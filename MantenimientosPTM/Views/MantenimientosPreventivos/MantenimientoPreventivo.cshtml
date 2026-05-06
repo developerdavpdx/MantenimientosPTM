@@ -1,0 +1,838 @@
+﻿@{
+    ViewBag.Title = "Mantenimientos Preventivos del Mes TEST";
+}
+
+<link href="~/Content/MantenimientosPreventivos.css" rel="stylesheet" />
+
+<!-- Tabla Principal -->
+<div class="row m-0 ps-3 pt-4 pe-3 main-container2 position-relative header-custom">
+    <div class="col-12 col-xl-12 p-0">
+        <div class="card shadow">
+            <div class="card-header header-fijo-custom text-dark">
+                <div class="row g-2 align-items-center mb-3">
+                    <!-- Título -->
+                    <div class="col-12 col-lg-7">
+                        <h4 class="mb-0 text-color-logo">
+                            <i class="bi bi-clipboard-check-fill me-2"></i>
+                            Órdenes de Trabajo Preventivo
+                            <span id="mesActual" class="text-primary ms-2"></span>
+                        </h4>
+                    </div>
+                    <!-- Botones -->
+                    <div class="col-12 col-lg-5">
+                        <div class="d-flex flex-wrap justify-content-start justify-content-lg-end gap-2">
+                            <button id="btnGenerarOrdenes" class="btn-filtro-aplicar d-flex align-items-center"
+                                    data-bs-toggle="tooltip" title="Generar Órdenes de Trabajo">
+                                <i class="bi bi-file-earmark-plus-fill me-2"></i>
+                                Generar Órdenes
+                            </button>
+                            <button id="btnExportarExcel" class="btn-filtro-limpiar d-flex align-items-center"
+                                    data-bs-toggle="tooltip" title="Exportar a Excel">
+                                <i class="bi bi-file-earmark-excel-fill me-2"></i>
+                                Exportar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="filtros-panel">
+                    <div class="filtros-titulo">
+                        <i class="bi bi-sliders" style="color:#0ea5d8"></i>
+                        Filtros de búsqueda
+                    </div>
+
+                    <div class="row g-2 align-items-end">
+
+                        <!-- Orden de Trabajo -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroOrdenTrabajo">
+                                <i class="bi bi-file-earmark-text-fill"></i> Orden de Trabajo
+                            </label>
+                            <input type="text" class="filtro-input"
+                                   id="FiltroOrdenTrabajo" name="FiltroOrdenTrabajo"
+                                   placeholder="Buscar orden...">
+                        </div>
+
+                        <!-- Fecha Inicio -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroFechaInicio">
+                                <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
+                            </label>
+                            <input type="date" class="filtro-input"
+                                   id="FiltroFechaInicio" name="FiltroFechaInicio">
+                        </div>
+
+                        <!-- Fecha Fin -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroFechaFin">
+                                <i class="bi bi-calendar-x-fill"></i> Fecha Fin
+                            </label>
+                            <input type="date" class="filtro-input"
+                                   id="FiltroFechaFin" name="FiltroFechaFin">
+                        </div>
+
+                        <!-- Proceso -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroArea">
+                                <i class="bi bi-gear-fill"></i> Proceso
+                            </label>
+                            <div class="select-wrapper">
+                                <select class="filtro-input" id="FiltroArea" name="FiltroArea">
+                                    <option value="">Todos los procesos...</option>
+                                </select>
+                                <div class="select-loader d-none" id="loader_FiltroArea">
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Línea de Producción -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroLinea">
+                                <i class="bi bi-diagram-3-fill"></i> Línea de Producción
+                            </label>
+                            <div class="select-wrapper">
+                                <select class="filtro-input" id="FiltroLinea" name="FiltroLinea">
+                                    <option value="">Todas las líneas...</option>
+                                </select>
+                                <div class="select-loader d-none" id="loader_FiltroLinea">
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                            <button type="button" class="btn-filtro-aplicar"
+                                    id="btnAplicarFiltros" title="Aplicar filtros">
+                                <i class="bi bi-search"></i>
+                                Buscar
+                            </button>
+                            <button type="button" class="btn-filtro-limpiar"
+                                    id="btnLimpiarFiltros" title="Limpiar filtros">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                                Limpiar
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+                <!-- Tabla -->
+                <div id="tablaMantenimientosRangoContainer" class="table-responsive small table-responsive-custom">
+                    <table class="table table-striped table-sm CustomTableResponsive" id="tablaMantenimientosRango">
+                        <thead>
+                            <tr>
+                                <th scope="col"></th>
+                                <th scope="col">
+                                    <input type="checkbox" id="selectAll" data-bs-toggle="tooltip" title="Seleccionar todos">
+                                </th>
+                                <th scope="col" class="col-actions">Acciones</th>
+                                <th scope="col">Número Orden</th>
+                                <th scope="col">Equipo</th>
+                                <th scope="col">Proceso</th>
+                                <th scope="col">Línea</th>
+                                <th scope="col">Estatus Orden</th>
+                                <th scope="col">Fecha Referencia</th>
+                                <th scope="col">Mantenimiento Programado</th>
+                                <th scope="col">Periodicidad MP</th>
+                                <th scope="col">Hora Apertura</th>
+                                <th scope="col">Hora Cierre</th>
+                                <th scope="col">Tiempo Invertido (Hrs)</th>
+                                <th scope="col">Usuario Generó</th>
+                                <th scope="col">Tipo Mantenimiento</th>
+                                <th scope="col">Texto Breve</th>
+                                <th scope="col" class="col-text-long">Comentarios</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="filaVacia">
+                                <td colspan="16" class="text-center">
+                                    <i class="bi bi-funnel"></i> Aplica los filtros para ver los mantenimientos
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL SOLICITAR REFACCIÓN PARA ORDEN DE TRABAJO
+═══════════════════════════════════════════════════ -->
+<div class="modal fade" id="solicitarRefaccionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-cart-plus-fill"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Solicitar Refacción</div>
+                        <div class="modal-subtitle-custom">Para Orden de Trabajo</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Body ── -->
+            <form id="formSolicitarRefaccion" class="needs-validation" novalidate autocomplete="on">
+                <div class="modal-body-custom">
+
+                    <!-- Sección 1: Información de la Orden -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-file-earmark-text-fill me-2"></i>Información de la Orden
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="ROT">
+                                    <i class="bi bi-hash"></i> Orden de Trabajo
+                                </label>
+                                <input type="text" class="form-control-custom" id="ROT" readonly autocomplete="off">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="RFechaMantenimiento">
+                                    <i class="bi bi-calendar-event"></i> Fecha de Solicitud
+                                </label>
+                                <input type="text" class="form-control-custom" id="RFechaMantenimiento" readonly autocomplete="off">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="REquipo">
+                                    <i class="bi bi-gear-fill"></i> Equipo
+                                </label>
+                                <input type="text" class="form-control-custom" id="REquipo" readonly autocomplete="off">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="RLinea">
+                                    <i class="bi bi-arrow-repeat"></i> Línea
+                                </label>
+                                <input type="text" class="form-control-custom" id="RLinea" readonly autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 2: Detalles de la Refacción -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-box-seam-fill me-2"></i>Detalles de la Refacción
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <!-- Buscador de artículos -->
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-12">
+                                            <label class="form-label-custom" for="BuscarArticuloMP">
+                                                <i class="bi bi-search"></i> Buscar Artículo <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control-custom" id="BuscarArticuloMP" name="BuscarArticuloMP"
+                                                   placeholder="Búsqueda mediante código de artículo, nombre, descripción..." autocomplete="off">
+                                            <div id="sugerenciasArticulosMP" class="autocomplete-sugerencias"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Campos ocultos para storing temporal del artículo seleccionado -->
+                                    <input type="hidden" id="CodigoArticuloMP" name="CodigoArticuloMP">
+                                    <input type="hidden" id="DescripcionArticuloMP" name="DescripcionArticuloMP">
+
+                                    <!-- Tabla de artículos agregados -->
+                                    <div class="table-responsive" style="max-height: 250px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
+                                        <table class="table table-sm table-hover table-bordered mb-0 CustomTableResponsive" id="tablaArticulosRefaccionMP">
+                                            <thead class="table-light text-center position-sticky top-0" style="z-index: 1;">
+                                                <tr>
+                                                    <th style="width: 50px;">#</th>
+                                                    <th>Código</th>
+                                                    <th>Descripción</th>
+                                                    <th style="width: 120px;">Cantidad <span class="text-danger">*</span></th>
+                                                    <th style="width: 60px;">Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="bodyArticulosRefaccionMP">
+                                                <tr id="filaSinArticulosMP">
+                                                    <td colspan="5" class="text-center text-muted py-3">
+                                                        <i class="bi bi-info-circle me-1"></i>Busque y seleccione un artículo para agregarlo
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="modal-error-msg" id="errorArticulosMP" style="display: none;">
+                                        <img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Agregue al menos un artículo a la solicitud.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 3: Prioridad y Justificación -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>Prioridad y Justificación
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label-custom" for="RdescripcionNecesidad">
+                                    <i class="bi bi-chat-left-text-fill"></i> Descripción de la Necesidad
+                                </label>
+                                <textarea maximo="500" funcion_destino="darFormatoNumLet"
+                                          class="form-control-custom validacion" id="RdescripcionNecesidad"
+                                          rows="3" placeholder="Describa por qué necesita esta refacción..."
+                                          autocomplete="on"></textarea>
+                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa por qué necesita la refacción.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerta Container -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="alertRefaccionContainer"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn-modal-guardar" id="btnSolicitarRefaccion">
+                        <i class="bi bi-send-fill me-1"></i> Enviar Solicitud
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL ORDEN DE MANTENIMIENTO
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalOrdenMantenimiento" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-file-earmark-text-fill"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Orden de Mantenimiento</div>
+                        <div class="modal-subtitle-custom">Complete los datos para cerrar la orden</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Formulario ── -->
+            <form id="formOrdenMantenimiento" class="needs-validation overflow-auto" novalidate autocomplete="on">
+                <div class="modal-body-custom">
+                    <div class="documento-papel bg-white rounded p-4" style="border: 1px solid var(--modal-border);">
+
+                        <!-- Header del documento -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <img src="~/Content/Images/LogoPTM.png" alt="Logo PTM" style="height:50px; width:auto;">
+                            <div class="text-end">
+                                <i class="bi bi-calendar3 me-2" style="color:var(--modal-primary);"></i>
+                                <strong class="me-1">Fecha:</strong>
+                                <span id="fechaImpresion"></span>
+                            </div>
+                        </div>
+                        <hr class="divider-custom">
+
+                        <!-- Tipo de Mantenimiento -->
+                        <div class="p-3 rounded mb-4" style="background: var(--modal-bg-input); border: 1px solid var(--modal-border);">
+                            <h6 class="mb-2" style="color:var(--modal-primary); font-weight:700;">
+                                <i class="bi bi-gear-fill me-2"></i>Tipo de Mantenimiento
+                            </h6>
+                            <p class="mb-1 fw-semibold">MANTENIMIENTO MAQUINARIA E INSTALACIONES</p>
+                            <p class="mb-0">MANTENIMIENTO SERVICIO REGULAR</p>
+                        </div>
+
+                        <!-- Sección 1: Datos de la Orden -->
+                        <div class="mb-4">
+                            <h6 class="mb-3 pb-2 border-bottom" style="color:var(--modal-primary); font-weight:700;">
+                                <i class="bi bi-clipboard-data-fill me-2"></i>Datos de la Orden
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="NumeroOrden">
+                                        <i class="bi bi-hash"></i> Número de Orden
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="NumeroOrden" name="NumeroOrden" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="Solicitante">
+                                        <i class="bi bi-person-check-fill"></i> Solicitante
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="Solicitante" name="Solicitante" readonly autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="divider-custom">
+
+                        <!-- Sección 2: Detalles del Mantenimiento -->
+                        <div class="mb-4">
+                            <h6 class="mb-3 pb-2 border-bottom" style="color:var(--modal-primary); font-weight:700;">
+                                <i class="bi bi-info-circle-fill me-2"></i>Detalles del Mantenimiento
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="ClaseMantenimiento">
+                                        <i class="bi bi-tag-fill"></i> Clase de Mantenimiento
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="ClaseMantenimiento" name="ClaseMantenimiento" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="CodigoMantenimiento">
+                                        <i class="bi bi-upc-scan"></i> Código del Mantenimiento
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="CodigoMantenimiento" name="CodigoMantenimiento" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="EstatusOrden">
+                                        <i class="bi bi-activity"></i> Estatus de la Orden
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="EstatusOrden" name="EstatusOrden" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="FechaInicioExtrema">
+                                        <i class="bi bi-calendar-check-fill"></i> Fecha Inicio Extrema
+                                    </label>
+                                    <input type="date" class="form-control-custom" id="FechaInicioExtrema" name="FechaInicioExtrema" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="FechaFinExtrema">
+                                        <i class="bi bi-calendar-x-fill"></i> Fecha Fin Extrema
+                                    </label>
+                                    <input type="date" class="form-control-custom" id="FechaFinExtrema" name="FechaFinExtrema" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="UbicacionTecnica">
+                                        <i class="bi bi-geo-alt-fill"></i> Ubicación Técnica
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="UbicacionTecnica" name="UbicacionTecnica" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="CentroCostos">
+                                        <i class="bi bi-cash-coin"></i> Centro de Costos
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="CentroCostos" name="CentroCostos" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="DescripcionEquipo">
+                                        <i class="bi bi-card-text"></i> Descripción
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="DescripcionEquipo" name="DescripcionEquipo" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="NumeroEquipo">
+                                        <i class="bi bi-pc-display-horizontal"></i> Número de Equipo
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="NumeroEquipo" name="NumeroEquipo" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="GrupoPlaneacion">
+                                        <i class="bi bi-diagram-3-fill"></i> Grupo de Planeación
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="GrupoPlaneacion" name="GrupoPlaneacion" readonly autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="divider-custom">
+
+                        <!-- Sección 3: Rutina de Mantenimiento -->
+                        <div id="rutinamaincontainer" class="mb-4">
+                            <h6 class="mb-3 pb-2 border-bottom" style="color:var(--modal-primary); font-weight:700;">
+                                <i class="bi bi-list-check me-2"></i>Rutina de Mantenimiento
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="p-3 rounded" style="background:var(--modal-bg-input); border:1px solid var(--modal-border);">
+                                        <h6 class="mb-2" style="color:var(--modal-primary);">
+                                            <i class="bi bi-clipboard-check me-2"></i>Rutina de Mantenimiento Preventivo
+                                        </h6>
+                                        <div class="d-flex flex-wrap gap-3">
+                                            <div>
+                                                <span class="fw-semibold">Equipo:</span>
+                                                <span id="rutinaNombreEquipo" style="color:var(--modal-primary);"></span>
+                                            </div>
+                                            <div>
+                                                <span class="fw-semibold">Proceso:</span>
+                                                <span id="rutinaProceso" style="color:var(--modal-primary);"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div id="formRutinaOnline"></div>
+                                    <div id="Evidenciatecnico"></div>
+
+                                    <!-- Sección Carga PDF Rutina (solo cuando no hay rutina específica) -->
+                                    <div id="seccionPdfRutina" class="mb-3 mt-3" style="display: none;">
+                                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight: 700;">
+                                            <i class="bi bi-file-pdf me-2"></i>Documento validación externa
+
+                                        </h6>
+                                        <div class="p-3 rounded" style="background: var(--modal-bg-input); border: 1px solid var(--modal-border);">
+                                            <!-- Visor PDF -->
+                                            <div id="pdfViewerContainer" style="display: none;">
+                                                <iframe id="pdfViewer" src="" style="width: 100%; height: 500px; border: none; border-radius: 8px;"></iframe>
+                                                <button type="button" class="btn btn-outline-danger btn-sm mt-3" id="btnEliminarPdfRutina">
+                                                    <i class="bi bi-trash me-1"></i> Eliminar PDF
+                                                </button>
+                                            </div>
+                                            <!-- Área de carga -->
+                                            <div id="pdfUploadContainer">
+                                                <label for="inputPdfRutina" class="form-label-custom">
+                                                    <i class="bi bi-upload me-2"></i>Seleccionar archivo PDF
+                                                </label>
+                                                <input type="file" id="inputPdfRutina" accept=".pdf" class="form-control" />
+                                                <small class="text-muted d-block mt-1">Solo archivos PDF (máx. 10MB)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Evidencia Fotográfica -->
+                                    <div id="EvidenciaOrdenTrabajo" class="p-3 border rounded mt-3">
+                                        <label class="form-label-custom mb-3">
+                                            <i class="bi bi-images"></i> Evidencia Fotográfica
+                                        </label>
+                                        <div class="upload-area border-2 border-dashed rounded p-4 text-center" id="uploadArea" style="cursor:pointer;">
+                                            <div class="upload-icon fs-1">☁️</div>
+                                            <div class="upload-text fw-semibold mt-2">Arrastra y suelta tus imágenes aquí</div>
+                                            <div class="upload-hint text-muted small">o haz clic para seleccionar archivos</div>
+                                            <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
+                                        </div>
+                                        <div class="progress mt-3" id="progressBar" style="display:none; height:25px;">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressFill" role="progressbar" style="width:0%"></div>
+                                        </div>
+                                        <div class="modal-banner-info mt-3" id="uploadInfo">
+                                            <i class="bi bi-info-circle-fill" style="font-size:1rem; flex-shrink:0;"></i>
+                                            <span>Formatos soportados: JPG, PNG, GIF, WebP | Tamaño máximo: 5MB por imagen</span>
+                                        </div>
+                                        <div class="preview-area row g-3 mt-2" id="previewArea"></div>
+                                        <button type="button" class="btn btn-outline-danger mt-3" id="clearAll" style="display:none;">
+                                            <i class="bi bi-trash me-1"></i> Limpiar todas las imágenes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="divider-custom">
+
+                        <!-- Sección 4: Registro de Trabajo -->
+                        <div id="CierreOrdenTrabajo" class="mb-4">
+                            <h6 class="mb-3 pb-2 border-bottom" style="color:var(--modal-primary); font-weight:700;">
+                                <i class="bi bi-wrench-adjustable-circle-fill me-2"></i>Registro de Trabajo
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="HoraInicio">
+                                        <i class="bi bi-clock-fill"></i> Hora Inicio <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="time" class="form-control-custom" id="HoraInicio" name="HoraInicio" required autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de inicio.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="HoraFin">
+                                        <i class="bi bi-clock-history"></i> Hora Fin <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="time" class="form-control-custom" id="HoraFin" name="HoraFin" required autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de fin.</div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label-custom" for="TextoSecuencia">
+                                        <i class="bi bi-list-ol"></i> Texto de Secuencia / Actividad Realizada <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea class="form-control-custom" id="TextoSecuencia" name="TextoSecuencia"
+                                              rows="3" required placeholder="Describa detalladamente la actividad realizada..." autocomplete="on"></textarea>
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa la actividad realizada.</div>
+                                </div>
+
+                                <!-- Búsqueda de técnicos -->
+                                <div id="busqueda_tecnicosMainContainer" class="col-12">
+                                    <label class="form-label-custom" for="BuscarTecnico">
+                                        <i class="bi bi-person-badge-fill"></i> Asignar Técnicos
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="BuscarTecnico" name="BuscarTecnico"
+                                           placeholder="Escriba número de nómina o nombre del técnico..." autocomplete="off">
+                                    <div id="sugerenciasTecnicos" class="autocomplete-sugerencias"></div>
+                                </div>
+
+                                <!-- Lista de técnicos asignados -->
+                                <div class="col-12">
+                                    <label class="form-label-custom">
+                                        <i class="bi bi-people-fill"></i> Técnicos Asignados
+                                    </label>
+                                    <div id="listaTecnicosAsignados" class="tecnicos-container p-3 rounded" style="border: 1.5px solid var(--modal-border); background: var(--modal-bg-input);">
+                                        <div style="font-size:0.85rem; color:var(--modal-text-muted);">
+                                            <i class="bi bi-info-circle me-2"></i>No hay técnicos asignados
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="DuracionHrs">
+                                        <i class="bi bi-hourglass-split"></i> Duración <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="DuracionHrs" name="DuracionHrs"
+                                           placeholder="0.0" required autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique la duración del trabajo.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row pt-3">
+                            <div class="col-12">
+                                <div id="alertTecnicosContainer"></div>
+                            </div>
+                        </div>
+
+                        <hr class="divider-custom">
+
+                        <!-- Sección 5: Firmas Digitales -->
+                        <div id="SeccionFirmas" class="mb-4">
+                            <h6 class="mb-3 pb-2 border-bottom" style="color:var(--modal-primary); font-weight:700;">
+                                <i class="bi bi-pen-fill me-2"></i>Firmas Digitales
+                            </h6>
+                            <div class="row g-4">
+
+                                <!-- Firma 1: Realizó -->
+                                <div class="col-md-4" id="firmaRealizoContainer">
+                                    <div class="card border-primary shadow-sm h-100">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Técnico MTTO</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="firma-wrapper border border-2 border-primary rounded position-relative mb-3" style="background:#f8f9fa;">
+                                                <span class="firma-placeholder position-absolute top-50 start-50 translate-middle text-muted"
+                                                      id="placeholderRealizo" style="pointer-events:none; font-style:italic; font-size:14px;">
+                                                    Firma aquí...
+                                                </span>
+                                                <canvas id="canvasRealizo" class="firma-canvas" style="width:100%; height:150px; cursor:crosshair; display:block;"></canvas>
+                                            </div>
+                                            <div class="d-flex gap-2 mb-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger flex-fill" onclick="limpiarFirma('Realizo')">
+                                                    <i class="bi bi-trash me-1"></i>Limpiar
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-warning flex-fill" onclick="deshacerFirma('Realizo')">
+                                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Deshacer
+                                                </button>
+                                            </div>
+                                            <label class="form-label-custom" for="nombreRealizo">
+                                                <i class="bi bi-person"></i> Nombre:
+                                            </label>
+                                            <input type="text" class="form-control-custom" id="nombreRealizo" name="nombreRealizo"
+                                                   placeholder="Nombre completo" readonly autocomplete="name">
+                                            <input type="hidden" id="firmaRealizoData" name="firmaRealizoData">
+                                            <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Firma 2: Supervisó -->
+                                <div class="col-md-4" id="firmaSupervisoContainer">
+                                    <div class="card border-success shadow-sm h-100">
+                                        <div class="card-header bg-success text-white">
+                                            <h6 class="mb-0"><i class="bi bi-eye-fill me-2"></i>Supervisor Producción</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="firma-wrapper border border-2 border-success rounded position-relative mb-3" style="background:#f8f9fa;">
+                                                <span class="firma-placeholder position-absolute top-50 start-50 translate-middle text-muted"
+                                                      id="placeholderSuperviso" style="pointer-events:none; font-style:italic; font-size:14px;">
+                                                    Firma aquí...
+                                                </span>
+                                                <canvas id="canvasSuperviso" class="firma-canvas" style="width:100%; height:150px; cursor:crosshair; display:block;"></canvas>
+                                            </div>
+                                            <div class="d-flex gap-2 mb-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger flex-fill" onclick="limpiarFirma('Superviso')">
+                                                    <i class="bi bi-trash me-1"></i>Limpiar
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-warning flex-fill" onclick="deshacerFirma('Superviso')">
+                                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Deshacer
+                                                </button>
+                                            </div>
+                                            <label class="form-label-custom" for="nombreSuperviso">
+                                                <i class="bi bi-person"></i> Nombre:
+                                            </label>
+                                            <input type="text" class="form-control-custom" id="nombreSuperviso" name="nombreSuperviso"
+                                                   placeholder="Nombre completo" autocomplete="name">
+                                            <input type="hidden" id="firmaSupervisoData" name="firmaSupervisoData">
+                                            <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Firma 3: Mantenimiento -->
+                                <div class="col-md-4" id="firmaMantenimientoContainer">
+                                    <div class="card border-info shadow-sm h-100">
+                                        <div class="card-header bg-info text-white">
+                                            <h6 class="mb-0"><i class="bi bi-gear-fill me-2"></i>Supervisor Mantenimiento</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="firma-wrapper border border-2 border-info rounded position-relative mb-3" style="background:#f8f9fa;">
+                                                <span class="firma-placeholder position-absolute top-50 start-50 translate-middle text-muted"
+                                                      id="placeholderMantenimiento" style="pointer-events:none; font-style:italic; font-size:14px;">
+                                                    Firma aquí...
+                                                </span>
+                                                <canvas id="canvasMantenimiento" class="firma-canvas" style="width:100%; height:150px; cursor:crosshair; display:block;"></canvas>
+                                            </div>
+                                            <div class="d-flex gap-2 mb-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger flex-fill" onclick="limpiarFirma('Mantenimiento')">
+                                                    <i class="bi bi-trash me-1"></i>Limpiar
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-warning flex-fill" onclick="deshacerFirma('Mantenimiento')">
+                                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Deshacer
+                                                </button>
+                                            </div>
+                                            <label class="form-label-custom" for="nombreMantenimiento">
+                                                <i class="bi bi-person"></i> Nombre:
+                                            </label>
+                                            <input type="text" class="form-control-custom" id="nombreMantenimiento" name="nombreMantenimiento"
+                                                   placeholder="Nombre completo" autocomplete="name">
+                                            <input type="hidden" id="firmaMantenimientoData" name="firmaMantenimientoData">
+                                            <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Instrucciones firmas -->
+                            <div class="modal-banner-info mt-3">
+                                <i class="bi bi-info-circle-fill" style="font-size:1rem; flex-shrink:0;"></i>
+                                <div class="small">
+                                    <strong>Instrucciones:</strong> Firme en cada recuadro usando el mouse o su dedo en dispositivos táctiles.
+                                    Las firmas serán guardadas automáticamente al enviar el formulario.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row pt-3">
+                            <div class="col-12">
+                                <div id="alertOrdenContainer"></div>
+                            </div>
+                        </div>
+                        <!-- Footer del documento -->
+                        <div class="text-center pt-3 mt-2" style="border-top: 1px solid var(--modal-border); color:var(--modal-text-muted);">
+                            <p class="mb-0 small">
+                                <i class="bi bi-shield-check me-2"></i>
+                                Sistema de Gestión de Mantenimiento - PTM © 2025
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom justify-content-between">
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn-modal-guardar" id="btnGuardarOT">
+                            <i class="bi bi-floppy-fill me-1"></i> Guardar
+                        </button>
+                        <button type="button" class="btn-modal-guardar danger" id="btnExportMantenimientoPDF">
+                            <i class="bi bi-file-earmark-pdf me-1"></i> Exportar PDF
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL: REFACCIONES DE LA ORDEN DE TRABAJO
+     ════════════════════════════════════════════ -->
+<div class="modal fade" id="modalRefaccionesOT" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-box-seam-fill"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Refacciones de la Orden de Trabajo</div>
+                        <div class="modal-subtitle-custom">OT: <span id="refaccionesOTNumero"></span></div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body-custom">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
+                    <table class="table table-sm table-hover table-bordered mb-0 CustomTableResponsive" id="tablaRefaccionesOT">
+                        <thead class="table-light text-center position-sticky top-0" style="z-index: 1;">
+                            <tr>
+                                <th>Código</th>
+                                <th>Artículo</th>
+                                <th style="width: 100px;">Cantidad</th>
+                                <th style="width: 120px;">Urgencia</th>
+                                <th style="width: 120px;">Estatus</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bodyRefaccionesOT">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="bi bi-info-circle me-1"></i>Seleccione una orden para ver sus refacciones...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Container para alerts de Bootstrap -->
+<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;">
+    <!-- Los alerts se insertarán aquí dinámicamente -->
+</div>
+
+<!-- ✅ Loader fullscreen - puede estar en cualquier parte -->
+<div id="calendarLoader" style="display: none;">
+    <div class="calendar-loader-overlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-3 text-white fw-semibold">Cargando mantenimientos...</p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script src="~/Scripts/mantenimientos_preventivos_refactor.js?V1.0.1"></script>
+<script src="~/Scripts/FileUpload.js"></script>

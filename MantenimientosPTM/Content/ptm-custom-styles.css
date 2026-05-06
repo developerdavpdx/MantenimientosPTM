@@ -1,0 +1,189 @@
+﻿/* ========================================
+   PALETA DE COLORES PTM - CLASES PERSONALIZADAS
+   ======================================== */
+
+/* 🔵 BOTONES BASE */
+.btn_disabled {
+    background: linear-gradient(135deg, #999999, #878b8f) !important;
+    cursor: not-allowed !important;
+}
+
+.btn-ptm-edit {
+    background: #1f6fb2;
+    color: white;
+}
+
+.btn-ptm-pausar {
+    background: #5a6268;
+    color: white;
+}
+
+.btn-ptm-eliminar {
+    background: #c82333;
+    color: white;
+}
+
+.btn-ptm-rutina {
+    background: #6c757d;
+    color: white;
+}
+
+/* Base */
+.btn-ptm {
+    border: none;
+    border-radius: 10px;
+    padding: 6px 14px;
+    font-weight: 500;
+    color: white;
+    transition: all 0.2s ease;
+}
+
+/* 🔵 Principal */
+.btn-ptm-primary {
+    background: linear-gradient(135deg, #125FA3, #1f6fb2);
+    box-shadow: 0 4px 14px rgba(18, 95, 163, 0.35);
+    color: white;
+}
+
+/* 🔷 Azul medio */
+.btn-ptm-mid {
+    background: linear-gradient(135deg, #2E8BC0, #3AA0D8);
+    box-shadow: 0 4px 14px rgba(46, 139, 192, 0.3);
+    color: white;
+}
+
+/* 🔹 Azul claro */
+.btn-ptm-light {
+    background: linear-gradient(135deg, #5DADE2, #85C1E9);
+    box-shadow: 0 4px 14px rgba(93, 173, 226, 0.3);
+    color: white;
+}
+
+/* ⚪ Gris */
+.btn-ptm-secondary {
+    background: linear-gradient(135deg, #6c757d, #868e96);
+    box-shadow: 0 4px 14px rgba(108, 117, 125, 0.3);
+    color:white;
+}
+
+    .btn-ptm-rutina:hover,
+    .btn-ptm-eliminar:hover,
+    .btn-ptm-pausar:hover,
+    .btn-ptm-edit:hover,
+    .btn-ptm-primary:hover,
+    .btn-ptm-mid:hover,
+    .btn-ptm-light:hover,
+    .btn-ptm-secondary:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.08);
+        background: white !important;
+        color: black;
+    }
+
+
+/* 🔵 BOTONES BASE */
+
+/* Headers PTM */
+.header-ptm {
+    background-color: #1976D2 !important;
+    color: white !important;
+}
+
+.card-header-ptm {
+    background-color: #f8f9fa;
+    border-bottom: 3px solid #1976D2;
+}
+
+/* Texto PTM */
+.text-ptm {
+    color: #1976D2 !important;
+}
+
+.text-ptm-dark {
+    color: #0D47A1 !important;
+}
+
+/* Tabla PTM */
+.table-ptm thead {
+    background-color: #1976D2;
+    color: white;
+}
+
+.table-ptm tbody tr:hover {
+    background-color: rgba(25, 118, 210, 0.08);
+}
+
+/* Focus PTM para inputs */
+.form-control-ptm:focus,
+.form-select-ptm:focus {
+    border-color: #1976D2;
+    box-shadow: 0 0 0 0.25rem rgba(25, 118, 210, 0.25);
+}
+
+
+/* Estilos adicionales para darle un toque más profesional */
+.modal-content {
+    border-radius: 12px;
+}
+
+.modal-header {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.input-group-text {
+    border-right: none;
+}
+
+.input-group:focus-within .input-group-text {
+    border-color: #86b7fe;
+    background-color: #e7f1ff;
+}
+
+.input-group:focus-within .form-control,
+.input-group:focus-within .form-select {
+    border-color: #86b7fe;
+}
+
+.border-bottom {
+    border-bottom: 2px solid #e9ecef !important;
+}
+
+h6.text-primary {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+/* ✅ Validación: Cuando hay un campo inválido, el span anterior se pone rojo */
+.input-group .is-invalid ~ .input-group-text,
+.input-group .form-control.is-invalid + .input-group-text,
+.input-group .form-select.is-invalid + .input-group-text {
+    border-color: #dc3545 !important;
+    background-color: #fff;
+}
+
+/* ✅ Como el span va ANTES del input, usamos la clase en el input-group */
+.input-group.is-invalid .input-group-text {
+    border-color: #dc3545 !important;
+}
+
+    /* ✅ Hacer que el icono dentro del span también se ponga rojo */
+    .input-group .is-invalid ~ .input-group-text i,
+    .input-group.is-invalid .input-group-text i {
+        color: #dc3545 !important;
+    }
+
+/* Asegurar que el input/select inválido también tenga el borde rojo */
+.input-group.has-validation .form-control.is-invalid,
+.input-group.has-validation .form-select.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.custom-invalid-feedback {
+    position: absolute;
+    top: 20px;
+    min-width: 225px;
+}
+.bg-blue-ptm {
+    background-color: #0d6efd;
+}

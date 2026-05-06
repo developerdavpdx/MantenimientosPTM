@@ -1,0 +1,341 @@
+﻿@{
+    ViewBag.Title = "Métricas de Mantenimiento";
+}
+
+<link href="~/Content/MantenimientosPreventivos.css" rel="stylesheet" />
+
+<div class="row m-0 pt-3">
+    <div class="col-12 col-xl-12 mb-4 mb-lg-0">
+        <div class="card shadow-lg">
+            <!-- Header Responsive -->
+            <div class="card-header text-dark">
+                <div class="row g-3 align-items-center">
+                    <div class="col-12">
+                        <h5 class="mb-0 text-color-logo">
+                            <i class="bi bi-graph-up-arrow me-2"></i>Métricas de Mantenimiento
+                        </h5>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- Sección de Filtros -->
+                <form id="formFiltrosMetricas" autocomplete="on">
+                    <div class="filtros-panel">
+
+                        <div class="filtros-titulo">
+                            <i class="bi bi-sliders" style="color:#0ea5d8"></i>
+                            Filtros de búsqueda
+                        </div>
+
+                        <div class="row g-2 align-items-end">
+
+                            <!-- Fecha Inicio -->
+                            <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                <label class="filtro-label" for="FiltroFechaInicio">
+                                    <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
+                                </label>
+                                <input type="date" class="filtro-input"
+                                       id="FiltroFechaInicio" name="FiltroFechaInicio">
+                            </div>
+
+                            <!-- Fecha Fin -->
+                            <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                <label class="filtro-label" for="FiltroFechaFin">
+                                    <i class="bi bi-calendar-x-fill"></i> Fecha Fin
+                                </label>
+                                <input type="date" class="filtro-input"
+                                       id="FiltroFechaFin" name="FiltroFechaFin">
+                            </div>
+
+                            <!-- Línea -->
+                            <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                <label class="filtro-label" for="FiltroLinea">
+                                    <i class="bi bi-diagram-3-fill"></i> Línea
+                                </label>
+                                <div class="select-wrapper">
+                                    <select class="filtro-input"
+                                            id="FiltroLinea" name="FiltroLinea">
+                                        <option value="">Todas las líneas...</option>
+                                    </select>
+                                    <div class="select-loader d-none" id="loader_FiltroLinea">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Proceso -->
+                            <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                <label class="filtro-label" for="FiltroProceso">
+                                    <i class="bi bi-grid-fill"></i> Proceso
+                                </label>
+                                <div class="select-wrapper">
+                                    <select class="filtro-input"
+                                            id="FiltroProceso" name="FiltroProceso">
+                                        <option value="">Todas las áreas...</option>
+                                    </select>
+                                    <div class="select-loader d-none" id="loader_FiltroProceso">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Equipo -->
+                            <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                <label class="filtro-label" for="FiltroEquipo">
+                                    <i class="bi bi-cpu-fill"></i> Equipo
+                                </label>
+                                <div class="select-wrapper">
+                                    <select class="filtro-input"
+                                            id="FiltroEquipo" name="FiltroEquipo">
+                                        <option value="">Todos los equipos...</option>
+                                    </select>
+                                    <div class="select-loader d-none" id="loader_FiltroEquipo">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Planta -->
+                            <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                <label class="filtro-label" for="FiltroPlanta">
+                                    <i class="bi bi-building"></i> Planta
+                                </label>
+                                <div class="select-wrapper">
+                                    <select class="filtro-input"
+                                            id="FiltroPlanta" name="FiltroPlanta">
+                                        <option value="">Todas las plantas...</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                    </select>
+                                    <div class="select-loader d-none" id="loader_FiltroPlanta">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                                <button type="button"
+                                        class="btn-filtro-aplicar"
+                                        id="btnAplicarFiltros">
+                                    <i class="bi bi-search"></i>
+                                    Buscar
+                                </button>
+
+                                <button type="button"
+                                        class="btn-filtro-limpiar"
+                                        id="btnLimpiarFiltros">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                    Limpiar
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Sección de Métricas -->
+                <div class="mb-4">
+                    <h6 class="text-primary mb-3 pb-2 border-bottom">
+                        <i class="bi bi-clipboard-data-fill me-2"></i>Indicadores de Rendimiento (KPIs)
+                    </h6>
+
+                    <div class="row g-3">
+                        <!-- MTBF Card -->
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-gear-wide-connected me-2"></i>MTBF
+                                    </h6>
+                                    <small class="opacity-75">Mean Time Between Failures</small>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-between">
+                                    <p class="card-text text-muted small mb-3">
+                                        Promedio de tiempo entre fallas para equipos de producción.
+                                    </p>
+                                    <div class="text-center">
+                                        <div class="display-4 fw-bold text-info" id="metric-mtbf">
+                                            <div class="spinner-border spinner-border-sm" role="status">
+                                                <span class="visually-hidden">Cargando...</span>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">horas</small>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="mtbf-update">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MTTR Card -->
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-warning text-white">
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-stopwatch-fill me-2"></i>MTTR
+                                    </h6>
+                                    <small class="opacity-75">Mean Time To Repair</small>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-between">
+                                    <p class="card-text text-muted small mb-3">
+                                        Promedio de tiempo necesario para reparar un equipo.
+                                    </p>
+                                    <div class="text-center">
+                                        <div class="display-4 fw-bold text-warning" id="metric-mttr">
+                                            <div class="spinner-border spinner-border-sm" role="status">
+                                                <span class="visually-hidden">Cargando...</span>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">horas</small>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="mttr-update">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FPY Card -->
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-check-circle-fill me-2"></i>FPY
+                                    </h6>
+                                    <small class="opacity-75">First Pass Yield</small>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-between">
+                                    <p class="card-text text-muted small mb-3">
+                                        Porcentaje de producción que pasa inspección sin retrabajo.
+                                    </p>
+                                    <div class="text-center">
+                                        <div class="display-4 fw-bold text-success" id="metric-fpy">
+                                            <div class="spinner-border spinner-border-sm" role="status">
+                                                <span class="visually-hidden">Cargando...</span>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">%</small>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="fpy-update">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Disponibilidad Card -->
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-clock-history me-2"></i>Disponibilidad
+                                    </h6>
+                                    <small class="opacity-75">Equipment Availability</small>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-between">
+                                    <p class="card-text text-muted small mb-3">
+                                        Porcentaje del tiempo en que el equipo está operativo.
+                                    </p>
+                                    <div class="text-center">
+                                        <div class="display-4 fw-bold text-primary" id="metric-disponibilidad">
+                                            <div class="spinner-border spinner-border-sm" role="status">
+                                                <span class="visually-hidden">Cargando...</span>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">%</small>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="disp-update">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- OEE Card -->
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-danger text-white">
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-speedometer2 me-2"></i>OEE
+                                    </h6>
+                                    <small class="opacity-75">Overall Equipment Effectiveness</small>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-between">
+                                    <p class="card-text text-muted small mb-3">
+                                        Eficiencia general del equipo (disponibilidad × rendimiento × calidad).
+                                    </p>
+                                    <div class="text-center">
+                                        <div class="display-4 fw-bold text-danger" id="metric-oee">
+                                            <div class="spinner-border spinner-border-sm" role="status">
+                                                <span class="visually-hidden">Cargando...</span>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">%</small>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="oee-update">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Mantenimientos Card -->
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-wrench-adjustable-circle-fill me-2"></i>Mantenimientos
+                                    </h6>
+                                    <small class="opacity-75">Total Period Maintenance</small>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-between">
+                                    <p class="card-text text-muted small mb-3">
+                                        Número total de mantenimientos realizados en el período.
+                                    </p>
+                                    <div class="text-center">
+                                        <div class="display-4 fw-bold text-secondary" id="metric-mantenimientos">
+                                            <div class="spinner-border spinner-border-sm" role="status">
+                                                <span class="visually-hidden">Cargando...</span>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">órdenes</small>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="mant-update">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerta Container -->
+                    <div class="row pt-3">
+                        <div class="col-md-12">
+                            <div id="alertContainer"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información Adicional -->
+                <div class="alert alert-info bg-light border-info d-flex align-items-start" role="alert">
+                    <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+                    <div>
+                        <h6 class="fw-bold mb-1">
+                            <i class="bi bi-lightbulb me-1"></i>Información
+                        </h6>
+                        <p class="mb-0 small">
+                            Las métricas se actualizan automáticamente según los filtros aplicados.
+                            Seleccione una línea y proceso específicos para obtener datos más precisos.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="~/Scripts/metricas_mannto_refactor.js"></script>

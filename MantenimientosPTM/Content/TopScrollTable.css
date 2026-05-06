@@ -1,0 +1,45 @@
+﻿.horizontal-scroll-top {
+    position: sticky;
+    top: 0;
+    z-index: 123;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 12px;
+    background-color: rgb(248,249,250);
+    margin-bottom: 3px;
+}
+
+    .horizontal-scroll-top.fixed {
+        position: fixed;
+        top: 100px;
+        right: 2%;
+        z-index: 124;
+    }
+
+
+    /* Scrollbar */
+    .horizontal-scroll-top::-webkit-scrollbar {
+        height: 10px;
+    }
+
+    .horizontal-scroll-top::-webkit-scrollbar-thumb {
+        background-color: #1e76bd;
+        border-radius: 6px;
+    }
+
+
+    .horizontal-scroll-top::-webkit-scrollbar-track {
+        background-color: rgb(248,249,250);
+    }
+
+    /* Contenedor fantasma */
+    .horizontal-scroll-top .scroll-content {
+        height: 1px;
+    }
+
+/*Ocultar scroll superior para dispositivos moviles*/
+@media(max-width: 767.98px) {
+    #scrollTopMannto {
+        display: none !important;
+    }
+}

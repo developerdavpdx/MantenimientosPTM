@@ -1,0 +1,600 @@
+﻿@{
+    ViewBag.Title = "Programar Mantenimiento Correctivo";
+}
+
+<link href="~/Content/MantenimientosPreventivos.css" rel="stylesheet" />
+
+
+<!-- ══════════════════════════════════════════════
+     MODAL ORDEN DE MANTENIMIENTO CORRECTIVO
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalOrdenMantenimiento" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-tools"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Orden de Mantenimiento Correctivo</div>
+                        <div class="modal-subtitle-custom">Complete los datos para registrar la orden</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Formulario ── -->
+            <form id="formOrdenMantenimiento" class="needs-validation overflow-auto" novalidate autocomplete="on">
+                <div class="modal-body-custom">
+                    <div class="documento-papel bg-white rounded p-4" style="border: 1px solid var(--modal-border);">
+
+                        <!-- Header del documento -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <img src="~/Content/Images/LogoPTM.png" alt="Logo PTM" style="height:50px; width:auto;">
+                            <div class="text-end">
+                                <i class="bi bi-calendar3 me-2" style="color:var(--modal-primary);"></i>
+                                <strong class="me-1">Fecha:</strong>
+                                <span id="fechaImpresion"></span>
+                            </div>
+                        </div>
+                        <hr class="divider-custom">
+
+                        <!-- Banner Tipo de Mantenimiento -->
+                        <div class="modal-banner-warning mb-4">
+                            <i class="bi bi-exclamation-triangle-fill" style="font-size:1.2rem; flex-shrink:0;"></i>
+                            <div>
+                                <h6 class="fw-bold mb-1">
+                                    <i class="bi bi-wrench-adjustable me-1"></i>Tipo de Mantenimiento
+                                </h6>
+                                <p class="mb-1 fw-semibold">MANTENIMIENTO MAQUINARIA E INSTALACIONES</p>
+                                <p class="mb-0">REPARACIÓN MANTENIMIENTO CORRECTIVO</p>
+                            </div>
+                        </div>
+
+                        <!-- Sección 1: Datos de la Orden -->
+                        <div class="mb-4">
+                            <h6 class="mb-3 pb-2 border-bottom" style="color:var(--modal-primary); font-weight:700;">
+                                <i class="bi bi-clipboard-data-fill me-2"></i>Datos de la Orden
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label-custom" for="AreaTecnica">
+                                        <i class="bi bi-wrench"></i> Área Técnica
+                                    </label>
+                                    <select class="form-select-custom" id="AreaTecnica" name="AreaTecnica" required readonly autocomplete="off">
+                                        <option value="" selected>Seleccionar tipo...</option>
+                                        <option value="MANTENIMIENTO HERRAMENTALES">Mantenimiento Herramentales</option>
+                                        <option value="MANTENIMIENTO">Mantenimiento</option>
+                                    </select>
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione el área técnica.</div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label-custom" for="NumeroOrden">
+                                        <i class="bi bi-hash"></i> Número de Orden
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="NumeroOrden" name="NumeroOrden" readonly autocomplete="off">
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label-custom" for="Solicitante">
+                                        <i class="bi bi-person-check-fill"></i> Solicitante <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="Solicitante" name="Solicitante"
+                                           placeholder="Nombre del operador" readonly autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el nombre del solicitante.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="NominaSolicitante">
+                                        <i class="bi bi-123"></i> Número Nómina <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="NominaSolicitante" name="NominaSolicitante"
+                                           placeholder="# de nómina" readonly autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el número de nómina.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="EstatusOrden">
+                                        <i class="bi bi-activity"></i> Estatus de la Orden
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="EstatusOrden" name="EstatusOrden" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="FechaInicioExtrema">
+                                        <i class="bi bi-calendar-check-fill"></i> Fecha Inicio Extrema
+                                    </label>
+                                    <input type="date" class="form-control-custom" id="FechaInicioExtrema" name="FechaInicioExtrema" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="HoraInicio">
+                                        <i class="bi bi-clock-fill"></i> Hora Apertura
+                                    </label>
+                                    <input type="time" class="form-control-custom" id="HoraInicio" name="HoraInicio" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="Scrap">
+                                        <i class="bi bi-recycle"></i> Scrap
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="Scrap" name="Scrap" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="HoraCierre">
+                                        <i class="bi bi-clock-history"></i> Hora Cierre
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="HoraCierre" name="HoraCierre" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="UbicacionTecnica">
+                                        <i class="bi bi-geo-alt-fill"></i> Ubicación Técnica
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="UbicacionTecnica" name="UbicacionTecnica" readonly autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="TipoMantenimiento">
+                                        <i class="bi bi-wrench-adjustable-circle-fill"></i> Tipo de Mantenimiento
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="TipoMantenimiento" name="TipoMantenimiento" readonly autocomplete="off">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label-custom" for="TextoCorto">
+                                        <i class="bi bi-chat-left-text-fill"></i> Texto Corto <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="TextoCorto" name="TextoCorto"
+                                           placeholder="Descripción corta de la falla" readonly autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el texto corto descriptivo.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="divider-custom">
+
+                        <!-- Sección 2: Datos del Equipo -->
+                        <div class="mb-4">
+                            <h6 class="mb-3 pb-2 border-bottom" style="color:var(--modal-primary); font-weight:700;">
+                                <i class="bi bi-gear-wide-connected me-2"></i>Datos del Equipo
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="ClaseMantenimiento">
+                                        <i class="bi bi-tag-fill"></i> Clase de Mantenimiento <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="ClaseMantenimiento" name="ClaseMantenimiento" value="Z10" readonly autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la clase de mantenimiento.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="NombreEquipo">
+                                        <i class="bi bi-gear-fill"></i> Nombre Equipo <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="NombreEquipo" name="NombreEquipo"
+                                           placeholder="Nombre del equipo" readonly autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el nombre del equipo.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="DescEquipo">
+                                        <i class="bi bi-card-text"></i> Descripción Equipo <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="DescEquipo" name="DescEquipo"
+                                           placeholder="Descripción del equipo" readonly autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la descripción del equipo.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="CentroCostos">
+                                        <i class="bi bi-cash-coin"></i> Centro Costos <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="CentroCostos" name="CentroCostos"
+                                           placeholder="Centro de costos" readonly autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el centro de costos.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="NumDocPmCalidad">
+                                        <i class="bi bi-file-earmark-check-fill"></i> Número Doc PM Calidad <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="NumDocPmCalidad" name="NumDocPmCalidad"
+                                           placeholder="# Doc pm.calidad" readonly autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el número de documento PM Calidad.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="Linea">
+                                        <i class="bi bi-arrow-repeat"></i> Línea <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="Linea" name="Linea" readonly autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la línea.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="divider-custom">
+
+                        <!-- Sección 3: Registro de Trabajo -->
+                        <div id="CierreOrdenTrabajo" class="mb-4">
+                            <h6 class="mb-3 pb-2 border-bottom" style="color:var(--modal-primary); font-weight:700;">
+                                <i class="bi bi-wrench-adjustable-circle-fill me-2"></i>Registro de Trabajo
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="HoraInicioTrabajo">
+                                        <i class="bi bi-clock-fill"></i> Hora Inicio <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="time" class="form-control-custom" id="HoraInicioTrabajo" name="HoraInicioTrabajo" required autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de inicio.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="HoraFin">
+                                        <i class="bi bi-clock-history"></i> Hora Fin <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="time" class="form-control-custom" id="HoraFin" name="HoraFin" required autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de fin.</div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label-custom" for="TextoSecuencia">
+                                        <i class="bi bi-list-ol"></i> Texto de Secuencia / Actividad Realizada <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea class="form-control-custom" id="TextoSecuencia" name="TextoSecuencia"
+                                              rows="3" required placeholder="Describa detalladamente la actividad realizada..." autocomplete="on"></textarea>
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa la actividad realizada.</div>
+                                </div>
+
+                                <!-- Búsqueda de técnicos -->
+                                <div class="col-12">
+                                    <label class="form-label-custom" for="BuscarTecnico">
+                                        <i class="bi bi-person-badge-fill"></i> Asignar Técnicos
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="BuscarTecnico" name="BuscarTecnico"
+                                           placeholder="Escriba número de nómina o nombre del técnico..." autocomplete="off">
+                                    <div id="sugerenciasTecnicos" class="autocomplete-sugerencias"></div>
+                                </div>
+
+                                <!-- Lista técnicos asignados -->
+                                <div class="col-12">
+                                    <label class="form-label-custom">
+                                        <i class="bi bi-people-fill"></i> Técnicos Asignados
+                                    </label>
+                                    <div id="listaTecnicosAsignados" class="tecnicos-container p-3 rounded"
+                                         style="border: 1.5px solid var(--modal-border); background: var(--modal-bg-input);">
+                                        <div style="font-size:0.85rem; color:var(--modal-text-muted);">
+                                            <i class="bi bi-info-circle me-2"></i>No hay técnicos asignados
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="DuracionHrs">
+                                        <i class="bi bi-hourglass-split"></i> Duración <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <input type="text" class="form-control-custom" id="DuracionHrs" name="DuracionHrs"
+                                               placeholder="0.0" required autocomplete="off">
+                                        <span class="fw-semibold" style="color:var(--modal-text-muted); white-space:nowrap;">Hrs</span>
+                                    </div>
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique la duración del trabajo.</div>
+                                </div>
+                            </div>
+                            <div class="row pt-3">
+                                <div class="col-12">
+                                    <div id="alertOrdenContainer"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer del documento -->
+                        <div class="text-center pt-3 mt-2" style="border-top: 1px solid var(--modal-border); color:var(--modal-text-muted);">
+                            <p class="mb-0 small">
+                                <i class="bi bi-shield-check me-2"></i>
+                                Sistema de Gestión de Mantenimiento - PTM © 2025
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom justify-content-end">
+                    <div class="d-flex gap-2">
+                        <button type="button" data-bs-dismiss="modal" class="btn-modal-guardar" id="btnGuardarOT">
+                            <i class="bi bi-floppy-fill me-1"></i> Guardar
+                        </button>
+                        <button type="button" class="btn-modal-guardar danger d-none" id="btnExportMantenimientoPDF">
+                            <i class="bi bi-file-earmark-pdf me-1"></i> Exportar PDF
+                        </button>
+                        <button type="button" class="btn-modal-guardar" id="btnImprimirOrden">
+                            <i class="bi bi-printer me-1"></i> Imprimir Orden
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="row m-0 pt-3">
+    <div class="col-12 col-xl-12 mb-4 mb-lg-0">
+        <div class="card shadow-lg">
+            <!-- Header Responsive -->
+            <div class="card-header text-dark">
+                <div class="row g-3 align-items-center">
+                    <div class="col-12">
+                        <h4 class="mb-0 text-color-logo">
+                            <i class="bi bi-tools me-2"></i>Programar Mantenimiento Correctivo
+                        </h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- ENCABEZADO DOCUMENTO -->
+                <div class="bg-white p-3 rounded shadow-sm mb-4 border">
+                    <div class="row align-items-center mb-2">
+                        <!-- Logo -->
+                        <div class="col-4 col-md-3 col-lg-2">
+                            <img src="~/Content/Images/LogoPTM.png"
+                                 alt="Logo PTM"
+                                 class="img-fluid"
+                                 style="max-height: 60px; width: auto;">
+                        </div>
+
+                        <!-- Título Central -->
+                        <div class="col-8 col-md-6 col-lg-8 text-center">
+                            <h6 class="fw-bold mb-0 text-uppercase" style="font-size: clamp(0.8rem, 2.5vw, 1rem);">
+                                PTM Mantenimiento
+                            </h6>
+                            <p class="text-primary fw-semibold mb-0" style="font-size: clamp(0.75rem, 2vw, 0.9rem);">
+                                Solicitud Mantenimiento Correctivo
+                            </p>
+                        </div>
+
+                        <!-- Fecha/Hora -->
+                        <div class="col-12 col-md-3 col-lg-2 text-center text-md-end mt-2 mt-md-0">
+                            <p class="mb-0 small"><strong>Fecha:</strong> <span id="fechaImpresion">26/09/2025</span></p>
+                            <p class="mb-0 small"><strong>Hora:</strong> <span id="horaImpresion">22:00:00</span></p>
+                            <p class="mb-0 small"><strong>Página:</strong> 1/1</p>
+                        </div>
+                    </div>
+                    <hr class="my-2">
+                </div>
+                <form id="formSolicitudCorrectivo" class="needs-validation" novalidate>
+                    <!-- Tipo de Mantenimiento -->
+                    <div class="mb-4">
+                        <div class="alert alert-info bg-light border-info d-flex align-items-start" role="alert">
+                            <i class="bi bi-gear-fill fs-4 me-3 text-info"></i>
+                            <div>
+                                <h6 class="fw-bold mb-1">
+                                    <i class="bi bi-wrench-adjustable me-1"></i>Tipo de Mantenimiento
+                                </h6>
+                                <p class="mb-1">MANTENIMIENTO MAQUINARIA E INSTALACIONES</p>
+                                <p class="mb-0">REPARACIÓN MANTENIMIENTO CORRECTIVO</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Datos de la Orden -->
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3 pb-2 border-bottom">
+                            <i class="bi bi-clipboard-data-fill me-2"></i>Datos de la Orden
+                        </h6>
+                        <div class="bg-white p-3 rounded shadow-sm border">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-4">
+                                    <label for="AreaTecnicaR" class="form-label fw-semibold">
+                                        <i class="bi bi-wrench me-1 text-muted"></i>Área Técnica
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-wrench"></i>
+                                        </span>
+                                        <select class="form-select" id="AreaTecnicaR" name="AreaTecnicaR" required autocomplete="off">
+                                            <option value="" selected>Seleccionar tipo...</option>
+                                            <option value="MANTENIMIENTO HERRAMENTALES">Mantenimiento Herramentales</option>
+                                            <option value="MANTENIMIENTO">Mantenimiento</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label for="Solicitante" class="form-label fw-semibold">
+                                        <i class="bi bi-person-check me-1 text-muted"></i>Solicitante
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group has-validation">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-person-fill"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="Solicitante" name="Solicitante" placeholder="Nombre del operador" required>
+                                        <div class="invalid-feedback">
+                                            ⚠️
+                                            Por favor ingrese el nombre del solicitante.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label for="NominaSolicitante" class="form-label fw-semibold">
+                                        <i class="bi bi-hash me-1 text-muted"></i>Número Nómina
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group has-validation">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-123"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="NominaSolicitante" name="NominaSolicitante" placeholder="# de nómina" required>
+                                        <div class="invalid-feedback">
+                                            ⚠️
+                                            Por favor ingrese el número de nómina.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Datos del Equipo -->
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3 pb-2 border-bottom">
+                            <i class="bi bi-gear-wide-connected me-2"></i>Datos del Equipo
+                        </h6>
+
+                        <div class="bg-white p-3 rounded shadow-sm border">
+                            <div class="row g-3">
+                                <!-- Buscar Equipo (NO CAMBIAR - ya está bien) -->
+                                <div class="col-12">
+                                    <label for="BuscarEquipo" class="form-label fw-semibold">
+                                        <i class="bi bi-search me-1 text-muted"></i>Asignar Equipo
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group has-validation">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-search"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="BuscarEquipo" name="BuscarEquipo" placeholder="Búsqueda mediante nombre equipo, descripción, doc pm.calidad, centro costos..." autocomplete="off">
+                                        <div class="invalid-feedback">
+                                            ⚠️ Por favor busque y seleccione un equipo.
+                                        </div>
+                                    </div>
+                                    <!-- Contenedor para sugerencias de autocomplete -->
+                                    <div id="sugerenciasEquipos" class="autocomplete-sugerencias"></div>
+                                </div>
+
+                                <!-- ✅ CLASE DE MANTENIMIENTO - NO CAMBIAR (no está duplicado) -->
+                                <div class="col-12 col-md-6">
+                                    <label for="ClaseMantenimiento" class="form-label fw-semibold">
+                                        <i class="bi bi-tag me-1 text-muted"></i>Clase de Mantenimiento
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group has-validation">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-tag-fill"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="ClaseMantenimiento" name="ClaseMantenimiento" value="Z10" required readonly>
+                                        <div class="invalid-feedback">
+                                            ⚠️ Por favor ingrese la clase de mantenimiento.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ✅ CAMBIO 1: FormNombreEquipo -->
+                                <div class="col-12 col-md-6">
+                                    <label for="FormNombreEquipo" class="form-label fw-semibold">
+                                        <i class="bi bi-gear me-1 text-muted"></i>Nombre Equipo
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group has-validation">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-gear-fill"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="FormNombreEquipo" name="NombreEquipo" placeholder="Nombre del equipo" required readonly>
+                                        <div class="invalid-feedback">
+                                            ⚠️ Por favor ingrese el nombre del equipo.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ✅ CAMBIO 2: FormDescEquipo -->
+                                <div class="col-12 col-md-6">
+                                    <label for="FormDescEquipo" class="form-label fw-semibold">
+                                        <i class="bi bi-card-text me-1 text-muted"></i>Descripción Equipo
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group has-validation">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-file-text"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="FormDescEquipo" name="DescripcionEquipo" placeholder="Descripción del equipo" required readonly>
+                                        <div class="invalid-feedback">
+                                            ⚠️ Por favor ingrese la descripción del equipo.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ✅ CAMBIO 3: FormCentroCostos -->
+                                <div class="col-12 col-md-6">
+                                    <label for="FormCentroCostos" class="form-label fw-semibold">
+                                        <i class="bi bi-currency-dollar me-1 text-muted"></i>Centro Costos
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group has-validation">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-cash-stack"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="FormCentroCostos" name="CentroCostos" placeholder="Centro de costos" required readonly>
+                                        <div class="invalid-feedback">
+                                            ⚠️ Por favor ingrese el centro de costos.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ✅ CAMBIO 4: FormNumDocPmCalidad -->
+                                <div class="col-12 col-md-6">
+                                    <label for="FormNumDocPmCalidad" class="form-label fw-semibold">
+                                        <i class="bi bi-file-earmark-text me-1 text-muted"></i>Número Doc PM Calidad
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group has-validation">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-file-earmark-text-fill"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="FormNumDocPmCalidad" name="NumeroDocPmCalidad" placeholder="# Doc pm.calidad" required readonly>
+                                        <div class="invalid-feedback">
+                                            ⚠️ Por favor ingrese el número de documento PM Calidad.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ✅ CAMBIO 5: FormLinea -->
+                                <div class="col-12 col-md-6">
+                                    <label for="FormLinea" class="form-label fw-semibold">
+                                        <i class="bi bi-boxes me-1 text-muted"></i>Línea
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group has-validation">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-diagram-3-fill"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="FormLinea" name="LineaProduccion" required readonly>
+                                        <div class="invalid-feedback">
+                                            ⚠️ Por favor ingrese la línea.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- TextoCorto - NO CAMBIAR (no está duplicado) -->
+                                <div class="col-12 col-md-12">
+                                    <label for="TextoCorto" class="form-label fw-semibold">
+                                        <i class="bi bi-list-ol me-1 text-muted"></i>Texto Corto
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group has-validation">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-chat-left-text"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="TextoCorto" name="TextoCorto" placeholder="Descripción corta de la falla" required>
+                                        <div class="invalid-feedback">
+                                            ⚠️ Por favor ingrese el texto corto descriptivo.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row pt-3">
+                                <div class="col-md-12">
+                                    <!-- Alerta container -->
+                                    <div id="alertaMCContainer"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- Botones -->
+                    <div class="mt-4 d-flex justify-content-end gap-2">
+                        <button type="submit" id="btnGuardarCorrectivo" class="btn-modal-guardar">
+                            <i class="bi bi-save-fill me-1"></i>Generar Solicitud
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Container para alerts de Bootstrap -->
+<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;"></div>
+<script src="~/Scripts/solicitud_mantenimiento_correctivo_refactor.js"></script>

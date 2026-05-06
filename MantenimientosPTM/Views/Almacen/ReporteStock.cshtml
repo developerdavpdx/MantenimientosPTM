@@ -1,0 +1,231 @@
+﻿@{
+    ViewBag.Title = "Reporte de Stock Almacén";
+}
+
+<link href="~/Content/SolicitudRefacciones.css" rel="stylesheet" />
+
+<!-- ══════════════════════════════════════════════
+     CARD PRINCIPAL
+══════════════════════════════════════════════ -->
+<div class="row m-0 ps-3 pt-4 pe-3 pb-4 position-relative header-custom">
+    <div class="col-12 p-0">
+        <div class="card shadow">
+
+            <!-- ── Card Header ── -->
+            <div class="card-header header-fijo-custom text-dark">
+                <div class="row g-3 align-items-center">
+
+                    <!-- Título -->
+                    <div class="col-12 col-sm-6 col-md-8 text-center text-sm-start">
+                        <h4 class="mb-0 text-color-logo">
+                            <i class="bi bi-box-seam me-2"></i>
+                            Reporte de Stock Almacén
+                        </h4>
+                    </div>
+                <!-- Botón Generar Solicitud y Exportar -->
+                <div class="col-12 col-sm-6 col-md-4 text-center text-sm-end d-flex gap-2 justify-content-end">
+                    <button type="button" class="btn btn-primary" id="btnGenerarSolicitudCompra" disabled>
+                        <i class="bi bi-cart-plus me-1"></i>
+                        Generar Solicitud Compra
+                        <span class="badge bg-light text-dark ms-1" id="contadorSeleccionados">0</span>
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnExportarExcel" title="Exportar a Excel">
+                        <i class="bi bi-file-earmark-excel me-1"></i>
+                        Exportar Excel
+                    </button>
+                </div>
+                </div>
+            </div>
+
+            <!-- ── Filtros + Tabla ── -->
+            <div class="row m-0 pt-3 pb-3">
+                <div class="col-12 mb-3 mb-lg-0">
+                    <form id="formFiltrosReporteStock" autocomplete="on">
+                        <div class="filtros-panel">
+                            <div class="filtros-titulo">
+                                <i class="bi bi-sliders" style="color:#0ea5d8"></i>
+                                Filtros de búsqueda
+                            </div>
+                            <div class="row g-2 align-items-end">
+                                <!-- Planta -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroPlanta">
+                                        <i class="bi bi-building"></i> Planta
+                                    </label>
+                                    <select class="filtro-input" id="FiltroPlanta" name="FiltroPlanta" disabled>
+                                        <option value="">Seleccione planta</option>
+                                        <option value="1">Planta 1</option>
+                                        <option value="2">Planta 2</option>
+                                    </select>
+                                </div>
+                                <!-- Código Artículo -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+                                    <label class="filtro-label" for="FiltroCodigoArticulo">
+                                        <i class="bi bi-upc"></i> Código Artículo
+                                    </label>
+                                    <input type="text" class="filtro-input"
+                                           id="FiltroCodigoArticulo" name="FiltroCodigoArticulo"
+                                           placeholder="Buscar código...">
+                                </div>
+                                <!-- Nombre Artículo -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+                                    <label class="filtro-label" for="FiltroNombreArticulo">
+                                        <i class="bi bi-tag"></i> Nombre Artículo
+                                    </label>
+                                    <input type="text" class="filtro-input"
+                                           id="FiltroNombreArticulo" name="FiltroNombreArticulo"
+                                           placeholder="Buscar nombre...">
+                                </div>
+                                <!-- Botones -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                                    <button type="button"
+                                            class="btn-filtro-aplicar"
+                                            id="btnAplicarFiltros"
+                                            title="Aplicar filtros">
+                                        <i class="bi bi-search"></i>
+                                        Buscar
+                                    </button>
+                                    <button type="button"
+                                            class="btn-filtro-limpiar"
+                                            id="btnLimpiarFiltros"
+                                            title="Limpiar filtros">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                        Limpiar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Tabla -->
+                    <div class="table-responsive small table-responsive-custom" id="tablaReporteStockContainer">
+                        <table class="table table-striped table-sm CustomTableResponsive" id="tablaReporteStock">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th><input type="checkbox" id="checkAll" title="Seleccionar todos"></th>
+                                    <th>Activo</th>
+                                    <th>Código Artículo</th>
+                                    <th>Nombre Artículo</th>
+                                    <th>UMI</th>
+                                    <th>Niveles Stock</th>
+                                    <th>Stock</th>
+                                    <th>Min</th>
+                                    <th>Max</th>
+                                    <th>Requis</th>
+                                    <th>Pedidos</th>
+                                    <th>Salida Prom. Mensual</th>
+                                    <th>Salida Máx. Mensual</th>
+                                    <th>Solicitar</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: GENERAR SOLICITUD DESDE STOCK -->
+<div class="modal fade" id="SolcitarModalStock" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-90">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-journal-arrow-up"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Generar Solicitud de Compra</div>
+                        <div class="modal-subtitle-custom">Artículos seleccionados del reporte de stock</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <!-- Body -->
+            <div class="modal-body-custom">
+                <form id="formGenerarRequisicionStock" class="needs-validation" novalidate>
+                    <!-- Artículos -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-box-seam-fill me-2"></i>Artículos Seleccionados
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped" id="tablaRequisicionArticulosStock">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Artículo</th>
+                                        <th>Cant. a Solicitar</th>
+                                        <th>Proveedor <span class="text-danger">*</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bodyRequisicionArticulosStock"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <hr class="divider-custom">
+                    <!-- Contabilización -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-building me-2"></i>Contabilización
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6" style="position: relative;">
+                                <label class="form-label-custom" for="SolDepStock">Departamento <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control-custom" id="SolDepStock" placeholder="Buscar departamento..." autocomplete="off">
+                                <div id="sugerenciasDepStock" class="autocomplete-centrocostos"></div>
+                                <input type="hidden" id="SolDepCodigoStock">
+                                <div class="modal-error-msg">⚠️ Ingresa el departamento.</div>
+                            </div>
+                            <div class="col-md-6" style="position: relative;">
+                                <label class="form-label-custom" for="SolProcesoStock">Proceso <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control-custom" id="SolProcesoStock" placeholder="Buscar proceso..." autocomplete="off">
+                                <div id="sugerenciasProcesoStock" class="autocomplete-centrocostos"></div>
+                                <input type="hidden" id="SolProcesoCodigoStock">
+                                <div class="modal-error-msg">⚠️ Ingresa el proceso.</div>
+                            </div>
+                            <div class="col-md-6" style="position: relative;">
+                                <label class="form-label-custom" for="SolGastosStock">Gastos <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control-custom" id="SolGastosStock" placeholder="Buscar gastos..." autocomplete="off">
+                                <div id="sugerenciasGastosStock" class="autocomplete-centrocostos"></div>
+                                <input type="hidden" id="SolGastosCodigoStock">
+                                <div class="modal-error-msg">⚠️ Ingresa gastos.</div>
+                            </div>
+                            <div class="col-md-6" style="position: relative;">
+                                <label class="form-label-custom" for="SolCedisStock">Cedis <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control-custom" id="SolCedisStock" placeholder="Buscar cedis..." autocomplete="off">
+                                <div id="sugerenciasCedisStock" class="autocomplete-centrocostos"></div>
+                                <input type="hidden" id="SolCedisCodigoStock">
+                                <div class="modal-error-msg">⚠️ Ingresa el cedis.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="alertSolicitudStockContainer"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <!-- Footer -->
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Cancelar
+                </button>
+                <button type="button" class="btn-modal-guardar" id="completeSolCompraStock">
+                    <i class="bi bi-floppy-fill me-1"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="~/Scripts/reporte_stock_refactor.js"></script>

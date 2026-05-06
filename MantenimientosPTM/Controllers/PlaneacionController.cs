@@ -1,0 +1,694 @@
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Sap.Data.Hana;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Data;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Web.Mvc;
+using static MantenimientosPTM.EmailNotificationService;
+
+namespace MantenimientosPTM.Controllers
+{
+    public class PlaneacionController : Controller
+    {
+        readonly LogicaPlaneacion Logic = new LogicaPlaneacion();
+
+        #region Views
+        public ActionResult Planeacion()
+        {
+            return View();
+        }
+        public ActionResult CalendarioPlaneacion()
+        {
+            return View();
+        }
+        #endregion
+
+        #region Endpoints
+        [HttpPost]
+        public JsonResult obtenerPlanesProgramados()
+        {
+            try
+            {
+                string draw = Request.Form["draw"];
+                string drawValue = !string.IsNullOrEmpty(draw) ? draw : "0";
+                int NroPeticion = Convert.ToInt32(drawValue);
+
+                string lenght = Request.Form["length"];
+                string lenghtValue = !string.IsNullOrEmpty(lenght) ? lenght : "10";
+                int CantidadRegistros = Convert.ToInt32(lenghtValue);
+
+                string start = Request.Form["start"];
+                string startValue = !string.IsNullOrEmpty(start) ? start : "0";
+                int OmitirRegistros = Convert.ToInt32(startValue);
+
+                string search = Request.Form["search[value]"];
+                string searchValue = !string.IsNullOrEmpty(search) ? search : "";
+                string FiltroBusqueda = searchValue;
+
+                string FiltroFechaInicio = Request.Form["FiltroFechaInicio"];
+                string FiltroFechaFin = Request.Form["FiltroFechaFin"];
+                string FiltroMesAnio = Request.Form["FiltroMesAnio"];
+                string FiltroLinea = Request.Form["FiltroLinea"];
+                string FiltroPlanta = Request.Form["FiltroPlanta"];
+                string FiltroProceso = Request.Form["FiltroProceso"];
+                string FiltroIdPlan = Request.Form["FiltroIdPlan"];
+
+                FiltroLinea = string.IsNullOrEmpty(FiltroLinea) ? null : FiltroLinea;
+                FiltroProceso = string.IsNullOrEmpty(FiltroProceso) ? null : FiltroProceso;
+
+                DateTime dtFechaInicio;
+                DateTime dtFechaFin;
+
+                if (string.IsNullOrEmpty(FiltroMesAnio))
+                {
+                    if (string.IsNullOrEmpty(FiltroFechaInicio) || string.IsNullOrEmpty(FiltroFechaFin))
+                    {
+                        DateTime hoy = DateTime.Now;
+                        dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1);
+                        dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1);
+                    }
+                    else
+                    {
+                        dtFechaInicio = DateTime.Parse(FiltroFechaInicio);
+                        dtFechaFin = DateTime.Parse(FiltroFechaFin);
+                    }
+                }
+                else
+                {
+                    string[] mesAnio = FiltroMesAnio.Split('-');
+                    int anio = int.Parse(mesAnio[0]);
+                    int mes = int.Parse(mesAnio[1]);
+                    dtFechaInicio = new DateTime(anio, mes, 1);
+                    dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1);
+                }
+
+                var parametros = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
+                {
+                    { "p_PLANTA",            (FiltroPlanta, ParameterDirection.Input, HanaDbType.Integer) },
+                    { "p_FECHA_INICIO",      (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date)    },
+                    { "p_FECHA_FIN",         (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date)    },
+                    { "p_LINEA_PRODUCCION",  (FiltroLinea,   ParameterDirection.Input, HanaDbType.Integer) },
+                    { "p_PROCESO",  (FiltroProceso,   ParameterDirection.Input, HanaDbType.Integer) },
+                    { "p_ID_PLAN",           (FiltroIdPlan,  ParameterDirection.Input, HanaDbType.Integer) }
+                };
+
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.SpPdxMTTOObtenerPlanesProduccion,
+                    parametros
+                );
+
+                // ── Deserializar filas planas del SP ─────────────────────────────────
+                List<AccesoDatosPlaneacion.PlanProduccion> filas = new List<AccesoDatosPlaneacion.PlanProduccion>();
+
+                if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
+                {
+                    filas = JsonConvert.DeserializeObject<List<AccesoDatosPlaneacion.PlanProduccion>>(resultHana.JsonResult);
+                }
+
+                // ✅ NUEVO — Agrupar filas por ID_PLAN e incrustar la bitácora
+                var planesAgrupados = AgruparPlanesConBitacora(filas);
+
+                // ── Paginación sobre los planes ya agrupados ──────────────────────────
+                int totalRegistrosFiltrados = planesAgrupados.Count;
+
+                var planesPaginados = planesAgrupados
+                    .Skip(OmitirRegistros)
+                    .Take(CantidadRegistros)
+                    .ToList();
+
+                var resultado = Json(new
+                {
+                    draw = NroPeticion,
+                    recordsTotal = totalRegistrosFiltrados,
+                    recordsFiltered = totalRegistrosFiltrados,
+                    data = planesPaginados,
+                    fechaInicio = dtFechaInicio.ToString("dd/MM/yyyy"),
+                    fechaFin = dtFechaFin.ToString("dd/MM/yyyy"),
+                    Status = "OK"
+                }, JsonRequestBehavior.AllowGet);
+
+                resultado.MaxJsonLength = 2147483644;
+                return resultado;
+            }
+            catch (Exception ex)
+            {
+                string MethodName = MethodBase.GetCurrentMethod().Name;
+                string ControllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
+                string msg = $"No es posible obtener los planes de producción, Error: ";
+
+                return Json(new
+                {
+                    draw = 0,
+                    recordsTotal = 0,
+                    recordsFiltered = 0,
+                    data = new List<object>(),
+                    error = msg + ex.Message
+                }, JsonRequestBehavior.AllowGet);
+            }
+        }
+        // ── Método auxiliar — mismo controller o en una clase helper ─────────────
+        private List<object> AgruparPlanesConBitacora(List<AccesoDatosPlaneacion.PlanProduccion> filas)
+        {
+            var map = new Dictionary<int, dynamic>();
+
+            foreach (var fila in filas)
+            {
+                if (!map.ContainsKey(fila.ID_PLAN))
+                {
+                    // Primera vez que aparece este plan — guardar datos base
+                    map[fila.ID_PLAN] = new
+                    {
+                        fila.ID_PLAN,
+                        fila.LINEA_PRODUCCION,
+                        fila.LINEA_PRODUCCION_DESC,
+                        fila.ID_PROCESO,
+                        fila.PROCESO,
+                        fila.ARTICULO,
+                        fila.ARTICULO_DESC,
+                        fila.CAPACIDAD,
+                        fila.DIA_INICIO_MANT_STR,
+                        fila.DIA_FIN_MANT_STR,
+                        fila.PRODUCCION_TEORICA,
+                        fila.PRODUCCION_REAL,
+                        fila.COMENTARIOS,
+                        fila.FECHA_PLAN_STRING,
+                        fila.FECHA_CREACION_STRING,
+                        fila.PLANTA,
+                        fila.ESTATUS,
+                        fila.ANIO_PLAN,
+                        fila.MES_PLAN,
+                        fila.DIAS_TOTALES,
+                        fila.ID_PARO,
+                        fila.FECHA_PARO,
+                        fila.COMENTARIOS_PARO,
+                        fila.TIENE_PARO_ACTIVO,
+                        fila.COLOR_EVENTO,
+                        BITACORA = new List<object>()   // ← se llenará abajo
+                    };
+                }
+
+                // Agregar entrada de bitácora si existe
+                if (fila.ID_BITACORA.HasValue)
+                {
+                    ((List<object>)map[fila.ID_PLAN].BITACORA).Add(new
+                    {
+                        fila.ID_BITACORA,
+                        fila.BIT_ACCION,
+                        fila.BIT_FECHA_MOVIMIENTO,
+                        fila.BIT_USUARIO,
+                        fila.NVO_LINEA_PRODUCCION,
+                        fila.NVO_PROCESO,
+                        fila.ID_NVO_PROCESO,
+                        fila.NVO_ARTICULO,
+                        fila.NVO_ARTICULO_DESC,
+                        fila.NVO_CAPACIDAD,
+                        fila.NVO_DIA_INICIO_MANT_STR,
+                        fila.NVO_DIA_FIN_MANT_STR,
+                        fila.NVO_PRODUCCION_TEORICA,
+                        fila.NVO_PRODUCCION_REAL,
+                        fila.NVO_COMENTARIOS,
+                        fila.NVO_FECHA_PLAN,
+                    });
+                }
+            }
+
+            return map.Values.Cast<object>().ToList();
+        }
+
+        [HttpPost]
+        public JsonResult obtenerOrdenesFabricacion()
+        {
+            try
+            {
+                // ✅ Parámetros de DataTables
+                string draw = Request.Form["draw"];
+                string drawValue = !string.IsNullOrEmpty(draw) ? draw : "0";
+                int NroPeticion = Convert.ToInt32(drawValue);
+
+                string lenght = Request.Form["length"];
+                string lenghtValue = !string.IsNullOrEmpty(lenght) ? lenght : "10";
+                int CantidadRegistros = Convert.ToInt32(lenghtValue);
+
+                string start = Request.Form["start"];
+                string startValue = !string.IsNullOrEmpty(start) ? start : "0";
+                int OmitirRegistros = Convert.ToInt32(startValue);
+
+                string search = Request.Form["search[value]"];
+                string searchValue = !string.IsNullOrEmpty(search) ? search : "";
+                string FiltroBusqueda = searchValue;
+
+                // ✅ Parámetros de filtros específicos para órdenes de fabricación
+                string FiltroDocEntry = Request.Form["FiltroDocEntry"];
+                string FiltroDocNum = Request.Form["FiltroDocNum"];
+                string FiltroItemCode = Request.Form["FiltroItemCode"];
+                string FiltroWarehouse = Request.Form["FiltroWarehouse"];
+                string FiltroStatus = Request.Form["FiltroStatus"];
+                string FiltroFechaInicio = Request.Form["FiltroFechaInicio"];
+                string FiltroFechaFin = Request.Form["FiltroFechaFin"];
+                string FiltroSerie = Request.Form["FiltroSerie"];
+                string FiltroPrioridad = Request.Form["FiltroPrioridad"];
+
+                // ✅ Parsear valores numéricos correctamente
+                int? docEntry = string.IsNullOrEmpty(FiltroDocEntry) ? (int?)null : Convert.ToInt32(FiltroDocEntry);
+                int? docNum = string.IsNullOrEmpty(FiltroDocNum) ? (int?)null : Convert.ToInt32(FiltroDocNum);
+                int? prioridad = string.IsNullOrEmpty(FiltroPrioridad) ? (int?)null : Convert.ToInt32(FiltroPrioridad);
+
+                // ✅ Si vienen filtros específicos (DocNum, DocEntry, ItemCode), NO usar fechas por defecto
+                bool tieneFiltrosEspecificos = !string.IsNullOrEmpty(FiltroDocNum) ||
+                                                !string.IsNullOrEmpty(FiltroDocEntry) ||
+                                                !string.IsNullOrEmpty(FiltroItemCode);
+
+                DateTime? dtFechaInicio = null;
+                DateTime? dtFechaFin = null;
+
+                if (!string.IsNullOrEmpty(FiltroFechaInicio) && !string.IsNullOrEmpty(FiltroFechaFin))
+                {
+                    // Usuario puso fechas manualmente
+                    dtFechaInicio = DateTime.Parse(FiltroFechaInicio);
+                    dtFechaFin = DateTime.Parse(FiltroFechaFin);
+                }
+                else if (!tieneFiltrosEspecificos)
+                {
+                    // ⚠️ SOLO si NO hay filtros específicos, usar últimos 30 días
+                    DateTime hoy = DateTime.Now;
+                    dtFechaInicio = hoy.AddDays(-30);
+                    dtFechaFin = hoy;
+                }
+                // Si hay filtros específicos y NO hay fechas, dtFechaInicio y dtFechaFin quedan en NULL
+
+                // ✅ Crear parámetros con los valores correctos (NULL o valor parseado)
+                var parametros = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
+                {
+                    { "P_DOC_ENTRY", (docEntry, ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_DOC_NUM", (docNum, ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_ITEM_CODE", (string.IsNullOrEmpty(FiltroItemCode) ? null : FiltroItemCode, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_WAREHOUSE", (string.IsNullOrEmpty(FiltroWarehouse) ? null : FiltroWarehouse, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_STATUS", (string.IsNullOrEmpty(FiltroStatus) ? null : FiltroStatus, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN", (dtFechaFin, ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_SERIE", (string.IsNullOrEmpty(FiltroSerie) ? null : FiltroSerie, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PRIORITY", (prioridad, ParameterDirection.Input, HanaDbType.Integer) }
+                };
+
+                // ✅ Ejecutar el stored procedure
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCConsultaOrdenesFabricacion, // ✅ Cambiar por tu constante
+                    parametros
+                );
+
+                // ✅ Obtener los datos desde HANA
+                List<AccesoDatosPlaneacion.OrdenFabricacion> ordenes = new List<AccesoDatosPlaneacion.OrdenFabricacion>();
+
+                if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
+                {
+                    ordenes = JsonConvert.DeserializeObject<List<AccesoDatosPlaneacion.OrdenFabricacion>>(resultHana.JsonResult);
+                }
+
+                // ✅ Aplicar filtro de búsqueda general (si viene del DataTable search)
+                if (!string.IsNullOrEmpty(FiltroBusqueda))
+                {
+                    ordenes = ordenes.Where(o =>
+                        o.DOC_NUM.ToString().Contains(FiltroBusqueda) ||
+                        (o.ITEM_CODE != null && o.ITEM_CODE.ToUpper().Contains(FiltroBusqueda.ToUpper())) ||
+                        (o.ITEM_NAME != null && o.ITEM_NAME.ToUpper().Contains(FiltroBusqueda.ToUpper())) ||
+                        (o.STATUS_DESC != null && o.STATUS_DESC.ToUpper().Contains(FiltroBusqueda.ToUpper())) ||
+                        (o.ALMACEN_NOMBRE != null && o.ALMACEN_NOMBRE.ToUpper().Contains(FiltroBusqueda.ToUpper()))
+                    ).ToList();
+                }
+
+                // ✅ Total de registros filtrados
+                int totalRegistrosFiltrados = ordenes.Count();
+
+                // ✅ Aplicar paginación
+                var ordenesPaginadas = ordenes.Skip(OmitirRegistros).Take(CantidadRegistros).ToList();
+
+                // ✅ RETORNAR formato DataTables
+                var resultado = Json(new
+                {
+                    draw = NroPeticion,
+                    recordsTotal = totalRegistrosFiltrados,
+                    recordsFiltered = totalRegistrosFiltrados,
+                    data = ordenesPaginadas,
+                    fechaInicio = dtFechaInicio?.ToString("dd/MM/yyyy"),
+                    fechaFin = dtFechaFin?.ToString("dd/MM/yyyy")
+                }, JsonRequestBehavior.AllowGet);
+
+                resultado.MaxJsonLength = 2147483644;
+
+                return resultado;
+            }
+            catch (Exception ex)
+            {
+                string MethodName = MethodBase.GetCurrentMethod().Name;
+                string ControllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
+                string msg = $"No es posible obtener las órdenes de fabricación en {MethodName} de {ControllerName}. Error: ";
+
+                return Json(new
+                {
+                    draw = 0,
+                    recordsTotal = 0,
+                    recordsFiltered = 0,
+                    data = new List<object>(),
+                    error = msg + ex.Message
+                }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        [HttpGet]
+        public JsonResult BuscarArticulo(string query, string Usuario)
+        {
+            try
+            {
+                // ✅ Validar que venga el parámetro
+                if (string.IsNullOrEmpty(query))
+                {
+                    return Json(new List<object>(), JsonRequestBehavior.AllowGet);
+                }
+
+                // ✅ Preparar parámetros para el SP
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_USUARIO", (Usuario, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                // ✅ Ejecutar el Stored Procedure
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCConsultaArticulos, // ⬅️ Nombre de tu SP
+                    parameters
+                );
+
+                // ✅ Deserializar resultado
+                List<AccesoDatosPlaneacion.Articulos> equipos = new List<AccesoDatosPlaneacion.Articulos>();
+
+                if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
+                {
+                    equipos = JsonConvert.DeserializeObject<List<AccesoDatosPlaneacion.Articulos>>(resultHana.JsonResult);
+                }
+
+                // ✅ Retornar JSON
+                return Json(equipos, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                string MethodName = MethodBase.GetCurrentMethod().Name;
+                string ControllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
+                string msg = $"Error al buscar articulos en {MethodName} de {ControllerName}. Error: {ex.Message}";
+
+                // ✅ Log del error (si tienes sistema de logs)
+                // Logger.Error(msg);
+
+                // ✅ Retornar lista vacía en caso de error
+                return Json(new List<object>(), JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult InsertarPlanProduccion()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            AccesoDatosPlaneacion.PlanProduccion RequestData;
+            try
+            {
+                // Leer el cuerpo de la solicitud JSON
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+                    // Deserializar JSON al modelo PlanProduccion
+                    RequestData = JsonConvert.DeserializeObject<AccesoDatosPlaneacion.PlanProduccion>(jsonData);
+                }
+
+                // 🔥 CONVERTIR FECHA AL FORMATO CORRECTO ANTES DE ENVIAR A HANA
+                if (RequestData.FECHA_PLAN.HasValue)
+                {
+                    // Formato: YYYY-MM-DD HH:mm:ss
+                    RequestData.FECHA_PLAN_STRING = RequestData.FECHA_PLAN.Value.ToString("yyyy-MM-dd HH:mm:ss");
+                }
+                else
+                {
+                    // Si no hay fecha, usar la fecha actual
+                    RequestData.FECHA_PLAN_STRING = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                }
+
+                // Convertir modelo a parámetros HANA
+                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
+                var excludedParams = new[] {
+                // — Campos que no usa el SP de Insertar —
+                "P_LINEA_PRODUCCION_DESC",
+                "P_ID_PLAN",
+                "P_ID_PROCESO",
+                "P_ARTICULO_DESC",
+                "P_FECHA_CREACION",
+                "P_FECHA_PLAN",
+                "P_ESTATUS",
+                "P_ANIO_PLAN",
+                "P_MES_PLAN",
+                "P_DIAS_TOTALES",
+                "P_FECHA_CREACION_STRING",
+
+                // — Campos STR / INPUT (frontend only) —
+                "P_DIA_INICIO_MANT_STR",
+                "P_DIA_FIN_MANT_STR",
+                "P_DIA_INICIO_MANT_INPUT",
+                "P_DIA_FIN_MANT_INPUT",
+
+                // — Campos de paro —
+                "P_ID_PARO",
+                "P_FECHA_PARO",
+                "P_COMENTARIOS_PARO",
+                "P_TIENE_PARO_ACTIVO",
+                "P_COLOR_EVENTO",
+
+                // — Campos de bitácora —
+                "P_ID_BITACORA",
+                "P_BIT_ACCION",
+                "P_BIT_FECHA_MOVIMIENTO",
+                "P_BIT_USUARIO",
+
+                "P_NVO_LINEA_PRODUCCION",
+                "P_NVO_PROCESO",
+                "P_ID_NVO_PROCESO",
+                "P_NVO_ARTICULO",
+                "P_NVO_ARTICULO_DESC",
+                "P_NVO_CAPACIDAD",
+
+                "P_NVO_DIA_INICIO_MANT",
+                "P_NVO_DIA_FIN_MANT",
+
+                "P_NVO_DIA_INICIO_MANT_STR",
+                "P_NVO_DIA_FIN_MANT_STR",
+
+                "P_NVO_PRODUCCION_TEORICA",
+                "P_NVO_PRODUCCION_REAL",
+                "P_NVO_COMENTARIOS",
+                "P_NVO_FECHA_PLAN"
+            };
+                var parameters = allparameters
+                    .Where(p => !excludedParams.Contains(p.Key))
+                    .ToDictionary(p => p.Key, p => p.Value);
+
+                // Ejecutar stored procedure para insertar plan
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertarPlanProduccion, parameters);
+
+                if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                {
+                    // Construir respuesta JSON
+                    jsonResponse.Status = "NO";
+                    jsonResponse.Message = $"No fue posible insertar el plan de producción: {resultHana.JsonResult}";
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse);
+                }
+
+                // Obtener resultado del stored
+                var nuevoId = JArray.Parse(resultHana.JsonResult);
+                string estatus = (string)nuevoId[0]["ESTATUS"];
+                string mensaje = (string)nuevoId[0]["MENSAJE"];
+
+                // Construir respuesta JSON
+                jsonResponse.Status = estatus.Contains("DUPLICADO") ? "NO" : "SI";
+                jsonResponse.Message = estatus.Contains("DUPLICADO") ? mensaje : "Plan insertado correctamente.";
+                jsonResponse.Data = resultHana.JsonResult;
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible insertar el plan de producción: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult ActualizarPlanProduccion()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            AccesoDatosPlaneacion.PlanProduccion RequestData;
+            try
+            {
+                // Leer el cuerpo de la solicitud JSON
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    RequestData = JsonConvert.DeserializeObject<AccesoDatosPlaneacion.PlanProduccion>(jsonData);
+                }
+
+                // Validar que venga el ID del plan a actualizar
+                if (RequestData.ID_PLAN == 0)
+                    throw new Exception("No se recibió el ID del plan a actualizar.");
+
+                // Convertir FECHA_PLAN al formato correcto antes de enviar a HANA
+                if (RequestData.FECHA_PLAN.HasValue)
+                {
+                    RequestData.FECHA_PLAN_STRING = RequestData.FECHA_PLAN.Value.ToString("yyyy-MM-dd HH:mm:ss");
+                }
+                else
+                {
+                    RequestData.FECHA_PLAN_STRING = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                }
+
+                // Convertir modelo a parámetros HANA
+                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
+
+                // Excluir los mismos campos que en Insertar + mantener P_ID_PLAN
+                var excludedParams = new[] {
+                // — Campos que no usa el SP de Insertar —
+                "P_LINEA_PRODUCCION_DESC",
+                "P_ID_PROCESO",
+                "P_ARTICULO_DESC",
+                "P_FECHA_CREACION",
+                "P_FECHA_PLAN",
+                "P_ESTATUS",
+                "P_ANIO_PLAN",
+                "P_MES_PLAN",
+                "P_DIAS_TOTALES",
+                "P_FECHA_CREACION_STRING",
+
+                // — Campos STR / INPUT (frontend only) —
+                "P_DIA_INICIO_MANT_STR",
+                "P_DIA_FIN_MANT_STR",
+                "P_DIA_INICIO_MANT_INPUT",
+                "P_DIA_FIN_MANT_INPUT",
+
+                // — Campos de paro —
+                "P_ID_PARO",
+                "P_FECHA_PARO",
+                "P_COMENTARIOS_PARO",
+                "P_TIENE_PARO_ACTIVO",
+                "P_COLOR_EVENTO",
+
+                // — Campos de bitácora —
+                "P_ID_BITACORA",
+                "P_BIT_ACCION",
+                "P_BIT_FECHA_MOVIMIENTO",
+                "P_BIT_USUARIO",
+
+                "P_NVO_LINEA_PRODUCCION",
+                "P_NVO_PROCESO",
+                "P_ID_NVO_PROCESO",
+                "P_NVO_ARTICULO",
+                "P_NVO_ARTICULO_DESC",
+                "P_NVO_CAPACIDAD",
+
+                "P_NVO_DIA_INICIO_MANT",
+                "P_NVO_DIA_FIN_MANT",
+
+                "P_NVO_DIA_INICIO_MANT_STR",
+                "P_NVO_DIA_FIN_MANT_STR",
+
+                "P_NVO_PRODUCCION_TEORICA",
+                "P_NVO_PRODUCCION_REAL",
+                "P_NVO_COMENTARIOS",
+                "P_NVO_FECHA_PLAN"
+            };
+
+                var parameters = allparameters
+                    .Where(p => !excludedParams.Contains(p.Key))
+                    .ToDictionary(p => p.Key, p => p.Value);
+
+                // Ejecutar stored procedure de actualización
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCActualizarPlanProduccion,
+                    parameters
+                );
+
+                if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                {
+                    jsonResponse.Status = "NO";
+                    jsonResponse.Message = $"No fue posible actualizar el plan: {resultHana.JsonResult}";
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse);
+                }
+
+                string errorEmail;
+
+                var changes = BuildChanges(RequestData);
+
+
+                // ✅ Preparar parámetros para el SP
+                var parametersEmail = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_PLANTA", (RequestData.PLANTA, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                // Ejecutar stored procedure de actualización
+                var resultHanaEmails = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetUsuariosXPlanta,
+                    parametersEmail
+                );
+
+                //Correos para notificaciones por cambio de plan
+                JArray ListaEmails = JArray.Parse(resultHanaEmails.JsonResult);
+                List<string> emails = new List<string>(); 
+
+                foreach (var itemEmail in ListaEmails)
+                {
+                    emails.Add(itemEmail["Email"].ToString());
+                }
+
+                var email = new EmailRequest
+                {
+                    To = emails,
+                    Subject = "📢 Plan de Producción Actualizado",
+                    Title = "Plan de Producción Actualizado",
+                    Message = "Se realizaron cambios en el plan de producción.",
+                    Data = changes
+                };
+
+                Send(email, out errorEmail);
+
+                var resultado = JArray.Parse(resultHana.JsonResult);
+                string estatus = (string)resultado[0]["ESTATUS"];
+                string mensaje = (string)resultado[0]["MENSAJE"];
+
+                // DUPLICADO o NO_EXISTE → respuesta negativa
+                jsonResponse.Status = (estatus == "O") ? "SI" : "NO";
+                jsonResponse.Message = (estatus == "O") ? "Plan actualizado correctamente." : mensaje;
+                jsonResponse.Data = resultHana.JsonResult;
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible actualizar el plan de producción: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+        #endregion
+    }
+}

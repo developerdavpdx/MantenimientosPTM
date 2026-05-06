@@ -1,0 +1,1106 @@
+﻿/* =====================================================
+   CARDS PLAN DE PRODUCCIÓN — PTM
+   Pega este CSS en tu archivo de estilos o en un <style>
+   ===================================================== */
+
+:root {
+    --ptm-blue: #1565C0;
+    --ptm-blue-dark: #0D47A1;
+    --ptm-blue-mid: #1976D2;
+    --ptm-blue-light: #E3F2FD;
+    --ptm-blue-soft: #BBDEFB;
+    --bg: #F4F6F9;
+    --surface: #FFFFFF;
+    --border: #DDEAF7;
+    --border-dark: #B3CDE8;
+    --text: #1A2740;
+    --text-muted: #6B84A3;
+    --success: #2E7D32;
+    --success-bg: #E8F5E9;
+    --success-border: #A5D6A7;
+    --warning: #E65100;
+    --warning-bg: #FFF3E0;
+    --warning-border: #FFCC80;
+    --danger: #C62828;
+    --danger-bg: #FFEBEE;
+    --danger-border: #EF9A9A;
+    --shadow: 0 2px 8px rgba(21,101,192,.10);
+    --shadow-hover: 0 8px 28px rgba(21,101,192,.18);
+    --radius: 10px;
+}
+
+/* ─── Grid ─── */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.1rem;
+}
+
+/* ─── Card base ─── */
+.prod-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform .2s ease, box-shadow .2s ease;
+    animation: fadeUpCard .3s ease both;
+}
+
+    .prod-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    /* tira de color según estatus */
+    .prod-card::before {
+        content: '';
+        display: block;
+        height: 4px;
+        background: var(--ptm-blue-mid);
+    }
+
+    .prod-card.estatus-C::before {
+        background: var(--success);
+    }
+
+    .prod-card.estatus-P::before {
+        background: var(--warning);
+    }
+
+    .prod-card.estatus-X::before {
+        background: var(--danger);
+    }
+
+/* ─── Header ─── */
+.card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .85rem 1rem .75rem;
+    background: var(--ptm-blue-light);
+    border-bottom: 1px solid var(--ptm-blue-soft);
+}
+
+.linea-info {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+}
+
+.linea-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: var(--ptm-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.linea-nombre {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--ptm-blue-dark);
+    line-height: 1.2;
+}
+
+.linea-sub {
+    font-size: .7rem;
+    color: var(--text-muted);
+}
+
+.mes-pill {
+    font-size: .7rem;
+    font-weight: 500;
+    background: var(--ptm-blue);
+    color: #fff;
+    padding: .3rem .7rem;
+    border-radius: 20px;
+    white-space: nowrap;
+    letter-spacing: .5px;
+}
+
+/* ─── Body ─── */
+.card-body {
+    padding: .9rem 1rem;
+}
+
+.rango-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    background: var(--bg);
+    border: 1px solid var(--border-dark);
+    border-radius: 6px;
+    padding: .28rem .65rem;
+    font-size: .7rem;
+    color: var(--text-muted);
+    margin-bottom: .85rem;
+}
+
+    .rango-tag i {
+        color: var(--ptm-blue-mid);
+    }
+
+/* stats */
+.stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .7rem;
+    margin-bottom: .85rem;
+}
+
+.stat-box {
+    border-radius: 8px;
+    padding: .6rem .8rem;
+    border: 1px solid var(--border);
+}
+
+    .stat-box.teorica {
+        background: var(--ptm-blue-light);
+        border-color: var(--ptm-blue-soft);
+    }
+
+    .stat-box.real {
+        background: var(--success-bg);
+        border-color: var(--success-border);
+    }
+
+.stat-label {
+    font-size: .67rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: .2rem;
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+}
+
+    .stat-label i.teorica-icon {
+        color: var(--ptm-blue);
+    }
+
+    .stat-label i.real-icon {
+        color: var(--success);
+    }
+
+.stat-value {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+    .stat-value.real {
+        color: var(--success);
+    }
+
+.stat-unit {
+    font-size: .65rem;
+    color: var(--text-muted);
+    margin-left: 2px;
+}
+
+/* progress */
+.progress-section {
+    margin-bottom: .85rem;
+}
+
+.progress-labels {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: .72rem;
+    color: var(--text-muted);
+    margin-bottom: .3rem;
+}
+
+    .progress-labels strong {
+        font-size: .82rem;
+        color: var(--text);
+    }
+
+.progress-track {
+    height: 8px;
+    background: var(--bg);
+    border-radius: 99px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width .7s cubic-bezier(.4,0,.2,1);
+}
+
+.fill-ok {
+    background: linear-gradient(90deg,#43A047,#66BB6A);
+}
+
+.fill-warn {
+    background: linear-gradient(90deg,#EF6C00,#FFA726);
+}
+
+.fill-bad {
+    background: linear-gradient(90deg,#C62828,#EF5350);
+}
+
+.fill-over {
+    background: linear-gradient(90deg,#00838F,#26C6DA);
+}
+
+/* comment */
+.comment-row {
+    display: flex;
+    gap: .5rem;
+    align-items: flex-start;
+    padding: .55rem .7rem;
+    background: var(--bg);
+    border-radius: 7px;
+    border-left: 3px solid var(--ptm-blue-soft);
+    font-size: .78rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+    .comment-row i {
+        color: var(--ptm-blue-mid);
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+/* ─── Footer ─── */
+.card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: end;
+    padding: .6rem 1rem;
+    border-top: 1px solid var(--border);
+    background: #FAFCFF;
+}
+
+.estatus-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    border-radius: 20px;
+    padding: .25rem .7rem;
+    border: 1px solid;
+}
+
+    .estatus-chip .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+    }
+
+.chip-C {
+    color: var(--success);
+    background: var(--success-bg);
+    border-color: var(--success-border);
+}
+
+    .chip-C .dot {
+        background: var(--success);
+    }
+
+.chip-P {
+    color: var(--warning);
+    background: var(--warning-bg);
+    border-color: var(--warning-border);
+}
+
+    .chip-P .dot {
+        background: var(--warning);
+    }
+
+.chip-X {
+    color: var(--danger);
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
+}
+
+    .chip-X .dot {
+        background: var(--danger);
+    }
+
+.chip-O {
+    color: #E65100;
+    background: #FFF3E0;
+    border-color: #FFCC80;
+}
+
+    .chip-O .dot {
+        background: #E65100;
+    }
+/* action buttons */
+.actions {
+    display: flex;
+    gap: .4rem;
+}
+
+.btn-act {
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    transition: all .15s ease;
+}
+
+    .btn-act:hover {
+        transform: scale(1.08);
+    }
+
+    .btn-act.view:hover {
+        background: var(--ptm-blue-light);
+        color: var(--ptm-blue);
+        border-color: var(--ptm-blue-soft);
+    }
+
+    .btn-act.edit:hover {
+        background: #FFF8E1;
+        color: #F57F17;
+        border-color: #FFE082;
+    }
+
+    .btn-act.del:hover {
+        background: var(--danger-bg);
+        color: var(--danger);
+        border-color: var(--danger-border);
+    }
+
+/* ─── Skeleton loader ─── */
+/*.skeleton-card {
+    border-radius: var(--radius);
+    height: 280px;
+    border: 1px solid var(--border);
+    background: linear-gradient(90deg,#f0f4f8 25%,#e0eaf5 50%,#f0f4f8 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}*/
+
+/* ─── Empty state ─── */
+.cards-empty {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+}
+
+    .cards-empty i {
+        font-size: 3rem;
+        color: var(--ptm-blue-soft);
+        display: block;
+        margin-bottom: 1rem;
+    }
+
+/* ─── Paginación ─── */
+#cardsPlaneacionPaginacion {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: .4rem;
+    margin-top: 1.25rem;
+    flex-wrap: wrap;
+    font-size: .8rem;
+}
+
+.pag-info {
+    color: var(--text-muted);
+    margin-right: .5rem;
+    font-size: .78rem;
+}
+
+.pag-btn {
+    height: 32px;
+    min-width: 32px;
+    padding: 0 .6rem;
+    background: var(--surface);
+    border: 1px solid var(--border-dark);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .15s;
+    font-size: .78rem;
+}
+
+    .pag-btn:hover:not(:disabled) {
+        background: var(--ptm-blue-light);
+        border-color: var(--ptm-blue);
+        color: var(--ptm-blue);
+    }
+
+    .pag-btn.active {
+        background: var(--ptm-blue);
+        color: #fff;
+        border-color: var(--ptm-blue);
+        font-weight: 600;
+    }
+
+    .pag-btn:disabled {
+        opacity: .35;
+        cursor: default;
+    }
+
+/* ─── Animación entrada ─── */
+@keyframes fadeUpCard {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =====================================================
+   NUEVOS ESTILOS — pega esto al final de cards-planeacion.css
+   ===================================================== */
+
+/* ─── Banner de paro activo ─── */
+.paro-banner {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    background: #FFF0F0;
+    border-bottom: 1px solid var(--danger-border);
+    padding: .45rem 1rem;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--danger);
+    letter-spacing: .3px;
+}
+
+    .paro-banner i {
+        font-size: 1rem;
+        flex-shrink: 0;
+        animation: pulso 1.4s ease-in-out infinite;
+    }
+
+@keyframes pulso {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .4;
+    }
+}
+
+/* =====================================================
+   NUEVOS ESTILOS — pega esto al final de cards-planeacion.css
+   ===================================================== */
+
+/* ─── Banner de paro activo ─── */
+.paro-banner {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    background: #FFF0F0;
+    border-bottom: 1px solid var(--danger-border);
+    padding: .45rem 1rem;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--danger);
+    letter-spacing: .3px;
+}
+
+    .paro-banner i {
+        font-size: 1rem;
+        flex-shrink: 0;
+        animation: pulso 1.4s ease-in-out infinite;
+    }
+
+@keyframes pulso {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .4;
+    }
+}
+
+/* Card con paro */
+.prod-card.tiene-paro {
+    box-shadow: 0 2px 8px rgba(198,40,40,.18), 0 0 0 1px var(--danger-border);
+}
+
+    .prod-card.tiene-paro:hover {
+        box-shadow: 0 8px 28px rgba(198,40,40,.25), 0 0 0 1px var(--danger);
+    }
+
+.linea-icon-paro {
+    background: var(--danger) !important;
+}
+
+/* ─── Tags (rango + proceso) ─── */
+.card-tags-row {
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+    margin-bottom: .75rem;
+}
+
+.tag-label {
+    font-weight: 600;
+    color: var(--text);
+    margin-right: 1px;
+}
+/* Rango y proceso ocupan todo el ancho */
+.rango-tag,
+.proceso-tag {
+    width: 100%;
+    justify-content: flex-start;
+}
+
+.proceso-tag {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    background: #EDE7F6;
+    border: 1px solid #CE93D8;
+    border-radius: 6px;
+    padding: .28rem .65rem;
+    font-size: .7rem;
+    color: #6A1B9A;
+    font-weight: 500;
+}
+
+    .proceso-tag i {
+        color: #8E24AA;
+    }
+
+/* ─── Info badge rows (Artículo / Capacidad) ─── */
+.info-badge-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    padding: .45rem .7rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    margin-bottom: .5rem;
+}
+
+.info-badge-label {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+    .info-badge-label i {
+        color: var(--ptm-blue-mid);
+        font-size: .8rem;
+    }
+
+.info-badge-value {
+    font-size: .78rem;
+    color: var(--text);
+    text-align: right;
+    line-height: 1.3;
+}
+
+    .info-badge-value.highlight {
+        font-weight: 700;
+        color: var(--ptm-blue);
+        font-size: .85rem;
+    }
+
+        .info-badge-value.highlight small {
+            font-weight: 400;
+            color: var(--text-muted);
+            font-size: .7rem;
+        }
+
+/* ─── Sublabel debajo del valor en stat-box ─── */
+.stat-sublabel {
+    font-size: .63rem;
+    color: var(--text-muted);
+    margin-top: .15rem;
+    letter-spacing: .3px;
+}
+
+
+/* ============================================================
+   MODAL DETALLE PLAN — estilos NUEVOS
+   Solo agrega esto a tu CSS existente (cards-planeacion.css)
+   Todo lo demás ya lo tienes: stat-box, progress, estatus-chip,
+   btn-act, paro-banner, info-badge-row, card-tags-row, etc.
+   ============================================================ */
+
+/* ── Contenedor del modal ─────────────────────────────────── */
+.ept-modal-content {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    font-family: 'DM Sans', sans-serif;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Header oscuro ────────────────────────────────────────── */
+.ept-modal-header {
+    background: #1a2035;
+    padding: 18px 20px 16px;
+    position: relative;
+    border-bottom: 2px solid rgba(14, 165, 216, 0.3);
+    flex-shrink: 0;
+}
+
+.ept-header-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Reutiliza .linea-icon de cards pero sobreescribe el color */
+.ept-modal-header .linea-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1a6fbd, #0ea5d8);
+    font-size: 1.2rem;
+    box-shadow: 0 4px 12px rgba(14, 165, 216, 0.4);
+    flex-shrink: 0;
+}
+
+    .ept-modal-header .linea-icon.linea-icon-paro {
+        background: linear-gradient(135deg, #ef4444, #f97316) !important;
+    }
+
+.ept-header-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ept-linea-nombre {
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Reutiliza .linea-sub de cards pero en header oscuro */
+.ept-modal-header .linea-sub {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    margin-top: 1px;
+}
+
+/* Reutiliza .mes-pill de cards pero versión outline */
+.ept-modal-header .mes-pill {
+    background: rgba(14, 165, 216, 0.15);
+    border: 1px solid rgba(14, 165, 216, 0.4);
+    color: #0ea5d8;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.ept-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: #94a3b8;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer !important;
+    transition: background 0.2s, color 0.2s;
+    font-size: 0.8rem;
+}
+
+    .ept-close:hover {
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+    }
+
+/* ── Body ─────────────────────────────────────────────────── */
+.ept-body {
+    background: #f8fafc;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+}
+
+/* ── Footer ───────────────────────────────────────────────── */
+.ept-footer {
+    background: #fff;
+    border-top: 1px solid #e2e8f0;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.ept-btn-cerrar {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    border-radius: 8px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+    .ept-btn-cerrar:hover {
+        background: #e2e8f0;
+        color: #1e293b;
+    }
+
+
+/* ══════════════════════════════════════════════════
+   BITÁCORA TIMELINE
+══════════════════════════════════════════════════ */
+
+.bitacora-wrap {
+    padding-top: 12px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+/* — Botón toggle — */
+.bit-toggle-btn {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 5px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background .18s;
+}
+
+    .bit-toggle-btn:hover {
+        background: #f1f5f9;
+    }
+
+.bit-toggle-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .78rem;
+    font-weight: 700;
+    color: #64748b;
+}
+
+    .bit-toggle-left .bi {
+        font-size: .82rem;
+    }
+
+.bit-toggle-right {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.bit-count-pill {
+    background: #e0e7ff;
+    color: #4338ca;
+    font-size: .67rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    letter-spacing: .02em;
+}
+
+.bit-chevron {
+    font-size: .72rem;
+    color: #94a3b8;
+    transition: transform .22s ease;
+}
+
+/* — Timeline container — */
+.bit-timeline {
+    display: none; /* ✅ oculto por defecto */
+    flex-direction: column;
+    margin-top: 12px;
+    padding: 0 4px 4px 4px;
+}
+
+/* ✅ Solo se muestra cuando data-open="true" */
+.bitacora-wrap[data-open="true"] .bit-timeline {
+    display: flex;
+    flex-direction: column; /* ✅ vertical, no horizontal */
+}
+
+.bit-body {
+    flex: 1;
+    min-width: 0;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    margin-right: 4px;
+}
+
+
+/* — Cada ítem del timeline — */
+.bit-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+/* Columna izquierda: dot + línea */
+.bit-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 26px;
+}
+
+.bit-dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: .7rem;
+    flex-shrink: 0;
+    z-index: 1;
+}
+
+.bit-line {
+    width: 2px;
+    flex: 1;
+    min-height: 14px;
+    background: #e2e8f0;
+    margin: 3px 0;
+}
+
+/* Colores del dot por acción */
+.bit-create .bit-dot {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.bit-update .bit-dot {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.bit-delete .bit-dot {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* — Cuerpo del ítem — */
+.bit-body {
+    flex: 1;
+    min-width: 0;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+}
+
+.bit-body-last {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+/* Header del ítem */
+.bit-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+
+.bit-chip {
+    font-size: .67rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: .02em;
+}
+
+.bit-create .bit-chip {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.bit-update .bit-chip {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.bit-delete .bit-chip {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.bit-reciente {
+    font-size: .62rem;
+    background: #fef9c3;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+/* Meta: usuario + fecha */
+.bit-meta {
+    display: flex;
+    gap: 10px;
+    font-size: .69rem;
+    color: #64748b;
+    flex-wrap: wrap;
+    margin-bottom: 2px;
+}
+
+    .bit-meta i {
+        margin-right: 2px;
+    }
+
+/* Campos de valores */
+.bit-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 7px;
+    padding-top: 7px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.bit-field.full {
+    grid-column: 1 / -1;
+}
+
+.bit-field.medium {
+    grid-column: span 2;
+}
+
+.bit-field {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    padding: 4px 9px;
+    min-width: 90px;
+    flex: 1;
+    transition: all .15s ease;
+}
+
+    .bit-field:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+.bit-field-label {
+    font-size: .59rem;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 2px;
+}
+
+    .bit-field-label .bi {
+        margin-right: 2px;
+    }
+
+.bit-field-val {
+    font-size: .78rem;
+    font-weight: 700;
+    color: #1e3a5f;
+}
+
+.plan-original-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: .7rem;
+    font-weight: 700;
+    color: #64748b;
+    background: #f1f5f9;
+    border: 1px dashed #cbd5e1;
+    border-radius: 999px;
+    padding: 3px 10px;
+    margin-bottom: 8px;
+    letter-spacing: .02em;
+}
+
+    .plan-original-badge i {
+        color: #94a3b8;
+        font-size: .72rem;
+    }
+
+
+
+.articulo-desc-text {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-style: italic;
+}
+
+.desc-articulo {
+    font-size: .75rem;
+    font-style: italic;
+    color: #475569;
+    line-height: 1.25;
+}

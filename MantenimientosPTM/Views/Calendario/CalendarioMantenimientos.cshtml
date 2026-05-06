@@ -1,0 +1,395 @@
+﻿@{
+    ViewBag.Title = "Calendario de Mantenimientos";
+}
+
+<link href="~/Content/CalendarioMantenimientoPreventivo.css" rel="stylesheet" />
+
+<main aria-labelledby="title">
+    <div class="ps-2 pe-2 pt-3 pb-3">
+        <div class="row m-0 main-container position-relative header-custom">
+            <div class="col-12">
+                <div class="card shadow">
+                    <!-- HEADER DEL CARD -->
+                    <div class="card-header header-fijo-custom text-dark">
+                        <div class="row g-3 align-items-center">
+                            <!-- Título -->
+                            <div class="col-12">
+                                <h4 class="mb-0 text-color-logo">
+                                    <i class="bi bi-calendar-event me-2"></i>Programación de Mantenimientos
+                                </h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BODY DEL CARD CON FILTROS -->
+                    <div class="card-body">
+                        <div class="filtros-panel">
+
+                            <div class="filtros-titulo">
+                                <i class="bi bi-sliders" style="color:#0ea5d8"></i>
+                                Filtros de búsqueda
+                            </div>
+
+                            <div class="row g-2 align-items-end">
+
+                                <!-- Tipo de Mantenimiento -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroTipoMantenimiento">
+                                        <i class="bi bi-gear-fill"></i> Tipo Mantenimiento
+                                    </label>
+                                    <select class="filtro-input" id="FiltroTipoMantenimiento" name="FiltroTipoMantenimiento">
+                                        <option value="">Todos los tipos...</option>
+                                        <option value="Preventivo">Preventivo</option>
+                                        <option value="Correctivo">Correctivo</option>
+                                    </select>
+                                </div>
+
+                                <!-- Línea de Producción -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroLineaProduccion">
+                                        <i class="bi bi-diagram-3-fill"></i> Línea Producción
+                                    </label>
+                                    <div class="select-wrapper">
+                                        <select class="filtro-input" id="FiltroLineaProduccion" name="FiltroLineaProduccion">
+                                            <option value="">Todas las líneas...</option>
+                                        </select>
+                                        <div class="select-loader d-none" id="loader_FiltroLineaProduccion">
+                                            <span class="spinner-border spinner-border-sm"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Fecha Inicio -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroFechaInicio">
+                                        <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
+                                    </label>
+                                    <input type="date" class="filtro-input"
+                                           id="FiltroFechaInicio" name="FiltroFechaInicio">
+                                </div>
+
+                                <!-- Fecha Fin -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroFechaFin">
+                                        <i class="bi bi-calendar-x-fill"></i> Fecha Fin
+                                    </label>
+                                    <input type="date" class="filtro-input"
+                                           id="FiltroFechaFin" name="FiltroFechaFin">
+                                </div>
+
+                                <!-- Botones -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                                    <button type="button" class="btn-filtro-aplicar"
+                                            id="btnAplicarFiltros" title="Aplicar filtros">
+                                        <i class="bi bi-search"></i>
+                                        Buscar
+                                    </button>
+                                    <button type="button" class="btn-filtro-limpiar"
+                                            id="btnLimpiarFiltros" title="Limpiar filtros">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                        Limpiar
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                        <!-- 📅 CALENDARIO -->
+                        <div id="calendar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         MODAL DETALLES DEL MANTENIMIENTO
+    ══════════════════════════════════════════════ -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+
+                <!-- ── Header ── -->
+                <div class="modal-header-custom">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="modal-icon-wrap">
+                            <i class="bi bi-info-circle-fill"></i>
+                        </div>
+                        <div>
+                            <div class="modal-title-custom" id="modalTitle">Detalles del Mantenimiento</div>
+                            <div class="modal-subtitle-custom">Información completa del registro</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <!-- ── Body ── -->
+                <div class="modal-body-custom">
+
+                    <!-- Sección 1: Información General -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-clipboard-check me-2"></i>Información General
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-hash me-2" style="color:var(--modal-primary);"></i>Número de Orden:</strong>
+                                    <span id="modalNumeroOrden" class="ms-2 badge bg-secondary"></span>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-wrench me-2" style="color:var(--modal-primary);"></i>Tipo de Mantenimiento:</strong>
+                                    <span id="modalType" class="ms-2 badge bg-info"></span>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-check-circle me-2 text-success"></i>Estado:</strong>
+                                    <span id="modalStatus" class="ms-2 badge bg-success"></span>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-person-fill me-2" style="color:var(--modal-primary);"></i>Solicitante:</strong>
+                                    <span id="modalSolicitante" class="ms-2"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 2: Información del Equipo -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-gear-wide-connected me-2"></i>Información del Equipo
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-gear-fill me-2" style="color:var(--modal-primary);"></i>Equipo:</strong>
+                                    <span id="modalEquipment" class="ms-2"></span>
+                                </p>
+                            </div>
+                            <div class="col-12">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-file-text me-2" style="color:var(--modal-primary);"></i>Descripción:</strong>
+                                    <span id="modalDescription" class="ms-2"></span>
+                                </p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-diagram-3 me-2" style="color:var(--modal-primary);"></i>Línea de Producción:</strong>
+                                    <span id="modalLine" class="ms-2"></span>
+                                </p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-building me-2" style="color:var(--modal-primary);"></i>Área:</strong>
+                                    <span id="modalArea" class="ms-2"></span>
+                                </p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-pin-map-fill me-2" style="color:var(--modal-primary);"></i>Ubicación Técnica:</strong>
+                                    <span id="modalUbicacionTecnica" class="ms-2"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 3: Fechas y Duración -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-calendar-range me-2"></i>Fechas y Duración
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-calendar-check me-2 text-success"></i>Fecha Completado:</strong>
+                                    <span id="modalFechaCompletado" class="ms-2"></span>
+                                </p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-calendar-event me-2" style="color:var(--modal-primary);"></i>Período de Mantenimiento:</strong>
+                                    <span id="modalPeriodoMantenimiento" class="ms-2"></span>
+                                </p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-clock-history me-2" style="color:var(--modal-primary);"></i>Duración:</strong>
+                                    <span id="modalDuracion" class="ms-2 badge bg-warning text-dark"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 4: Técnicos Asignados -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-people-fill me-2"></i>Técnicos Asignados
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <p class="mb-2">
+                                    <strong><i class="bi bi-person-badge me-2" style="color:var(--modal-primary);"></i>Técnicos:</strong>
+                                    <span id="modalTecnicos" class="ms-2"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 5: Observaciones (condicional) -->
+                    <div class="row g-3" id="seccionObservaciones" style="display:none;">
+                        <div class="col-12">
+                            <hr class="divider-custom">
+                            <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                                <i class="bi bi-chat-left-text me-2"></i>Observaciones
+                            </h6>
+                        </div>
+
+                        <!-- Texto Corto — solo Correctivos -->
+                        <div class="col-12" id="contenedorTextoCorto" style="display:none;">
+                            <div class="modal-banner-info mb-3">
+                                <i class="bi bi-info-circle-fill" style="font-size:1rem; flex-shrink:0;"></i>
+                                <div>
+                                    <strong>Texto Corto:</strong>
+                                    <p id="modalTextoCorto" class="mb-0 mt-1"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Texto Secuencia — ambos tipos -->
+                        <div class="col-12" id="contenedorTextoSecuencia" style="display:none;">
+                            <div class="modal-banner-info mb-0" style="background:#F5F5F5; border-color:#E0E0E0; color: var(--modal-text-dark);">
+                                <i class="bi bi-list-task" style="font-size:1rem; flex-shrink:0; color: var(--modal-text-muted);"></i>
+                                <div>
+                                    <strong>Texto Secuencia:</strong>
+                                    <p id="modalTextoSecuencia" class="mb-0 mt-1"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cerrar
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         MODAL AGENDAR NUEVO MANTENIMIENTO CORRECTIVO
+    ══════════════════════════════════════════════ -->
+    <div class="modal fade" id="addEventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+
+                <!-- ── Header ── -->
+                <div class="modal-header-custom">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="modal-icon-wrap">
+                            <i class="bi bi-plus-circle-fill"></i>
+                        </div>
+                        <div>
+                            <div class="modal-title-custom">Agendar Nuevo Mantenimiento</div>
+                            <div class="modal-subtitle-custom">Correctivo Planeado</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <!-- ── Body ── -->
+                <div class="modal-body-custom">
+                    <form id="eventForm">
+                        <input type="hidden" id="selectedDate">
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label-custom" for="equipo">
+                                    <i class="bi bi-gear-wide-connected"></i> Equipo
+                                </label>
+                                <select class="form-select-custom" id="equipo" required>
+                                    <option value="">Seleccionar equipo...</option>
+                                    <!-- Se cargarán dinámicamente -->
+                                </select>
+                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione un equipo.</div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label-custom" for="tipoMantenimiento">
+                                    <i class="bi bi-wrench"></i> Tipo de Mantenimiento
+                                </label>
+                                <select class="form-select-custom" id="tipoMantenimiento" required>
+                                    <option value="">Seleccionar tipo...</option>
+                                    <option value="Correctivo">Correctivo</option>
+                                </select>
+                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione el tipo de mantenimiento.</div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label-custom" for="descripcion">
+                                    <i class="bi bi-file-text"></i> Descripción
+                                </label>
+                                <textarea class="form-control-custom" id="descripcion"
+                                          rows="3" required
+                                          placeholder="Describe el trabajo a realizar..."></textarea>
+                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> La descripción es obligatoria.</div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn-modal-guardar" id="btnGuardarEvento">
+                        <i class="bi bi-floppy-fill me-1"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Container para alerts de Bootstrap -->
+<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;"></div>
+
+<!-- Loader fullscreen -->
+<div id="calendarLoader" style="display: none;">
+    <div class="calendar-loader-overlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-3 text-white fw-semibold">Cargando mantenimientos...</p>
+    </div>
+</div>
+
+<!-- FullCalendar desde CDN -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
+
+<!-- Fallback a archivo local si CDN falla -->
+<script>
+    if (window.FullCalendar == undefined) {
+        document.write('<script src="/Scripts/index.global.min.js"><\/script>');
+    }
+</script>
+
+<script src="~/Scripts/calendario_mantenimientos_refactor.js"></script>

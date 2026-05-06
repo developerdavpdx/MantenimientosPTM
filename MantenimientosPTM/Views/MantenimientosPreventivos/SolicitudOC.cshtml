@@ -1,0 +1,122 @@
+﻿@{
+    ViewBag.Title = "Solicitudes de Compra SAP";
+}
+
+<div class="row m-0 pt-3">
+    <div class="col-12">
+        <div class="card shadow-lg">
+            <div class="card-header text-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-color-logo"><i class="bi bi-card-checklist me-2"></i> Solicitudes de Compra SAP</h5>
+                <button id="btnRefrescarSC" class="btn btn-light btn-sm">
+                    <i class="bi bi-arrow-clockwise"></i> Refrescar
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive small">
+                    <table class="table table-striped table-sm CustomTableResponsive" id="tablaSolicitudesCompra">
+                        <thead class="table-light">
+                            <tr>
+                                <th># Solicitud</th>
+                                <th>Fecha</th>
+                                <th>Solicitante</th>
+                                <th># Solicitud Refacción</th>
+                                <th>Estado</th>
+                                <th>Total</th>
+                                <th>Moneda</th>
+                                <th>Artículos</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>SC-1001</td>
+                                <td>15/09/2025</td>
+                                <td>Juan Pérez</td>
+                                <td>SR-001</td>
+                                <td><span class="badge bg-info">Abierta</span></td>
+                                <td>12,500.00</td>
+                                <td>MXP</td>
+                                <td>3</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary btn-ver-detalle" data-bs-toggle="tooltip" title="Ver detalle de SR">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success btn-aprobar" data-bs-toggle="tooltip" title="Aprobar SC">
+                                        <i class="bi bi-check2-circle"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger btn-rechazar" data-bs-toggle="tooltip" title="Rechazar SC">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>SC-1002</td>
+                                <td>16/09/2025</td>
+                                <td>María López</td>
+                                <td>SR-002</td>
+                                <td><span class="badge bg-warning">Pendiente</span></td>
+                                <td>5,200.00</td>
+                                <td>MXP</td>
+                                <td>2</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary btn-ver-detalle" data-bs-toggle="tooltip" title="Ver detalle de SR">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success btn-aprobar" data-bs-toggle="tooltip" title="Aprobar SC">
+                                        <i class="bi bi-check2-circle"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger btn-rechazar" data-bs-toggle="tooltip" title="Rechazar SC">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>SC-1003</td>
+                                <td>17/09/2025</td>
+                                <td>Carlos Martínez</td>
+                                <td>SR-003</td>
+                                <td><span class="badge bg-success">Aprobada</span></td>
+                                <td>8,750.00</td>
+                                <td>USD</td>
+                                <td>4</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary btn-ver-detalle" data-bs-toggle="tooltip" title="Ver detalle de SR">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success btn-aprobar" data-bs-toggle="tooltip" title="Aprobar SC">
+                                        <i class="bi bi-check2-circle"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger btn-rechazar" data-bs-toggle="tooltip" title="Rechazar SC">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver detalles de la solicitud -->
+<div class="modal fade" id="detalleSCModal" tabindex="-1" aria-labelledby="detalleSCModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="detalleSCModalLabel"><i class="bi bi-card-list me-2"></i> Detalle de Solicitud</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detalleSCContent">
+                    <!-- Aquí se llenará con detalles de artículos y cantidades -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Container para alerts de Bootstrap -->
+<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;"></div>
+
+<script src="~/Scripts/SOC.js"></script>

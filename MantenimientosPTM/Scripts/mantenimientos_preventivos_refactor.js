@@ -1,0 +1,4997 @@
+// ========================================
+// APLICACIÓN PRINCIPAL
+// ========================================
+class MantenimientosPreventivoApp {
+    constructor() {
+        this.URLBase = "MantenimientosPreventivos";
+        this.URLBaseCorrectivos = "MantenimientosCorrectivos";
+        this.URLBaseRutinas = "Rutinas";
+        this.gestionTecnicos = new GestionTecnicos(this.URLBase);
+        this.gestionFirmas = new GestionFirmas();
+        this.datos_usuario = GlobalUtil.getDatosUsuario();
+
+        // ✅ Inicializar gestión de artículos custom para MP
+        this.gestionArticulosMP = new GestionArticulosCustom(
+            '#BuscarArticuloMP',
+            '#sugerenciasArticulosMP',
+            '#CodigoArticuloMP',
+            '#DescripcionArticuloMP',
+            '#bodyArticulosRefaccionMP',
+            'Planeacion',
+            'alertRefaccionContainer',
+            [110] // Grupos de articulos excluidos 110 -> Producto Terminado
+        );
+
+        this.mantenimientoManager = new MantenimientoManager(
+            this.URLBase,
+            this.URLBaseCorrectivos,
+            this.URLBaseRutinas,
+            this.gestionTecnicos,
+            this.gestionFirmas,
+            this.datos_usuario,
+            this // ✅ Pasar referencia de la app
+        );
+
+        // ✅ Exponer manager globalmente para funciones onclick en HTML
+        window.MantenimientoManagerRefactor = this.mantenimientoManager;
+
+        this.pdfManager = new PDFManagerMantenimiento();
+        this.printManager = new PrintManagerMantenimiento(this.mantenimientoManager);
+
+        window.AppMantenimientos = this;
+    }
+
+    inicializar() {
+        UIManager.inicializarUI(this.datos_usuario);
+        this.mantenimientoManager.inicializar();
+        this.pdfManager.inicializar();
+        this.printManager.inicializar();
+        this.gestionTecnicos.inicializar();
+        this.gestionFirmas.inicializar(); // 🔥 AGREGAR ESTA LÍNEA
+
+        this.configurarEventosMantenimientos();
+        this.configurarEventosPDF();
+        this.configurarEventosImpresion();
+        this.configurarEventosTecnicos();
+        this.configurarEventosFirmas(); // 🔥 AGREGAR ESTA LÍNEA
+        this.configurarEventosGestionArticulos();
+        this.initHubMantenimientosPreventivos(); //Inicializar HUB mantenimientos preventivos
+
+        console.log('✅ Sistema Completo de Mantenimientos Preventivos inicializado correctamente');
+    }
+
+    //GESTION DE ARTICULOS - Preventivo (MP)
+    configurarEventosGestionArticulos() {
+        // ✅ Input de búsqueda - usando nuevos IDs
+        $('#BuscarArticuloMP').on('input', (e) => {
+            const query = $(e.target).val().trim();
+            if (query.length >= 2) {
+                this.gestionArticulosMP.buscarArticulos(query, this.datos_usuario[0].EMAIL);
+            } else {
+                this.gestionArticulosMP.ocultarSugerencias();
+            }
+        });
+
+        // ✅ Click fuera para cerrar sugerencias
+        $(document).on('click', (e) => {
+            if (!$(e.target).closest('#BuscarArticuloMP, #sugerenciasArticulosMP').length) {
+                this.gestionArticulosMP.ocultarSugerencias();
+            }
+        });
+    }
+
+    configurarEventosMantenimientos() {
+        // Agregar mantenimiento
+        $('#btnAgregarMantenimiento').on('click', (e) => this.mantenimientoManager.abrirModalAgregar(e));
+
+        $('#btnGuardarMantenimiento').on('click', () => this.mantenimientoManager.guardarMantenimiento());
+
+        // Filtros
+        $('#btnFiltrar').on('click', () => this.mantenimientoManager.aplicarFiltros());
+
+        // Checkboxes
+        $('#selectAll').on('change', (e) => this.mantenimientoManager.seleccionarTodos(e));
+
+        // Generar órdenes
+        $('#btnGenerarOrdenes').on('click', () => this.mantenimientoManager.generarOrdenes());
+
+        // Solicitar refacción
+        $(document).on('click', '.btn-solicitar-refaccion', (e) => {
+            this.mantenimientoManager.abrirModalRefaccion($(e.currentTarget));
+        });
+
+        // Rutina online
+        $(document).on('click', '.btn-rutina-online', (e) => {
+            this.mantenimientoManager.abrirModalRutinaOnline($(e.currentTarget));
+        });
+
+        // Carátula online
+        $(document).on('click', '.btn-caratula-online', (e) => {
+            this.mantenimientoManager.abrirModalCaratulaOnline($(e.currentTarget));
+        })
+
+        // 🔥 EXPORTAR A s
+        $('#btnExportarExcel').on('click', () => this.mantenimientoManager.exportarExcel());
+
+        // Guardar refacción
+        $('#formSolicitarRefaccion').on('submit', (e) => this.mantenimientoManager.enviarSolicitudRefaccion(e));
+
+        // ✅ CORRECTO - Debes pasar "e" como parámetro
+        $('#formOrdenMantenimiento').on('submit', (e) => this.mantenimientoManager.guardarOT(e));
+
+        // Guardar estatus
+        $('#btnGuardarEstatus').on('click', () => this.mantenimientoManager.guardarEstatus());
+
+        // Guardar rutina
+        $('#btnGuardarRutina').on('click', () => this.mantenimientoManager.guardarRutina());
+
+        // ❌ Ya no necesitas esto con arrow functions
+        // const self = this;
+        // ✅ Arrow function - mantiene el contexto de this automáticamente
+        $('#FiltroFechaInicio, #FiltroFechaFin, #FiltroArea, #FiltroLinea, #FiltroPeriodicidad').on('change', () => {
+            const fechaInicio = $('#FiltroFechaInicio').val();
+            const fechaFin = $('#FiltroFechaFin').val();
+
+            // Validar solo si ambas fechas tienen valor
+            if (fechaInicio && fechaFin) {
+                const inicio = new Date(fechaInicio);
+                const fin = new Date(fechaFin);
+
+                if (inicio > fin) {
+                    AlertManager.mostrar('La fecha de inicio no puede ser mayor a la fecha de fin.', 'warning');
+                    return;
+                }
+            }
+
+            // Si pasa la validación, recargar la tabla
+            if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+                $('#tablaMantenimientosRango').DataTable().ajax.reload();
+            } else {
+                this.mantenimientoManager.llenarMantenimientosPorRango();
+            }
+        });
+
+        // ✅ Arrow function con validación de fechas
+        $('#btnAplicarFiltros').on('click', () => {
+            const fechaInicio = $('#FiltroFechaInicio').val();
+            const fechaFin = $('#FiltroFechaFin').val();
+
+            // Validar solo si ambas fechas tienen valor
+            if (fechaInicio && fechaFin) {
+                const inicio = new Date(fechaInicio);
+                const fin = new Date(fechaFin);
+
+                if (inicio > fin) {
+                    AlertManager.mostrar('La fecha de inicio no puede ser mayor a la fecha de fin.', 'warning');
+                    return;
+                }
+            }
+
+            // Si pasa la validación, recargar la tabla
+            if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+                $('#tablaMantenimientosRango').DataTable().ajax.reload();
+            } else {
+                this.mantenimientoManager.llenarMantenimientosPorRango();
+            }
+        });
+
+        // ✅ Arrow function
+        $('#btnLimpiarFiltros').on('click', () => {
+            $('#FiltroOrdenTrabajo').val('');
+            $('#FiltroFechaInicio').val('');
+            $('#FiltroFechaFin').val('');
+
+            // Si pasa la validación, recargar la tabla
+            if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+                $('#tablaMantenimientosRango').DataTable().ajax.reload();
+            } else {
+                this.mantenimientoManager.llenarMantenimientosPorRango();
+            }
+        });
+
+        // Lista de refacciones
+        $(document).on('click', '.btn-list-refacciones', function () {
+            const $btn = $(this);
+            const ordenTrabajo = $btn.data('numeroorden'); // Requiere que el botón tenga data-ot="NUMERO_OT"
+
+            if (!ordenTrabajo) {
+                alert('No se encontró el número de orden de trabajo.');
+                return;
+            }
+
+            // Actualizar subtítulo del modal con el número de OT
+            $('#refaccionesOTNumero').text(ordenTrabajo);
+
+            // Mostrar estado de carga
+            $('#bodyRefaccionesOT').html(`
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        <i class="bi bi-hourglass-split me-1"></i>Cargando refacciones...
+                    </td>
+                </tr>
+            `);
+
+            // Mostrar modal
+            const modalElement = document.getElementById('modalRefaccionesOT');
+            const modalRefacciones = new bootstrap.Modal(modalElement);
+            modalRefacciones.show();
+
+            // Obtener datos del método obtenerArticulosPorOT
+            $.ajax({
+                url: `/Almacen/GetArticulosPorOrdenTrabajo`,
+                type: 'GET',
+                data: { ordenTrabajo: ordenTrabajo },
+                dataType: 'json',
+                success: function (response) {
+
+                    if (response.Status === 'OK') {
+                        let refacciones = JSON.parse(response.Data);
+                        let html = '';
+                        refacciones.forEach(item => {
+
+                            let classBadge = `bg-warning text-dark`;
+
+                            if (item.ESTATUS == 'Atendida') {
+                                classBadge = `bg-sucess`
+                            }
+
+                            html += `
+                                <tr>
+                                    <td>${item.REFACCION_SOLICITADA || ''}</td>
+                                    <td>${item.NOMBRE_ARTICULO || ''}</td>
+                                    <td class="text-center">${item.CANTIDAD || 0}</td>
+                                    <td class="text-center">
+                                       ${item.NIVEL_URGENCIA || ''}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge ${classBadge}">${item.ESTATUS || ''}</span>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        $('#bodyRefaccionesOT').html(html);
+                    } else {
+                        $('#bodyRefaccionesOT').html(`
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="bi bi-info-circle me-1"></i>No hay refacciones registradas para esta orden.
+                                </td>
+                            </tr>
+                        `);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error al cargar refacciones:', error);
+                    $('#bodyRefaccionesOT').html(`
+                        <tr>
+                            <td colspan="5" class="text-center text-danger py-4">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Error al cargar las refacciones.
+                            </td>
+                        </tr>
+                    `);
+                }
+            });
+        });
+    }
+
+    configurarEventosPDF() {
+        $('#btnExportMantenimientoPDF').on('click', () => this.pdfManager.exportarOrdenMantenimiento());
+    }
+
+    // 🔥 Nuevo método para eventos de impresión
+    configurarEventosImpresion() {
+        $(document).on('click', '.btn-impresion-online', (e) => {
+
+            const btn = $(e.currentTarget);
+
+            // 🔥 abrir inmediatamente
+            const win = window.open('', '_blank', 'width=900,height=700');
+
+            if (!win) {
+                AlertManager.mostrar('El navegador bloqueó la ventana. Permite popups.', 'warning');
+                return;
+            }
+
+            // 🔥 pasar la referencia
+            this.printManager.prepararImpresionDirecta(btn, win);
+        });
+    }
+
+    configurarEventosTecnicos() {
+        // ❌ QUITA el const self = this; ya no lo necesitas
+
+        // ✅ Cambiar TODAS las function() por arrow functions
+        $('#BuscarTecnico').on('input', (e) => {  // ⬅️ Agrega parámetro 'e'
+            const query = $(e.target).val().trim();  // ⬅️ Usa e.target, no this
+            if (query.length >= 2) {
+                this.gestionTecnicos.buscarTecnicos(query);
+            } else {
+                this.gestionTecnicos.ocultarSugerencias();
+            }
+        });
+
+        $('#btnAgregarTecnico').on('click', () => {  // ⬅️ Arrow function
+            this.gestionTecnicos.agregarTecnicoDesdeInput();
+        });
+
+        $('#BuscarTecnico').on('keypress', (e) => {  // ⬅️ Arrow function
+            if (e.which === 13) {
+                e.preventDefault();
+                this.gestionTecnicos.agregarTecnicoDesdeInput();
+            }
+        });
+
+        // ✅ Este ya está bien con arrow function
+        $(document).on('click', (e) => {
+            if (!$(e.target).closest('#BuscarTecnico, #sugerenciasTecnicos').length) {
+                this.gestionTecnicos.ocultarSugerencias();
+            }
+        });
+
+        // ✅ Versión con suffix visual
+        $('#Duracion').on('input', function (e) {
+            let valor = $(this).val().replace(' Hrs', '').trim();
+
+            // Remover todo excepto números y punto
+            valor = valor.replace(/[^0-9.]/g, '');
+
+            // Permitir solo un punto decimal
+            const partes = valor.split('.');
+            if (partes.length > 2) {
+                valor = partes[0] + '.' + partes.slice(1).join('');
+            }
+
+            // Limitar a 2 decimales
+            if (partes.length === 2 && partes[1].length > 2) {
+                valor = partes[0] + '.' + partes[1].substring(0, 2);
+            }
+
+            $(this).val(valor);
+        });
+
+    }
+
+    configurarEventosFirmas() {
+        // Los eventos se manejan mediante onclick en el HTML
+        // pero creamos funciones globales para que sean accesibles
+        window.limpiarFirma = (tipo) => this.gestionFirmas.limpiarFirma(tipo);
+        window.deshacerFirma = (tipo) => this.gestionFirmas.deshacerFirma(tipo);
+    }
+
+    // ========================================
+    // SIGNALR MANAGER - MANTENIMIENTOS
+    // ========================================
+    initHubMantenimientosPreventivos() {
+
+        const self = this;
+        const hub = $.connection.mantenimientoHub;
+
+        let isReloading = false; // 🔥 evita spam de reload
+        let reconnectDelay = 5000;
+
+        // ========================================
+        // 📡 EVENTO PRINCIPAL
+        // ========================================
+        hub.client.actualizarTablaMantenimientosPreventivos = function () {
+
+            console.warn("📡 Actualización recibida desde SignalR");
+
+            // 🔥 evitar reload si es técnico
+            /*            if (self.datos_usuario[0].TIPOUSUARIO === "TecnicoMtto") return;*/
+
+            // 🔥 evitar múltiples reload simultáneos
+            if (isReloading) return;
+
+            isReloading = true;
+
+            const table = $('#tablaMantenimientosRango').DataTable();
+
+            if (table) {
+                table.ajax.reload(() => {
+                    isReloading = false;
+                }, false);
+            } else {
+                isReloading = false;
+            }
+        };
+
+        // ========================================
+        // 🚀 START HUB (con fallback controlado)
+        // ========================================
+        $.connection.hub.start({
+            transport: ['webSockets', 'longPolling']
+        }).done(function () {
+            console.log("✅ SignalR conectado");
+            console.log("🚚 Transporte:", $.connection.hub.transport.name);
+        }).fail(function (error) {
+            console.error("❌ Error al conectar SignalR:", error);
+        });
+
+        // ========================================
+        // 🔄 RECONNECTING
+        // ========================================
+        $.connection.hub.reconnecting(function () {
+            console.warn("🔄 SignalR reconectando...");
+        });
+
+        // ========================================
+        // 🔁 RECONNECTED
+        // ========================================
+        $.connection.hub.reconnected(function () {
+
+            console.info("✅ SignalR reconectado");
+
+            // 🔥 refresco inteligente al reconectar
+            //if (self.datos_usuario[0].TIPOUSUARIO !== "TecnicoMtto") {
+            $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+            //}
+
+            reconnectDelay = 5000; // reset delay
+        });
+
+        // ========================================
+        // ❌ DISCONNECTED (retry exponencial)
+        // ========================================
+        $.connection.hub.disconnected(function () {
+
+            console.error("❌ SignalR desconectado");
+
+            setTimeout(function () {
+
+                console.warn(`🔁 Reintentando conexión en ${reconnectDelay / 1000}s...`);
+
+                $.connection.hub.start();
+
+                // 🔥 backoff exponencial (máx 30s)
+                reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+
+            }, reconnectDelay);
+        });
+    }
+}
+
+// ========================================
+// INICIALIZACIÓN
+// ========================================
+$(document).ready(function () {
+    const app = new MantenimientosPreventivoApp();
+    app.inicializar();
+
+    // 🔥 INICIALIZAR HEADER FIJO CON EL GESTOR GLOBAL
+    window.HeaderFijoGlobalManager.crear(
+        '.card-header.header-fijo-custom',      // ✅ Header
+        '.position-relative.header-custom',     // ✅ Contenedor
+        'headerMantenimientos',                 // ID único
+        {
+            topOffset: 45,
+            backgroundColor: 'white',
+            boxShadow: '0 4px 12px rgba(0, 88, 161, 0.3)',
+            animacion: true
+        }
+    );
+
+    console.log('✅ Header fijo inicializado correctamente');
+});
+
+// ========================================
+// GESTOR DE UI
+// ========================================
+class UIManager {
+    static inicializarUI(datos_usuario) {
+        // Seleccionar el padre "MantenimientosContainer" y expandir
+        $("#MantenimientosContainer").addClass("selected");
+        $("#MantenimientosContainer a").addClass("whiteText");
+        $("#mantenimientos-collapse").addClass("show");
+        // Configuración de navegación
+        $("#MPContainer").removeClass("collapsed").attr("aria-expanded", true);
+        $("#manntopreventivo-collapse").addClass("show");
+        $("#MPProgramadoURL").addClass("selected-item");
+
+
+
+        if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+            $("#btnGenerarOrdenes").addClass("d-none");
+            $("#btnExportarExcel").addClass("d-none");
+        }
+
+        $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
+        $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
+        //const TopScrool = new TopScrollTable("tablaMantenimientosRango", "tablaMantenimientosRangoContainer", "TblMCScrool");
+        //TopScrool.createScroll();
+        //TopScrool.initScroll();
+    }
+}
+
+
+// ========================================
+// GESTOR DE MANTENIMIENTOS PREVENTIVOS
+// ========================================
+class MantenimientoManager {
+    constructor(URLBase, URLBaseCorrectivos, URLBaseRutinas, gestionTecnicos, gestionFirmas, datos_usuario, appReferencia = null) {
+        this.URLBase = URLBase;
+        this.URLBaseCorrectivos = URLBaseCorrectivos;
+        this.URLBaseRutinas = URLBaseRutinas;
+        this.gestionTecnicos = gestionTecnicos;
+        this.gestionFirmas = gestionFirmas;
+        this.datos_usuario = datos_usuario;
+        this.appReferencia = appReferencia; // ✅ Referencia a la app para acceder a gestionArticulosMP
+        this.checklistManager = new ChecklistManager();
+        this.ID_EQUIPO = "";
+        this.ID_MANTENIMIENTO = "";
+        this.ID_EQUIPO_PDF = "";
+        this.PLANTA_PDF = "";
+        this.pdfTemporalRutina = null; // ✅ PDF temporal que se guarda al presionar "Guardar"
+    }
+
+    inicializar() {
+        this.inicializarTooltips();
+        //Solo si es admin
+        if (this.datos_usuario[0].TIPOUSUARIO == "AdminMtto" || this.datos_usuario[0].TIPOUSUARIO == "Administrador") {
+            this.llenarMantenimientosPorRango();
+        }
+        EquiposUtil.llenarLineas(this.datos_usuario[0].PLANTA, "none", "FiltroLinea");
+        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, "none", "FiltroArea");
+
+        console.log('✅ MantenimientoManager inicializado correctamente');
+    }
+
+    llenarMantenimientosPorRango() {
+        try {
+
+            // ✅ Remover fila vacía si existe
+            $('#filaVacia').remove();
+            // Destruir DataTable si ya existe
+            if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+                $('#tablaMantenimientosRango').DataTable().destroy();
+            }
+
+            let FiltroEstatusOT = (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto" ? "2,3,4" : null);
+
+            // Función para calcular el offset correcto según el tamaño de pantalla
+            function calcularHeaderOffset() {
+                if (window.innerWidth < 625) {
+                    return 230;
+                }
+                if (window.innerWidth < 640) {
+                    return 210;
+                }
+                if (window.innerWidth < 992) {
+                    return 155;
+                }
+                if (window.innerWidth < 1155) {
+                    return 140;
+                } else if (window.innerWidth < 1400) {
+                    return 120;
+                } else {
+                    return 113;
+                }
+            }
+
+            const table = $('#tablaMantenimientosRango').DataTable({
+                processing: false,
+                serverSide: true,
+                bDestroy: true,
+                searching: false,
+                autoWidth: false,
+                colReorder: true,
+                fixedHeader: {
+                    header: true,
+                    headerOffset: calcularHeaderOffset()
+                },
+                responsive: {
+                    details: {
+                        type: 'column',
+                        target: 0,
+                        renderer: function (api, rowIdx, columns) {
+                            var hiddenColumns = columns.filter(function (col) {
+                                return col.hidden;
+                            });
+
+                            if (hiddenColumns.length === 0) return false;
+
+                            function normalizar(texto) {
+                                return texto.toUpperCase()
+                                    .normalize("NFD")
+                                    .replace(/[\u0300-\u036f]/g, "")
+                                    .trim();
+                            }
+
+                            function obtenerIcono(titulo) {
+                                var tituloNorm = normalizar(titulo);
+
+                                var iconos = {
+                                    'TIPO MANTENIMIENTO': 'bi bi-gear-fill',
+                                    'PROCESO': 'bi bi-diagram-2-fill',
+                                    'LINEA': 'bi bi-diagram-3-fill',
+                                    'EQUIPO': 'bi bi-tools',
+                                    'USUARIO GENERO': 'bi bi-person-fill',
+                                    'NUMERO ORDEN': 'bi bi-file-earmark-text',
+                                    'TEXTO BREVE': 'bi bi-card-text',
+                                    'PERIODICIDAD MP': 'bi bi-arrow-repeat',
+                                    'FECHA REFERENCIA': 'bi bi-calendar-event',
+                                    'MANTENIMIENTO PROGRAMADO': 'bi bi-calendar-range',
+                                    'HORA APERTURA': 'bi bi-clock',
+                                    'HORA CIERRE': 'bi bi-clock-fill',
+                                    'TIEMPO INVERTIDO (HRS)': 'bi bi-hourglass-split',
+                                    'COMENTARIOS': 'bi bi-chat-left-text',
+                                    'ESTATUS ORDEN': 'bi bi-flag-fill',
+                                    'ACCIONES': 'bi bi-lightning-fill'
+                                };
+
+                                return iconos[tituloNorm] || 'bi bi-circle-fill';
+                            }
+
+                            var detallesHtml = '';
+
+                            $.each(hiddenColumns, function (i, col) {
+                                var title = col.title;
+                                var valueContent = col.data || '<em class="text-muted">Sin información</em>';
+                                var iconClass = obtenerIcono(title);
+
+                                detallesHtml +=
+                                    '<div class="row mb-3 py-2 border-bottom align-items-center">' +
+                                    '  <div class="col-5">' +
+                                    '    <i class="' + iconClass + ' me-2" style="font-size: 1.3rem; color: #0D6EFD;"></i>' +
+                                    '    <strong>' + title + '</strong>' +
+                                    '  </div>' +
+                                    '  <div class="col-7">' +
+                                    '    <span class="badge px-3 py-2" style="background-color: #F2F2F2; color: #333;">' + valueContent + '</span>' +
+                                    '  </div>' +
+                                    '</div>';
+                            });
+
+                            return '<div class="card shadow-sm mt-3">' +
+                                '  <div class="card-header bg-light">' +
+                                '    <h5 class="mb-0">' +
+                                '      <i class="bi bi-clipboard-check me-2" style="color: #0D6EFD;"></i>' +
+                                '      Información adicional del mantenimiento' +
+                                '    </h5>' +
+                                '  </div>' +
+                                '  <div class="card-body">' +
+                                detallesHtml +
+                                '  </div>' +
+                                '  <div class="card-footer bg-light text-muted">' +
+                                '    <small>Última actualización: ' + new Date().toLocaleDateString() + '</small>' +
+                                '  </div>' +
+                                '</div>';
+                        }
+                    }
+                },
+                ajax: {
+                    url: `/${this.URLBase}/GetMantenimientosPorRango`,
+                    type: "POST",
+                    dataType: "json",
+                    beforeSend: function () {
+                        GlobalUtil.mostrarLoader(true);
+                    },
+                    complete: function () {
+                        GlobalUtil.mostrarLoader(false);
+                    },
+                    data: (d) => {
+                        return $.extend({}, d, {
+                            "FiltroFechaInicio": $("#FiltroFechaInicio").val() || null,
+                            "FiltroFechaFin": $("#FiltroFechaFin").val() || null,
+                            "FiltroArea": $("#FiltroArea").val() || null,
+                            "FiltroLinea": $("#FiltroLinea").val() || null,
+                            "FiltroOrdenTrabajo": $("#FiltroOrdenTrabajo").val() || null,
+                            "FiltroPeriodicidad": $("#FiltroPeriodicidad").val() || null,
+                            "FiltroPlanta": this.datos_usuario[0].PLANTA || null,
+                            "FiltroEstatusOT": FiltroEstatusOT,
+                            "FiltroUsuario": this.datos_usuario[0].EMAIL || null,
+                            "FiltroTipoUsuario": this.datos_usuario[0].TIPOUSUARIO
+                        });
+                    },
+                    dataSrc: function (json) {
+                        if (json.fechaInicio && json.fechaFin) {
+                            if ($('#mesActual').length) {
+                                let Mes = DateUtils.capitalizarPrimeraLetra(json.fechaInicio + ' - ' + json.fechaFin);
+                                $('#mesActual').text(Mes);
+                            }
+                        }
+                        return json.data;
+                    }
+                },
+                columns: [
+                    // 🎯 Col 0: Control Responsive (+/-)
+                    {
+                        className: 'dtr-control',
+                        orderable: false,
+                        data: null,
+                        defaultContent: '',
+                        width: '50px'
+                    },
+                    // ✅ Col 1: Checkbox
+                    {
+                        data: null,
+                        orderable: false,
+                        className: 'text-center',
+                        render: (data, type, row) => {
+                            if (!row.EstatusOrden || row.EstatusOrden === '') {
+                                if (this.datos_usuario[0].TIPOUSUARIO == "AdminMtto" || this.datos_usuario[0].TIPOUSUARIO == "Administrador") {
+                                    return '<input type="checkbox" class="row-checkbox">';
+                                }
+                            }
+                            return '';
+                        }
+                    },
+                    // ✅ Col 2: Acciones
+                    {
+                        data: null,
+                        orderable: false,
+                        className: 'all text-center',
+                        render: (data, type, row) => {
+
+                            const dataAttrs = this.buildDataAttributesMP(row);
+
+                            const tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+                            const esAdmin = tipoUsuario === "AdminMtto" || tipoUsuario === "Administrador";
+                            const esTecnico = tipoUsuario === "TecnicoMtto";
+                            const tieneRefacciones = data.TieneRefaciones;
+
+                            const estatusOrden = row.EstatusOrden || '';
+                            const ordenFinalizada = row.OrdenTrabajoFinalizada || '';
+
+                            const btn = (color, cssClass, icon, tooltip, attrs = '') =>
+                                `<button class="btn btn-sm ${color} ${cssClass}" data-bs-toggle="tooltip" title="${tooltip}" ${attrs}>
+                                <i class="bi bi-${icon}"></i>
+                            </button>`;
+
+                            const btnDisabled = (color, icon, tooltip) =>
+                                btn(color, 'disabled', icon, tooltip).replace('<button', '<button disabled');
+
+                            let refaccionBtn = '';
+                            let caratulaBtn = '';
+                            let impresionBtn = '';
+                            let listRefBtn = '';
+
+                            if (estatusOrden && estatusOrden !== '') {
+
+                                if (estatusOrden == 3 || estatusOrden == 4 || ordenFinalizada === "SI") {
+                                    refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
+                                } else {
+                                    refaccionBtn = btn('btn-ptm-primary', 'btn-solicitar-refaccion', 'tools', 'Solicitar Refacción', dataAttrs);
+                                }
+
+                                if ((estatusOrden == 4 || ordenFinalizada === "SI") && esTecnico) {
+                                    caratulaBtn = btnDisabled('secondary', 'eye', 'Carátula(OT)');
+                                } else {
+                                    caratulaBtn = btn('btn-ptm-mid', 'btn-caratula-online', 'eye', 'Carátula(OT)', dataAttrs);
+                                }
+
+                                if (!esTecnico) {
+                                    if (estatusOrden == 4 || ordenFinalizada === "SI") {
+                                        impresionBtn = btnDisabled('secondary', 'printer', 'Impresión(OT)');
+                                    } else {
+                                        impresionBtn = btn('btn-ptm-light', 'btn-impresion-online', 'printer', 'Impresión(OT)', dataAttrs);
+                                    }
+                                }
+
+                                // 🔧 LISTADO DE REFACCIÓNES
+                                if (tieneRefacciones === "SI") {
+                                    listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Solicitar Refacción', dataAttrs);
+                                } else {
+                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Solicitar Refacción');
+                                }
+
+                                return `${refaccionBtn}${caratulaBtn}${impresionBtn}${listRefBtn}`;
+
+                            } else {
+
+                                caratulaBtn = btnDisabled('secondary', 'eye', 'Carátula(OT)');
+
+                                if (esAdmin) {
+                                    refaccionBtn = '';
+                                } else {
+                                    refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
+                                }
+
+                                return `${refaccionBtn}${caratulaBtn}`;
+                            }
+                        }
+                    },
+                    // ✅ Col 3: Número Orden
+                    {
+                        data: "NumeroOrden",
+                        className: "text-center",
+                        render: (data, type, row) => {
+                            let orden = data || '';
+                            return `<span class="badge bg-primary badge-custom">
+                                <i class="bi bi-clipboard-data me-1"></i>${orden}
+                            </span>`;
+                        }
+                    },
+                    // ✅ Col 4: Equipo
+                    {
+                        data: null,
+                        render: (data, type, row) => {
+                            let equipo = (row.NombreEquipo || 'N/A') + ' ' + (row.NumeroDocPmCalidad || '');
+                            return `<i class="bi bi-gear-fill me-1 text-muted"></i>${equipo}`;
+                        }
+                    },
+                    // ✅ Col 5: Proceso (Área)
+                    {
+                        data: "Area",
+                        render: (data, type, row) => {
+                            return `<i class="bi bi-diagram-3 me-1 text-muted"></i>${data || 'N/A'}`;
+                        }
+                    },
+                    // ✅ Col 6: Línea
+                    {
+                        data: "LineaProduccion",
+                        render: (data, type, row) => {
+                            return `<i class="bi bi-arrow-repeat me-1 text-muted"></i>${data || 'N/A'}`;
+                        }
+                    },
+                    // ✅ Col 7: Estatus Orden
+                    {
+                        data: null,
+                        className: "text-center",
+                        render: (data, type, row) => {
+                            if (!row.DescEstatusOrden) {
+                                return `<span class="badge bg-info badge-custom">
+                                <i class="bi bi-plus-lg me-1"></i>Nueva
+                            </span>`;
+                            }
+
+                            let status = row.DescEstatusOrden;
+
+                            if (row.OrdenTrabajoFinalizada === "NO" && row.EstatusOrden == 4) {
+                                status = "En proceso de firmas";
+                            }
+
+                            let badgeClass = 'bg-secondary';
+                            let badgeIcon = '';
+
+                            switch (status) {
+                                case 'Liberado':
+                                    badgeClass = 'btn-ptm-primary';
+                                    badgeIcon = '<i class="bi bi-check-circle me-1"></i>';
+                                    break;
+                                case 'En espera de refacción':
+                                    badgeClass = 'bg-warning';
+                                    badgeIcon = '<i class="bi bi-tools me-1"></i>';
+                                    break;
+                                case 'En proceso de firmas':
+                                    badgeClass = 'bg-dark';
+                                    badgeIcon = '<i class="bi bi-pen me-1"></i>';
+                                    break;
+                                case 'Cerrado':
+                                    badgeClass = 'bg-primary';
+                                    badgeIcon = '<i class="bi bi-lock me-1"></i>';
+                                    break;
+                                case 'Cancelado':
+                                    badgeClass = 'bg-danger';
+                                    badgeIcon = '<i class="bi bi-x-circle me-1"></i>';
+                                    break;
+                            }
+
+                            return `<span class="badge ${badgeClass} badge-custom">
+                            ${badgeIcon}${status}
+                        </span>`;
+                        }
+                    },
+                    // ✅ Col 8: Fecha Referencia
+                    {
+                        data: "FechaReferencia",
+                        className: "text-center",
+                        render: (data, type, row) => {
+                            return `<i class="bi bi-calendar-event me-1 text-muted"></i>${data || 'N/A'}`;
+                        }
+                    },
+                    // ✅ Col 9: Mantenimiento Programado (Mes Mantenimiento)
+                    {
+                        data: "MesMantenimiento",
+                        className: "text-center",
+                        render: (data, type, row) => {
+                            if (!data) {
+                                return `<span class="badge btn-ptm-light badge-custom">
+                                <i class="bi bi-calendar-x me-1"></i>N/A
+                            </span>`;
+                            }
+
+                            return data.replace(
+                                /(\d{2}\/\d{2}\/\d{4})/g,
+                                '<span class="badge btn-ptm-light badge-custom"><i class="bi bi-calendar3 me-1"></i>$1</span>'
+                            );
+                        }
+                    },
+                    // ✅ Col 10: Periodicidad MP
+                    {
+                        data: null,
+                        render: (data, type, row) => {
+                            return `<i class="bi bi-calendar-week me-1 text-muted"></i>
+                        ${DateUtils.formatearPeriodicidad(
+                                row.PeriodicidadMantenimiento,
+                                row.DiaInicioMant,
+                                row.DiaFinMant,
+                                row.FechaInicioMantenimiento
+                            )}`;
+                        }
+                    },
+                    // ✅ Col 11: Hora Apertura
+                    {
+                        data: "HoraApertura",
+                        className: "text-center",
+                        render: (data, type, row) => {
+                            return `<i class="bi bi-clock me-1 text-muted"></i>${data || ''}`;
+                        }
+                    },
+                    // ✅ Col 12: Hora Cierre
+                    {
+                        data: "HoraCierre",
+                        className: "text-center",
+                        render: (data, type, row) => {
+                            return `<i class="bi bi-clock-history me-1 text-muted"></i>${data || ''}`;
+                        }
+                    },
+                    // ✅ Col 13: Tiempo Invertido (Hrs)
+                    {
+                        data: "TiempoInvertido",
+                        className: "text-center",
+                        render: (data, type, row) => {
+                            return `<i class="bi bi-stopwatch me-1 text-muted"></i>
+                        ${data ? `${data} HRS` : ''}`;
+                        }
+                    },
+                    // ✅ Col 14: Usuario Generó
+                    {
+                        data: "UsuarioGenero",
+                        render: (data, type, row) => {
+                            let user = data || '';
+                            return `<span class="badge btn-ptm-mid badge-custom">
+                                <i class="bi bi-person-circle me-1"></i>${user}
+                            </span>`;
+                        }
+                    },
+                    // ✅ Col 15: Tipo Mantenimiento
+                    {
+                        data: "TipoMantenimiento",
+                        className: "text-center",
+                        render: (data, type, row) => {
+                            let tipo_mantenimiento = this.datos_usuario[0].PLANTA == "2" ? "Preventivo" : "Z20";
+                            return `<span class="badge btn-ptm-secondary badge-custom">
+                                <i class="bi bi-wrench-adjustable me-1"></i>${tipo_mantenimiento}
+                            </span>`;
+                        }
+                    },
+                    // ✅ Col 16: Texto Breve (oculta por defecto)
+                    {
+                        data: "DescripcionEquipo",
+                        className: "text-center",
+                        render: (data, type, row) => {
+                            return `<i class="bi bi-card-text me-1 text-muted"></i>${data || ''}`;
+                        }
+                    },
+                    // ✅ Col 17: Comentarios
+                    {
+                        data: null,
+                        render: (data, type, row) => {
+                            return "";
+                        }
+                    }
+                ],
+                columnDefs: [
+                    // Columnas no ordenables
+                    { orderable: false, targets: [0, 1, 2, 7, 9, 10, 11, 12, 17] },
+
+                    // Centrado de columnas
+                    { className: "text-center", targets: [0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17] },
+
+                    // 🙈 Columnas ocultas
+                    /*{ visible: false, targets: 16 },  // Texto Breve*/
+
+                    // 🎯 PRIORIDADES RESPONSIVE
+                    { responsivePriority: 1, targets: 0 },  // Control +/-
+                    { responsivePriority: 2, targets: 1 },  // Checkbox
+                    { responsivePriority: 3, targets: 2 },  // Acciones
+                    { responsivePriority: 4, targets: 3 },  // Número Orden
+                    { responsivePriority: 5, targets: 4 },  // Equipo
+                    { responsivePriority: 6, targets: 5 },  // Proceso
+                    { responsivePriority: 7, targets: 6 },  // Línea
+                    { responsivePriority: 8, targets: 7 },  // Estatus Orden
+                    { responsivePriority: 9, targets: 8 },  // Fecha Referencia
+                    { responsivePriority: 10, targets: 9 },  // Mantenimiento Programado
+                    { responsivePriority: 11, targets: 10 },  // Periodicidad MP
+                    { responsivePriority: 12, targets: 11 },  // Hora Apertura
+                    { responsivePriority: 13, targets: 12 },  // Hora Cierre
+                    { responsivePriority: 14, targets: 13 },  // Tiempo Invertido
+                    { responsivePriority: 15, targets: 14 },  // Usuario Generó
+                    { responsivePriority: 16, targets: 15 },  // Tipo Mantenimiento
+                    { responsivePriority: 17, targets: 16 },  // Texto Breve
+                    { responsivePriority: 18, targets: 17 },  // Comentarios
+                ],
+                ordering: false,
+                info: true,
+                bPaginate: true,
+                pageLength: 200,
+                lengthMenu: [[10, 25, 50, 100, 200, 500, 1000], [10, 25, 50, 100, 200, 500, 1000]],
+                language: {
+                    lengthMenu: "Mostrar _MENU_ registros",
+                    zeroRecords: "No se encontraron resultados",
+                    info: "Registros del _START_ al _END_ de un total de _TOTAL_ registros",
+                    infoEmpty: "Registros del 0 al 0 de un total de 0 registros",
+                    infoFiltered: "(filtrado de un total de _MAX_ registros)",
+                    sSearch: "Buscar:",
+                    oPaginate: {
+                        sFirst: "Primero",
+                        sLast: "Último",
+                        sNext: "Siguiente",
+                        sPrevious: "Anterior"
+                    },
+                    sProcessing: "Cargando datos, por favor espere...",
+                    emptyTable: "No hay datos disponibles en la tabla"
+                },
+                createdRow: function (row, data, dataIndex) {
+                    $(row).attr('data-id-equipo', data.IdEquipo);
+                    $(row).attr('data-numero-ocurrencia', data.NumeroOcurrencia);
+                    $(row).attr('data-area', data.Area);
+                    $(row).attr('data-linea', data.LineaProduccion);
+                    $(row).attr('data-periodicidad', data.PeriodicidadMantenimiento);
+
+                    $(row).data('mantenimiento-completo', {
+                        idEquipo: data.IdEquipo,
+                        nombreEquipo: (data.NombreEquipo + ' ' + data.NumeroDocPmCalidad),
+                        descripcionEquipo: data.DescripcionEquipo,
+                        area: data.Area,
+                        lineaProduccion: data.LineaProduccion,
+                        periodicidadMantenimiento: data.PeriodicidadMantenimiento,
+                        numeroOcurrencia: data.NumeroOcurrencia,
+                        fechaInicioMantenimiento: data.FechaInicioMantenimiento,
+                        fechaFinMantenimiento: data.FechaFinMantenimiento,
+                        fechaReferencia: data.FechaReferencia,
+                        diaInicioMant: data.DiaInicioMant,
+                        diaFinMant: data.DiaFinMant,
+                        tipoMantenimiento: data.TipoMantenimiento
+                    });
+                },
+                drawCallback: function () {
+                    table.columns.adjust();
+                }
+            });
+
+            // ✅ Ajustar cuando cambia el tamaño de ventana
+            $(window).on('resize', function () {
+                if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+                    const nuevoOffset = calcularHeaderOffset();
+                    $('#tablaMantenimientosRango').DataTable().fixedHeader.headerOffset(nuevoOffset);
+                    $('#tablaMantenimientosRango').DataTable().fixedHeader.adjust();
+                }
+            });
+
+            return table;
+
+        } catch (error) {
+            AlertManager.mostrar('No es posible mostrar los mantenimientos: ' + error, 'warning');
+            console.error('Error en llenarMantenimientosPorRango:', error);
+        }
+    }
+
+    buildDataAttributesMP(row) {
+        const map = {
+            idequipo: row.IdEquipo,
+            planta: row.Planta,
+            numerodocpmcalidad: row.NumeroDocPmCalidad,
+            nombreequipo: row.NombreEquipo,
+            descripcionequipo: row.DescripcionEquipo,
+            idarea: row.Idarea,
+            area: row.Area,
+            idlineaproduccion: row.IdLineaProduccion,
+            lineaproduccion: row.LineaProduccion,
+            centrocostos: row.CentroCostos,
+            periodicidadmantenimiento: row.PeriodicidadMantenimiento,
+            diainiciomant: row.DiaInicioMant,
+            diafinmant: row.DiaFinMant,
+            fechainiciomant: row.FechaInicioMant,
+            mesmantenimiento: row.MesMantenimiento,
+            fechainiciomantenimiento: row.FechaInicioMantenimiento,
+            fechafinmantenimiento: row.FechaFinMantenimiento,
+            fechareferencia: row.FechaReferencia,
+            tipomantenimiento: row.TipoMantenimiento,
+
+            numeroorden: row.NumeroOrden,
+            horaapertura: row.HoraApertura,
+            horacierre: row.HoraCierre,
+            tiempoinvertido: row.TiempoInvertido,
+
+            estatusorden: row.EstatusOrden,
+            descestatusorden: row.DescEstatusOrden,
+            idmantenimiento: row.IdMantenimiento,
+            ordentrabajofinalizada: row.OrdenTrabajoFinalizada,
+            rutinacompletada: row.RutinaCompletada,
+            comentariosRutina: row.ComentariosRutina,
+
+            // 🔥 NUEVOS (los del SP)
+            horainicio: row.HoraInicio,
+            horafin: row.HoraFin,
+            textosecuencia: row.TextoSecuencia,
+            duracionhrs: row.DuracionHrs,
+
+            firmarealizo: row.FirmaRealizo,
+            nombrerealizo: row.NombreRealizo,
+            firmasuperviso: row.FirmaSuperviso,
+            nombresuperviso: row.NombreSuperviso,
+            firmamantenimiento: row.FirmaMantenimiento,
+            nombremantenimiento: row.NombreMantenimiento
+        };
+
+        return Object.entries(map)
+            .map(([key, value]) =>
+                `data-${key}="${(value ?? '').toString().replace(/"/g, '&quot;')}"`
+            )
+            .join(' ');
+    }
+
+    // ============================
+    // AGREGAR MANTENIMIENTO
+    // ============================
+    abrirModalAgregar(e) {
+        e.preventDefault();
+        $('#agregarMantenimientoModal').modal('show');
+    }
+
+    guardarMantenimiento() {
+        // Validar formulario
+        const equipo = $('#equipoSelect').val();
+        const linea = $('#lineaSelect').val();
+        const fecha = $('#fechaMantenimiento').val();
+        const estatus = $('#estatusSelect').val();
+        const ordenTrabajo = $('#ordenTrabajo').val();
+
+        if (!equipo || !linea || !fecha || !estatus) {
+            AlertManager.mostrar('Por favor, complete todos los campos obligatorios', 'warning');
+            return;
+        }
+
+        // Formatear fecha
+        const fechaFormateada = DateUtils.formatearFecha(fecha);
+        const claseBadge = EstatusManager.obtenerClaseBadge(estatus);
+
+        // Crear nueva fila
+        const nuevaFila = `
+            <tr>
+                <td>${equipo}</td>
+                <td>${linea}</td>
+                <td>${fechaFormateada}</td>
+                <td><span class="badge ${claseBadge}">${estatus}</span></td>
+                <td>${ordenTrabajo || ''}</td>
+                <td>
+                    <button class="btn btn-sm btn-info">Detalles</button>
+                </td>
+            </tr>
+        `;
+
+        // Agregar nueva fila a la tabla
+        $('#tablaMantenimientos tbody').append(nuevaFila);
+
+        // Cerrar modal y limpiar formulario
+        $('#agregarMantenimientoModal').modal('hide');
+        $('#formMantenimiento')[0].reset();
+
+        AlertManager.mostrar('Mantenimiento preventivo programado correctamente', 'success');
+    }
+
+    // ============================
+    // FILTROSconfigurarEventosFiltrosMantenimientos
+    // ============================
+    aplicarFiltros() {
+        AlertManager.mostrar('Funcionalidad de filtro será implementada próximamente', 'info');
+    }
+
+    seleccionarTodos(e) {
+        $('.row-checkbox').prop('checked', $(e.target).prop('checked'));
+    }
+
+    // ============================
+    // REFACCIONES
+    // ============================
+    abrirModalRefaccion(btn) {
+        // ===== OBTENER TODOS LOS DATA ATTRIBUTES =====
+        const idEquipo = btn.data('idequipo');
+        const planta = btn.data('planta');
+        const numeroDocPmCalidad = btn.data('numerodocpmcalidad');
+        const nombreEquipo = btn.data('nombreequipo');
+        const descripcionEquipo = btn.data('descripcionequipo');
+        const idArea = btn.data('idarea');
+        const area = btn.data('area');
+        const idLineaProduccion = btn.data('idlineaproduccion');
+        const lineaProduccion = btn.data('lineaproduccion');
+        const centrocostos = btn.data('centrocostos');
+        const periodicidadMantenimiento = btn.data('periodicidadmantenimiento');
+        const diaInicioMant = btn.data('diainiciomant');
+        const diaFinMant = btn.data('diafinmant');
+        const fechaInicioMant = btn.data('fechainiciomant');
+        const mesMantenimiento = btn.data('mesmantenimiento');
+        const fechaInicioMantenimiento = btn.data('fechainiciomantenimiento');
+        const fechaFinMantenimiento = btn.data('fechafinmantenimiento');
+        const fechaReferencia = btn.data('fechareferencia');
+        const tipoMantenimiento = btn.data('tipomantenimiento');
+        const numeroOrden = btn.data('numeroorden');
+        const horaApertura = btn.data('horaapertura');
+        const estatusOrden = btn.data('estatusorden');
+        const descEstatusOrden = btn.data('descestatusorden');
+        const idMantenimiento = btn.data('idmantenimiento');
+
+        // Llenar el modal con los datos
+        $("#formSolicitarRefaccion")[0].reset();
+        ValidationManager.limpiarValidacion('#formSolicitarRefaccion'); // AGREGAR ESTA LÍNEA
+        $('#ROT').val(numeroOrden);
+        $('#REquipo').val(nombreEquipo + ' ' + numeroDocPmCalidad);
+        $('#RLinea').val(lineaProduccion);
+        $('#RFechaMantenimiento').val(fechaReferencia);
+
+        this.appReferencia.gestionArticulosMP.limpiar();
+
+
+        this.ID_EQUIPO = idEquipo;
+        this.ID_MANTENIMIENTO = idMantenimiento;
+        $('#solicitarRefaccionModal').modal('show');
+    }
+
+    enviarSolicitudRefaccion(e) {
+        e.preventDefault();
+
+        // ✅ Validar que haya artículos en la tabla
+        const articulos = this.appReferencia ? this.appReferencia.gestionArticulosMP.obtenerArticulos() : [];
+        if (articulos.length === 0) {
+            AlertManager.mostrar('Agregue al menos un artículo a la solicitud.', 'warning', 'alertRefaccionContainer');
+            return;
+        }
+
+        // Validar prioridad y descripción
+        if (!ValidationManager.validarFormulario('#formSolicitarRefaccion')) {
+            AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', 'alertRefaccionContainer');
+            return false;
+        }
+
+        // ✅ Recopilar los datos con múltiples artículos
+        const datos = {
+            Articulos: articulos.map(art => ({
+                RefaccionSolicitada: art.CodigoArticulo,
+                Cantidad: art.Cantidad,
+                IdEquipo: this.ID_EQUIPO,
+                OrdenTrabajo: $('#ROT').val(),
+                IdMantenimiento: parseInt(this.ID_MANTENIMIENTO),
+                Estatus: 3,
+                NivelUrgencia: $('#RurgenciaRefaccion').val(),
+                DescripcionNecesidad: $('#RdescripcionNecesidad').val(),
+                UsuarioSolicita: this.datos_usuario[0].EMAIL,
+                Planta: this.datos_usuario[0].PLANTA
+            })),
+            OrdenTrabajo: $('#ROT').val(),
+            IdEquipo: this.ID_EQUIPO,
+            IdMantenimiento: parseInt(this.ID_MANTENIMIENTO),
+            Estatus: 3,
+            NivelUrgencia: $('#RurgenciaRefaccion').val(),
+            DescripcionNecesidad: $('#RdescripcionNecesidad').val(),
+            UsuarioSolicita: this.datos_usuario[0].EMAIL,
+            Planta: this.datos_usuario[0].PLANTA
+        };
+
+        $("#btnSolicitarRefaccion").html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
+        $("#btnSolicitarRefaccion").prop("disabled", true);
+
+        $.ajax({
+            url: `/${this.URLBase}/InsertarSolicitudRefaccion`,
+            type: 'POST',
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(datos),
+            dataType: 'json',
+            success: (response) => {
+                if (response.Status === 'SI') {
+                    $("#btnSolicitarRefaccion").html('<i class="bi bi-check-circle-fill text-white me-2"></i>Solicitud generada correctamente');
+                    $("#btnSolicitarRefaccion").prop("disabled", false);
+
+                    // Limpiar formulario y tabla
+                    $("#formSolicitarRefaccion")[0].reset();
+                    $("#formSolicitarRefaccion").removeClass("was-validated");
+
+                    // ✅ Limpiar tabla de artículos
+                    if (this.appReferencia) {
+                        this.appReferencia.gestionArticulosMP.limpiar();
+                    }
+
+                    // Recargar DataTable
+                    $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+
+                    setTimeout(function () {
+                        $("#btnSolicitarRefaccion").html('<i class="bi bi-save me-1"></i>Guardar');
+                        $("#solicitarRefaccionModal").modal('hide');
+                    }, 3000);
+
+                } else {
+                    $("#btnSolicitarRefaccion").html('<i class="bi bi-save me-1"></i>Guardar');
+                    $("#btnSolicitarRefaccion").prop("disabled", false);
+                    AlertManager.mostrar(response.Message || 'Error al realizar la solicitud de refacción', 'warning', "alertRefaccionContainer");
+                }
+            },
+            error: (xhr, status, error) => {
+                $("#btnSolicitarRefaccion").html('<i class="bi bi-save me-1"></i>Guardar');
+                $("#btnSolicitarRefaccion").prop("disabled", false);
+                AlertManager.mostrar('Error al conectar con el servidor', 'warning', "alertRefaccionContainer");
+            }
+        });
+    }
+
+    // ============================
+    // GENERAR ÓRDENES
+    // ============================
+    generarOrdenes() {
+        try {
+            const checkboxes = $('#tablaMantenimientosRango .row-checkbox:checked');
+            if (checkboxes.length === 0) {
+                AlertManager.mostrar('Debe seleccionar al menos una fila para generar las órdenes de trabajo.', 'warning');
+                return;
+            }
+            let Usuario = this.datos_usuario[0].EMAIL;
+            // Obtener array de objetos con ID, Nombre y Fechas del Periodo
+            const equiposSeleccionados = checkboxes.map(function () {
+                const fila = $(this).closest('tr');
+                const datosCompletos = fila.data('mantenimiento-completo');
+                return {
+                    IdEquipo: datosCompletos.idEquipo,
+                    NombreEquipo: datosCompletos.nombreEquipo,
+                    FechaInicioMantenimiento: datosCompletos.fechaInicioMantenimiento,  // ✅ NUEVO
+                    FechaFinMantenimiento: datosCompletos.fechaFinMantenimiento,         // ✅ NUEVO
+                    Usuario: Usuario         // ✅ NUEVO
+                };
+            }).get();
+
+            $.ajax({
+                url: `/${this.URLBase}/InsertarMP`,
+                type: 'POST',
+                contentType: 'application/json; charset=utf-8',
+                data: JSON.stringify(equiposSeleccionados),
+                dataType: 'json',
+                beforeSend: function () {
+                    GlobalUtil.mostrarLoader(true);
+                },
+                success: (response) => {
+                    if (response.Status === 'SI') {
+                        $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                        AlertManager.mostrar(response.Message, 'success');
+                    } else {
+                        $("#btnGuardarEquipo").html('<i class="bi bi-save me-1"></i>Guardar');
+                        $("#btnGuardarEquipo").prop("disabled", false);
+                        AlertManager.mostrar(response.Message || 'Error al generar las ordenes de trabajo', 'warning');
+                    }
+                    GlobalUtil.mostrarLoader(false);
+                },
+                error: (xhr, status, error) => {
+                    $("#btnGuardarEquipo").html('<i class="bi bi-save me-1"></i>Guardar');
+                    $("#btnGuardarEquipo").prop("disabled", false);
+                    AlertManager.mostrar('Error al conectar con el servidor,intente de nuevo más tarde', 'warning', "alertEquipoContainer");
+                    GlobalUtil.mostrarLoader(false);
+                }
+            });
+        }
+        catch (error) {
+            AlertManager.mostrar('No es posible generar las ordenes de trabajo: ' + error, 'warning');
+        }
+    }
+
+    // ============================
+    // ORDENES TRABAJO
+    // ============================
+    abrirModalCaratulaOnline(btn) {
+        try {
+            // ========================================
+            // 1️ DATA
+            // ========================================
+            const data = this.getDataFromButtonMP(btn);
+
+            if (!btn || !btn.data()) {
+                console.error("❌ Botón inválido o sin data");
+                AlertManager.mostrar("No se pudo obtener información de la orden, intente de nuevo más tarde.", "warning");
+                return;
+            }
+
+            // 🔥 Tipo operación
+            this.TIPO_OPERACION = (data.estatusOrden == "4" ? "U" : "I");
+
+            // ========================================
+            // 2️ RESET
+            // ========================================
+            $("#formOrdenMantenimiento")[0].reset();
+            ValidationManager.limpiarValidacion('#formOrdenMantenimiento');
+
+            $("#btnGuardarOT").prop("disabled", false);
+            $("#btnGuardarOT").removeClass("btn_disabled");
+
+            this.gestionFirmas.limpiarTodasLasFirmas();
+            // ✅ VARIABLE GLOBAL PARA ALMACENAR ARCHIVOS
+            window.imagenesRutina = [];
+            // ✅ VARIABLE GLOBAL PARA ALMACENAR TECNICOS
+            this.gestionTecnicos.tecnicosAsignados = [];
+
+            $("#listaTecnicosAsignados").empty().append(`<div style="font-size:0.85rem; color:var(--modal-text-muted);">
+                                            <i class="bi bi-info-circle me-2"></i>No hay técnicos asignados
+                                        </div>"`);
+
+            // ========================================
+            // 3️ DATOS GENERALES
+            // ========================================
+            $('#NumeroOrden').val(data.numeroOrden || '');
+            $('#Solicitante').val(this.datos_usuario[0].EMAIL || '');
+            $('#ClaseMantenimiento').val('Z20'); // 🔥 Preventivo
+            $("#EstatusOrden").val(data.descEstatusOrden || '');
+
+            $('#NombreEquipo').val(data.nombreEquipo || '');
+            $('#DescEquipo').val(data.descripcionEquipo || '');
+
+            // ========================================
+            // 4️ FECHA / HORA APERTURA
+            // ========================================
+            if (data.horaApertura && data.horaApertura.includes(' ')) {
+                try {
+                    const [fechaParte, horaParte] = data.horaApertura.split(' ');
+                    const [dia, mes, anio] = fechaParte.split('/');
+
+                    if (dia && mes && anio && horaParte) {
+                        $("#FechaInicioExtrema").val(`${anio}-${mes}-${dia}`);
+                        $("#HoraInicio").val(horaParte.substring(0, 5));
+                    }
+                } catch (err) {
+                    console.warn("⚠️ Error parseando horaApertura:", data.horaApertura);
+                }
+            }
+
+            // ========================================
+            // 5️ UBICACIÓN / DATOS TÉCNICOS
+            // ========================================
+            $("#UbicacionTecnica").val(data.area ? `AREA ${data.area}` : '');
+            $("#CentroCostos").val(data.centroCostos || '');
+            $("#NumDocPmCalidad").val(data.numeroDocPmCalidad || '');
+            $("#Linea").val(data.lineaProduccion || '');
+            $("#DescripcionEquipo").val(data.descripcionEquipo || '');
+            $("#NumeroEquipo").val(data.numeroDocPmCalidad || '');
+
+            const codigo_mantenimiento =
+                (this.datos_usuario[0].PLANTA == "1" ? "PL1" : "PL2") +
+                "-PMT" + (data.area || '') + "01-L01-F01";
+
+            $("#CodigoMantenimiento").val(codigo_mantenimiento);
+            $("#GrupoPlaneacion").val(this.datos_usuario[0].PLANTA + "_" + (data.area || ''));
+
+            $("#fechaImpresion").text(DateUtils.obtenerFechaHora());
+
+            // ========================================
+            // 6️🔥 REGISTRO DE TRABAJO
+            // ========================================
+            if (data.horaInicio) {
+                $("#HoraInicioTrabajo").val(data.horaInicio.substring(0, 5));
+            }
+
+            if (data.horaFin) {
+                $("#HoraFin").val(data.horaFin.substring(0, 5));
+            }
+
+            $("#TextoSecuencia").val(data.textoSecuencia || '');
+            $("#DuracionHrs").val(data.duracionHrs || '');
+            $("#DuracionHrs").val(data.duracionHrs || '');
+
+            // ========================================
+            // 7️ IDS
+            // ========================================
+            this.ID_EQUIPO = data.idEquipo;
+            this.ID_MANTENIMIENTO = data.idMantenimiento;
+
+            // ========================================
+            // 8️ RUTINA (CLAVE EN MP)
+            // ========================================
+            $('#rutinaNombreEquipo').text(data.nombreEquipo + ' ' + data.numeroDocPmCalidad);
+            $('#rutinaProceso').text(data.area);
+
+            // ========================================
+            // LIMPIAR EVIDENCIA TECNICO IMAGENES
+            // ========================================
+            $("#galeriaEvidenciaRutina").remove();
+
+            // ========================================
+            // 9 CONFIGURACIÓN POR ROL
+            // ========================================
+            const tipoUsuario = this.datos_usuario?.[0]?.TIPOUSUARIO || "";
+
+            switch (tipoUsuario) {
+
+                // ============================
+                // 🔧 TÉCNICO
+                // ============================
+                case "TecnicoMtto":
+
+                    if (typeof this.configurarVistaTecnico === "function") {
+                        this.configurarVistaTecnico(data.idEquipo, data.planta);
+                    } else {
+                        console.error("❌ configurarVistaTecnico no definido");
+                    }
+
+                    break;
+
+
+                // ============================
+                // 🏭 PRODUCCIÓN
+                // ============================
+                case "Produccion":
+
+                    if (typeof this.configurarVistaProduccion === "function") {
+                        this.configurarVistaProduccion(
+                            data.estatusOrden,
+                            data.firmaSuperviso,
+                            data.firmaMantenimiento,
+                            data.numeroOrden,
+                            data.idEquipo,
+                            data.planta
+                        );
+                    } else {
+                        console.error("❌ configurarVistaProduccion no definido");
+                    }
+
+                    // 🔥 Si la orden ya está atendida → cargar actividades
+                    if (data.estatusOrden == 4 && typeof this.ConsultarActividadesPorOTMP === "function") {
+                        this.ConsultarActividadesPorOTMP(data.numeroOrden, data.idEquipo, data.planta, data.comentariosRutina);
+                    }
+
+                    break;
+
+
+                // ============================
+                // 👨‍💼 ADMIN / ADMIN MTTO
+                // ============================
+                case "AdminMtto":
+                case "Administrador":
+
+                    if (typeof this.configurarVistaAdministrador === "function") {
+                        this.configurarVistaAdministrador(
+                            data.estatusOrden,
+                            data.firmaMantenimiento,
+                            data.firmaSuperviso,
+                            data.numeroOrden,
+                            data.idEquipo,
+                            data.planta
+                        );
+                    } else {
+                        console.error("❌ configurarVistaAdministrador no definido");
+                    }
+
+                    // 🔥 Igual que producción: ver actividades si ya está atendida
+                    if (data.estatusOrden == 4 && typeof this.ConsultarActividadesPorOTMP === "function") {
+                        this.ConsultarActividadesPorOTMP(data.numeroOrden, data.idEquipo, data.planta, data.comentariosRutina);
+                    }
+
+                    break;
+
+
+                // ============================
+                // 🧠 FALLBACK (CRÍTICO)
+                // ============================
+                default:
+
+                    console.warn("⚠️ Tipo de usuario no reconocido:", tipoUsuario);
+
+                    if (typeof this.configurarVistaAdministrador === "function") {
+                        this.configurarVistaAdministrador(
+                            data.estatusOrden,
+                            data.firmaMantenimiento,
+                            data.firmaSuperviso,
+                            data.numeroOrden,
+                            data.idEquipo,
+                            data.planta
+                        );
+                    }
+
+                    // 🔥 También carga actividades por seguridad
+                    if (data.estatusOrden == 4 && typeof this.ConsultarActividadesPorOTMP === "function") {
+                        this.ConsultarActividadesPorOTMP(data.numeroOrden, data.idEquipo, data.planta);
+                    }
+
+                    break;
+            }
+
+            // ========================================
+            // 🔥 1️0 FIRMAS
+            // ========================================
+            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo);
+            this.gestionFirmas.queueFirma('superviso', data.firmaSuperviso, data.nombreSuperviso);
+            this.gestionFirmas.queueFirma('mantenimiento', data.firmaMantenimiento, data.nombreMantenimiento);
+
+            // ========================================
+            // 🔥 1️1 TÉCNICOS
+            // ========================================
+            this.cargarTecnicos(data.numeroOrden, "MP");
+
+            // ========================================
+            // 1️2 MODAL
+            // ========================================
+            $('#modalOrdenMantenimiento').modal('show');
+        }
+        catch (error) {
+            console.error("❌ Error en abrirModalCaratulaOnline:", error);
+            AlertManager.mostrar("Error al abrir la orden, intente de nuevo más tarde.", "danger");
+        }
+    }
+
+    getDataFromButtonMP(btn) {
+        const d = btn.data();
+
+        return {
+            idEquipo: d.idequipo,
+            planta: d.planta,
+            numeroDocPmCalidad: d.numerodocpmcalidad,
+            nombreEquipo: d.nombreequipo,
+            descripcionEquipo: d.descripcionequipo,
+            area: d.area,
+            lineaProduccion: d.lineaproduccion,
+            centroCostos: d.centrocostos,
+
+            periodicidadMantenimiento: d.periodicidadmantenimiento,
+            fechaInicioMantenimiento: d.fechainiciomantenimiento,
+            fechaFinMantenimiento: d.fechafinmantenimiento,
+            fechaReferencia: d.fechareferencia,
+
+            numeroOrden: d.numeroorden,
+            horaApertura: d.horaapertura,
+            horaCierre: d.horacierre,
+
+            // 🔥 NUEVOS (IMPORTANTES)
+            horaInicio: d.horainicio,
+            horaFin: d.horafin,
+            textoSecuencia: d.textosecuencia,
+            duracionHrs: d.duracionhrs,
+
+            estatusOrden: d.estatusorden,
+            descEstatusOrden: d.descestatusorden,
+            idMantenimiento: d.idmantenimiento,
+            comentariosRutina:d.comentariosrutina,
+
+            // 🔥 FIRMAS
+            firmaRealizo: d.firmarealizo || '',
+            nombreRealizo: d.nombrerealizo || '',
+            firmaSuperviso: d.firmasuperviso || '',
+            nombreSuperviso: d.nombresuperviso || '',
+            firmaMantenimiento: d.firmamantenimiento || '',
+            nombreMantenimiento: d.nombremantenimiento || ''
+        };
+    }
+
+    cargarFirmasExistentes(firmas) {
+
+        this.gestionFirmas._cargarFirmaFromDB('realizo', firmas.firmaRealizo, firmas.nombreRealizo);
+        this.gestionFirmas._cargarFirmaFromDB('superviso', firmas.firmaSuperviso, firmas.nombreSuperviso);
+        this.gestionFirmas._cargarFirmaFromDB('mantenimiento', firmas.firmaMantenimiento, firmas.nombreMantenimiento);
+
+    }
+
+    cargarTecnicos(numeroOrden, tipo) {
+
+        const key = `${numeroOrden}_${tipo}`;
+
+        if (!this.cacheTecnicos) {
+            this.cacheTecnicos = {};
+        }
+
+        // 🔥 CACHE
+        if (this.cacheTecnicos[key]) {
+            if (this.cacheTecnicos[key].length > 0)
+                this.gestionTecnicos.cargarTecnicosDesdeDB(this.cacheTecnicos[key]);
+            return;
+        }
+
+        $.ajax({
+            url: `/${this.URLBaseCorrectivos}/ObtenerTecnicosOT`,
+            type: 'GET',
+            data: {
+                numeroOrden: numeroOrden,
+                tipo: tipo
+            },
+            dataType: 'json',
+
+            beforeSend: () => {
+                $('#listaTecnicosAsignados').html(`
+                <div class="text-center py-2">
+                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                </div>
+            `);
+            },
+
+            success: (data) => {
+
+                this.cacheTecnicos[key] = data;
+
+                this.gestionTecnicos.cargarTecnicosDesdeDB(data);
+            },
+
+            error: (xhr, status, error) => {
+
+                $('#listaTecnicosAsignados').html(`
+                <div style="color:red; font-size:0.9rem;">
+                    Error al cargar técnicos
+                </div>
+            `);
+
+                console.error(error);
+            }
+        });
+    }
+
+    async cargarTecnicosLista(numeroOrden, tipo) {
+
+        const key = `${numeroOrden}_${tipo}`;
+
+        if (!this.cacheTecnicos) {
+            this.cacheTecnicos = {};
+        }
+
+        // 🔥 CACHE
+        if (this.cacheTecnicos[key]) {
+            return this.cacheTecnicos[key];
+        }
+
+        try {
+            const response = await $.ajax({
+                url: `/${this.URLBase}/ObtenerTecnicosOT`,
+                type: 'GET',
+                data: {
+                    numeroOrden: numeroOrden,
+                    tipo: tipo
+                },
+                dataType: 'json'
+            });
+
+            this.cacheTecnicos[key] = response;
+
+            return response;
+
+        } catch (error) {
+            console.error("Error obteniendo técnicos:", error);
+            return [];
+        }
+    }
+
+    // ========================================
+    // 🔧 CONFIGURAR VISTA TÉCNICO (CORRECTIVO)
+    // ========================================
+    configurarVistaTecnico(IdEquipo, Planta) {
+
+        // 🔹 SECCIONES
+        $('#EvidenciaOrdenTrabajo').removeClass('d-none');
+        $('#CierreOrdenTrabajo').removeClass('d-none');
+        $('#SeccionFirmas').removeClass('d-none');
+        $("#busqueda_tecnicosMainContainer").removeClass('d-none');
+
+        // 🔹 REQUIRED
+        $('#EvidenciaOrdenTrabajo input:not(#fileInput)').prop('required', true);
+        $('#CierreOrdenTrabajo input:not(#BuscarTecnico)').prop('required', true);
+        $('#BuscarTecnico, #fileInput').prop('required', false);
+
+        // 🔹 BOTONES
+        $('#btnGuardarOT').removeClass('d-none');
+        $('#btnExportMantenimientoPDF').addClass('d-none');
+
+        // 🔹 UPLOADER
+        $('#previewArea').empty();
+        $('#clearAll').hide();
+        $('#uploadArea').removeClass('upload-area-disabled');
+        $('#uploadInfo').show();
+
+        const uploader = $('#uploadArea').data('imageUploader');
+        if (uploader && uploader.enableUpload) {
+            uploader.enableUpload();
+        }
+
+        // 🔹 CAMPOS EDITABLES
+        $("#Scrap").removeAttr('readonly').prop('required', true);
+        $("#HoraCierreMan").removeAttr('readonly').prop('required', true);
+
+        // 🔥 FIRMAS
+        this.gestionFirmas.mostrarFirma('Realizo', true);
+        $("#nombreRealizo").val(this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase()).attr('readonly', true);
+        this.gestionFirmas.mostrarFirma('Superviso', true);
+        this.gestionFirmas.mostrarFirma('Mantenimiento', true);
+
+        this.gestionFirmas.deshabilitarFirma('Superviso', true);
+        this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
+
+        $('#firmaRealizoContainer input[type="text"]').prop('required', true);
+        $('#firmaSupervisoContainer input[type="text"]').prop('required', false);
+        $('#firmaMantenimientoContainer input[type="text"]').prop('required', false);
+
+        // ========================================
+        //🔥 RUTINA
+        // ========================================
+        this.ConsultarRutinaServer(IdEquipo, Planta);
+
+    }
+
+    // ========================================
+    // 👨‍💼 CONFIGURAR VISTA PRODUCCION (CORRECTIVO)
+    // ========================================
+    configurarVistaProduccion(EstatusOrden, FirmaSuperviso, FirmaMantenimiento, NumeroOrden, IdEquipo, Planta) {
+
+        // 🔹 MOSTRAR FIRMAS
+        $('#SeccionFirmas').removeClass('d-none');
+
+        // 🔹 REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
+        $('#EvidenciaOrdenTrabajo input').prop('required', false);
+        $('#EvidenciaOrdenTrabajo input').prop('readonly', true);
+        $('#CierreOrdenTrabajo input').prop('required', false);
+        $('#CierreOrdenTrabajo input').prop('readonly', true);
+        // 🔥 CAMPOS BLOQUEADOS DEFAULT ADMIN
+        $("#Scrap").attr('readonly', true).prop('required', false);
+        $("#HoraCierreMan").attr('readonly', true).prop('required', false);
+
+        // 🔥 FIRMAS
+        this.gestionFirmas.mostrarFirma('Realizo', true);
+        this.gestionFirmas.mostrarFirma('Superviso', true);
+        $("#nombreSuperviso").val(this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase()).attr('readonly', true);
+        this.gestionFirmas.mostrarFirma('Mantenimiento', true);
+
+        // bloquear correctamente
+        this.gestionFirmas._bloquearFirma("Realizo", true);
+
+        if (FirmaMantenimiento != "")
+            this.gestionFirmas._bloquearFirma("Mantenimiento", true);
+        else
+            this.gestionFirmas.deshabilitarFirma("Mantenimiento", true);
+
+        // 🔹 MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
+        if (EstatusOrden == 4) {
+            $('#EvidenciaOrdenTrabajo').removeClass('d-none');
+            $('#CierreOrdenTrabajo').removeClass('d-none');
+
+            //TEXTO DE SECUENCIA
+            $("#TextoSecuencia").prop('readonly', true);
+
+            // 🔹 BOTONES
+            $('#btnGuardarOT').removeClass('d-none');
+            $('#btnExportMantenimientoPDF').removeClass('d-none');
+
+            //INPUTS FIRMAS
+            $('#firmaMantenimientoContainer input[type="text"]').prop('required', false);
+            $('#firmaRealizoContainer input[type="text"]').prop('required', false);
+            $('#firmaSupervisoContainer input[type="text"]').prop('required', true);
+
+            //LISTA DE TECNICOS
+            $('#listaTecnicosAsignados').addClass('tecnicos-readonly');
+            $("#busqueda_tecnicosMainContainer").addClass("d-none");
+
+            //SECCION PARA CARGAR IMAGENES
+            $("#EvidenciaOrdenTrabajo").addClass("d-none");
+
+            //OBTENER LISTA DE ACTIVIDADES CONTESTADA
+            this.ConsultarActividadesPorOTMP(NumeroOrden, IdEquipo, Planta);
+
+            //PARA DEMO OCULTAR SECCION
+            //$("#formRutinaOnline").addClass("d-none");
+            //$("#EvidenciaOrdenTrabajo").addClass("d-none");
+            //$("#rutinamaincontainer").addClass("d-none");
+        }
+        // 🔹 OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
+        else {
+            $('#EvidenciaOrdenTrabajo').addClass('d-none');
+            $('#CierreOrdenTrabajo').addClass('d-none');
+
+            // 🔹 BOTONES
+            $('#btnGuardarOT').addClass('d-none');
+            $('#btnExportMantenimientoPDF').removeClass('d-none');
+
+            //INPUTS FIRMAS
+            $('#firmaMantenimientoContainer input[type="text"]').prop('required', false);
+            $('#firmaRealizoContainer input[type="text"]').prop('required', false);
+            $('#firmaSupervisoContainer input[type="text"]').prop('required', false);
+
+            // ========================================
+            //🔥 RUTINA
+            // ========================================
+            this.ConsultarRutinaServer(IdEquipo, Planta);
+        }
+
+        //IMPORTANTE SI YA FIRMO MANTENIMIENTO OCULTAR BOTON GUARDAR
+        if (FirmaSuperviso != "") {
+            $("#btnGuardarOT").prop("disabled", true);
+            $("#btnGuardarOT").addClass("btn_disabled");
+        }
+
+    }
+
+    // ========================================
+    // 👨‍💼 CONFIGURAR VISTA ADMIN (CORRECTIVO)
+    // ========================================
+    configurarVistaAdministrador(EstatusOrden, FirmaMantenimiento, FirmaSuperviso, NumeroOrden, IdEquipo, Planta) {
+
+        // 🔹 MOSTRAR FIRMAS
+        $('#SeccionFirmas').removeClass('d-none');
+
+        // 🔹 REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
+        $('#EvidenciaOrdenTrabajo input').prop('required', false);
+        $('#EvidenciaOrdenTrabajo input').prop('readonly', true);
+        $('#CierreOrdenTrabajo input').prop('required', false);
+        $('#CierreOrdenTrabajo input').prop('readonly', true);
+
+        // 🔥 CAMPOS BLOQUEADOS DEFAULT ADMIN
+        $("#Scrap").attr('readonly', true).prop('required', false);
+        $("#HoraCierreMan").attr('readonly', true).prop('required', false);
+
+        // 🔥 FIRMAS
+        this.gestionFirmas.mostrarFirma('Realizo', true);
+        this.gestionFirmas.mostrarFirma('Superviso', true);
+        this.gestionFirmas.mostrarFirma('Mantenimiento', true);
+        $("#nombreMantenimiento").val(this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase()).attr('readonly', true);
+
+        // bloquear correctamente
+        this.gestionFirmas._bloquearFirma("Realizo", true);
+        if (FirmaSuperviso != "")
+            this.gestionFirmas._bloquearFirma("Superviso", true);
+        else
+            this.gestionFirmas.deshabilitarFirma("Superviso", true);
+        //this.gestionFirmas._bloquearFirma("Realizo");
+        //this.gestionFirmas._bloquearFirma("Superviso");
+
+        // 🔹 MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
+        if (EstatusOrden == 4) {
+            $('#EvidenciaOrdenTrabajo').removeClass('d-none');
+            $('#CierreOrdenTrabajo').removeClass('d-none');
+
+            //TEXTO DE SECUENCIA
+            $("#TextoSecuencia").prop('readonly', true);
+
+            // 🔹 BOTONES
+            $('#btnGuardarOT').removeClass('d-none');
+            $('#btnExportMantenimientoPDF').removeClass('d-none');
+
+            //INPUTS FIRMAS
+            $('#firmaMantenimientoContainer input[type="text"]').prop('required', true);
+            $('#firmaRealizoContainer input[type="text"]').prop('required', false);
+            $('#firmaSupervisoContainer input[type="text"]').prop('required', false);
+
+            //LISTA DE TECNICOS
+            $('#listaTecnicosAsignados').addClass('tecnicos-readonly');
+            $("#busqueda_tecnicosMainContainer").addClass("d-none");
+
+            //SECCION PARA CARGAR IMAGENES
+            $("#EvidenciaOrdenTrabajo").addClass("d-none");
+
+            //OBTENER LISTA DE ACTIVIDADES CONTESTADA
+            this.ConsultarActividadesPorOTMP(NumeroOrden, IdEquipo, Planta);
+
+            //PARA DEMO OCULTAR SECCION
+            //$("#formRutinaOnline").addClass("d-none");
+            //$("#EvidenciaOrdenTrabajo").addClass("d-none");
+            //$("#rutinamaincontainer").addClass("d-none");
+        }
+        // 🔹 OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
+        else {
+            $('#EvidenciaOrdenTrabajo').addClass('d-none');
+            $('#CierreOrdenTrabajo').addClass('d-none');
+
+            // 🔹 BOTONES
+            $('#btnGuardarOT').addClass('d-none');
+            $('#btnExportMantenimientoPDF').removeClass('d-none');
+
+            //INPUTS FIRMAS
+            $('#firmaMantenimientoContainer input[type="text"]').prop('required', false);
+            $('#firmaRealizoContainer input[type="text"]').prop('required', false);
+            $('#firmaSupervisoContainer input[type="text"]').prop('required', false);
+
+            // ========================================
+            //🔥 RUTINA
+            // ========================================
+            this.ConsultarRutinaServer(IdEquipo, Planta);
+        }
+
+        //IMPORTANTE SI YA FIRMO MANTENIMIENTO OCULTAR BOTON GUARDAR
+        if (FirmaMantenimiento != "") {
+            $("#btnGuardarOT").prop("disabled", true);
+            $("#btnGuardarOT").addClass("btn_disabled");
+        }
+    }
+
+
+    async guardarOT(e) {
+        e.preventDefault();
+
+        // Validar formulario
+        if (!ValidationManager.validarFormulario('#formOrdenMantenimiento')) {
+            AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', "alertOrdenContainer");
+            return false;
+        }
+
+        // ✅ Validar técnicos
+        if (this.gestionTecnicos.tecnicosAsignados.length === 0) {
+            AlertManager.mostrar(
+                'Debe asignar al menos un técnico a la orden de trabajo',
+                'warning',
+                "alertOrdenContainer"
+            );
+            $('#BuscarTecnico').focus();
+            $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+            return false;
+        }
+
+
+
+        let FirmaRequerida = "";
+        if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+            FirmaRequerida = "Realizo";
+        }
+        if (this.datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion") {
+            FirmaRequerida = "Superviso";
+        }
+        if (this.datos_usuario[0].TIPOUSUARIO == "AdminMtto" || this.datos_usuario[0].TIPOUSUARIO == "Administrador") {
+            FirmaRequerida = "Mantenimiento";
+        }
+
+        // 🔥 VALIDAR FIRMAS (solo si la sección está visible)
+        if ($('#SeccionFirmas').is(':visible')) {
+            if (!this.gestionFirmas.validarFirmas()) {
+                $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                return false;
+            }
+
+            // 🔥 Guardar las firmas en los campos ocultos ANTES de obtenerlas
+            this.gestionFirmas.guardarTodasLasFirmas();
+        }
+
+        // ✅ Deshabilitar botón y mostrar loading
+        $('#btnGuardarOT').html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando OT...').prop('disabled', true);
+
+        try {
+            // 🔥 OBTENER DATOS DEL FORMULARIO
+            const datos = GlobalUtil.obtenerDatosAnyFormulario("formOrdenMantenimiento");
+            // 🔥 GUARDAR PRIMERO LA RUTINA Y ESPERAR RESPUESTA
+            const rutinaGuardada = await this.guardarRutina(datos.NumeroOrden, datos.EstatusOrden);
+
+            if (!rutinaGuardada) {
+                AlertManager.mostrar('Error al guardar la rutina. No se puede continuar.', 'warning', "alertOrdenContainer");
+                $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                return false;
+            }
+
+            console.log('✅ Rutina guardada exitosamente, procediendo a guardar OT...');
+
+            // ✅ SUBIR PDF SI EXISTE (cuando es rutina default para TecnicoMtto)
+            if (this.pdfTemporalRutina) {
+                console.log('📄 Subiendo PDF de rutina...');
+                const pdfSubido = await this.SubirPdfRutinaAsync(this.pdfTemporalRutina);
+                if (!pdfSubido) {
+                    AlertManager.mostrar('Error al guardar el PDF de la rutina. No se puede continuar.', 'warning', "alertOrdenContainer");
+                    $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                    return false;
+                }
+                console.log('✅ PDF de rutina guardado exitosamente');
+                // Limpiar el PDF temporal después de subirlo
+                this.pdfTemporalRutina = null;
+            }
+
+
+            datos.Usuario = this.datos_usuario[0].EMAIL;
+            datos.TipoOperacion = this.TIPO_OPERACION;
+            // ✅ Convertir horas de 12h a 24h
+            if (datos.HoraInicio) {
+                datos.HoraInicio = this.convertirA24Horas(datos.HoraInicio);
+            }
+            if (datos.HoraFin) {
+                datos.HoraFin = this.convertirA24Horas(datos.HoraFin);
+            }
+
+            // ✅ Agregar técnicos
+            datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
+            datos.IdMantenimiento = this.ID_MANTENIMIENTO;
+
+            // 🔥 OBTENER Y AGREGAR FIRMAS DIGITALES
+            const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
+
+            // 🔥 AGREGAR DATOS DE FIRMAS AL OBJETO
+            datos.FirmaRealizo = firmas.realizo.firma || '';        // Base64 PNG
+            datos.NombreRealizo = firmas.realizo.nombre || '';
+            datos.FirmaSuperviso = firmas.superviso.firma || '';    // Base64 PNG
+            datos.NombreSuperviso = firmas.superviso.nombre || '';
+            datos.FirmaMantenimiento = firmas.mantenimiento.firma || ''; // Base64 PNG
+            datos.NombreMantenimiento = firmas.mantenimiento.nombre || '';
+
+            // 🔥 GUARDAR LA ORDEN DE TRABAJO
+            await this.guardarOTDefinitivo(datos);
+
+        } catch (error) {
+            console.error('Error en el proceso:', error);
+            AlertManager.mostrar('No es posible guardar la orden de trabajo: ' + error, 'warning', "alertOrdenContainer");
+            $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+        }
+
+        return false;
+    }
+    // 🔥 MÉTODO SEPARADO PARA GUARDAR LA OT (también async)
+    async guardarOTDefinitivo(datos) {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: `/${this.URLBase}/InsertarOrdenTrabajoMP`,
+                type: 'POST',
+                contentType: 'application/json; charset=utf-8', // ✅ Importante
+                data: JSON.stringify(datos), // ✅ Convierte todo a JSON
+                dataType: 'json',
+                success: (response) => {
+                    if (response.Status === 'SI') {
+                        AlertManager.mostrar(
+                            response.Message,
+                            'success',
+                            "alertOrdenContainer"
+                        );
+
+                        // Recargar la tabla
+                        $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+
+                        // Cerrar modal después de 2 segundos
+                        setTimeout(() => {
+                            $('#modalOrdenMantenimiento').modal('hide');
+                            $('#formOrdenMantenimiento')[0].reset();
+                            this.gestionTecnicos.limpiar();
+                            this.gestionFirmas.limpiarTodasLasFirmas(); // 🔥 Limpiar firmas
+                        }, 2000);
+
+                        resolve(true);
+                    } else {
+                        AlertManager.mostrar(response.Message || 'Error al guardar la orden de trabajo', 'warning', "alertOrdenContainer");
+                        reject(false);
+                    }
+
+                    // Restaurar botón
+                    $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                },
+                error: (xhr, status, error) => {
+                    AlertManager.mostrar('Error al conectar con el servidor', 'warning', "alertOrdenContainer");
+                    $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                    reject(error);
+                }
+            });
+        });
+    }
+    // ✅ Método para convertir de 12h a 24h (formato TIME)
+    convertirA24Horas(hora12h) {
+        if (!hora12h || hora12h.trim() === '') {
+            return null;
+        }
+
+        try {
+            // Separar hora y AM/PM
+            const [time, modifier] = hora12h.trim().split(' ');
+            let [hours, minutes] = time.split(':');
+
+            hours = parseInt(hours, 10);
+
+            // Convertir a formato 24 horas
+            if (modifier && modifier.toUpperCase() === 'PM' && hours !== 12) {
+                hours += 12;
+            }
+            if (modifier && modifier.toUpperCase() === 'AM' && hours === 12) {
+                hours = 0;
+            }
+
+            // Retornar en formato HH:MM:SS
+            return `${hours.toString().padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
+
+        } catch (error) {
+            console.error('Error al convertir hora:', hora12h, error);
+            return null;
+        }
+    }
+
+    // ============================
+    // RUTINAS
+    // ============================
+    abrirModalRutinaOnline(btn) {
+        // ===== OBTENER TODOS LOS DATA ATTRIBUTES =====
+        const idEquipo = btn.data('idequipo');
+        const planta = btn.data('planta');
+        const numeroDocPmCalidad = btn.data('numerodocpmcalidad');
+        const nombreEquipo = btn.data('nombreequipo');
+        const descripcionEquipo = btn.data('descripcionequipo');
+        const idArea = btn.data('idarea');
+        const area = btn.data('area');
+        const idLineaProduccion = btn.data('idlineaproduccion');
+        const lineaProduccion = btn.data('lineaproduccion');
+        const centrocostos = btn.data('centrocostos');
+        const periodicidadMantenimiento = btn.data('periodicidadmantenimiento');
+        const diaInicioMant = btn.data('diainiciomant');
+        const diaFinMant = btn.data('diafinmant');
+        const fechaInicioMant = btn.data('fechainiciomant');
+        const mesMantenimiento = btn.data('mesmantenimiento');
+        const fechaInicioMantenimiento = btn.data('fechainiciomantenimiento');
+        const fechaFinMantenimiento = btn.data('fechafinmantenimiento');
+        const fechaReferencia = btn.data('fechareferencia');
+        const tipoMantenimiento = btn.data('tipomantenimiento');
+        const numeroOrden = btn.data('numeroorden');
+        const horaApertura = btn.data('horaapertura');
+        const estatusOrden = btn.data('estatusorden');
+        const descEstatusOrden = btn.data('descestatusorden');
+        const idMantenimiento = btn.data('idmantenimiento');
+
+        // Guardar los datos del equipo
+        this.ID_EQUIPO = idEquipo;
+        this.ID_MANTENIMIENTO = idMantenimiento;
+
+        $('#rutinaNombreEquipo').text(nombreEquipo + ' ' + numeroDocPmCalidad);
+        $('#rutinaProceso').text(area);
+
+        // 🔥 CARGAR LA VISTA DESDE EL SERVIDOR
+        this.ConsultarRutinaServer(idEquipo);
+    }
+
+    ConsultarRutinaServer(idEquipo, Planta) {
+
+        // CARGAR LA VISTA DESDE EL SERVIDOR
+        const startTime = Date.now();
+
+        // 🔥 CARGAR LA VISTA DESDE EL SERVIDOR
+        $.ajax({
+            url: `/${this.URLBaseRutinas}/ObtenerRutinaCompleta`,
+            type: 'GET',
+            data: { idEquipo: idEquipo, Planta: Planta },
+            dataType: 'json',
+            beforeSend: function () {
+                $('#formRutinaOnline').html(`
+                <div class="ai-loader">
+
+                    <div class="ai-core">
+                        <div class="ai-ring"></div>
+                        <div class="ai-ring delay"></div>
+                        <div class="ai-ring delay2"></div>
+                    </div>
+
+                    <div class="ai-wave"></div>
+
+                    <p class="ai-text">CARGANDO RUTINA...</p>
+
+                </div>
+            `);
+            },
+
+            success: (response) => {
+                const elapsed = Date.now() - startTime;
+                const minDelay = 2000; // 👈 3 segundos
+
+                const render = () => {
+                    if (response.Status === 'OK') {
+
+                        const $c = $('#formRutinaOnline');
+
+                        $c.fadeOut(400, () => {  // 👈 arrow function aquí también
+                            $c.html(response.Html).fadeIn(600, () => {
+                                $('#formRutinaOnline').find('#seccion-upload-imagenes').remove();
+                                $('#formRutinaOnline').find('#seccion-galeria-imagenes').remove();
+                                if (response.Imagenes?.length > 0) {
+                                    this.checklistManager.cargarImagenesExistentes(response.Imagenes);
+                                }
+
+                                //✅ TRANSFORMAR LAS FIRMAS A RADIOBUTTONS PARA TECNICO
+                                if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+                                    $('#rutinaChecklist .actividad').each(function (index) {
+                                        const actividadNum = index + 1;
+                                        const firmaContainer = $(this).find('.d-flex.gap-4.mt-2');
+                                        // Crear los radiobuttons
+                                        const radioHTML = `
+                                        <div class="d-flex gap-4 mt-2">
+                                            <div class="form-check position-relative">
+                                                <input class="form-check-input" type="radio" name="actividad_${actividadNum}" id="actividad_${actividadNum}_realizado" value="realizado" required>
+                                                <label class="form-check-label fw-semibold" for="actividad_${actividadNum}_realizado">
+                                                    Realizado
+                                                </label>
+                                                 <div class="invalid-feedback custom-invalid-feedback">
+                                                    ⚠️ Por favor complete la actividad.
+                                                </div>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="actividad_${actividadNum}" id="actividad_${actividadNum}_no_realizado" value="no_realizado">
+                                                <label class="form-check-label fw-semibold" for="actividad_${actividadNum}_no_realizado">
+                                                    No Realizado
+                                                </label>
+                                            </div>
+                                        </div>
+                                    `;
+                                        // Reemplazar el contenido
+                                        firmaContainer.replaceWith(radioHTML);
+                                    });
+                                }
+
+                                // 🔥 ELIMINAR TODOS LOS BOTONES DE ELIMINAR
+                                $('#rutinaChecklist .btn-eliminar-actividad').remove();
+
+                                // 🔥 QUITAR CLASE "actividad" DE TODOS LOS DIVS
+                                $('#rutinaChecklist .actividad').removeClass('actividad').addClass("actividad_realizada");
+
+                                // 🔥 CARGAR IMÁGENES EXISTENTES DE LA RUTINA
+                                if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+                                    this.CargarEvidenciaRutina(idEquipo, Planta);
+                                    $("#seccion-upload-imagenes").hide();
+                                }
+
+                                // 🔥 DETECTAR SI ES RUTINA DEFAULT Y MOSTRAR SECCIÓN PDF
+                                if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+                                    const esRutinaDefault = $('#esRutinaDefault').length > 0;
+                                    if (esRutinaDefault) {
+                                        // Ocultar rutina default y mostrar sección PDF
+                                        $('#formRutinaOnline').hide();
+                                        $('#seccionPdfRutina').show();
+                                        this.CargarPdfRutina(idEquipo, Planta);
+                                    } else {
+                                        $('#formRutinaOnline').show();
+                                        $('#seccionPdfRutina').hide();
+                                    }
+                                }
+                            });
+                        });
+
+
+
+                    } else {
+                        $('#formRutinaOnline').html(`<div class="alert alert-danger">${response.Message}</div>`);
+                    }
+                };
+
+                if (elapsed < minDelay) {
+                    setTimeout(render, minDelay - elapsed);
+                } else {
+                    render();
+                }
+            },
+            error: (xhr, status, error) => {
+                $('#formRutinaOnline').html(`
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                Error al cargar la rutina: ${error}
+            </div>
+        `);
+            }
+        });
+
+    }
+
+    ConsultarActividadesPorOTMP(numeroOrden, idEquipo, Planta,ComentariosRutina) {
+
+        const startTime = Date.now();
+
+        $.ajax({
+            url: `/${this.URLBase}/ObtenerActividadesPorOTMP`,
+            type: 'GET',
+            data: { numeroOrden: numeroOrden },
+            dataType: 'json',
+
+            beforeSend: function () {
+                $('#formRutinaOnline').html(`
+                <div class="ai-loader">
+                    <div class="ai-core">
+                        <div class="ai-ring"></div>
+                        <div class="ai-ring delay"></div>
+                        <div class="ai-ring delay2"></div>
+                    </div>
+                    <div class="ai-wave"></div>
+                    <p class="ai-text">CARGANDO ACTIVIDADES...</p>
+                </div>
+            `);
+            },
+
+            success: (response) => {
+
+                const elapsed = Date.now() - startTime;
+                const minDelay = 1200;
+
+                const render = () => {
+
+                    if (!response || response.length === 0) {
+                        $('#formRutinaOnline').html(`<div class="alert alert-warning">Sin actividades para esta OT</div>`);
+                        return;
+                    }
+
+                    const $c = $('#formRutinaOnline');
+
+                    let html = `<div id="rutinaChecklist">`;
+
+                    response.forEach((act, index) => {
+
+                        const actividadNum = index + 1;
+
+                        const checkedSI = act.COMPLETADA === "SI" ? "checked" : "";
+                        const checkedNO = act.COMPLETADA === "NO" ? "checked" : "";
+
+                        html += `
+                        <div class="actividad_realizada mb-3 p-3 border rounded">
+                            <div class="fw-bold texto-actividad">${actividadNum}. ${act.DESCRIPCION || ""}</div>
+                            <div class="d-flex gap-4 mt-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio"
+                                        name="actividad_${actividadNum}"
+                                        value="realizado"
+                                        ${checkedSI}
+                                        disabled>
+                                    <label class="form-check-label fw-semibold">
+                                        Realizado
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio"
+                                        name="actividad_${actividadNum}"
+                                        value="no_realizado"
+                                        ${checkedNO}
+                                        disabled>
+                                    <label class="form-check-label fw-semibold">
+                                        No Realizado
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    });
+
+                    html += `</div>`;
+
+                    html += `<div class="mb-3">
+                            <label for="Comentarios" class="form-label">Comentarios</label>
+                            <textarea class="form-control" id="ComentariosRutina" rows="3" readonly required="">${ComentariosRutina}</textarea>
+                            </div>`;
+
+                    $c.fadeOut(300, () => {
+                        $c.html(html).fadeIn(500, () => {
+
+                            // 🔥 CARGAR IMÁGENES EXISTENTES DE LA RUTINA (PARA TODOS)
+                            this.CargarEvidenciaRutina(numeroOrden, Planta)
+
+                            // 🔥 DETECTAR SI ES RUTINA DEFAULT Y MOSTRAR PDF (PARA TODOS)
+                            const esRutinaDefault = $('#esRutinaDefault').length > 0;
+
+                            if (esRutinaDefault) {
+                                $('#formRutinaOnline').hide();
+                                $('#seccionPdfRutina').show();
+                                this.CargarPdfRutinaPorOT(numeroOrden);
+                            } else {
+                                $('#formRutinaOnline').show();
+                                $('#seccionPdfRutina').hide();
+                            }
+
+                        });
+                    });
+
+                };
+
+                if (elapsed < minDelay) {
+                    setTimeout(render, minDelay - elapsed);
+                } else {
+                    render();
+                }
+            },
+
+            error: (xhr, status, error) => {
+                $('#formRutinaOnline').html(`
+                <div class="alert alert-danger">
+                    Error al cargar actividades: ${error}
+                </div>
+            `);
+            }
+        });
+    }
+
+    async guardarRutina(OrdenTrabajo, EstatusOrden) {
+        return new Promise((resolve, reject) => {
+            // ✅ NUEVA LÓGICA: Si hay PDF de rutina (rutina default), no validar actividades
+            const esRutinaDefault = $('#esRutinaDefault').length > 0;
+            const tienePdf = this.pdfTemporalRutina !== null || ($('#seccionPdfRutina').is(':visible') && $('#pdfViewerContainer').is(':visible'));
+
+            if (esRutinaDefault && tienePdf) {
+                // Es rutina default con PDF - no hay actividades que validar
+                console.log('📄 Rutina con PDF - omitiendo validación de actividades');
+                resolve(true);
+                return;
+            }
+            if (EstatusOrden == "Cerrado") {
+                // Ya solo son firmas
+                console.log('📄 Solo guardando firmas');
+                resolve(true);
+                return;
+            }
+
+            const respuestas = this.obtenerRespuestasRutina();
+            const comentarios = $('#Comentarios').val();
+
+            // Validar que todas las actividades estén respondidas
+            const sinResponder = respuestas.filter(r => r.estado === null);
+            if (sinResponder.length > 0) {
+                AlertManager.mostrar(`Faltan ${sinResponder.length} actividades por responder`, 'warning');
+                reject(false); // ❌ Rechazar si falta algo
+                return;
+            }
+
+            //🔥 CREAR FORMDATA
+            const formData = new FormData();
+            formData.append('idMantenimiento', this.ID_MANTENIMIENTO);
+            formData.append('idEquipo', this.ID_EQUIPO);
+            formData.append('comentarios', comentarios);
+            formData.append('actividades', JSON.stringify(respuestas));
+            formData.append('usuarioRegistro', this.datos_usuario[0].EMAIL);
+            formData.append('OrdenTrabajo', OrdenTrabajo);
+            formData.append('Planta', this.datos_usuario[0].PLANTA);
+
+            // 🔥 AGREGAR IMÁGENES
+            const files = window.imagenesRutina || [];
+            console.log('Total de archivos:', files.length);
+
+            for (let i = 0; i < files.length; i++) {
+                formData.append('imagenes', files[i]);
+                console.log(`Agregando imagen ${i}:`, files[i].name);
+            }
+
+            // Enviar al servidor
+            $.ajax({
+                url: `/${this.URLBase}/GuardarRutina`,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                beforeSend: function () {
+                    $("#btnGuardarRutina").html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
+                    $("#btnGuardarRutina").prop("disabled", true);
+                },
+                success: function (response) {
+                    $("#btnGuardarRutina").html('<i class="bi bi-check-circle-fill me-2 text-success"></i>Rutina guardada correctamente.');
+                    $("#btnGuardarRutina").prop("disabled", false);
+
+                    // 🔥 RECARGAR LA TABLA DATATABLE
+                    /*$('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);*/
+
+                    setTimeout(function () {
+                        $("#btnGuardarRutina").html('<i class="bi bi-check2-circle me-1"></i>Guardar Rutina');
+                        $('#modalRutinaOnline').modal('hide');
+                    }, 3000);
+
+                    resolve(true); // ✅ TODO SALIÓ BIEN
+                },
+                error: function (xhr, status, error) {
+                    AlertManager.mostrar('No se pudo guardar la rutina: ' + error, 'warning');
+                    $("#btnGuardarRutina").html('<i class="bi bi-check2-circle me-1"></i>Guardar Rutina');
+                    $("#btnGuardarRutina").prop("disabled", false);
+                    reject(false); // ❌ ERROR
+                }
+            });
+        });
+    }
+
+    obtenerRespuestasRutina() {
+        const respuestas = [];
+        $('#rutinaChecklist .actividad_realizada').each(function (index) {
+            const actividadNum = index + 1;
+            const textoActividad = $(this).find('.texto-actividad').text().trim();
+            // ✅ CORRECTO - Agregamos el $ faltante
+            const radioSeleccionado = $(`input[name="actividad_${actividadNum}"]:checked`).val();
+
+            respuestas.push({
+                numero: actividadNum,
+                descripcion: textoActividad,
+                estado: radioSeleccionado || null // null si no seleccionó nada
+            });
+        });
+        return respuestas;
+    }
+
+    CargarEvidenciaRutina(NumeroOrden, Planta) {
+        $.get(`/${this.URLBaseRutinas}/ObtenerImagenes`, { NumeroOrden: NumeroOrden, Planta: Planta })
+            .done(data => {
+                if (data.Status === 'OK' && data.Imagenes && data.Imagenes.length > 0) {
+                    this.MostrarGaleriaEvidencia(data.Imagenes);
+                }
+            })
+            .fail(() => {
+                console.log('No se pudieron cargar las imágenes de evidencia');
+            });
+    }
+
+    MostrarGaleriaEvidencia(imagenes) {
+        // 🔥 1. Crear contenedor vacío
+        const galeriaHTML = `
+        <div id="galeriaEvidenciaRutina" class="mb-3 mt-4">
+            <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight: 700;">
+                <i class="bi bi-images me-2"></i>
+                Imagenes De Rutina Cargadas Por Técnico (${imagenes.length} imagen${imagenes.length > 1 ? 'es' : ''})
+            </h6>
+            <div class="row g-3" id="contenedorImagenesRutina"></div>
+        </div>
+    `;
+
+        $('#Evidenciatecnico').html(galeriaHTML);
+
+        const $contenedor = $('#contenedorImagenesRutina');
+
+        // 🔥 2. Insertar imágenes una por una con animación
+        imagenes.forEach((img, index) => {
+
+            setTimeout(() => {
+
+                const item = $(`
+                <div class="col-md-6 img-wrapper" style="display:none;">
+                    <img src="${img}" class="img-evidencia-rutina w-100"
+                        onclick="MantenimientoManagerRefactor.mostrarLightboxEvidencia('${img}', ${index}, ${JSON.stringify(imagenes).replace(/"/g, '&quot;')})"
+                        alt="Evidencia ${index + 1}" />
+                </div>
+            `);
+
+                $contenedor.append(item);
+
+                // 🔥 Animación suave
+                item.fadeIn(3000);
+
+            }, index * 150); // 👈 delay entre imágenes (ajustable)
+
+        });
+    }
+
+    // ============================================================
+    // GESTIÓN DE PDFs DE RUTINAS (CUANDO NO HAY RUTINA ESPECÍFICA)
+    // ============================================================
+
+    CargarPdfRutina(idEquipo, planta) {
+        this.ID_EQUIPO_PDF = idEquipo;
+        this.PLANTA_PDF = planta;
+
+        // Verificar si existe PDF guardado
+        $.get(`/${this.URLBaseRutinas}/ObtenerPdfRutina`, { idEquipo: idEquipo, planta: planta })
+            .done(data => {
+                if (data.Status === 'OK' && data.Existe) {
+                    this.MostrarPdfRutina(data.Url);
+                } else {
+                    this.LimpiarPdfRutina();
+                }
+            })
+            .fail(() => {
+                this.LimpiarPdfRutina();
+            });
+
+        // Configurar eventos del input file
+        this.ConfigurarEventosPdfRutina();
+    }
+
+    ConfigurarEventosPdfRutina() {
+        const self = this;
+
+        // Cambio de archivo
+        $('#inputPdfRutina').off('change').on('change', function (e) {
+            const file = this.files[0];
+            if (file) {
+                if (file.size > 10 * 1024 * 1024) {
+                    AlertManager.mostrar('El archivo excede el límite de 10MB', 'warning');
+                    $(this).val('');
+                    return;
+                }
+                if (file.type !== 'application/pdf') {
+                    AlertManager.mostrar('Solo se permiten archivos PDF', 'warning');
+                    $(this).val('');
+                    return;
+                }
+                // ✅ Guardar PDF temporalmente en variable (NO subir inmediatamente)
+                self.pdfTemporalRutina = file;
+                self.MostrarPdfTemporal(file);
+            }
+        });
+
+        // Eliminar PDF
+        $('#btnEliminarPdfRutina').off('click').on('click', function () {
+            self.pdfTemporalRutina = null;
+            self.LimpiarPdfRutina();
+        });
+    }
+
+    MostrarPdfTemporal(file) {
+        // Crear URL temporal para previsualización
+        const url = URL.createObjectURL(file);
+        $('#pdfUploadContainer').hide();
+        $('#pdfViewerContainer').show();
+        $('#pdfViewer').attr('src', url + '#toolbar=0');
+    }
+
+    SubirPdfRutina(file) {
+        const formData = new FormData();
+        formData.append('archivo', file);
+        formData.append('idEquipo', this.ID_EQUIPO_PDF);
+        formData.append('planta', this.PLANTA_PDF);
+
+        $.ajax({
+            url: `/${this.URLBaseRutinas}/GuardarPdfRutina`,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: (data) => {
+                if (data.Status === 'OK') {
+                    this.MostrarPdfRutina(data.Url);
+                    AlertManager.mostrar('PDF guardado correctamente', 'success');
+                } else {
+                    AlertManager.mostrar(data.Message || 'Error al guardar PDF', 'warning');
+                }
+            },
+            error: () => {
+                AlertManager.mostrar('Error al subir el PDF', 'warning');
+            }
+        });
+    }
+
+    SubirPdfRutinaAsync(file) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('archivo', file);
+            formData.append('idEquipo', this.ID_EQUIPO_PDF);
+            formData.append('planta', this.PLANTA_PDF);
+
+            $.ajax({
+                url: `/${this.URLBaseRutinas}/GuardarPdfRutina`,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: (data) => {
+                    if (data.Status === 'OK') {
+                        this.MostrarPdfRutina(data.Url);
+                        resolve(true);
+                    } else {
+                        AlertManager.mostrar(data.Message || 'Error al guardar PDF', 'warning');
+                        resolve(false);
+                    }
+                },
+                error: () => {
+                    AlertManager.mostrar('Error al subir el PDF', 'warning');
+                    resolve(false);
+                }
+            });
+        });
+    }
+
+    MostrarPdfRutina(url) {
+        $('#pdfUploadContainer').hide();
+        $('#pdfViewerContainer').show();
+        $('#pdfViewer').attr('src', url);
+    }
+
+    EliminarPdfRutina() {
+        $.ajax({
+            url: `/${this.URLBaseRutinas}/EliminarPdfRutina`,
+            type: 'POST',
+            data: {
+                idEquipo: this.ID_EQUIPO_PDF,
+                planta: this.PLANTA_PDF
+            },
+            success: (data) => {
+                if (data.Status === 'OK') {
+                    this.LimpiarPdfRutina();
+                    AlertManager.mostrar('PDF eliminado', 'success');
+                }
+            },
+            error: () => {
+                AlertManager.mostrar('Error al eliminar el PDF', 'warning');
+            }
+        });
+    }
+
+    LimpiarPdfRutina() {
+        // ✅ Limpiar variable temporal
+        this.pdfTemporalRutina = null;
+
+        $('#inputPdfRutina').val('');
+        $('#pdfViewerContainer').hide();
+        $('#pdfViewer').attr('src', '');
+        $('#pdfUploadContainer').show();
+    }
+
+    // ============================
+    // TOOLTIPS
+    // ============================
+    inicializarTooltips() {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        this.tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+
+    refreshTooltips() {
+        // Destruir tooltips existentes
+        if (this.tooltipList) {
+            this.tooltipList.forEach(t => t.dispose());
+        }
+
+        // Reinicializar
+        this.inicializarTooltips();
+    }
+
+    async exportarExcel() {
+        try {
+            const table = $('#tablaMantenimientosRango').DataTable();
+
+            if (!table || table.rows().count() === 0) {
+                AlertManager.mostrar('No hay datos para exportar', 'warning');
+                return;
+            }
+
+            $('#btnExportarExcel').html('<span class="spinner-border spinner-border-sm me-2"></span>Exportando...').prop('disabled', true);
+
+            // Obtener todos los datos de la tabla
+            const data = table.rows({ search: 'applied' }).data().toArray();
+
+            // Crear workbook y worksheet
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Mantenimientos', {
+                pageSetup: {
+                    paperSize: 9,
+                    orientation: 'landscape',
+                    fitToPage: true,
+                    fitToWidth: 1,
+                    fitToHeight: 0
+                }
+            });
+
+            // 🎨 SECCIÓN 1: ENCABEZADO PRINCIPAL CON LOGO Y TÍTULO
+            worksheet.mergeCells('A1:F1');
+            const headerCell = worksheet.getCell('A1');
+            headerCell.value = '📊 REPORTE DE MANTENIMIENTOS PREVENTIVOS';
+            headerCell.font = {
+                name: 'Segoe UI',
+                size: 18,
+                bold: true,
+                color: { argb: 'FFFFFFFF' }
+            };
+            headerCell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF0058A1' } // Azul PTM
+            };
+            headerCell.alignment = {
+                vertical: 'middle',
+                horizontal: 'center'
+            };
+            worksheet.getRow(1).height = 40;
+
+            // 🎨 SECCIÓN 2: INFORMACIÓN DEL REPORTE
+            worksheet.mergeCells('A2:C2');
+            const infoCell1 = worksheet.getCell('A2');
+            const fechaActual = new Date().toLocaleDateString('es-MX', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            infoCell1.value = `📅 Fecha de Generación: ${fechaActual}`;
+            infoCell1.font = { name: 'Segoe UI', size: 11, bold: true };
+            infoCell1.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE3F2FD' } // Azul claro
+            };
+            infoCell1.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+            worksheet.getRow(2).height = 25;
+
+            worksheet.mergeCells('D2:F2');
+            const infoCell2 = worksheet.getCell('D2');
+            infoCell2.value = `📈 Total de Registros: ${data.length}`;
+            infoCell2.font = { name: 'Segoe UI', size: 11, bold: true };
+            infoCell2.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE8F5E9' } // Verde claro
+            };
+            infoCell2.alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+
+            // 🎨 ESPACIO EN BLANCO
+            worksheet.getRow(3).height = 10;
+
+            // 🎨 SECCIÓN 3: ENCABEZADOS DE COLUMNAS CON GRADIENTE
+            const headerRow = worksheet.getRow(4);
+            const headers = [
+                { text: '🏭 Línea de Producción', width: 30 },
+                { text: '⚙️ Equipo', width: 40 },
+                { text: '📋 Número de Orden', width: 22 },
+                { text: '🕐 Hora de Apertura', width: 20 },
+                { text: '📆 Periodicidad MP', width: 35 },
+                { text: '👤 Técnico Responsable', width: 30 }
+            ];
+
+            headers.forEach((header, index) => {
+                const col = String.fromCharCode(65 + index); // A, B, C, D, E, F
+                worksheet.getColumn(col).width = header.width;
+
+                const cell = headerRow.getCell(index + 1);
+                cell.value = header.text;
+                cell.font = {
+                    name: 'Segoe UI',
+                    size: 12,
+                    bold: true,
+                    color: { argb: 'FFFFFFFF' }
+                };
+                cell.fill = {
+                    type: 'gradient',
+                    gradient: 'angle',
+                    degree: 90,
+                    stops: [
+                        { position: 0, color: { argb: 'FF1976D2' } },
+                        { position: 1, color: { argb: 'FF0058A1' } }
+                    ]
+                };
+                cell.alignment = {
+                    vertical: 'middle',
+                    horizontal: 'center',
+                    wrapText: true
+                };
+                cell.border = {
+                    top: { style: 'medium', color: { argb: 'FF0058A1' } },
+                    left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+                    bottom: { style: 'medium', color: { argb: 'FF0058A1' } },
+                    right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+                };
+            });
+            headerRow.height = 35;
+
+            // 🎨 SECCIÓN 4: DATOS CON FORMATO ALTERNADO
+            data.forEach((row, index) => {
+                const rowNumber = 5 + index;
+                const excelRow = worksheet.getRow(rowNumber);
+
+                // Alternar colores de fila
+                const isEvenRow = index % 2 === 0;
+                const bgColor = isEvenRow ? 'FFFFFFFF' : 'FFF5F5F5';
+
+                const rowData = [
+                    row.LineaProduccion || 'N/A',
+                    `${row.NombreEquipo || ''} ${row.NumeroDocPmCalidad || ''}`.trim() || 'N/A',
+                    row.NumeroOrden || '',
+                    row.HoraApertura || '',
+                    DateUtils.formatearPeriodicidad(
+                        row.PeriodicidadMantenimiento,
+                        row.DiaInicioMant,
+                        row.DiaFinMant,
+                        row.FechaInicioMantenimiento
+                    ) || 'N/A',
+                    '' // Técnico vacío
+                ];
+
+                rowData.forEach((value, colIndex) => {
+                    const cell = excelRow.getCell(colIndex + 1);
+                    cell.value = value;
+                    cell.font = {
+                        name: 'Segoe UI',
+                        size: 10
+                    };
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: bgColor }
+                    };
+                    cell.alignment = {
+                        vertical: 'middle',
+                        horizontal: colIndex <= 1 ? 'left' : 'center',
+                        indent: colIndex <= 1 ? 1 : 0
+                    };
+                    cell.border = {
+                        top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                        left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                        bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                        right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+                    };
+                });
+
+                excelRow.height = 22;
+            });
+
+            // 🎨 SECCIÓN 5: FILA DE RESUMEN AL FINAL
+            const lastRow = worksheet.getRow(5 + data.length);
+            worksheet.mergeCells(`A${lastRow.number}:F${lastRow.number}`);
+            const summaryCell = worksheet.getCell(`A${lastRow.number}`);
+            summaryCell.value = `✅ Fin del reporte - ${data.length} registros exportados`;
+            summaryCell.font = {
+                name: 'Segoe UI',
+                size: 11,
+                bold: true,
+                italic: true,
+                color: { argb: 'FF666666' }
+            };
+            summaryCell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF0F0F0' }
+            };
+            summaryCell.alignment = {
+                vertical: 'middle',
+                horizontal: 'center'
+            };
+            summaryCell.border = {
+                top: { style: 'medium', color: { argb: 'FF0058A1' } },
+                bottom: { style: 'medium', color: { argb: 'FF0058A1' } }
+            };
+            lastRow.height = 30;
+
+            // 🎨 CONGELAR PANELES (Header fijo)
+            worksheet.views = [
+                { state: 'frozen', xSplit: 0, ySplit: 4 }
+            ];
+
+            // 🎨 AUTOFILTRO
+            worksheet.autoFilter = {
+                from: { row: 4, column: 1 },
+                to: { row: 4, column: 6 }
+            };
+
+            // 📥 GENERAR Y DESCARGAR
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+
+            const fecha = new Date().toISOString().split('T')[0];
+            const nombreArchivo = `Mantenimientos_PTM_${fecha}.xlsx`;
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = nombreArchivo;
+            link.click();
+
+            AlertManager.mostrar('¡Excel exportado con éxito! 🎉', 'success');
+
+        } catch (error) {
+            console.error('Error al exportar:', error);
+            AlertManager.mostrar('Error al exportar: ' + error.message, 'warning');
+        } finally {
+            $('#btnExportarExcel').html('<i class="bi bi-file-earmark-excel-fill me-1"></i>Exportar').prop('disabled', false);
+        }
+    }
+}
+
+
+// ========================================
+// GESTION TECNICOS
+// ========================================
+class GestionTecnicos {
+    constructor(URLBase) {
+        this.tecnicosAsignados = [];
+        this.tecnicosDisponibles = []; // Se llenará desde el servidor
+        this.URLBase = URLBase;
+        this.foundtecnicos = false;
+    }
+
+    inicializar() {
+        console.log('✅ GestionTecnicos inicializado correctamente');
+    }
+    // Buscar técnicos (aquí llamarías a tu API)
+    async buscarTecnicos(query) {
+        try {
+            const response = await $.ajax({
+                url: `/${this.URLBase}/BuscarEmpleados`, // ⬅️ Ruta de tu controller
+                method: 'GET',
+                data: { query: query },
+                dataType: 'json'
+            });
+
+            this.mostrarSugerencias(response);
+        } catch (error) {
+            AlertManager.mostrar('No es posible mostrar la listá de técnicos: ' + error, 'warning');
+        }
+    }
+
+    mostrarSugerencias(tecnicos) {
+        const container = $('#sugerenciasTecnicos');
+        container.empty();
+
+        if (tecnicos.length === 0) {
+            container.html(`
+            <div class="sugerencia-item text-muted">
+                <i class="bi bi-exclamation-circle"></i> No se encontraron técnicos
+            </div>
+        `);
+            this.foundtecnicos = false;
+
+        } else {
+            tecnicos.forEach(tecnico => {
+                const item = $(`
+                    <div class="sugerencia-item" data-nomina="${tecnico.NOMINA}">
+                        <div class="sugerencia-nomina">📛 #${tecnico.NOMINA}</div>
+                        <div class="sugerencia-nombre">👷 ${tecnico.NOMBRE_COMPLETO}</div>
+                        <div class="sugerencia-puesto">🏭 ${tecnico.DEPARTAMENTO || 'N/A'}</div>
+                    </div>
+                `);
+
+                item.on('click', () => {
+                    this.agregarTecnico({
+                        nomina: tecnico.NOMINA,
+                        nombre: tecnico.NOMBRE_COMPLETO,
+                        puesto: tecnico.DEPARTAMENTO || 'Sin departamento'
+                    });
+                    $('#BuscarTecnico').val('');
+                    this.ocultarSugerencias();
+                });
+
+                container.append(item);
+            });
+
+            this.foundtecnicos = true;
+        }
+
+        container.addClass('show');
+    }
+
+    ocultarSugerencias() {
+        $('#sugerenciasTecnicos').removeClass('show').empty();
+    }
+
+    agregarTecnicoDesdeInput() {
+        if (this.foundtecnicos) {
+            const nomina = $('#BuscarTecnico').val().trim();
+            if (!nomina) return;
+
+            // Buscar técnico por nómina exacta
+            // En producción, aquí harías una llamada al servidor
+            const tecnicoEncontrado = {
+                nomina: nomina,
+                nombre: 'Técnico ' + nomina, // Placeholder
+                puesto: 'Técnico'
+            };
+
+            this.agregarTecnico(tecnicoEncontrado);
+            $('#BuscarTecnico').val('');
+            this.ocultarSugerencias();
+        }
+        else {
+            AlertManager.mostrar('No hay ningun técnico valido para agregar', 'info');
+        }
+    }
+
+    agregarTecnico(tecnico) {
+        // Verificar si ya está asignado
+        if (this.tecnicosAsignados.some(t => t.nomina === tecnico.nomina)) {
+            AlertManager.mostrar(`El técnico ${tecnico.nombre} ya está en la lista`, 'warning', 'alertTecnicosContainer');
+            return;
+        }
+        this.tecnicosAsignados.push(tecnico);
+        this.renderizarTecnicos();
+    }
+
+    removerTecnico(nomina) {
+        this.tecnicosAsignados = this.tecnicosAsignados.filter(t => t.nomina !== nomina);
+        this.renderizarTecnicos();
+    }
+
+    renderizarTecnicos() {
+        const container = $('#listaTecnicosAsignados');
+        container.empty();
+
+        if (this.tecnicosAsignados.length === 0) {
+            container.html(`
+                <div class="text-muted small">
+                    <i class="bi bi-info-circle"></i> No hay técnicos asignados
+                </div>
+            `);
+            return;
+        }
+
+        this.tecnicosAsignados.forEach(tecnico => {
+            const badge = $(`
+                <div class="tecnico-badge">
+                    <div class="tecnico-info">
+                        <span class="tecnico-nomina">#${tecnico.nomina}</span>
+                        <span class="tecnico-nombre">${tecnico.nombre}</span>
+                    </div>
+                    <button class="btn-remover-tecnico" data-nomina="${tecnico.nomina}">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            `);
+
+            badge.find('.btn-remover-tecnico').on('click', () => {
+                this.removerTecnico(tecnico.nomina);
+            });
+
+            container.append(badge);
+        });
+    }
+
+    obtenerTecnicosAsignados() {
+        return this.tecnicosAsignados;
+    }
+
+    obtenerNominasComoString() {
+        return this.tecnicosAsignados.map(t => t.nomina).join(',');
+    }
+
+    // También puedes agregar este por si lo necesitas como array
+    obtenerNominasComoArray() {
+        return this.tecnicosAsignados.map(t => t.nomina);
+    }
+
+    limpiar() {
+        this.tecnicosAsignados = [];
+        this.renderizarTecnicos();
+        $('#BuscarTecnico').val('');
+        this.ocultarSugerencias();
+    }
+
+    // ✅ Para obtener el valor numérico cuando lo necesites:
+    obtenerDuracion(element) {
+        const valor = $(`#${element}`).val().replace(' Hrs', '').trim();
+        return parseFloat(valor) || 0;
+    }
+
+    cargarTecnicosDesdeDB(lista) {
+
+        // 🔥 limpiar input y estado
+        $('#BuscarTecnico').val('');
+        this.ocultarSugerencias();
+
+        if (!lista || lista.length === 0) {
+            this.tecnicosAsignados = [];
+            this.renderizarTecnicos();
+            return;
+        }
+
+        // 🔥 AQUÍ va el map (tu duda)
+        this.tecnicosAsignados = lista.map(t => ({
+            nomina: t.Nomina,
+            nombre: t.NombreTecnico,
+            puesto: ''
+        }));
+
+        this.renderizarTecnicos();
+    }
+}
+
+// ========================================
+// GESTION DE FIRMAS DIGITALES
+// ========================================
+class GestionFirmas {
+    constructor() {
+        this.signaturePads = {
+            Realizo: null,
+            Superviso: null,  // ✅ Usar 'Superviso'
+            Mantenimiento: null
+        };
+
+        this._firmasInicializadas = false;
+        this._inicializandoFirmas = false;
+    }
+
+    inicializar() {
+
+        console.log('✅ GestionFirmas inicializado correctamente');
+
+        $('#modalOrdenMantenimiento').on('shown.bs.modal', async () => {
+
+            await this.inicializarFirmas();
+
+            await this._procesarFirmasPendientes();
+
+        });
+    }
+
+    async inicializarFirmas() {
+
+        if (this._firmasInicializadas) return;
+        if (this._inicializandoFirmas) return;
+
+        this._inicializandoFirmas = true;
+
+        const firmas = ['Realizo', 'Superviso', 'Mantenimiento'];
+
+        firmas.forEach(tipo => {
+
+            const canvas = document.getElementById(`canvas${tipo}`);
+
+            if (!canvas) {
+                console.warn(`Canvas no encontrado: canvas${tipo}`);
+                return;
+            }
+
+            this.ajustarCanvas(canvas);
+
+            const pad = new SignaturePad(canvas, {
+                backgroundColor: 'rgb(255,255,255)',
+                penColor: 'rgb(0,0,0)',
+                minWidth: 1,
+                maxWidth: 2.5,
+                throttle: 0,
+                minDistance: 0,
+                velocityFilterWeight: 0.7
+            });
+
+            pad.addEventListener('beginStroke', () => {
+                const placeholder = document.getElementById(`placeholder${tipo}`);
+                if (placeholder) placeholder.style.display = 'none';
+            });
+
+            pad.addEventListener('endStroke', () => {
+                this.guardarFirmaEnCampo(tipo);
+            });
+
+            this.signaturePads[tipo] = pad;
+        });
+
+        this._firmasInicializadas = true;
+        this._inicializandoFirmas = false;
+
+        console.log('✅ Firmas inicializadas correctamente');
+    }
+
+    async _ensurePad(tipo) {
+
+        const key = this._mapTipo(tipo);
+
+        // Si no está inicializado → inicializa
+        if (!this._firmasInicializadas) {
+            await this.inicializarFirmas();
+        }
+
+        let pad = this.signaturePads[key];
+
+        // Si sigue sin existir → retry corto (por DOM/render)
+        if (!pad) {
+            console.warn(`Reintentando obtener pad: ${key}`);
+
+            await new Promise(r => setTimeout(r, 150));
+
+            pad = this.signaturePads[key];
+        }
+
+        if (!pad) {
+            console.error(`❌ No se pudo inicializar firma: ${key}`);
+            return null;
+        }
+
+        return pad;
+    }
+
+    ajustarCanvas(canvas) {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d").scale(ratio, ratio);
+    }
+
+    limpiarFirma(tipo) {
+        if (this.signaturePads[tipo]) {
+            this.signaturePads[tipo].clear();
+            const placeholder = document.getElementById(`placeholder${tipo}`);
+            if (placeholder) {
+                placeholder.style.display = 'block';
+            }
+            const inputData = document.getElementById(`firma${tipo}Data`);
+            if (inputData) {
+                inputData.value = '';
+            }
+        }
+    }
+
+    deshacerFirma(tipo) {
+        if (this.signaturePads[tipo]) {
+            const data = this.signaturePads[tipo].toData();
+            if (data && data.length > 0) {
+                data.pop();
+                this.signaturePads[tipo].fromData(data);
+
+                if (data.length === 0) {
+                    const placeholder = document.getElementById(`placeholder${tipo}`);
+                    if (placeholder) {
+                        placeholder.style.display = 'block';
+                    }
+                }
+
+                this.guardarFirmaEnCampo(tipo);
+            }
+        }
+    }
+
+    validarFirmas(Tipo) {
+        const errores = [];
+
+        switch (Tipo) {
+
+            case "Realizo":
+                // Solo validar firmas HABILITADAS
+                if ($('#firmaRealizoContainer').is(':visible') &&
+                    !$('#firmaRealizoContainer').hasClass('firma-deshabilitada')) {
+                    if (this.signaturePads.Realizo && this.signaturePads.Realizo.isEmpty()) {
+                        errores.push('"Realizó"');
+                    }
+                    if (!$('#nombreRealizo').val().trim()) {
+                        errores.push('Falta el nombre en "Realizó"');
+                    }
+                }
+                break;
+            case "Superviso":
+                if ($('#firmaSupervisoContainer').is(':visible') &&
+                    !$('#firmaSupervisoContainer').hasClass('firma-deshabilitada')) {
+                    if (this.signaturePads.Superviso && this.signaturePads.Superviso.isEmpty()) {
+                        errores.push('"Supervisó"');
+                    }
+                    if (!$('#nombreSuperviso').val().trim()) {
+                        errores.push('Falta el nombre en "Supervisó"');
+                    }
+                }
+                break;
+
+            case "Mantenimiento":
+                if ($('#firmaMantenimientoContainer').is(':visible') &&
+                    !$('#firmaMantenimientoContainer').hasClass('firma-deshabilitada')) {
+                    if (this.signaturePads.Mantenimiento && this.signaturePads.Mantenimiento.isEmpty()) {
+                        errores.push('"Mantenimiento"');
+                    }
+                    if (!$('#nombreMantenimiento').val().trim()) {
+                        errores.push('Falta el nombre en "Mantenimiento"');
+                    }
+                }
+                break;
+        }
+
+        if (errores.length > 0) {
+            AlertManager.mostrar('Por favor complete las siguientes firmas:\n\n' + errores.join('\n'), 'warning', 'alertOrdenContainer');
+            return false;
+        }
+
+        return true;
+    }
+
+    guardarTodasLasFirmas() {
+        // ✅ Usar 'Superviso'
+        ['Realizo', 'Superviso', 'Mantenimiento'].forEach(tipo => {
+            this.guardarFirmaEnCampo(tipo);
+        });
+    }
+
+    guardarFirmaEnCampo(tipo) {
+        if (this.signaturePads[tipo] && !this.signaturePads[tipo].isEmpty()) {
+            const dataURL = this.signaturePads[tipo].toDataURL('image/png');
+            const inputData = document.getElementById(`firma${tipo}Data`);
+            if (inputData) {
+                inputData.value = dataURL;
+            } else {
+                console.error(`Input no encontrado: firma${tipo}Data`);
+            }
+        } else {
+            const inputData = document.getElementById(`firma${tipo}Data`);
+            if (inputData) {
+                inputData.value = '';
+            }
+        }
+    }
+
+    obtenerTodasLasFirmas() {
+        return {
+            realizo: {
+                firma: $('#firmaRealizoData').val(),
+                nombre: $('#nombreRealizo').val()
+            },
+            // ✅ Usar 'Superviso'
+            superviso: {
+                firma: $('#firmaSupervisoData').val(),
+                nombre: $('#nombreSuperviso').val()
+            },
+            mantenimiento: {
+                firma: $('#firmaMantenimientoData').val(),
+                nombre: $('#nombreMantenimiento').val()
+            }
+        };
+    }
+
+    mostrarFirma(tipo, mostrar = true) {
+        const container = $(`#firma${tipo}Container`);
+        if (container.length) {
+            container.toggle(mostrar);
+        }
+    }
+
+    limpiarTodasLasFirmas() {
+        // ✅ Usar 'Superviso'
+        ['Realizo', 'Superviso', 'Mantenimiento'].forEach(tipo => {
+            this.limpiarFirma(tipo);
+            $(`#nombre${tipo}`).val('');
+        });
+        this._desbloquearFirmas();
+    }
+
+    // 🔥 NUEVO MÉTODO: Deshabilitar firma específica
+    deshabilitarFirma(tipo, deshabilitar = true) {
+        const container = $(`#firma${tipo}Container`);
+        const canvas = document.getElementById(`canvas${tipo}`);
+        const nombreInput = $(`#nombre${tipo}`);
+
+        if (!container.length || !canvas) return;
+
+        if (deshabilitar) {
+            // ✅ DESHABILITAR
+            // 1. Deshabilitar el SignaturePad
+            if (this.signaturePads[tipo]) {
+                this.signaturePads[tipo].off(); // Desactiva eventos de firma
+            }
+
+            // 2. Aplicar estilos visuales de deshabilitado
+            $(canvas).css({
+                'cursor': 'not-allowed',
+                'opacity': '0.5',
+                'pointer-events': 'none'
+            });
+
+            // 3. Deshabilitar input de nombre
+            nombreInput.prop('disabled', true);
+
+            // 4. Deshabilitar botones
+            container.find('button').prop('disabled', true).css('opacity', '0.5');
+
+            // 5. Agregar clase visual al contenedor
+            container.addClass('firma-deshabilitada');
+
+
+        } else {
+            // ✅ HABILITAR
+            // 1. Reactivar el SignaturePad
+            if (this.signaturePads[tipo]) {
+                this.signaturePads[tipo].on(); // Reactiva eventos
+            }
+
+            // 2. Restaurar estilos
+            $(canvas).css({
+                'cursor': 'crosshair',
+                'opacity': '1',
+                'pointer-events': 'auto'
+            });
+
+            // 3. Habilitar input de nombre
+            nombreInput.prop('disabled', false);
+
+            // 4. Habilitar botones
+            container.find('button').prop('disabled', false).css('opacity', '1');
+
+            // 5. Remover clase visual
+            container.removeClass('firma-deshabilitada');
+
+            // 6. Remover badge
+            container.find('.badge-readonly').remove();
+        }
+    }
+
+    // 🔥 NUEVO MÉTODO: Deshabilitar múltiples firmas
+    deshabilitarFirmas(tiposArray) {
+        tiposArray.forEach(tipo => {
+            this.deshabilitarFirma(tipo, true);
+        });
+    }
+
+    async _cargarFirmaFromDB(tipo, ruta, nombre) {
+
+        if (!ruta) return;
+
+        const key = this._mapTipo(tipo);
+
+        const pad = await this._ensurePad(key);
+
+        if (!pad) return;
+
+        const canvas = pad.canvas;
+        const ctx = canvas.getContext("2d");
+
+        // limpiar pad correctamente
+        pad.clear();
+
+        await new Promise((resolve) => {
+
+            const img = new Image();
+
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve();
+            };
+
+            img.onerror = () => {
+                console.warn("Error cargando firma:", ruta);
+                resolve();
+            };
+
+            img.src = ruta;
+        });
+
+        // nombre
+        $(`#nombre${key}`).val(nombre || '');
+
+        // ocultar placeholder
+        $(`#placeholder${key}`).hide();
+
+        // bloquear correctamente
+        this._bloquearFirma(key);
+    }
+
+    _bloquearFirma(tipo) {
+
+        const key = this._mapTipo(tipo);
+        const pad = this.signaturePads[key];
+
+        if (pad && pad.off) {
+            pad.off();
+        }
+
+        const container = $(`#firma${key}Container`);
+        const canvas = document.getElementById(`canvas${key}`);
+        const nombreInput = $(`#nombre${key}`);
+
+        // 🔥 1. Ocultar botones (en lugar de deshabilitar)
+        container.find('button').hide();
+
+        // 🔥 2. Input readonly (más elegante que disabled)
+        nombreInput.prop('readonly', true);
+
+        // 🔥 3. Canvas sin interacción PERO visual limpio
+        if (canvas) {
+            $(canvas).css({
+                'pointer-events': 'none',
+                'cursor': 'default',
+                'opacity': '1' // 👈 importante, quitar ese gris feo
+            });
+        }
+
+        // 🔥 4. (opcional) quitar placeholder si aún existe
+        $(`#placeholder${key}`).hide();
+
+        // 🔥 5. Clase ligera (por si quieres estilos después)
+        container.addClass('firma-readonly');
+    }
+
+    _desbloquearFirmas() {
+
+        const tipos = ['Realizo', 'Superviso', 'Mantenimiento']; // ajusta si tienes más
+
+        tipos.forEach(tipo => {
+
+            const key = this._mapTipo(tipo);
+            const pad = this.signaturePads[key];
+
+            const container = $(`#firma${key}Container`);
+            const canvas = document.getElementById(`canvas${key}`);
+            const nombreInput = $(`#nombre${key}`);
+
+            // 🔥 1. Mostrar botones otra vez
+            container.find('button').show();
+
+            // 🔥 2. Input editable
+            nombreInput.prop('readonly', false);
+
+            // 🔥 3. Reactivar canvas
+            if (canvas) {
+                $(canvas).css({
+                    'pointer-events': 'auto',
+                    'cursor': 'crosshair',
+                    'opacity': '1'
+                });
+            }
+
+            // 🔥 4. Volver a activar SignaturePad
+            if (pad && pad.on) {
+                pad.on();
+            }
+
+            // 🔥 5. Quitar clase readonly
+            container.removeClass('firma-readonly');
+
+            // 🔥 6. (opcional) mostrar placeholder si no hay firma
+            if (pad && pad.isEmpty && pad.isEmpty()) {
+                $(`#placeholder${key}`).show();
+            }
+        });
+    }
+
+    async queueFirma(tipo, ruta, nombre) {
+
+        // 🔒 Validación básica
+        if (!tipo) return;
+
+        // 🚫 No encolar si no hay firma
+        if (!ruta) return;
+
+        // 🔥 Si ya está listo → carga directo
+        if (this._firmasInicializadas) {
+            await this._cargarFirmaFromDB(tipo, ruta, nombre);
+            return;
+        }
+
+        // 🧩 Inicializar cola
+        if (!this._firmasPendientes) {
+            this._firmasPendientes = [];
+        }
+
+        // 🛑 Evitar duplicados por tipo
+        const existe = this._firmasPendientes.some(f => f.tipo === tipo);
+
+        if (existe) return;
+
+        this._firmasPendientes.push({ tipo, ruta, nombre });
+    }
+
+    async _procesarFirmasPendientes() {
+
+        if (!this._firmasPendientes || this._firmasPendientes.length === 0) return;
+
+        console.log('🖋️ Procesando firmas pendientes...');
+
+        for (const f of this._firmasPendientes) {
+            await this._cargarFirmaFromDB(f.tipo, f.ruta, f.nombre);
+        }
+
+        this._firmasPendientes = null;
+    }
+
+    _cap(txt) {
+        return txt.charAt(0).toUpperCase() + txt.slice(1);
+    }
+
+    _mapTipo(tipo) {
+        switch (tipo) {
+            case 'realizo': return 'Realizo';
+            case 'superviso': return 'Superviso';
+            case 'mantenimiento': return 'Mantenimiento';
+            default: return tipo;
+        }
+    }
+}
+
+// ========================================
+// GESTOR DE ESTATUS
+// ========================================
+class EstatusManager {
+    static obtenerClaseBadge(estatus) {
+        switch (estatus) {
+            case 'En espera de refacción':
+                return 'bg-warning';
+            case 'Liberado por mantenimiento':
+                return 'bg-success';
+            case 'Cerrado':
+                return 'bg-secondary';
+            case 'Nueva':
+                return 'bg-info';
+            case 'Abierta':
+                return 'bg-success';
+            default:
+                return 'bg-info';
+        }
+    }
+
+    static actualizarBadge(fila, nuevoEstatus) {
+        const claseBadge = this.obtenerClaseBadge(nuevoEstatus);
+
+        fila.find('.badge')
+            .removeClass('bg-info bg-warning bg-success bg-secondary')
+            .addClass(claseBadge)
+            .text(nuevoEstatus);
+    }
+}
+
+
+// ========================================
+// GESTOR DE PDFs PARA MANTENIMIENTO PREVENTIVO
+// ========================================
+class PDFManagerMantenimiento {
+    constructor() {
+        this.logoUrl = `${window.location.origin}/Content/Images/LogoPTMWhite.png`;
+        this.printEngine = new PrintEngine();
+    }
+
+    inicializar() {
+        console.log('✅ PDFManagerMantenimiento inicializado correctamente');
+    }
+
+    async exportarOrdenMantenimiento() {
+        const $btn = $("#btnExportMantenimientoPDF");
+
+        try {
+            $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Generando...');
+            $btn.prop("disabled", true);
+
+            const datos = this.obtenerDatosDocumento();
+            const qrBase64 = await GlobalUtil.generarQRCode(datos.NumeroOrden);
+            datos.QR = qrBase64;
+
+            const html = this.generarContenidoHTML(datos);
+
+            this.printEngine.imprimir({
+                html,
+                titulo: `Orden Preventiva - ${datos.NumeroOrden}`,
+                autoClose: true
+            });
+
+            $btn.html('<i class="bi bi-check-circle-fill me-2 text-white"></i>PDF Generado Correctamente');
+
+        } catch (error) {
+            console.error('❌ Error al imprimir:', error);
+            $btn.html('<i class="bi bi-x-circle-fill me-2"></i>Error');
+            if (window.AlertManager) {
+                AlertManager.mostrar('Error al generar el documento.', 'warning');
+            }
+        } finally {
+            setTimeout(() => {
+                $btn.html('<i class="bi bi-file-pdf"></i> Exportar PDF');
+                $btn.prop("disabled", false);
+            }, 2000);
+        }
+    }
+
+    // ============================
+    // OBTENER DATOS DEL DOCUMENTO
+    // ============================
+    obtenerDatosDocumento() {
+        return {
+            // Header
+            FechaImpresion: $('#fechaImpresion').text() || new Date().toLocaleString('es-MX'),
+
+            // Tipo de Mantenimiento
+            TipoMantenimiento1: $('.tipo-mantenimiento-section p:nth-child(2)').text() || '',
+            TipoMantenimiento2: $('.tipo-mantenimiento-section p:nth-child(3)').text() || '',
+
+            // Datos de la Orden
+            NumeroOrden: $('#NumeroOrden').val() || '',
+            Solicitante: $('#Solicitante').val() || '',
+
+            // Detalles del Mantenimiento
+            ClaseMantenimiento: $('#ClaseMantenimiento').val() || '',
+            CodigoMantenimiento: $('#CodigoMantenimiento').val() || '',
+            EstatusOrden: $('#EstatusOrden').val() || '',
+            FechaInicioExtrema: $('#FechaInicioExtrema').val() || '',
+            FechaFinExtrema: $('#FechaFinExtrema').val() || '',
+            UbicacionTecnica: $('#UbicacionTecnica').val() || '',
+            CentroCostos: $('#CentroCostos').val() || '',
+            DescripcionEquipo: $('#DescripcionEquipo').val() || '',
+            NumeroEquipo: $('#NumeroEquipo').val() || '',
+            GrupoPlaneacion: $('#GrupoPlaneacion').val() || '',
+
+            // Rutina
+            RutinaNombreEquipo: $('#rutinaNombreEquipo').text() || '',
+            RutinaProceso: $('#rutinaProceso').text() || '',
+            RutinaDuracion: $('#rutinaChecklist .form-label span:first').text() || '',
+            RutinaDescripcion: $('#rutinaChecklist .text-justify:first').text() || '',
+            RutinaNotaInicial: $('#rutinaChecklist .position-relative:has(.text-justify) .text-justify').last().text() || '',
+            RutinaNotaFinal: $('#nota_final').html() || '',
+            ComentariosRutina: $('#ComentariosRutina').html() || '',
+            RutinaActividades: this.obtenerActividades(),
+
+            // ✅ NUEVOS
+            RegistroTrabajo: this.obtenerRegistroTrabajo(),
+            Tecnicos: this.obtenerTecnicos(),
+            Firmas: this.obtenerFirmas(),
+            ImagenesEvidencia: this.obtenerImagenesEvidencia()
+        };
+    }
+
+    // ============================
+    // ACTIVIDADES (ya existía, sin cambios)
+    // ============================
+    obtenerActividades() {
+        const actividades = [];
+        $('.actividad_realizada').each(function (index) {
+            const textoActividad = $(this).find('.texto-actividad').text().trim();
+            const radioChecked = $(this).find('input[type="radio"]:checked').val();
+            actividades.push({
+                numero: index + 1,
+                texto: textoActividad,
+                estado: radioChecked === 'realizado' ? 'Realizado' : (radioChecked === 'no_realizado' ? 'No Realizado' : 'Sin evaluar')
+            });
+        });
+        return actividades;
+    }
+
+    // ============================
+    // ✅ NUEVO: REGISTRO DE TRABAJO
+    // ============================
+
+    obtenerRegistroTrabajo() {
+        const campoVisible = (id) => {
+            const $el = $(`#${id}`);
+            return $el.length && $el.is(':visible') ? $el.val() || '' : '';
+        };
+        return {
+            HoraInicio: campoVisible('HoraInicio'),
+            HoraFin: campoVisible('HoraFin'),
+            TextoSecuencia: campoVisible('TextoSecuencia'),
+            DuracionHrs: campoVisible('DuracionHrs')
+        };
+    }
+
+
+    // ============================
+    // ✅ NUEVO: TÉCNICOS ASIGNADOS
+    // ============================
+    obtenerTecnicos() {
+        const tecnicos = [];
+        $('#listaTecnicosAsignados .tecnico-badge').each(function () {
+            const nomina = $(this).find('.tecnico-nomina').text().trim();
+            const nombre = $(this).find('.tecnico-nombre').text().trim();
+            if (nombre) {
+                tecnicos.push({ nomina, nombre });
+            }
+        });
+        return tecnicos;
+    }
+
+    // ============================
+    // ✅ NUEVO: FIRMAS DIGITALES
+    // ============================
+    obtenerFirmas() {
+        const extraerFirma = (canvasId, hiddenId, nombreId) => {
+            let imagenBase64 = '';
+
+            // Primero intenta desde el hidden (cargada desde archivo)
+            const hiddenVal = $(`#${hiddenId}`).val();
+            if (hiddenVal && hiddenVal.trim() !== '') {
+                imagenBase64 = hiddenVal;
+            } else {
+                // Si no, intenta desde el canvas (dibujada)
+                const canvas = document.getElementById(canvasId);
+                if (canvas) {
+                    try {
+                        const dataUrl = canvas.toDataURL('image/png');
+                        // Verificar que el canvas no esté vacío
+                        // Un canvas vacío genera una imagen completamente transparente
+                        const ctx = canvas.getContext('2d');
+                        const pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                        const tieneContenido = pixelData.some(channel => channel !== 0);
+                        if (tieneContenido) {
+                            imagenBase64 = dataUrl;
+                        }
+                    } catch (e) {
+                        console.warn(`⚠️ No se pudo leer canvas ${canvasId}:`, e);
+                    }
+                }
+            }
+
+            return {
+                imagen: imagenBase64,
+                nombre: $(`#${nombreId}`).val() || ''
+            };
+        };
+
+        return {
+            Realizo: extraerFirma('canvasRealizo', 'firmaRealizoData', 'nombreRealizo'),
+            Superviso: extraerFirma('canvasSuperviso', 'firmaSupervisoData', 'nombreSuperviso'),
+            Mantenimiento: extraerFirma('canvasMantenimiento', 'firmaMantenimientoData', 'nombreMantenimiento')
+        };
+    }
+
+    // ============================
+    // ✅ NUEVO: IMÁGENES DE EVIDENCIA
+    // ============================
+    obtenerImagenesEvidencia() {
+        const imagenes = [];
+        $('#contenedorImagenesRutina .img-evidencia-rutina').each(function () {
+            const src = $(this).attr('src');
+            const alt = $(this).attr('alt') || '';
+            if (src) {
+                imagenes.push({ src, alt });
+            }
+        });
+        return imagenes;
+    }
+
+    // ============================
+    // GENERAR HTML COMPLETO
+    // ============================
+    generarContenidoHTML(datos) {
+        return `<div style="
+                width: 202mm;
+                margin: 0 auto;
+                padding: 3mm;
+                box-sizing: border-box;
+                font-family: Arial, sans-serif;
+                font-size: 11px;">
+
+                <!-- HEADER -->
+            <div style="background:#2b74c0;color:white;padding:15px;border-radius:8px;margin-bottom:20px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <img src="${this.logoUrl}" style="height:40px;">
+                    </div>
+                    <div style="text-align:right;font-size:10px;">
+                        <div>
+                            <strong>Fecha:</strong> ${DateUtils.obtenerFechaHora()}
+                        </div>
+                        <div style="margin-top:5px;">
+                            <img src="${datos.QR}" style="width:70px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                <!-- TIPO DE MANTENIMIENTO -->
+                ${datos.TipoMantenimiento1 ? `
+                <div class="page-break-avoid" style="background-color: #f0f9ff; border-left: 4px solid #2563eb; padding: 15px; margin-bottom: 15px;">
+                    <p style="margin: 0; font-weight: bold;">${datos.TipoMantenimiento1}</p>
+                    <p style="margin: 5px 0 0 0;">${datos.TipoMantenimiento2}</p>
+                </div>
+                ` : ''}
+
+                <!-- DATOS DE LA ORDEN -->
+                <div class="page-break-avoid" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="background: #1976d2; color: white; padding: 8px; margin: -15px -15px 15px -15px; border-radius: 7px 7px 0 0; font-weight: bold; font-size: 10.5px;">
+                        📋 DATOS DE LA ORDEN
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 50%; padding: 8px; vertical-align: top;">
+                                <strong style="font-size:9.5px;">Número de Orden:</strong><br>
+                                <span style="font-size:10px; border-bottom: 1px solid #000; display: inline-block; min-width: 180px; padding: 2px;">${datos.NumeroOrden}</span>
+                            </td>
+                            <td style="width: 50%; padding: 8px; vertical-align: top;">
+                                <strong style="font-size:9.5px;">Solicitante:</strong><br>
+                                <span style="font-size:10px; border-bottom: 1px solid #000; display: inline-block; min-width: 180px; padding: 2px;">${datos.Solicitante}</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- DETALLES DEL MANTENIMIENTO -->
+                <div class="page-break-avoid" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                    <div style="background: #1976d2; color: white; padding: 8px; margin: -15px -15px 15px -15px; border-radius: 7px 7px 0 0; font-weight: bold; font-size: 10.5px;">
+                        ℹ️ DETALLES DEL MANTENIMIENTO
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        ${this.generarFilaDetalle('Clase de Mantenimiento', datos.ClaseMantenimiento, 'Código del Mantenimiento', datos.CodigoMantenimiento)}
+                        ${this.generarFilaDetalle('Estatus de la Orden', datos.EstatusOrden, 'Fecha Inicio Extrema', datos.FechaInicioExtrema)}
+                        ${this.generarFilaDetalle('Fecha Fin Extrema', datos.FechaFinExtrema, 'Ubicación Técnica', datos.UbicacionTecnica)}
+                        ${this.generarFilaDetalle('Centro de Costos', datos.CentroCostos, 'Descripción', datos.DescripcionEquipo)}
+                        ${this.generarFilaDetalle('Número de Equipo', datos.NumeroEquipo, 'Grupo de Planeación', datos.GrupoPlaneacion)}
+                    </table>
+                </div>
+
+                    <!-- RUTINA MANTENIMIENTO -->
+                    ${datos.RutinaActividades.length > 0 ? `
+                    <div style="margin-bottom: 15px; margin-top: 20px;">
+                        <div class="page-break-avoid" style="background: #1976d2; color: white; padding: 10px; margin-bottom: 15px; border-radius: 8px; font-weight: bold;">
+                            🔧 RUTINA MANTENIMIENTO
+                        </div>
+            
+                        <div class="page-break-avoid" style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <p style="margin: 0 0 15px 0; font-size: 12px;">
+                                <strong>Rutina de Mantenimiento Preventivo</strong> | 
+                                <strong>Equipo:</strong> ${datos.RutinaNombreEquipo} | 
+                                <strong>Proceso:</strong> ${datos.RutinaProceso}
+                            </p>
+                
+                            ${datos.RutinaDuracion ? `
+                            <div style="background-color: #f0f9ff; padding: 10px; margin-bottom: 10px; border-radius: 4px;">
+                                <span style="font-weight: bold;">${datos.RutinaDuracion}</span>
+                            </div>
+                            ` : ''}
+                
+                            ${datos.RutinaDescripcion ? `
+                            <div style="background-color: #fffbeb; padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 10px;">
+                                ${datos.RutinaDescripcion}
+                            </div>
+                            ` : ''}
+                
+                            ${datos.RutinaNotaInicial ? `
+                            <div style="background-color: #fef3c7; padding: 10px; margin-bottom: 0; border-radius: 4px; font-size: 10px; border-left: 3px solid #f59e0b;">
+                                <strong>Nota Inicial:</strong> ${datos.RutinaNotaInicial}
+                            </div>
+                            ` : ''}
+                        </div>
+            
+                        <!-- ACTIVIDADES -->
+                        ${datos.RutinaActividades.map(act => {
+            const esRealizado = act.estado === 'Realizado';
+            const esNoRealizado = act.estado === 'No Realizado';
+            const sinEvaluar = act.estado === 'Sin evaluar';
+
+            let estadoHTML = '';
+            if (sinEvaluar) {
+                estadoHTML = `
+                                    <div style="display: flex; gap: 10px; align-items: center; white-space: nowrap;">
+                                        <span style="display: flex; align-items: center; gap: 3px; font-size: 9px; color: #6b7280;">
+                                            <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #16a34a; border-radius: 3px; background: white;"></span>
+                                            Realizado
+                                        </span>
+                                        <span style="display: flex; align-items: center; gap: 3px; font-size: 9px; color: #6b7280;">
+                                            <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #dc2626; border-radius: 3px; background: white;"></span>
+                                            No Realizado
+                                        </span>
+                                    </div>
+                                `;
+            } else if (esRealizado) {
+                estadoHTML = `
+                                    <div style="display: flex; gap: 10px; align-items: center; white-space: nowrap;">
+                                        <span style="display: flex; align-items: center; gap: 3px; font-size: 9px; color: #16a34a; font-weight: bold;">
+                                            <span style="display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border: 2px solid #16a34a; border-radius: 3px; background: #16a34a; color: white; font-size: 10px;">✓</span>
+                                            Realizado
+                                        </span>
+                                        <span style="display: flex; align-items: center; gap: 3px; font-size: 9px; color: #d1d5db;">
+                                            <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #d1d5db; border-radius: 3px; background: white;"></span>
+                                            No Realizado
+                                        </span>
+                                    </div>
+                                `;
+            } else {
+                estadoHTML = `
+                                    <div style="display: flex; gap: 10px; align-items: center; white-space: nowrap;">
+                                        <span style="display: flex; align-items: center; gap: 3px; font-size: 9px; color: #d1d5db;">
+                                            <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #d1d5db; border-radius: 3px; background: white;"></span>
+                                            Realizado
+                                        </span>
+                                        <span style="display: flex; align-items: center; gap: 3px; font-size: 9px; color: #dc2626; font-weight: bold;">
+                                            <span style="display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border: 2px solid #dc2626; border-radius: 3px; background: #dc2626; color: white; font-size: 10px;">✓</span>
+                                            No Realizado
+                                        </span>
+                                    </div>
+                                `;
+            }
+
+                                return `
+                                <div class="page-break-avoid" style="background-color: ${act.numero % 2 === 0 ? '#ffffff' : '#f9fafb'}; border: 1px solid #e5e7eb; padding: 10px; margin-bottom: 6px; border-radius: 6px;">
+                                    <div style="display: flex; align-items: flex-start; gap: 10px;">
+                                        <span style="display: inline-block; background-color: #2563eb; color: white; min-width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 11px; flex-shrink: 0;">${act.numero}</span>
+                                        <span style="flex: 1; line-height: 1.4; font-size: 10px;">${act.texto}</span>
+                                        ${estadoHTML}
+                                    </div>
+                                </div>
+                            `;
+                                }).join('')}
+            
+                        <!-- NOTA FINAL -->
+                        ${datos.RutinaNotaFinal ? `
+                            <div style="background-color: #fef3c7; padding: 10px; margin-top: 15px; margin-bottom: 15px; border-radius: 4px; font-size: 10px; border-left: 3px solid #f59e0b;">
+                                <strong>Nota Final:</strong> ${datos.RutinaNotaFinal}
+                            </div>
+                            ` : ''}
+
+                        <!-- COMENTARIOS -->
+                        <div class="page-break-avoid" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                            <strong style="display: block; margin-bottom: 8px; color: #374151;">Comentarios:</strong>
+                            <div style="border: 1px solid #d1d5db; padding: 10px; background: #fffbeb; font-size: 10px; border-radius: 4px; min-height: 60px;">
+                                ${datos.ComentariosRutina}
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                <!-- ✅ REGISTRO DE TRABAJO -->
+                <div style="page-break-inside: avoid; break-inside: avoid;">
+                ${this.generarSeccionRegistroTrabajo(datos.RegistroTrabajo, datos.Tecnicos)}
+                 </div>
+
+                <!-- ✅ IMÁGENES DE EVIDENCIA -->
+                <div style="page-break-inside: avoid; break-inside: avoid;">
+                ${this.generarSeccionImagenes(datos.ImagenesEvidencia)}
+                </div>
+
+                <!-- ✅ FIRMAS -->
+                <div style="page-break-inside: avoid; break-inside: avoid;">
+                    ${this.generarSeccionFirmas(datos.Firmas)}
+                </div>
+
+                </div>
+            `;
+    }
+
+    // ============================
+    // ✅ NUEVO: HTML REGISTRO DE TRABAJO
+    // ============================
+    generarSeccionRegistroTrabajo(registro, tecnicos) {
+        const tecnicosHTML = tecnicos && tecnicos.length > 0 ? `
+            <tr>
+                <td colspan="2" style="padding: 8px; vertical-align: top;">
+                    <strong style="font-size:9.5px;">👷 Técnicos Asignados:</strong><br>
+                    <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px;">
+                        ${tecnicos.map(t => `
+                            <span style="
+                                display: inline-flex; align-items: center; gap: 5px;
+                                background: #eff6ff; border: 1px solid #bfdbfe;
+                                border-radius: 20px; padding: 3px 10px; font-size: 9.5px; color: #1e40af;">
+                                <strong>${t.nomina}</strong> ${t.nombre}
+                            </span>
+                        `).join('')}
+                    </div>
+                </td>
+            </tr>
+        ` : '';
+
+        const textoHTML = registro.TextoSecuencia ? `
+            <tr>
+                <td colspan="2" style="padding: 8px; vertical-align: top;">
+                    <strong style="font-size:9.5px;">📝 Actividad Realizada:</strong><br>
+                    <div style="border: 1px solid #d1d5db; padding: 8px; background: #f9fafb; font-size: 10px; border-radius: 4px; margin-top: 4px; min-height: 40px;">
+                        ${registro.TextoSecuencia}
+                    </div>
+                </td>
+            </tr>
+        ` : '';
+
+        return `
+            <div class="page-break-avoid" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                <div style="background: #1976d2; color: white; padding: 8px; margin: -15px -15px 15px -15px; border-radius: 7px 7px 0 0; font-weight: bold; font-size: 10.5px;">
+                    🔩 REGISTRO DE TRABAJO
+                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    ${this.generarFilaDetalle('⏰ Hora Inicio', registro.HoraInicio, '⏱️ Hora Fin', registro.HoraFin)}
+                    ${registro.DuracionHrs ? this.generarFilaDetalle('⌛ Duración (Hrs)', registro.DuracionHrs, '', '') : ''}
+                    ${tecnicosHTML}
+                    ${textoHTML}
+                </table>
+            </div>
+        `;
+    }
+
+    // ============================
+    // ✅ NUEVO: HTML IMÁGENES DE EVIDENCIA
+    // ============================
+    generarSeccionImagenes(imagenes) {
+        if (!imagenes || imagenes.length === 0) return '';
+
+        const imagenesHTML = imagenes.map((img, index) => `
+            <td style="width: 50%; padding: 5px; vertical-align: top;">
+                <img src="${window.location.origin}${img.src.startsWith('/') ? img.src : '/' + img.src}"
+                     alt="${img.alt}"
+                     style="width: 100%; border-radius: 6px; border: 1px solid #e5e7eb; display: block;"
+                     crossorigin="anonymous">
+                <div style="font-size: 9px; color: #6b7280; text-align: center; margin-top: 3px;">
+                    Evidencia ${index + 1}
+                </div>
+            </td>
+        `).reduce((rows, cell, i) => {
+            if (i % 2 === 0) rows.push(`<tr>${cell}`);
+            else rows[rows.length - 1] += `${cell}</tr>`;
+            return rows;
+        }, []).map((row, i, arr) => {
+            // Cerrar la última fila si tiene número impar de imágenes
+            return (i === arr.length - 1 && imagenes.length % 2 !== 0)
+                ? row + '<td style="width:50%;"></td></tr>'
+                : row;
+        }).join('');
+
+        return `
+            <div class="page-break-avoid" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                <div style="background: #1976d2; color: white; padding: 8px; margin: -15px -15px 15px -15px; border-radius: 7px 7px 0 0; font-weight: bold; font-size: 10.5px;">
+                    📸 EVIDENCIA FOTOGRÁFICA (${imagenes.length} imagen${imagenes.length > 1 ? 'es' : ''})
+                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    ${imagenesHTML}
+                </table>
+            </div>
+        `;
+    }
+
+    // ============================
+    // ✅ NUEVO: HTML FIRMAS DIGITALES
+    // ============================
+    generarSeccionFirmas(firmas) {
+        const firmaCard = (titulo, color, firma) => {
+            const tieneImagen = firma.imagen && firma.imagen.trim() !== '';
+            const tieneNombre = firma.nombre && firma.nombre.trim() !== '';
+
+            return `
+                <td style="width: 33.33%; padding: 8px; vertical-align: top;">
+                    <div style="border: 2px solid ${color}; border-radius: 8px; overflow: hidden;">
+                        <div style="background: ${color}; color: white; padding: 6px 10px; font-size: 9.5px; font-weight: bold;">
+                            ${titulo}
+                        </div>
+                        <div style="padding: 8px; background: #f8f9fa; min-height: 80px; display: flex; align-items: center; justify-content: center;">
+                            ${tieneImagen
+                    ? `<img src="${firma.imagen}" alt="Firma ${titulo}" style="max-width: 100%; max-height: 80px; display: block;">`
+                    : `<span style="font-size: 9px; color: #9ca3af; font-style: italic;">Sin firma</span>`
+                }
+                        </div>
+                        <div style="padding: 6px 10px; border-top: 1px solid #e5e7eb; font-size: 9.5px; min-height: 28px;">
+                            <strong>Nombre:</strong>
+                            <span style="border-bottom: 1px solid #000; display: inline-block; min-width: 100px; padding: 1px 2px;">
+                                ${tieneNombre ? firma.nombre : ''}
+                            </span>
+                        </div>
+                    </div>
+                </td>
+            `;
+        };
+
+        return `
+            <div class="page-break-avoid" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                <div style="background: #1976d2; color: white; padding: 8px; margin: -15px -15px 15px -15px; border-radius: 7px 7px 0 0; font-weight: bold; font-size: 10.5px;">
+                    ✍️ FIRMAS DIGITALES
+                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        ${firmaCard('Técnico MTTO', '#1d4ed8', firmas.Realizo)}
+                        ${firmaCard('Supervisor Producción', '#15803d', firmas.Superviso)}
+                        ${firmaCard('Supervisor Mantenimiento', '#0369a1', firmas.Mantenimiento)}
+                    </tr>
+                </table>
+            </div>
+        `;
+    }
+
+    // ============================
+    // MÉTODOS EXISTENTES SIN CAMBIOS
+    // ============================
+    generarFilaDetalle(label1, valor1, label2, valor2) {
+        const icon1 = this.obtenerIconoCampo(label1);
+        const icon2 = this.obtenerIconoCampo(label2);
+        if (label2 && valor2) {
+            return `
+                <tr>
+                    <td style="width: 50%; padding: 8px; vertical-align: top;">
+                        <strong style="font-size:9.5px;">${icon1} ${label1}:</strong><br>
+                        <span style="font-size:10px; border-bottom: 1px solid #000; display: inline-block; min-width: 180px; padding: 2px;">
+                            ${valor1 || ''}
+                        </span>
+                    </td>
+                    <td style="width: 50%; padding: 8px; vertical-align: top;">
+                        <strong style="font-size:9.5px;">${icon2} ${label2}:</strong><br>
+                        <span style="font-size:10px; border-bottom: 1px solid #000; display: inline-block; min-width: 180px; padding: 2px;">
+                            ${valor2 || ''}
+                        </span>
+                    </td>
+                </tr>
+                `;
+        }
+        else {
+            return `
+            <tr>
+                <td style="width: 50%; padding: 8px; vertical-align: top;">
+                    <strong style="font-size:9.5px;">${icon1} ${label1}:</strong><br>
+                    <span style="font-size:10px; border-bottom: 1px solid #000; display: inline-block; min-width: 180px; padding: 2px;">
+                        ${valor1 || ''}
+                    </span>
+                </td>
+            </tr>
+            `;
+        }
+    }
+
+    obtenerOpcionesPDF() {
+        const numeroOrden = document.getElementById('NumeroOrden')?.value || 'SIN_NUMERO';
+        const fecha = new Date().toISOString().split('T')[0];
+        return {
+            margin: [4, 4, 4, 4],
+            filename: `Orden_Mantenimiento_${numeroOrden}_${fecha}.pdf`,
+            html2canvas: { scale: 1.5, useCORS: true, letterRendering: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: {
+                mode: ['avoid-all', 'css', 'legacy'],
+                before: '.page-break-before',
+                after: '.page-break-after',
+                avoid: '.page-break-avoid'
+            }
+        };
+    }
+
+    obtenerIconoCampo(label) {
+        const iconos = {
+            'Número de Orden': '📄',
+            'Solicitante': '👤',
+            'Clase de Mantenimiento': '⚙️',
+            'Código del Mantenimiento': '🏷️',
+            'Estatus de la Orden': '📊',
+            'Fecha Inicio Extrema': '📅',
+            'Fecha Fin Extrema': '📅',
+            'Ubicación Técnica': '📍',
+            'Centro de Costos': '💰',
+            'Descripción': '📝',
+            'Número de Equipo': '🏭',
+            'Grupo de Planeación': '📋'
+        };
+        return iconos[label] || '▪️';
+    }
+}
+
+// ========================================
+// GESTOR DE IMPRESIÓN PARA MANTENIMIENTO PREVENTIVO
+// ========================================
+class PrintManagerMantenimiento {
+    constructor(mantenimientoManager) {
+        this.logoUrl = `${window.location.origin}/Content/Images/LogoPTMWhite.png`;
+        this.mantenimientoManager = mantenimientoManager;
+
+        // 🔥 AGREGAR
+        this.printEngine = new PrintEngine();
+    }
+
+    inicializar() {
+        console.log('✅ PrintManagerMantenimiento inicializado correctamente');
+    }
+
+    async prepararImpresionDirecta(btn, win) {
+        try {
+            // 🔥 Mostrar loading en el botón
+            const iconoOriginal = btn.html();
+            btn.html('<span class="spinner-border spinner-border-sm"></span>');
+            btn.prop("disabled", true);
+
+            // 🔥 PASO 1: Obtener datos del botón
+            const datosBoton = this.obtenerDatosDelBoton(btn);
+            const qrBase64 = await GlobalUtil.generarQRCode(datosBoton.NumeroOrden);
+            datosBoton.QR = qrBase64;
+            // 🔥 PASO 2: Consultar la rutina desde el servidor (reutilizando método existente)
+            const rutinaData = await this.consultarRutinaServidor(datosBoton.idEquipo);
+
+            // 🔥 PASO 3: Combinar datos y generar impresión
+            const datosCompletos = {
+                ...datosBoton,
+                ...rutinaData
+            };
+
+            this.imprimirOrdenMantenimiento(datosCompletos, win);
+
+            // Restaurar botón
+            btn.html(iconoOriginal);
+            btn.prop("disabled", false);
+
+        } catch (error) {
+            console.error('Error al preparar impresión:', error);
+            AlertManager.mostrar('Error al preparar la impresión. Revise la consola para más detalles.', 'warning');
+            btn.html('<i class="bi bi-printer"></i>');
+            btn.prop("disabled", false);
+        }
+    }
+
+    obtenerDatosDelBoton(btn) {
+        // 🔥 Extraer TODOS los data attributes del botón
+        const idEquipo = btn.data('idequipo');
+        const planta = btn.data('planta');
+        const numeroDocPmCalidad = btn.data('numerodocpmcalidad');
+        const nombreEquipo = btn.data('nombreequipo');
+        const descripcionEquipo = btn.data('descripcionequipo');
+        const area = btn.data('area');
+        const lineaProduccion = btn.data('lineaproduccion');
+        const centrocostos = btn.data('centrocostos');
+        const fechaInicioMantenimiento = btn.data('fechainiciomantenimiento');
+        const fechaFinMantenimiento = btn.data('fechafinmantenimiento');
+        const tipoMantenimiento = btn.data('tipomantenimiento');
+        const numeroOrden = btn.data('numeroorden');
+        const descEstatusOrden = btn.data('descestatusorden');
+        const idMantenimiento = btn.data('idmantenimiento');
+
+        // 🔥 Formatear fechas de DD/MM/YYYY a YYYY-MM-DD
+        let fechaInicio = '';
+        let fechaFin = '';
+
+        if (fechaInicioMantenimiento) {
+            const [dia1, mes1, anio1] = fechaInicioMantenimiento.split('/');
+            fechaInicio = `${anio1}-${mes1}-${dia1}`;
+        }
+
+        if (fechaFinMantenimiento) {
+            const [dia2, mes2, anio2] = fechaFinMantenimiento.split('/');
+            fechaFin = `${anio2}-${mes2}-${dia2}`;
+        }
+
+        // 🔥 Obtener datos del usuario desde el manager (igual que abrirModalCaratulaOnline)
+        const datos_usuario = this.mantenimientoManager.datos_usuario;
+
+        // 🔥 Retornar objeto con todos los datos formateados
+        return {
+            FechaImpresion: DateUtils.obtenerFechaHora(),
+            TipoMantenimiento1: planta == "1" ? 'Mantenimiento Preventivo Z20' : 'Mantenimiento Preventivo',
+            TipoMantenimiento2: `Equipo: ${nombreEquipo} | Área: ${area}`,
+            NumeroOrden: numeroOrden || '',
+            Solicitante: datos_usuario[0].EMAIL || '',
+            ClaseMantenimiento: (planta == "1" ? tipoMantenimiento : "Preventivo"),
+            CodigoMantenimiento: `${planta == "1" ? "PL1" : "PL2"}-PMT${area}01-L01-F01`,
+            EstatusOrden: descEstatusOrden || '',
+            FechaInicioExtrema: fechaInicio,
+            FechaFinExtrema: fechaFin,
+            UbicacionTecnica: `AREA ${area}`,
+            CentroCostos: centrocostos || '',
+            DescripcionEquipo: descripcionEquipo || '',
+            NumeroEquipo: numeroDocPmCalidad || '',
+            GrupoPlaneacion: `${planta}_${area}`,
+            RutinaNombreEquipo: `${nombreEquipo} ${numeroDocPmCalidad}`,
+            RutinaProceso: area || '',
+            idEquipo: idEquipo,
+            idMantenimiento: idMantenimiento,
+            Comentarios: '' // Vacío por defecto para impresión
+        };
+    }
+
+    async consultarRutinaServidor(idEquipo) {
+        // 🔥 Reutilizar la URL base del manager
+        const URLBaseRutinas = this.mantenimientoManager.URLBaseRutinas;
+
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: `/${URLBaseRutinas}/Default`,
+                type: 'GET',
+                data: { idEquipo: idEquipo },
+                dataType: 'html',
+                success: (html) => {
+                    // 🔥 Parsear el HTML y extraer los datos
+                    const $html = $(html);
+
+                    const rutina = {
+                        RutinaDuracion: $html.find('.form-label span:first').text() || '',
+                        RutinaDescripcion: $html.find('.text-justify:first').text() || '',
+                        RutinaNotaInicial: $html.find('.position-relative:has(.text-justify) .text-justify').last().text() || '',
+                        RutinaNotaFinal: $html.find('#nota_final').html() || '',
+                        RutinaActividades: this.extraerActividades($html)
+                    };
+
+                    resolve(rutina);
+                },
+                error: (error) => {
+                    console.error('Error al consultar rutina:', error);
+                    // Retornar datos vacíos en caso de error
+                    resolve({
+                        RutinaDuracion: '',
+                        RutinaDescripcion: '',
+                        RutinaNotaInicial: '',
+                        RutinaNotaFinal: '',
+                        RutinaActividades: []
+                    });
+                }
+            });
+        });
+    }
+
+    extraerActividades($html) {
+        const actividades = [];
+        $html.find('.actividad').each(function (index) {
+            const textoActividad = $(this).find('.texto-actividad').text().trim();
+            actividades.push({
+                numero: index + 1,
+                texto: textoActividad,
+                estado: 'Sin evaluar' // Por defecto sin evaluar para impresión
+            });
+        });
+        return actividades;
+    }
+
+    imprimirOrdenMantenimiento(datos, win) {
+        try {
+            const html = this.generarContenidoHTML(datos);
+            const estilos = this.obtenerEstilosImpresion();
+
+            this.printEngine.imprimir({
+                html,
+                estilos,
+                titulo: `Orden Preventiva - ${datos.NumeroOrden}`,
+                autoClose: true,
+                win // 🔥 le pasas la ventana ya abierta
+            });
+
+        } catch (error) {
+            console.error('Error al generar impresión:', error);
+            AlertManager.mostrar('Error al preparar la impresión.', 'warning');
+        }
+    }
+
+    obtenerEstilosImpresion() {
+        return `
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            padding: 15px;
+            background: white;
+            color: #000;
+        }
+        
+        @media print {
+            @page { margin: 6mm 5mm; size: A4 portrait; }
+            body { margin: 0; padding: 0; }
+            .page-break-avoid { page-break-inside: avoid; break-inside: avoid; }
+        }
+        
+        .contenedor-principal {
+            width: 100%;
+            max-width: 200mm;
+            margin: 0 auto;
+            font-size: 11.5px; /* 🔥 subimos un poco */
+            line-height: 1.45;
+        }
+
+        /* HEADER */
+        .encabezado {
+            background: #1976d2;
+            color: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: table;
+            width: 100%;
+        }
+
+        .encabezado-logo {
+            display: table-cell;
+            width: 120px;
+            vertical-align: middle;
+        }
+
+        .encabezado-logo img {
+            max-width: 100%;
+            max-height: 50px;
+            display: block;
+        }
+
+        .encabezado-fecha {
+            display: table-cell;
+            text-align: right;
+            vertical-align: middle;
+            font-size: 10px;
+        }
+
+        /* BANNER */
+        .banner-tipo {
+            background-color: #f0f9ff;
+            border-left: 4px solid #2563eb;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .banner-tipo p { margin: 0; }
+        .banner-tipo-titulo { font-weight: bold; margin-bottom: 5px; }
+
+        /* SECCIONES */
+        .seccion {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        /* 🔥 ligeramente más grande */
+        .seccion-header {
+            background: #1976d2;
+            color: white;
+            padding: 9px 12px;
+            margin: -15px -15px 15px -15px;
+            border-radius: 7px 7px 0 0;
+            font-weight: bold;
+            font-size: 10.8px;
+            letter-spacing: 0.3px;
+        }
+
+        /* TABLA */
+        .tabla-detalles {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tabla-detalles td {
+            width: 50%;
+            padding: 8px;
+            vertical-align: top;
+        }
+
+        /* 🔥 aquí está el balance bueno */
+        .campo-label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 2px;
+            font-size: 9.5px;
+        }
+
+        .campo-valor {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 180px;
+            padding: 2px;
+            font-size: 10.2px;
+        }
+
+        /* RUTINA */
+        .rutina-header {
+            background: #1976d2;
+            color: white;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .rutina-info {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .rutina-titulo {
+            margin: 0 0 15px 0;
+            font-size: 12px;
+        }
+
+        .rutina-duracion {
+            background-color: #f0f9ff;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .rutina-descripcion {
+            background-color: #fffbeb;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 10px;
+        }
+
+        .rutina-nota {
+            background-color: #fef3c7;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            border-left: 3px solid #f59e0b;
+            margin: 15px 0;
+        }
+
+        /* ACTIVIDADES */
+        .actividad {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            margin-bottom: 6px;
+            border-radius: 6px;
+            display: table;
+            width: 100%;
+        }
+
+        .actividad:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        .actividad-numero {
+            display: table-cell;
+            width: 30px;
+            vertical-align: top;
+        }
+
+        .actividad-numero-circulo {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            min-width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 11px;
+        }
+
+        .actividad-texto {
+            display: table-cell;
+            vertical-align: top;
+            padding-left: 10px;
+            line-height: 1.4;
+            font-size: 10px;
+        }
+
+        .actividad-estado {
+            display: table-cell;
+            width: 200px;
+            vertical-align: top;
+            text-align: right;
+        }
+
+        /* ESTADOS */
+        .estado-opciones {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            white-space: nowrap;
+        }
+
+        .estado-opcion {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 9px;
+        }
+
+        .checkbox {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid;
+            border-radius: 3px;
+            background: white;
+        }
+
+        .checkbox-realizado { border-color: #16a34a; }
+        .checkbox-no-realizado { border-color: #dc2626; }
+
+        .checkbox-marcado {
+            background: currentColor;
+            color: white;
+            text-align: center;
+            line-height: 10px;
+            font-size: 10px;
+        }
+
+        .estado-realizado { color: #16a34a; font-weight: bold; }
+        .estado-no-realizado { color: #dc2626; font-weight: bold; }
+        .estado-sin-evaluar { color: #6b7280; }
+        .checkbox-deshabilitado { border-color: #d1d5db; }
+
+        /* COMENTARIOS */
+        .comentarios-contenedor {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .comentarios-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #374151;
+            font-weight: bold;
+        }
+
+        .comentarios-valor {
+            border: 1px solid #d1d5db;
+            padding: 10px;
+            background: #fffbeb;
+            font-size: 10px;
+            border-radius: 4px;
+            min-height: 60px;
+        }
+        
+        .fade-out {
+            opacity: 0;
+        }
+    `;
+    }
+
+    generarContenidoHTML(datos) {
+        return `
+    <div class="contenedor-principal">
+        <div class="encabezado page-break-avoid"
+     style="display:flex;justify-content:space-between;align-items:center;">
+    <div class="encabezado-logo">
+        <img src="${this.logoUrl}" alt="Logo PTM" />
+    </div>
+    <div class="encabezado-fecha" style="text-align:right;">
+        <div>
+            <strong>Fecha:</strong> ${datos.FechaImpresion}
+        </div>
+        <div style="margin-top:5px;">
+            <img src="${datos.QR}" style="width:70px;">
+        </div>
+    </div>
+    </div>
+
+        ${datos.TipoMantenimiento1 ? `
+        <div class="banner-tipo page-break-avoid">
+            <p class="banner-tipo-titulo">${datos.TipoMantenimiento1}</p>
+            <p>${datos.TipoMantenimiento2}</p>
+        </div>
+        ` : ''}
+
+        <div class="seccion page-break-avoid">
+            <div class="seccion-header">📋 DATOS DE LA ORDEN</div>
+            <table class="tabla-detalles">
+                <tr>
+                    <td><span class="campo-label">Número de Orden:</span><span class="campo-valor">${datos.NumeroOrden}</span></td>
+                    <td><span class="campo-label">Solicitante:</span><span class="campo-valor">${datos.Solicitante}</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="seccion page-break-avoid">
+            <div class="seccion-header">ℹ️ DETALLES DEL MANTENIMIENTO</div>
+            <table class="tabla-detalles">
+                ${this.generarFilaDetalle('Clase de Mantenimiento', datos.ClaseMantenimiento, 'Código del Mantenimiento', datos.CodigoMantenimiento)}
+                ${this.generarFilaDetalle('Estatus de la Orden', datos.EstatusOrden, 'Fecha Inicio Extrema', datos.FechaInicioExtrema)}
+                ${this.generarFilaDetalle('Fecha Fin Extrema', datos.FechaFinExtrema, 'Ubicación Técnica', datos.UbicacionTecnica)}
+                ${this.generarFilaDetalle('Centro de Costos', datos.CentroCostos, 'Descripción', datos.DescripcionEquipo)}
+                ${this.generarFilaDetalle('Número de Equipo', datos.NumeroEquipo, 'Grupo de Planeación', datos.GrupoPlaneacion)}
+            </table>
+        </div>
+
+        ${datos.RutinaActividades && datos.RutinaActividades.length > 0 ? `
+        <div style="margin-bottom: 15px; margin-top: 20px;">
+            <div class="rutina-header page-break-avoid">🔧 RUTINA MANTENIMIENTO</div>
+            
+            <div class="rutina-info page-break-avoid">
+                <p class="rutina-titulo">
+                    <strong>Rutina de Mantenimiento Preventivo</strong> | 
+                    <strong>Equipo:</strong> ${datos.RutinaNombreEquipo} | 
+                    <strong>Proceso:</strong> ${datos.RutinaProceso}
+                </p>
+                ${datos.RutinaDuracion ? `<div class="rutina-duracion"><span style="font-weight: bold;">${datos.RutinaDuracion}</span></div>` : ''}
+                ${datos.RutinaDescripcion ? `<div class="rutina-descripcion">${datos.RutinaDescripcion}</div>` : ''}
+                ${datos.RutinaNotaInicial ? `<div class="rutina-nota"><strong>Nota Inicial:</strong> ${datos.RutinaNotaInicial}</div>` : ''}
+            </div>
+
+            ${datos.RutinaActividades.map(act => this.generarActividadHTML(act)).join('')}
+            
+            ${datos.RutinaNotaFinal ? `<div class="rutina-nota"><strong>Nota Final:</strong> ${datos.RutinaNotaFinal}</div>` : ''}
+
+            <div class="comentarios-contenedor page-break-avoid">
+                <span class="comentarios-label">Comentarios:</span>
+                <div class="comentarios-valor">${datos.Comentarios}</div>
+            </div>
+        </div>
+        ` : ''}
+    </div>
+`;
+    }
+
+    generarActividadHTML(act) {
+        const esRealizado = act.estado === 'Realizado';
+        const esNoRealizado = act.estado === 'No Realizado';
+
+        let estadoHTML = '';
+        if (act.estado === 'Sin evaluar') {
+            estadoHTML = `
+                <div class="estado-opciones">
+                    <span class="estado-opcion estado-sin-evaluar">
+                        <span class="checkbox checkbox-realizado"></span> Realizado
+                    </span>
+                    <span class="estado-opcion estado-sin-evaluar">
+                        <span class="checkbox checkbox-no-realizado"></span> No Realizado
+                    </span>
+                </div>
+            `;
+        } else if (esRealizado) {
+            estadoHTML = `
+                <div class="estado-opciones">
+                    <span class="estado-opcion estado-realizado">
+                        <span class="checkbox checkbox-realizado checkbox-marcado">✓</span> Realizado
+                    </span>
+                    <span class="estado-opcion" style="color: #d1d5db;">
+                        <span class="checkbox checkbox-deshabilitado"></span> No Realizado
+                    </span>
+                </div>
+            `;
+        } else {
+            estadoHTML = `
+                <div class="estado-opciones">
+                    <span class="estado-opcion" style="color: #d1d5db;">
+                        <span class="checkbox checkbox-deshabilitado"></span> Realizado
+                    </span>
+                    <span class="estado-opcion estado-no-realizado">
+                        <span class="checkbox checkbox-no-realizado checkbox-marcado">✓</span> No Realizado
+                    </span>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="actividad page-break-avoid">
+                <div class="actividad-numero">
+                    <span class="actividad-numero-circulo">${act.numero}</span>
+                </div>
+                <div class="actividad-texto">${act.texto}</div>
+                <div class="actividad-estado">${estadoHTML}</div>
+            </div>
+        `;
+    }
+
+    generarFilaDetalle(label1, valor1, label2, valor2) {
+
+        const icon1 = this.obtenerIconoCampo(label1);
+        const icon2 = this.obtenerIconoCampo(label2);
+
+        return `
+    <tr>
+        <td>
+            <span class="campo-label">
+                ${icon1} ${label1}:
+            </span>
+            <span class="campo-valor">${valor1 || ''}</span>
+        </td>
+
+        <td>
+            <span class="campo-label">
+                ${icon2} ${label2}:
+            </span>
+            <span class="campo-valor">${valor2 || ''}</span>
+        </td>
+    </tr>
+    `;
+    }
+
+    obtenerIconoCampo(label) {
+
+        const iconos = {
+            'Número de Orden': '📄',
+            'Solicitante': '👤',
+            'Clase de Mantenimiento': '⚙️',
+            'Código del Mantenimiento': '🏷️',
+            'Estatus de la Orden': '📊',
+            'Fecha Inicio Extrema': '📅',
+            'Fecha Fin Extrema': '📅',
+            'Ubicación Técnica': '📍',
+            'Centro de Costos': '💰',
+            'Descripción': '📝',
+            'Número de Equipo': '🏭',
+            'Grupo de Planeación': '📋'
+        };
+
+        return iconos[label] || '▪️';
+    }
+}
+

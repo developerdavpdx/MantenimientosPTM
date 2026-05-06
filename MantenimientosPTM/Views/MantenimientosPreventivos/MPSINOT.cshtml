@@ -1,0 +1,302 @@
+﻿@{
+    ViewBag.Title = "Mantenimientos Preventivos Sin OT";
+}
+
+<div class="row m-0 pt-3">
+    <div class="col-12 col-xl-12 mb-4 mb-lg-0">
+        <div class="card">
+            <div class="card-header text-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-color-logo">Órdenes Trabajo sin generar - @DateTime.Now.ToString("MMMM yyyy")</h5>
+                <div>
+                    <!-- Botón principal -->
+                    <button id="btnGenerarOT" class="btn btn-sm btn-warning text-white" data-bs-toggle="tooltip" title="Generar Órdenes Trabajo">
+                        <i class="bi bi-journal-check me-1 text-white"></i> Generar Órdenes Trabajo
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive small">
+                    <!-- Tabla completa -->
+                    <table class="table table-striped table-sm" id="tablaMantenimientos">
+                        <thead>
+                            <tr>
+                                <th scope="col">
+                                    <input type="checkbox" id="selectAll" data-bs-toggle="tooltip" title="Seleccionar todas las filas">
+                                </th>
+                                <th scope="col">OT</th>
+                                <th scope="col">Equipo</th>
+                                <th scope="col">Línea</th>
+                                <th scope="col">Fecha Mantenimiento</th>
+                                <th scope="col">Estatus</th>
+                                <th scope="col" class="col-actions">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><input type="checkbox" class="row-checkbox"></td>
+                                <td>--</td>
+                                <td>EX-450-P</td>
+                                <td>Línea 1</td>
+                                <td>15/@DateTime.Now.ToString("MM/yyyy")</td>
+                                <td><span class="badge bg-secondary">Sin OT generada</span></td>
+                                <td class="col-actions">
+                                    <button class="btn btn-sm btn-info btn-generar-ot-fila"
+                                            data-equipo="EX-450-P"
+                                            data-linea="Línea 1"
+                                            data-fecha="15/@DateTime.Now.ToString("MM/yyyy")"
+                                            data-bs-toggle="tooltip" title="Generar Orden de Trabajo">
+                                        <i class="bi bi-file-earmark-plus"></i> Generar OT
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><input type="checkbox" class="row-checkbox"></td>
+                                <td>--</td>
+                                <td>ML-2200</td>
+                                <td>Línea 2</td>
+                                <td>18/@DateTime.Now.ToString("MM/yyyy")</td>
+                                <td><span class="badge bg-secondary">Sin OT generada</span></td>
+                                <td class="col-actions">
+                                    <button class="btn btn-sm btn-info btn-generar-ot-fila"
+                                            data-equipo="ML-2200"
+                                            data-linea="Línea 2"
+                                            data-fecha="18/@DateTime.Now.ToString("MM/yyyy")"
+                                            data-bs-toggle="tooltip" title="Generar Orden de Trabajo">
+                                        <i class="bi bi-file-earmark-plus"></i> Generar OT
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><input type="checkbox" class="row-checkbox"></td>
+                                <td>--</td>
+                                <td>CNC-789-XF</td>
+                                <td>Línea 3</td>
+                                <td>22/@DateTime.Now.ToString("MM/yyyy")</td>
+                                <td><span class="badge bg-secondary">Sin OT generada</span></td>
+                                <td class="col-actions">
+                                    <button class="btn btn-sm btn-info btn-generar-ot-fila"
+                                            data-equipo="CNC-789-XF"
+                                            data-linea="Línea 3"
+                                            data-fecha="22/@DateTime.Now.ToString("MM/yyyy")"
+                                            data-bs-toggle="tooltip" title="Generar Orden de Trabajo">
+                                        <i class="bi bi-file-earmark-plus"></i> Generar OT
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><input type="checkbox" class="row-checkbox"></td>
+                                <td>--</td>
+                                <td>ENS-100</td>
+                                <td>Línea 1</td>
+                                <td>05/@DateTime.Now.ToString("MM/yyyy")</td>
+                                <td><span class="badge bg-secondary">Sin OT generada</span></td>
+                                <td class="col-actions">
+                                    <button class="btn btn-sm btn-info btn-generar-ot-fila"
+                                            data-equipo="ENS-100"
+                                            data-linea="Línea 1"
+                                            data-fecha="05/@DateTime.Now.ToString("MM/yyyy")"
+                                            data-bs-toggle="tooltip" title="Generar Orden de Trabajo">
+                                        <i class="bi bi-file-earmark-plus"></i> Generar OT
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><input type="checkbox" class="row-checkbox"></td>
+                                <td>--</td>
+                                <td>EMP-345</td>
+                                <td>Línea 4</td>
+                                <td>28/@DateTime.Now.ToString("MM/yyyy")</td>
+                                <td><span class="badge bg-secondary">Sin OT generada</span></td>
+                                <td class="col-actions">
+                                    <button class="btn btn-sm btn-info btn-generar-ot-fila"
+                                            data-equipo="EMP-345"
+                                            data-linea="Línea 4"
+                                            data-fecha="28/@DateTime.Now.ToString("MM/yyyy")"
+                                            data-bs-toggle="tooltip" title="Generar Orden de Trabajo">
+                                        <i class="bi bi-file-earmark-plus"></i> Generar OT
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><input type="checkbox" class="row-checkbox"></td>
+                                <td>--</td>
+                                <td>HORNO-7G</td>
+                                <td>Línea 2</td>
+                                <td>12/@DateTime.Now.ToString("MM/yyyy")</td>
+                                <td><span class="badge bg-secondary">Sin OT generada</span></td>
+                                <td class="col-actions">
+                                    <button class="btn btn-sm btn-info btn-generar-ot-fila"
+                                            data-equipo="HORNO-7G"
+                                            data-linea="Línea 2"
+                                            data-fecha="12/@DateTime.Now.ToString("MM/yyyy")"
+                                            data-bs-toggle="tooltip" title="Generar Orden de Trabajo">
+                                        <i class="bi bi-file-earmark-plus"></i> Generar OT
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><input type="checkbox" class="row-checkbox"></td>
+                                <td>--</td>
+                                <td>MEZ-850</td>
+                                <td>Línea 5</td>
+                                <td>08/@DateTime.Now.ToString("MM/yyyy")</td>
+                                <td><span class="badge bg-secondary">Sin OT generada</span></td>
+                                <td class="col-actions">
+                                    <button class="btn btn-sm btn-info btn-generar-ot-fila"
+                                            data-equipo="MEZ-850"
+                                            data-linea="Línea 5"
+                                            data-fecha="08/@DateTime.Now.ToString("MM/yyyy")"
+                                            data-bs-toggle="tooltip" title="Generar Orden de Trabajo">
+                                        <i class="bi bi-file-earmark-plus"></i> Generar OT
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><input type="checkbox" class="row-checkbox"></td>
+                                <td>--</td>
+                                <td>ROB-6AX</td>
+                                <td>Línea 3</td>
+                                <td>25/@DateTime.Now.ToString("MM/yyyy")</td>
+                                <td><span class="badge bg-secondary">Sin OT generada</span></td>
+                                <td class="col-actions">
+                                    <button class="btn btn-sm btn-info btn-generar-ot-fila"
+                                            data-equipo="ROB-6AX"
+                                            data-linea="Línea 3"
+                                            data-fecha="25/@DateTime.Now.ToString("MM/yyyy")"
+                                            data-bs-toggle="tooltip" title="Generar Orden de Trabajo">
+                                        <i class="bi bi-file-earmark-plus"></i> Generar OT
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar estatus -->
+<div class="modal fade" id="editarEstatusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Estatus</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar" data-bs-toggle="tooltip" title="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarEstatus">
+                    <div class="mb-3">
+                        <label for="modalOTEditar" class="form-label">Orden de Trabajo</label>
+                        <input type="text" class="form-control" id="modalOTEditar" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalEquipoEditar" class="form-label">Equipo</label>
+                        <input type="text" class="form-control" id="modalEquipoEditar" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalLineaEditar" class="form-label">Línea</label>
+                        <input type="text" class="form-control" id="modalLineaEditar" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="estatusEditar" class="form-label">Estatus</label>
+                        <select class="form-select" id="estatusEditar">
+                            <option value="Nueva">Nueva</option>
+                            <option value="En espera de refacción">En espera de refacción</option>
+                            <option value="Liberado por mantenimiento">Liberado por mantenimiento</option>
+                            <option value="Cerrado">Cerrado</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-toggle="tooltip" title="Cancelar">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGuardarEstatus" data-bs-toggle="tooltip" title="Guardar cambios">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para solicitar refacción -->
+<div class="modal fade" id="solicitarRefaccionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Solicitar Refacción para OT</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar" data-bs-toggle="tooltip" title="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formSolicitarRefaccion">
+                    <div class="mb-3">
+                        <label class="form-label">Orden de Trabajo</label>
+                        <input type="text" class="form-control" id="modalOT" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Equipo</label>
+                        <input type="text" class="form-control" id="modalEquipo" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Línea</label>
+                        <input type="text" class="form-control" id="modalLinea" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fecha de Mantenimiento</label>
+                        <input type="text" class="form-control" id="modalFechaMantenimiento" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="refaccionSolicitada" class="form-label">Refacción Solicitada *</label>
+                        <input type="text" class="form-control" id="refaccionSolicitada" required placeholder="Ej: Rodamiento axial 6008-2RS">
+                    </div>
+                    <div class="mb-3">
+                        <label for="cantidadRefaccion" class="form-label">Cantidad *</label>
+                        <input type="number" class="form-control" id="cantidadRefaccion" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="urgenciaRefaccion" class="form-label">Nivel de Urgencia *</label>
+                        <select class="form-select" id="urgenciaRefaccion" required>
+                            <option value="">Seleccionar urgencia...</option>
+                            <option value="Normal">Normal</option>
+                            <option value="Urgente">Urgente</option>
+                            <option value="Crítico">Crítico</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="descripcionNecesidad" class="form-label">Descripción de la necesidad</label>
+                        <textarea class="form-control" id="descripcionNecesidad" rows="3" placeholder="Describa por qué necesita esta refacción..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-toggle="tooltip" title="Cancelar solicitud">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnEnviarSolicitud" data-bs-toggle="tooltip" title="Enviar solicitud">Enviar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Container para alerts de Bootstrap -->
+<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;"></div>
+
+
+<style>
+    .badge {
+        font-size: 0.85em;
+        padding: 0.35em 0.65em;
+    }
+
+    .btn-sm {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        margin: 1px;
+    }
+</style>
+
+<script src="~/Scripts/MPSINOT.js"></script>
+
+<script>
+    // Inicializar tooltips de Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>

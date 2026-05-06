@@ -1,0 +1,43 @@
+﻿.menu-contextual {
+    position: fixed;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 5px 15px rgba(0,0,0,.15);
+    z-index: 9999;
+    display: none;
+    min-width: 180px;
+}
+
+    .menu-contextual div {
+        padding: 8px 12px;
+        cursor: pointer;
+    }
+
+        .menu-contextual div:hover {
+            background: #f1f5f9;
+        }
+
+/* ============================================================
+   AUTOCOMPLETE GRID
+   ============================================================ */
+.autocomplete-dropdown {
+    position: fixed;
+    background: linear-gradient(135deg, #ffffff 0%, #f7fafd 60%, var(--modal-primary-light) 100%);
+    border: 1px solid #ccc;
+    width: 600px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 999999;
+    font-size: 13px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.autocomplete-item {
+    padding: 8px;
+    cursor: pointer;
+    white-space: normal;
+}
+
+    .autocomplete-item:hover {
+        background: #f1f5f9;
+    }

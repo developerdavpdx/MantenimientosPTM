@@ -1,0 +1,96 @@
+﻿@{
+    ViewBag.Title = "Producción PVC";
+}
+
+<link href="~/Content/Produccion.css" rel="stylesheet" />
+<link href="~/Content/TiemposMuertos.css" rel="stylesheet" />
+
+<main aria-labelledby="title">
+    <div class="ps-2 pe-2 pt-3 pb-3">
+        <div class="row m-0 pt-3">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header text-dark">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-12 col-md-8">
+                                <h4 class="mb-0 text-color-logo d-flex">
+                                    <i class="bi bi-table me-2"></i>Causas Tiempos Muertos
+                                    <span id="fechaActual" class="text-primary ms-2">PVC</span>
+                                    <span id="mesActual" class="text-primary ms-2"></span>
+                                </h4>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="d-flex justify-content-md-end gap-2">
+                                    <button id="btnGuardarCambios" class="btn-filtro-aplicar">
+                                        <i class="bi bi-save-fill me-1"></i>Guardar
+                                    </button>
+                                    <button id="btnExportarExcel" class="btn-filtro-limpiar">
+                                        <i class="bi bi-file-excel-fill me-1"></i>Exportar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="filtros-panel">
+
+                            <div class="filtros-titulo">
+                                <i class="bi bi-sliders" style="color:#0ea5d8"></i>
+                                Filtros de búsqueda
+                            </div>
+
+                            <div class="row g-2 align-items-end">
+                                <!-- Fecha Inicio -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroFechaInicio">
+                                        <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
+                                    </label>
+                                    <input type="date" class="filtro-input"
+                                           id="FiltroFechaInicio" name="FiltroFechaInicio">
+                                </div>
+
+                                <!-- Fecha Fin -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroFechaFin">
+                                        <i class="bi bi-calendar-x-fill"></i> Fecha Fin
+                                    </label>
+                                    <input type="date" class="filtro-input"
+                                           id="FiltroFechaFin" name="FiltroFechaFin">
+                                </div>
+                                <!-- Botones -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                                    <button type="button" class="btn-filtro-aplicar"
+                                            id="btnAplicarFiltros" title="Aplicar filtros">
+                                        <i class="bi bi-search"></i>
+                                        Buscar
+                                    </button>
+                                    <button type="button" class="btn-filtro-limpiar"
+                                            id="btnLimpiarFiltros" title="Limpiar filtros">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                        Limpiar
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div class="cards-grid" id="cardsPlaneacionGrid">
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                        </div>
+                        <div id="tablaProduccion" class="ag-theme-alpine d-none"></div>
+                    </div>
+                </div>
+                <div id="menuContextual" class="menu-contextual">
+                    <div data-action="agregar">➕ Agregar fila</div>
+                    <div data-action="copiar">📋 Copiar fila</div>
+                    <div data-action="eliminar">🗑️ Eliminar fila</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="~/Scripts/produccion_pvc_refactor.js"></script>

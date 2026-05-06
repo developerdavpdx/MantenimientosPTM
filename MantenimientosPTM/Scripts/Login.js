@@ -1,0 +1,165 @@
+﻿// ========================================
+// GESTOR DE VALIDACIONES
+// ========================================
+class ValidationManagerLogin {
+
+    // Inicializar formulario con jQuery
+    static inicializarFormulario(formId) {
+        const form = $(formId);
+        if (form.length === 0) return;
+
+        form.on('submit', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (this.checkValidity()) {
+                ValidationManagerLogin.procesarLogin();
+            }
+
+            form.addClass('was-validated');
+        });
+    }
+
+    // Procesar login con jQuery AJAX
+    static procesarLogin() {
+        const usuario = $('#usuario').val();
+        const password = $('#password').val();
+        const recordarme = $('#recordarme').is(':checked');
+
+        AlertManager.mostrar('Iniciando sesión...', 'info');
+
+        const btnSubmit = $('.btn-login');
+        btnSubmit.prop('disabled', true);
+        btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Iniciando...');
+
+        $.ajax({
+            url: '/Login/ValidaUsuario',
+            type: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Usuario': usuario,
+                'Password': password
+            },
+            success: function (data) {
+                console.log('Respuesta del servidor:', data);
+
+                if (data.Status === 'OK') {
+                    let UserData = data.Data;
+                    if (typeof UserData === 'string') {
+                        try {
+                            UserData = JSON.parse(UserData);
+                        } catch (e) {
+                            console.warn('No se pudo parsear Data:', e);
+                        }
+                    }
+                    if (UserData[0].STATUS == "200") {
+
+                        //Agregar correo
+                        UserData[0].EMAIL = usuario;
+
+                        AlertManager.mostrar('¡Bienvenido! ' + data.Message, 'success');
+                        btnSubmit.addClass("text-white");
+                        btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Estamos preparando todo...');
+
+                        if (recordarme) {
+                            localStorage.setItem('recordarUsuario', usuario);
+                        } else {
+                            localStorage.removeItem('recordarUsuario');
+                        }
+
+                        sessionStorage.setItem('userData', JSON.stringify(UserData));
+
+                        //Validar permisos y modulos
+                        let datos_usuario = GlobalUtil.getDatosUsuario();
+
+                        //Administrador
+                        if (datos_usuario[0].TIPOUSUARIO == "AdminMtto" || datos_usuario[0].TIPOUSUARIO == "Administrador") {
+                            setTimeout(function () {
+                                window.location.href = '/Equipos/GestionEquipos';
+                            }, 1000);
+                        }
+                        //Tecnico Mtto
+                        else if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+                            setTimeout(function () {
+                                window.location.href = '/MantenimientosPreventivos/MantenimientoPreventivo';
+                            }, 1000);
+                        }
+                        //Almacen
+                        else if (datos_usuario[0].TIPOUSUARIO == "Almacen") {
+                            setTimeout(function () {
+                                window.location.href = '/Almacen/SolicitudRefacciones';
+                            }, 1000);
+                        }
+                        //Planeacion
+                        else if (datos_usuario[0].TIPOUSUARIO == "Planeacion") {
+                            setTimeout(function () {
+                                window.location.href = '/Planeacion/Planeacion';
+                            }, 1000);
+                        }
+                        //Produccion
+                        else if (datos_usuario[0].TIPOUSUARIO == "Produccion") {
+                            setTimeout(function () {
+                                window.location.href = '/Produccion/ParosProduccion';
+                            }, 1000);
+                        }
+                    }
+                    else {
+                        AlertManager.mostrar("No fue posible iniciar sesión, valida tus credenciales.", 'warning');
+                        ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
+                    }
+                } else if (data.Status === 'NO') {
+                    AlertManager.mostrar(data.Message, 'warning');
+                    ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
+                } else if (data.Status === 'warning') {
+                    AlertManager.mostrar('Error: ' + data.Message, 'warning');
+                    ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error en la petición:', error);
+                AlertManager.mostrar('Error de conexión. Por favor, intenta de nuevo.', 'warning');
+                ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
+            }
+        });
+    }
+
+    // Habilitar botón de login con jQuery
+    static habilitarBotonLogin(btnSubmit) {
+        btnSubmit.prop('disabled', false);
+        btnSubmit.html('<i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión');
+    }
+
+    // Limpiar validación con jQuery
+    static limpiarValidacion(formId) {
+        const form = $(formId);
+        if (form.length > 0) {
+            form.removeClass('was-validated');
+        }
+    }
+}
+
+// ========================================
+// TOGGLE PASSWORD
+// ========================================
+document.getElementById('togglePassword').addEventListener('click', function () {
+    const password = document.getElementById('password');
+    const icon = document.getElementById('toggleIcon');
+
+    if (password.type === 'password') {
+        password.type = 'text';
+        icon.classList.remove('bi-eye-fill');
+        icon.classList.add('bi-eye-slash-fill');
+    } else {
+        password.type = 'password';
+        icon.classList.remove('bi-eye-slash-fill');
+        icon.classList.add('bi-eye-fill');
+    }
+});
+
+// ========================================
+// INICIALIZACIÓN
+// ========================================
+document.addEventListener('DOMContentLoaded', function () {
+    ValidationManagerLogin.inicializarFormulario('#loginForm');
+    console.log('✅ Sistema de Login inicializado correctamente');
+});

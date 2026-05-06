@@ -1,0 +1,370 @@
+﻿:root {
+    --ptm-primary: #1F5FA8;
+    --ptm-primary-light: #E8F1FB;
+    --ptm-secondary: #4A8ED1;
+    --ptm-danger: #E24B4A;
+    --ptm-success: #3BA66B;
+    --ptm-warning: #E6A23C;
+    --ptm-border: #E6EAF0;
+}
+
+/* Gradientes suaves para las tarjetas de estadísticas */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #1F5FA8 0%, #4A8ED1 100%);
+}
+
+.bg-gradient-danger {
+    background: linear-gradient(135deg, #E24B4A 0%, #F06A6A 100%);
+    color: #fff;
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #3BA66B 0%, #55C38A 100%);
+    color: #fff;
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #E6A23C 0%, #F2BC5E 100%);
+    color: #fff;
+}
+
+    .bg-gradient-primary h3,
+    .bg-gradient-danger h3,
+    .bg-gradient-success h3,
+    .bg-gradient-warning h3 {
+        color: #fff !important;
+        font-weight: 700;
+    }
+
+    .bg-gradient-primary p,
+    .bg-gradient-danger p,
+    .bg-gradient-success p,
+    .bg-gradient-warning p {
+        color: rgba(255,255,255,.9) !important;
+        font-weight: 500;
+    }
+
+    .bg-gradient-primary i,
+    .bg-gradient-danger i,
+    .bg-gradient-success i,
+    .bg-gradient-warning i {
+        color: rgba(255,255,255,.9) !important;
+    }
+
+.card.bg-gradient-primary,
+.card.bg-gradient-danger,
+.card.bg-gradient-success,
+.card.bg-gradient-warning {
+    border-radius: 12px;
+    transition: all .2s ease;
+}
+
+    .card.bg-gradient-primary:hover,
+    .card.bg-gradient-danger:hover,
+    .card.bg-gradient-success:hover,
+    .card.bg-gradient-warning:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0,0,0,.12);
+    }
+
+    .card.bg-gradient-primary .card-body,
+    .card.bg-gradient-danger .card-body,
+    .card.bg-gradient-success .card-body,
+    .card.bg-gradient-warning .card-body {
+        padding: 0px 0px;
+    }
+
+    .card.bg-gradient-primary i,
+    .card.bg-gradient-danger i,
+    .card.bg-gradient-success i,
+    .card.bg-gradient-warning i {
+        opacity: .9;
+    }
+
+    .card.bg-gradient-primary h3,
+    .card.bg-gradient-danger h3,
+    .card.bg-gradient-success h3,
+    .card.bg-gradient-warning h3 {
+        font-size: 22px;
+        margin-bottom: 2px;
+    }
+
+    .card.bg-gradient-primary p,
+    .card.bg-gradient-danger p,
+    .card.bg-gradient-success p,
+    .card.bg-gradient-warning p {
+        font-size: 12px;
+        margin-bottom: 0;
+    }
+
+
+/* Tabla responsive mejorada */
+.table-responsive {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* Badges de estado */
+.badge-activo {
+    background-color: #dc3545;
+    color: white;
+}
+
+.badge-resuelto {
+    background-color: #28a745;
+    color: white;
+}
+
+/* Loader overlay */
+.paros-loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* Animación para las filas de la tabla */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.table tbody tr {
+    animation: fadeIn 0.3s ease;
+}
+
+/* Botones de acción en tabla */
+.btn-action {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* ══════════════════════════════════════════════════════════
+   ParosProduccion.css — estilos para vista híbrida de paros
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Grid de tarjetas activos ─────────────────────────────── */
+#gridActivos {
+    display: grid;
+    margin-top: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.paro-empty-activos {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 0;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+/* ── Tarjeta de paro ──────────────────────────────────────── */
+.paro-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--ptm-border);
+    padding: 16px;
+    transition: all .2s ease;
+    position: relative;
+}
+
+    .paro-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,.06);
+    }
+
+    .paro-card.activo {
+        border-left: 4px solid var(--ptm-danger);
+    }
+
+/* ── Cabecera de tarjeta ──────────────────────────────────── */
+.paro-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.paro-linea {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.paro-meta-id {
+    font-size: 11px;
+    color: #6c757d;
+    margin-top: 2px;
+}
+
+/* ── Badge de estado ──────────────────────────────────────── */
+.paro-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+    .paro-badge.activo {
+        background: #ffecec;
+        color: var(--ptm-danger);
+    }
+
+    .paro-badge.resuelto {
+        background: #eaf7f0;
+        color: var(--ptm-success);
+    }
+
+.paro-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+    .paro-dot.rojo {
+        background: #E24B4A;
+    }
+
+    .paro-dot.verde {
+        background: #639922;
+    }
+
+/* ── Motivo del paro ──────────────────────────────────────── */
+.paro-motivo {
+    font-size: 13px;
+    color: #495057;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.paro-motivo-td {
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Pie de tarjeta ───────────────────────────────────────── */
+.paro-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.paro-tiempo-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.paro-tiempo-label {
+    font-size: 11px;
+    color: #6c757d;
+}
+
+/* ── Timer con colores de urgencia ───────────────────────── */
+.paro-timer {
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #212529;
+}
+
+    .paro-timer.warn {
+        color: #BA7517;
+    }
+
+    .paro-timer.critico {
+        color: #E24B4A;
+    }
+
+/* ── Botones de acción en tarjeta ────────────────────────── */
+.paro-acciones {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-paro {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 11px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: opacity 0.15s, transform 0.1s;
+    line-height: 1;
+}
+
+    .btn-paro:active {
+        transform: scale(0.97);
+    }
+
+.btn-paro-ver {
+    background: #f5f7fa;
+    color: #495057;
+    border-color: #e0e6ed;
+}
+
+.btn-paro-resolver {
+    background: var(--ptm-primary-light);
+    color: var(--ptm-primary);
+    border-color: #c6dbf5;
+}
+
+    .btn-paro-resolver:hover {
+        background: var(--ptm-primary);
+        color: white;
+    }
+
+    .btn-paro-resolver:hover {
+        background: #d4e9bb;
+    }
+
+/* ── Loader de la sección ────────────────────────────────── */
+.paros-loader-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.75);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+}
+
+.paro-id {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ptm-primary);
+    letter-spacing: .5px;
+    margin-bottom: 2px;
+}

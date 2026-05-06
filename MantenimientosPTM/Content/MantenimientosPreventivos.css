@@ -1,0 +1,603 @@
+﻿/* ===== ESTILOS DOCUMENTO CORPORATIVO PTM ===== */
+
+:root {
+    --ptm-azul-principal: #0066b3;
+    --ptm-azul-claro: #1e9bd7;
+    --ptm-azul-oscuro: #004a8f;
+}
+
+/* Modal body fondo */
+#modalOrdenMantenimiento .modal-body {
+    background: #f0f2f5;
+    padding: 30px 15px;
+}
+
+/* Contenedor principal - simula hoja de papel */
+.documento-papel {
+    background: #fff;
+    max-width: 1100px;
+    margin: 0 auto;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border: 1px solid #e0e0e0;
+}
+
+/* Header del documento con colores PTM */
+.documento-header {
+    background: linear-gradient(135deg, var(--ptm-azul-claro) 0%, var(--ptm-azul-principal) 100%);
+    color: white;
+    padding: 15px 40px;
+    margin-bottom: 0;
+    position: relative;
+}
+
+    .documento-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--ptm-azul-oscuro) 0%, var(--ptm-azul-claro) 100%);
+    }
+
+    .documento-header .d-flex {
+        align-items: center;
+    }
+
+    .documento-header hr {
+        border-top: 2px solid rgba(255,255,255,0.3);
+        margin: 15px 0;
+    }
+
+.documento-titulo {
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 10px 0 0 0;
+    color: white;
+}
+
+.fecha-impresion {
+    color: white;
+    font-weight: 500;
+    font-size: 0.95rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Contenido del documento */
+.documento-contenido {
+    padding: 35px 40px;
+}
+
+/* Tipo de mantenimiento destacado */
+.tipo-mantenimiento-section {
+    background: linear-gradient(to right, #f8f9fa 0%, #e9f5fb 100%);
+    border-left: 5px solid var(--ptm-azul-principal);
+    padding: 18px 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 5px rgba(0,102,179,0.1);
+}
+
+    .tipo-mantenimiento-section p {
+        font-weight: 600;
+        color: #000;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+    }
+
+        .tipo-mantenimiento-section p:first-child {
+            color: var(--ptm-azul-principal);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+/* Secciones internas del documento */
+.seccion-interna {
+    margin-bottom: 30px;
+}
+
+.seccion-titulo {
+    background: linear-gradient(135deg, var(--ptm-azul-principal) 0%, var(--ptm-azul-oscuro) 100%);
+    color: white;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    margin-left: -40px;
+    margin-right: -40px;
+    padding-left: 40px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 2px 4px rgba(0,102,179,0.2);
+}
+
+    .seccion-titulo i {
+        font-size: 1.1rem;
+    }
+
+/* Inputs estilo documento limpio */
+.form-control-document {
+    border: none;
+    border-bottom: 1.5px solid #dee2e6;
+    border-radius: 0;
+    background: transparent;
+    padding: 5px 8px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 14px;
+    color: #000;
+    transition: all 0.2s;
+}
+
+    .form-control-document:focus {
+        outline: none;
+        border-bottom: 2px solid var(--ptm-azul-principal);
+        box-shadow: none;
+        background: #f8f9fa;
+    }
+
+    .form-control-document[readonly] {
+        color: #212529;
+        cursor: default;
+        font-weight: 500;
+    }
+
+/* Textarea estilo documento */
+textarea.form-control-document {
+    border: 1px solid #dee2e6;
+    min-height: 80px;
+    resize: vertical;
+    line-height: 1.6;
+    padding: 10px;
+}
+
+    textarea.form-control-document:focus {
+        border-color: var(--ptm-azul-principal);
+    }
+
+/* Labels estilo documento con iconos */
+.label-document {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+    .label-document i {
+        color: var(--ptm-azul-principal);
+        font-size: 0.9rem;
+    }
+
+/* Espaciado entre campos */
+.campo-grupo {
+    margin-bottom: 18px;
+}
+
+/* Footer del documento */
+.documento-footer {
+    background: linear-gradient(to right, #f8f9fa 0%, #e9f5fb 100%);
+    padding: 20px 40px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6c757d;
+    border-top: 4px solid var(--ptm-azul-principal);
+    position: relative;
+}
+
+    .documento-footer::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--ptm-azul-claro) 0%, var(--ptm-azul-principal) 50%, var(--ptm-azul-claro) 100%);
+    }
+
+/* Logo container */
+.logo-container {
+    background: white;
+    padding: 5px 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Para impresión */
+@media print {
+    #modalOrdenMantenimiento .modal-body {
+        background: #fff;
+        padding: 0;
+    }
+
+    .documento-papel {
+        box-shadow: none;
+        border: none;
+    }
+
+    .documento-header {
+        background: var(--ptm-azul-principal) !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+
+/* Modal más grande en pantallas menores a 1100px */
+@media (max-width: 1099px) {
+    #modalOrdenMantenimiento .modal-dialog {
+        max-width: 95% !important;
+        margin: 1rem auto;
+    }
+}
+
+/* Ajustes para tablets */
+@media (max-width: 991px) {
+    #modalOrdenMantenimiento .modal-dialog {
+        max-width: 90% !important;
+        margin: 0.5rem auto;
+    }
+
+    #modalOrdenMantenimiento .documento-papel {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .documento-contenido {
+        padding: 25px 25px !important;
+    }
+
+    .seccion-titulo {
+        margin-left: -25px !important;
+        margin-right: -25px !important;
+        padding-left: 25px !important;
+        font-size: 0.9rem;
+    }
+}
+
+/* Ajustes para móviles */
+@media (max-width: 576px) {
+    #modalOrdenMantenimiento .modal-dialog {
+        max-width: 100% !important;
+        margin: 0.25rem;
+    }
+
+    .documento-header {
+        padding: 20px 20px !important;
+    }
+
+    .documento-contenido {
+        padding: 20px 20px !important;
+    }
+
+    .documento-titulo {
+        font-size: 1rem !important;
+        letter-spacing: 1px;
+    }
+
+    .logo-container img {
+        height: 40px !important;
+    }
+
+    .seccion-titulo {
+        margin-left: -20px !important;
+        margin-right: -20px !important;
+        padding-left: 20px !important;
+        font-size: 0.85rem;
+        padding: 10px 15px 10px 20px;
+    }
+
+    .label-document {
+        font-size: 0.75rem;
+    }
+
+    .form-control-document {
+        font-size: 13px;
+    }
+}
+
+/* ===== CONTENEDOR DE TÉCNICOS ASIGNADOS ===== */
+
+.tecnicos-container {
+    min-height: 50px;
+    padding: 10px;
+    border: 1px dashed #dee2e6;
+    border-radius: 4px;
+    background: #f8f9fa;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+    .tecnicos-container:empty::before {
+        content: 'No hay técnicos asignados';
+        color: #6c757d;
+        font-size: 0.85rem;
+        font-style: italic;
+    }
+
+.tecnico-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, var(--ptm-azul-principal) 0%, var(--ptm-azul-claro) 100%);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0,102,179,0.2);
+    transition: all 0.2s;
+}
+
+    .tecnico-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,102,179,0.3);
+    }
+
+.tecnico-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.tecnico-nomina {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.tecnico-nombre {
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.btn-remover-tecnico {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+    font-size: 0.8rem;
+}
+
+    .btn-remover-tecnico:hover {
+        background: rgba(255,255,255,0.4);
+        transform: scale(1.1);
+    }
+
+/* Input group personalizado */
+.input-group .form-control-document {
+    border-right: none;
+    border-top: none;
+}
+
+.input-group-text {
+    border-radius: 0;
+}
+
+/*FIRMAS*/
+/* Estilos para autocompletado de técnicos */
+.autocomplete-sugerencias {
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    width: calc(100% - 30px);
+    margin-top: 2px;
+    display: none;
+}
+
+    .autocomplete-sugerencias.show {
+        display: block;
+    }
+
+.sugerencia-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.2s;
+}
+
+    .sugerencia-item:hover {
+        background: #f8f9fa;
+    }
+
+.sugerencia-nomina {
+    font-weight: bold;
+    color: #0058A1;
+    font-size: 13px;
+}
+
+.sugerencia-nombre {
+    font-size: 14px;
+    margin: 2px 0;
+}
+
+.sugerencia-puesto {
+    font-size: 12px;
+    color: #666;
+}
+
+/* Estilos para badges de técnicos */
+.tecnicos-container {
+    min-height: 50px;
+}
+
+.tecnico-badge {
+    display: inline-flex;
+    align-items: center;
+    background: #e3f2fd;
+    border: 1px solid #2196F3;
+    border-radius: 20px;
+    padding: 6px 12px;
+    margin: 4px;
+    gap: 8px;
+}
+
+.tecnico-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tecnico-nomina {
+    font-weight: bold;
+    color: #1976D2;
+    font-size: 11px;
+}
+
+.tecnico-nombre {
+    font-size: 12px;
+    color: #333;
+}
+
+.btn-remover-tecnico {
+    background: transparent;
+    border: none;
+    color: #d32f2f;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+    .btn-remover-tecnico:hover {
+        background: #ffebee;
+    }
+
+/* Estilos para firmas */
+.firma-canvas {
+    touch-action: none;
+}
+
+.firma-wrapper {
+    position: relative;
+    background: #ffffff;
+}
+
+.firma-placeholder {
+    z-index: 1;
+    user-select: none;
+}
+
+/* Validación personalizada para radiobuttons */
+.custom-invalid-feedback {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+    display: none;
+}
+
+
+/* Responsive */
+@media (max-width: 768px) {
+    .firma-canvas {
+        height: 120px !important;
+    }
+}
+
+/* Firma deshabilitada con candado centrado */
+.firma-deshabilitada {
+    position: relative;
+}
+
+    .firma-deshabilitada .firma-wrapper::after {
+        content: '🔒';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 48px;
+        opacity: 0.3;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .firma-deshabilitada .card {
+        background-color: #f5f5f5;
+    }
+
+    .firma-deshabilitada canvas {
+        filter: grayscale(50%);
+        opacity: 0.6;
+    }
+
+    /* Input y botones deshabilitados */
+    .firma-deshabilitada input[disabled] {
+        background-color: #e9ecef;
+        cursor: not-allowed;
+    }
+
+    .firma-deshabilitada button[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+
+.tecnicos-readonly {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+    .tecnicos-readonly .tecnico-badge,
+    .tecnicos-readonly .btn-remover-tecnico {
+        pointer-events: auto; /* importante */
+        cursor: not-allowed !important;
+    }
+
+    .tecnicos-readonly .btn-remover-tecnico {
+        display: none;
+    }
+
+.punto-pulso {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #1291ce;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    animation: pulso 1.5s infinite;
+}
+
+@keyframes pulso {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    25%, 75% {
+        opacity: 0;
+    }
+}

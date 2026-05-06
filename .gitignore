@@ -1,0 +1,58 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.useross
+*.sln.docstates
+*.dtbcache.json
+*.ide*
+
+# Build outputs
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+
+# Config sensible (excluir, pero crear plantilla)
+Web.config
+Web.Debug.config
+Web.Release.config
+
+# Logs
+Logs/
+*.log
+
+# NuGet packages
+packages/
+*.nupkg
+
+# Archivos temporales
+*.tmp
+*.temp
+Thumbs.db
+Desktop.ini
+
+# Datos dinámicos generados por usuario
+FirmasOTPreventivo/
+EvidenciaRutinas/
+
+# Archivos de publishing
+*.publishsettings
+*.pubxml
+
+# Entity Framework
+Migrations/
+
+# ReSharper
+_ReSharper*/
+
+# Node modules (si aplica)
+node_modules/
+
+# Excel temporal
+~$*.xls*

@@ -1,0 +1,377 @@
+﻿@{
+    ViewBag.Title = "Calendario de Mantenimientos";
+}
+
+<link href="~/Content/CalendarioPlaneacion.css" rel="stylesheet" />
+<link href="~/Content/CardsPlaneacion.css" rel="stylesheet" />
+
+<div class="row m-0 ps-3 pt-4 pe-3 pb-4 position-relative header-custom">
+    <div class="col-12 col-xl-12 p-0">
+        <div class="card shadow">
+            <!-- HEADER DEL CARD -->
+            <div class="card-header header-fijo-custom text-dark">
+                <div class="row g-3 align-items-center">
+                    <!-- Título -->
+                    <div class="col-12">
+                        <h4 class="mb-0 text-color-logo">
+                            <i class="bi bi-calendar-event me-2"></i>Calendario Planeación
+                        </h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BODY DEL CARD CON FILTROS -->
+            <div class="card-body">
+                <!-- 🔍 PANEL DE FILTROS -->
+                <div class="filtros-panel mb-3">
+
+                    <div class="filtros-titulo">
+                        <i class="bi bi-sliders" style="color:#0ea5d8"></i>
+                        Filtros de búsqueda
+                    </div>
+
+                    <div class="row g-2 align-items-end">
+
+                        <!-- Fecha Inicio -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroFechaInicio">
+                                <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
+                            </label>
+                            <input type="date"
+                                   class="filtro-input"
+                                   id="FiltroFechaInicio"
+                                   name="FiltroFechaInicio">
+                        </div>
+
+                        <!-- Fecha Fin -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroFechaFin">
+                                <i class="bi bi-calendar-x-fill"></i> Fecha Fin
+                            </label>
+                            <input type="date"
+                                   class="filtro-input"
+                                   id="FiltroFechaFin"
+                                   name="FiltroFechaFin">
+                        </div>
+
+                        <!-- Mes y Año -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroMesAnio">
+                                <i class="bi bi-calendar2-month-fill"></i> Mes y Año
+                            </label>
+                            <input type="month"
+                                   class="filtro-input"
+                                   id="FiltroMesAnio"
+                                   name="FiltroMesAnio">
+                        </div>
+
+                        <!-- Línea de Producción -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroLinea">
+                                <i class="bi bi-diagram-3-fill"></i> Línea de Producción
+                            </label>
+                            <div class="select-wrapper">
+                                <select class="filtro-input"
+                                        id="FiltroLinea"
+                                        name="FiltroLinea">
+                                    <option value="">Selecciona la línea de producción...</option>
+                                    <!-- Se carga dinámicamente -->
+                                </select>
+                                <div class="modal-error-msg">⚠️ Seleccione la línea de producción.</div>
+                                <div class="select-loader d-none" id="loader_FiltroLinea">
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                </div>
+                            </div>
+
+                        </div>
+
+
+                        <!-- Proceso de Producción -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroProceso">
+                                <i class="bi bi-gear-fill"></i> Proceso
+                            </label>
+                            <div class="select-wrapper">
+                                <select class="filtro-input"
+                                        id="FiltroProceso"
+                                        name="FiltroProceso">
+                                    <option value="">Selecciona el proceso...</option>
+                                    <!-- Se carga dinámicamente -->
+                                </select>
+                                <div class="modal-error-msg">⚠️ Seleccione la línea de producción.</div>
+                                <div class="select-loader d-none" id="loader_FiltroProceso">
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                </div>
+                            </div>
+
+                        </div>
+
+
+                        <!-- Separador visual (solo desktop) -->
+                        <div class="col-auto d-none d-xl-flex">
+                            <div class="filtro-divider"></div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                            <button type="button"
+                                    class="btn-filtro-aplicar"
+                                    id="btnAplicarFiltros"
+                                    title="Aplicar filtros">
+                                <i class="bi bi-search"></i>
+                                Buscar
+                            </button>
+                            <button type="button"
+                                    class="btn-filtro-limpiar"
+                                    id="btnLimpiarFiltros"
+                                    title="Limpiar filtros">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                                Limpiar
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+                <!-- 📅 CALENDARIO -->
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL DETALLE PLAN — #eventModal
+     ============================================================ -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true" data-bs-keyboard="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content ept-modal-content">
+
+            <!-- HEADER -->
+            <div class="ept-modal-header" id="eptModalHeader">
+                <div class="ept-header-top">
+                    <div class="linea-icon" id="eptLineaIcon">
+                        <i class="bi bi-diagram-3-fill"></i>
+                    </div>
+                    <div class="ept-header-info">
+                        <div class="ept-linea-nombre" id="eptLineaNombre">—</div>
+                        <div class="linea-sub" id="eptLineaSub">ID #—</div>
+                    </div>
+                    <span class="mes-pill" id="eptMesPill">
+                        <i class="bi bi-calendar3"></i> —
+                    </span>
+                </div>
+            </div>
+
+            <!-- BODY -->
+            <div class="ept-body">
+
+                <!-- Paro activo banner -->
+                <div class="paro-banner d-none" id="eptParoBanner">
+                    <i class="bi bi-exclamation-octagon-fill"></i>
+                    <span id="eptParoTexto">Paro activo registrado</span>
+                </div>
+
+                <!-- Período + Proceso -->
+                <div class="card-tags-row">
+                    <span class="rango-tag">
+                        <i class="bi bi-calendar-range"></i>
+                        <span class="tag-label">Período:</span>
+                        <span id="eptPeriodo">—</span>
+                    </span>
+                    <span class="proceso-tag">
+                        <i class="bi bi-gear-fill"></i>
+                        <span class="tag-label">Proceso:</span>
+                        <span id="eptProceso">—</span>
+                    </span>
+                </div>
+
+                <!-- Artículo -->
+                <div class="info-badge-row">
+                    <span class="info-badge-label">
+                        <i class="bi bi-box-seam-fill"></i> Artículo
+                    </span>
+                    <span class="info-badge-value" id="eptArticulo">—</span>
+                </div>
+
+                <!-- Cap. diaria -->
+                <div class="info-badge-row">
+                    <span class="info-badge-label">
+                        <i class="bi bi-speedometer2"></i> Cap. diaria
+                    </span>
+                    <span class="info-badge-value highlight" id="eptCapacidad">— <small>PZ/día</small></span>
+                </div>
+
+                <!-- Stats producción -->
+                <div class="stats-row">
+                    <div class="stat-box teorica">
+                        <div class="stat-label">
+                            <i class="bi bi-calculator-fill teorica-icon"></i> Prod. Teórica
+                        </div>
+                        <div class="stat-value" id="eptProdTeorica">—</div>
+                        <div class="stat-sublabel">Meta del período</div>
+                    </div>
+                    <div class="stat-box real">
+                        <div class="stat-label">
+                            <i class="bi bi-graph-up-arrow real-icon"></i> Prod. Real
+                        </div>
+                        <div class="stat-value real" id="eptProdReal">—</div>
+                        <div class="stat-sublabel">Piezas producidas</div>
+                    </div>
+                </div>
+
+                <!-- Barra de cumplimiento -->
+                <div class="progress-section">
+                    <div class="progress-labels">
+                        <span><i class="bi bi-bar-chart-fill me-1"></i>% Cumplimiento del plan</span>
+                        <strong id="eptPct">0%</strong>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="eptProgressFill" style="width:0%"></div>
+                    </div>
+                </div>
+
+                <!-- Comentarios -->
+                <div class="info-badge-row">
+                    <span class="info-badge-label">
+                        <i class="bi bi-chat-left-text-fill"></i> Comentarios
+                    </span>
+                    <span class="info-badge-value" id="eptComentarios"><em>Sin comentarios</em></span>
+                </div>
+                <!-- Bitácora -->
+                <div id="eptBitacora"></div>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="ept-footer">
+                <span class="estatus-chip" id="eptEstatusChip">
+                    <span class="dot"></span>
+                    <span id="eptEstatusLabel">—</span>
+                </span>
+                <div class="actions">
+                    @*<button class="btn-act del" id="eptBtnEliminar" title="Eliminar plan">
+                        <i class="bi bi-trash3-fill"></i>
+                    </button>*@
+                    <button type="button" class="ept-btn-cerrar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cerrar
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL DETALLE PARO — #modalParo
+     ============================================================ -->
+<div class="modal fade" id="modalParo" tabindex="-1" aria-hidden="true" data-bs-keyboard="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content ept-modal-content">
+
+            <!-- HEADER -->
+            <div class="ept-modal-header paro-header" id="paroModalHeader">
+                <div class="ept-header-top">
+                    <div class="linea-icon paro-icon" id="paroLineaIcon">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div class="ept-header-info">
+                        <div class="ept-linea-nombre" id="paroLineaNombre">—</div>
+                        <div class="linea-sub" id="paroLineaSub">ID #—</div>
+                    </div>
+                    <span class="mes-pill" id="paroEstatusPill">—</span>
+                </div>
+            </div>
+
+            <!-- BODY -->
+            <div class="ept-body">
+
+                <!-- Período del paro -->
+                <div class="card-tags-row">
+                    <span class="rango-tag">
+                        <i class="bi bi-play-fill text-danger"></i>
+                        <span class="tag-label">Inicio:</span>
+                        <span id="paroFechaInicio">—</span>
+                    </span>
+                    <!-- Tiempo transcurrido -->
+                    <div class="info-badge-row" id="paroTiempoRow">
+                        <span class="info-badge-label">
+                            <i class="bi bi-hourglass-split"></i> Tiempo transcurrido
+                        </span>
+                        <span class="info-badge-value highlight" id="paroTiempoTranscurrido">—</span>
+                    </div>
+                    <span class="proceso-tag">
+                        <i class="bi bi-stop-fill text-success"></i>
+                        <span class="tag-label">Reanudación:</span>
+                        <span id="paroFechaReanudacion">—</span>
+                    </span>
+                </div>
+
+                <!-- Duración -->
+                <div class="info-badge-row">
+                    <span class="info-badge-label">
+                        <i class="bi bi-clock-fill"></i> Duración
+                    </span>
+                    <span class="info-badge-value highlight" id="paroDuracion">—</span>
+                </div>
+
+                <!-- Registrado por -->
+                <div class="info-badge-row">
+                    <span class="info-badge-label">
+                        <i class="bi bi-person-fill"></i> Registrado por
+                    </span>
+                    <span class="info-badge-value" id="paroUsuario">—</span>
+                </div>
+
+                <!-- Comentarios -->
+                <div class="info-badge-row">
+                    <span class="info-badge-label">
+                        <i class="bi bi-chat-left-text-fill"></i> Comentarios
+                    </span>
+                    <span class="info-badge-value" id="paroComentarios">
+                        <em>Sin comentarios</em>
+                    </span>
+                </div>
+
+            </div>
+
+            <!-- FOOTER -->
+            <div class="ept-footer">
+                <span class="estatus-chip" id="paroEstatusChip">
+                    <span class="dot"></span>
+                    <span id="paroEstatusLabel">—</span>
+                </span>
+                <div class="actions">
+                    <button type="button" class="ept-btn-cerrar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cerrar
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Container para alerts de Bootstrap -->
+<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;"></div>
+
+<!-- Loader fullscreen -->
+<div id="calendarLoader" style="display: none;">
+    <div class="calendar-loader-overlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-3 text-white fw-semibold">Cargando mantenimientos...</p>
+    </div>
+</div>
+
+<!-- FullCalendar desde CDN -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
+
+<!-- Fallback a archivo local si CDN falla -->
+<script>
+    if (window.FullCalendar == undefined) {
+        document.write('<script src="/Scripts/index.global.min.js"><\/script>');
+    }
+</script>
+
+<script src="~/Scripts/calendario_planeacion_refactor.js?v1.1.0"></script>

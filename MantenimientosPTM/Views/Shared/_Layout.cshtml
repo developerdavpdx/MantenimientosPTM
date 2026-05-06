@@ -1,0 +1,360 @@
+﻿<!doctype html>
+<html lang="es" data-bs-theme="light">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="David Reyes">
+    <meta name="generator" content="David R 140102">
+    <title>Mantenimientos</title>
+
+    <!-- Bootstrap 5.3.2 -->
+    <link href="~/Content/bootstrap.min.css" rel="stylesheet" />
+
+    <!-- Animate.css para animaciones suaves -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+    <link href="https://cdn.datatables.net/2.3.7/css/dataTables.dataTables.min.css" rel="stylesheet" integrity="sha384-iRTWPXZquQySBE9K96fgJXUIrnm8TpdtPAbiCNR+qjpP24qFZw9PHFA91JtWy7Ul" crossorigin="anonymous">
+    <link href="https://cdn.datatables.net/colreorder/2.1.2/css/colReorder.dataTables.min.css" rel="stylesheet" integrity="sha384-BoHAO1+Cm4MbQ5dK2SooWY0ynsjjABcetMCsLKARvR8c7bESMreZ/j551/hnnK9n" crossorigin="anonymous">
+    <link href="https://cdn.datatables.net/fixedcolumns/5.0.5/css/fixedColumns.dataTables.min.css" rel="stylesheet" integrity="sha384-E6DA5a374pncwNfU7fXSUW8i+e8NpV6O9uLAk46lYM6eMyzIvWogJ4lavgj9UYSN" crossorigin="anonymous">
+    <link href="https://cdn.datatables.net/fixedheader/4.0.5/css/fixedHeader.dataTables.min.css" rel="stylesheet" integrity="sha384-MdjfIsy9elm9qOpK/KXJfYR9PmcQ47vcI0vij5V7nLUOBFvZqPwz0wKJ3q+Sg1RG" crossorigin="anonymous">
+    <link href="https://cdn.datatables.net/responsive/3.0.8/css/responsive.dataTables.min.css" rel="stylesheet" integrity="sha384-kz9bozrCHP/y+wTJV8P+n/dMBOh00rqNmmIAgHckzFWpoSB49V5ornW1aY+uYTyA" crossorigin="anonymous">
+
+    <link href="~/Content/Custom.css" rel="stylesheet" />
+    <link href="~/Content/ptm-custom-styles.css" rel="stylesheet" />
+    <link href="~/Content/UploadFile.css" rel="stylesheet" />
+
+    <!-- Iconos de bootstrap -->
+    <link href="~/Content/Icons/bootstrap-icons.min.css" rel="stylesheet" />
+
+    <!-- Estilos Basicos -->
+    <link href="~/Content/chartist.min.css" rel="stylesheet" />
+    <link href="~/Content/CustomTables.css" rel="stylesheet" />
+
+    <!-- Scrool CSS -->
+    <link href="~/Content/TopScrollTable.css" rel="stylesheet" />
+    <!-- Custom styles for this template -->
+    <!-- AG-Grid CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.0/styles/ag-grid.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.0/styles/ag-theme-alpine.css" />
+    <!-- Modales CSS -->
+    <link href="~/Content/Modales.css" rel="stylesheet" />
+    <style>
+        body {
+            height: 100%;
+        }
+
+        aside {
+            position: fixed;
+            overflow: auto;
+            height: calc(100vh - 68px);
+            justify-content: flex-start;
+            align-self: flex-start;
+        }
+
+        main {
+            position: relative;
+            overflow: auto;
+            margin-left: auto;
+            justify-content: flex-end;
+            align-self: flex-end;
+        }
+
+        #sidebarshow {
+            display: none;
+        }
+    </style>
+
+    <!-- Jquery (DEBE IR PRIMERO) -->
+    <script src="~/Scripts/jquery-3.7.1.min.js"></script>
+
+    <script src="https://cdn.datatables.net/2.3.7/js/dataTables.min.js" integrity="sha384-Lo2E+ASlyar6zUXt6sPEy5uaDGtDGHXo300rohaW4/AV26JdoLBT9zhcOhV8BtL8" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/colreorder/2.1.2/js/dataTables.colReorder.min.js" integrity="sha384-P0Gr2+sRNEqaGVmrmdXZZNDHYIsOJdvWwCvHLu3MkQHy7AtRBWn5nBGUpSZRyLMi" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/fixedcolumns/5.0.5/js/dataTables.fixedColumns.min.js" integrity="sha384-snbynrvB6Hq5gwo20rFwR3sUhSWtWsNgU6zSa1ta13Yf7u6ic/lZEmbq6uY4zZGe" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/fixedheader/4.0.5/js/dataTables.fixedHeader.min.js" integrity="sha384-JxStvM0Ok+ArQDY+V0vVrAfklIxU02MThxg/bD2B9O+oCUvX+V81pERBBXASWUDR" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/responsive/3.0.8/js/dataTables.responsive.min.js" integrity="sha384-jp1JS4vMvRmld4ZK9Co4AZftrm1tt3FbEZrCdFZIcoRiazQGkTqOS1QqI060oG2F" crossorigin="anonymous"></script>
+
+
+    <!-- ✅ fixedHeaders any element JS -->
+    <script src="~/Scripts/HeaderFixedManager.js"></script>
+
+    <script src="~/Scripts/main.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script src="~/Scripts/Global.js"></script>
+    <script src="~/Scripts/bootstrap.bundle.min.js"></script>
+    <script src="~/Scripts/popper.min.js"></script>
+    <script src="~/Scripts/color-modes.js"></script>
+    <!-- HTML PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- ✅ QR CODE (AGREGAR AQUÍ) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Scrool -->
+    <script src="~/Scripts/TopScrollManager.js"></script>
+
+    <!-- AUTOCOMPLETE NATIVO -->
+    <script src="~/Scripts/DatalistAutocomplete.js"></script>
+
+
+    <!-- AG-Grid + ExcelJS -->
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@30.2.0/dist/ag-grid-community.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+    <!-- Signal R -->
+    <script src="~/Scripts/jquery.signalR-2.4.3.min.js"></script>
+    <script src="~/signalr/hubs"></script>
+</head>
+
+<!-- Body of dashboard - inside is all content-->
+<body class="bg-body-tertiary" data-require-auth="true">
+
+    <!-- SVG images -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+        <symbol id="check2" viewBox="0 0 16 16">
+            <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" />
+        </symbol>
+        <symbol id="circle-half" viewBox="0 0 16 16">
+            <path d="M8 15A7 7 0 1 0 8 1v14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z" />
+        </symbol>
+        <symbol id="moon-stars-fill" viewBox="0 0 16 16">
+            <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z" />
+            <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.734 1.734 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.734 1.734 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.734 1.734 0 0 0 1.097-1.097l.387-1.162zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L13.863.1z" />
+        </symbol>
+        <symbol id="sun-fill" viewBox="0 0 16 16">
+            <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z" />
+        </symbol>
+    </svg>
+
+    <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+        <symbol id="bootstrap" viewBox="0 0 118 94">
+            <title>Bootstrap</title>
+            <path fill-rule="evenodd" clip-rule="evenodd"
+                  d="M24.509 0c-6.733 0-11.715 5.893-11.492 12.284.214 6.14-.064 14.092-2.066 20.577C8.943 39.365 5.547 43.485 0 44.014v5.972c5.547.529 8.943 4.649 10.951 11.153 2.002 6.485 2.28 14.437 2.066 20.577C12.794 88.106 17.776 94 24.51 94H93.5c6.733 0 11.714-5.893 11.491-12.284-.214-6.14.064-14.092 2.066-20.577 2.009-6.504 5.396-10.624 10.943-11.153v-5.972c-5.547-.529-8.934-4.649-10.943-11.153-2.002-6.484-2.28-14.437-2.066-20.577C105.214 5.894 100.233 0 93.5 0H24.508zM80 57.863C80 66.663 73.436 72 62.543 72H44a2 2 0 01-2-2V24a2 2 0 012-2h18.437c9.083 0 15.044 4.92 15.044 12.474 0 5.302-4.01 10.049-9.119 10.88v.277C75.317 46.394 80 51.21 80 57.863zM60.521 28.34H49.948v14.934h8.905c6.884 0 10.68-2.772 10.68-7.727 0-4.643-3.264-7.207-9.012-7.207zM49.948 49.2v16.458H60.91c7.167 0 10.964-2.876 10.964-8.281 0-5.406-3.903-8.178-11.425-8.178H49.948z">
+            </path>
+        </symbol>
+    </svg>
+
+    <!-- Start navbar -->
+    <nav class="navbar bg-white-force sticky-top navbar-expand-lg border-bottom bg-body-tertiary">
+        <div class="container-fluid">
+            <button class="btn btn-outline-info" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#MenuLateral"
+                    aria-expanded="true" aria-controls="MenuLateral"
+                    style="margin-right: 10px; padding: 0px 5px 0px 5px;"
+                    id="sidebartoggle">
+                <i class="bi bi-menu-up"></i>
+            </button>
+            <a class="navbar-brand" href="#"></a>
+        </div>
+    </nav>
+    <!-- end navbar -->
+    <!-- Aside menu reorganizado -->
+    <aside class="col-sm-3 border-end bg-body-tertiary collapse"
+           id="MenuLateral">
+        <div class="dividerblue"></div>
+        <div class="p-3">
+            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
+                <img src="~/Content/Images/LogoPTM.png" width="100" />
+            </a>
+            <hr>
+            <ul class="nav nav-pills flex-column mb-auto">
+                <!-- Mantenimientos -->
+                <li id="MantenimientosMainContainer">
+                    <a id="MantenimientosContainer" href="#" class="nav-link link-body-emphasis collapsed" data-bs-toggle="collapse" data-bs-target="#mantenimientos-collapse" aria-expanded="false">
+                        <p class="bi bi-hdd-rack"> Mantenimientos</p><br>
+                    </a>
+                    <div class="collapse" id="mantenimientos-collapse">
+                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                            <li id="GestionEquiposURL">
+                                <a href="@Url.Action("GestionEquipos","Equipos")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-laptop me-2"></i> Gestión de equipos
+                                </a>
+                            </li>
+                            <li id="CalendarioManttoURL">
+                                <a href="@Url.Action("CalendarioMantenimientos","Calendario")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-calendar-week me-2"></i> Calendario Mantenimientos
+                                </a>
+                            </li>
+                            <!-- Preventivos -->
+                            <li id="MPProgramadoURL">
+                                <a href="@Url.Action("MantenimientoPreventivo","MantenimientosPreventivos")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-clock-history me-2"></i> Mantenimientos Preventivos
+                                </a>
+                            </li>
+                            <!-- Correctivos -->
+                            <li>
+                                <a id="MantenimientosCorrectivosContainer" href="#" class="nav-link link-body-emphasis collapsed" data-bs-toggle="collapse" data-bs-target="#manntocorrectivo-collapse" aria-expanded="false">
+                                    <i class="bi bi-tools me-2"></i> Mantenimientos Correctivos
+                                </a>
+                                <div class="collapse" id="manntocorrectivo-collapse">
+                                    <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                                        <li id="MCProgramarURL">
+                                            <a href="@Url.Action("PROGMC","MantenimientosCorrectivos")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded ps-5">
+                                                <i class="bi bi-save me-2"></i> Solicitud Mtto. Correctivo
+                                            </a>
+                                        </li>
+                                        <li id="MCProgramadoURL">
+                                            <a href="@Url.Action("MantenimientoCorrectivo","MantenimientosCorrectivos")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded ps-5">
+                                                <i class="bi bi-list-check me-2"></i> OT Pendientes Correctivo
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- Almacén -->
+                <li id="AlmacenURL">
+                    <a id="AlmacenContainer" href="#" class="nav-link link-body-emphasis collapsed" data-bs-toggle="collapse" data-bs-target="#almacen-collapse" aria-expanded="false">
+                        <p class="bi bi-box-seam me-2"> Almacén</p><br>
+                    </a>
+                    <div class="collapse" id="almacen-collapse">
+                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                            <li id="SolicitudRefaccionesURL">
+                                <a href="@Url.Action("SolicitudRefacciones","Almacen")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-card-checklist me-2"></i> Solicitud Refacciones
+                                </a>
+                            </li>
+                            <li id="SolicitudOrdenesCompraURL">
+                                <a href="@Url.Action("SolicitudOC","Almacen")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-card-checklist me-2"></i> Solicitud Ordenes Compra
+                                </a>
+                            </li>
+                            <li id="ReporteStockURL">
+                                <a href="@Url.Action("ReporteStock","Almacen")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-clipboard-data me-2"></i> Reporte Stock
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                <!-- Planeación -->
+                <li id="PlaneacionURL">
+                    <a id="PlaneacionContainer" href="#" class="nav-link link-body-emphasis collapsed" data-bs-toggle="collapse" data-bs-target="#planeacion-collapse" aria-expanded="false">
+                        <i class="bi bi-bar-chart me-2"></i> Planeación
+                    </a>
+                    <div class="collapse" id="planeacion-collapse">
+                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                            <li id="RegistroPlaneacionURL">
+                                <a href="@Url.Action("Planeacion","Planeacion")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-check2-square pe-1"></i>Registro Planeación
+                                </a>
+                            </li>
+                            <li id="CalendarioPlaneacionURL">
+                                <a href="@Url.Action("CalendarioPlaneacion","Planeacion")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-calendar pe-1"></i>Calendario Planeación
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                <!-- Produccion -->
+                <li id="ProduccionURL">
+                    <a id="ProduccionContainer" href="#" class="nav-link link-body-emphasis collapsed" data-bs-toggle="collapse" data-bs-target="#produccion-collapse" aria-expanded="false">
+                        <i class="bi bi-building me-2"></i> Producción
+                    </a>
+                    <div class="collapse" id="produccion-collapse">
+                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                            <li id="ParosProduccionURL">
+                                <a href="@Url.Action("ParosProduccion","Produccion")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-pause-circle me-2"></i>Paros Producción
+                                </a>
+                            </li>
+                            <li id="RegistroProduccionPVCURL">
+                                <a href="@Url.Action("Produccion_pvc","Produccion")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-capsule pe-1"></i>  Registro TM PVC
+                                </a>
+                            </li>
+                            <li id="RegistroProduccionCorrugadoURL">
+                                <a href="@Url.Action("Produccion_corrugado","Produccion")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-grid-3x3-gap pe-1"></i>  Registro TM Corrugado
+                                </a>
+                            </li>
+                            <li id="RegistroProduccionPLURL">
+                                <a href="@Url.Action("Produccion_peadliso","Produccion")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                                    <i class="bi bi-file-earmark-text pe-1"></i>  Registro TM Pead Liso
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                <!-- Metricas -->
+                <li id="MetricasURL">
+                    <a href="@Url.Action("MetricasMtto","Metricas")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded">
+                        <i class="bi bi-graph-up me-2"></i> Métricas
+                    </a>
+                </li>
+            </ul>
+            <hr>
+            <div class="dropdown">
+                <a href="#" class="d-flex align-items-center link-body-emphasis text-decoration-none dropdown-toggle"
+                   data-bs-toggle="dropdown" aria-expanded="true">
+                    <img src="~/Content/Images/user.png" alt="" width="32" height="32" class="rounded-circle me-2">
+                    <span class="d-print-block"><strong style="text-wrap:auto">Bienvenido <span id="UserName"></span></strong></span>
+                </a>
+                <ul class="dropdown-menu text-small shadow">
+                    <li class="d-flex justify-content-center align-items-center"><i class="bi bi-box-arrow-right pe-2 fs-5 text-blue"></i> <a class="text-decoration-none text-blue" id="btnCerrarSesion" href="#">Cerrar Sesión</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="dividerblue"></div>
+    </aside>
+
+    <!-- Content of the main body - heres the main content like graph, tables, etc... -->
+    <main class="main-container col-12 col-xl-12 bg-body-tertiary" id="main">
+        @RenderBody()
+    </main>
+    <!-- end main -->
+    <!-- Footer fijo al final -->
+    <footer class="footer mt-auto py-3 bg-body-tertiary border-top bg-white-force">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start">
+                    @*<span class="text-footer">&copy; 2025 PTM Todos los derechos reservados.</span>*@
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    @*<span class="text-footer PoweredByText">Powered By </span>
+                        <img class="PoweredByLogo" src="~/Content/Images/Paradox1.png" />*@
+                </div>
+            </div>
+        </div>
+    </footer>
+    <div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;"></div>
+    <!-- Modal Confirmación Eliminar -->
+    <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+            <div class="modal-content" style="background:#1e2a3a; border:1px solid #ef444430; border-radius:16px;">
+                <div class="modal-body p-4 text-center">
+                    <!-- Ícono -->
+                    <div style="width:64px;height:64px;background:#ef444420;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+                        <i class="bi bi-trash3-fill" style="color:#ef4444;font-size:1.6rem;"></i>
+                    </div>
+                    <!-- Título -->
+                    <h5 id="modalConfirmarTitulo" style="color:#f1f5f9;font-weight:700;margin-bottom:0.5rem;">
+                        ¿Eliminar plan?
+                    </h5>
+                    <!-- Mensaje -->
+                    <p id="modalConfirmarMensaje" style="color:#94a3b8;font-size:0.9rem;margin-bottom:1.5rem;">
+                        Esta acción no se puede deshacer.
+                    </p>
+                    <!-- Botones -->
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="button" id="modalConfirmarBtn" class="btn px-4"
+                                style="background:#ef4444;border:none;color:#fff;font-weight:600;">
+                            <i class="bi bi-trash3 me-1"></i> Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

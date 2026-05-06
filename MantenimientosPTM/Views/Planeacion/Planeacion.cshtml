@@ -1,0 +1,448 @@
+﻿@{
+    ViewBag.Title = "Planeación";
+}
+
+<link href="~/Content/CardsPlaneacion.css" rel="stylesheet" />
+
+<!-- Tabla de equipos -->
+<div class="row m-0 ps-3 pt-4 pe-3 main-container position-relative header-custom">
+    <div class="col-12 col-xl-12 p-0">
+        <div class="card shadow">
+            <!-- HEADER DEL CARD -->
+            <div class="card-header header-fijo-custom text-dark">
+                <div class="row g-3 align-items-center">
+                    <!-- Título -->
+                    <div class="col-12 col-sm-6 col-md-4 col-xl-4 text-center text-sm-start">
+                        <h4 class="mb-0 text-color-logo">
+                            <i class="bi bi-calendar-event me-2"></i>
+                            Programación Plan de Producción
+                        </h4>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="col-12 col-sm-6 col-md-8 col-xl-8">
+                        <div class="d-flex flex-column flex-sm-row justify-content-center justify-content-sm-end gap-2">
+                            <a href="#"
+                               id="AgregarPlan"
+                               class="btn-filtro-aplicar"
+                               title="Programar nuevo plan">
+                                <i class="bi bi-plus-circle-fill me-1"></i>
+                                <span class="d-none d-sm-inline">Agregar </span>Plan
+                            </a>
+                            <button id="btnExportarExcel"
+                                    class="btn-filtro-limpiar"
+                                    data-bs-toggle="tooltip"
+                                    title="Exportar a Excel">
+                                <i class="bi bi-file-earmark-excel-fill me-1"></i>
+                                Exportar
+                            </button>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Tabla de ordenes de fabricación -->
+            <div class="row m-0 pt-3 pb-3">
+                <div class="col-12 col-xl-12 mb-3 mb-lg-0">
+                    <form id="formFiltrosOrdenes" autocomplete="on">
+                        <div class="filtros-panel">
+
+                            <div class="filtros-titulo">
+                                <i class="bi bi-sliders" style="color:#0ea5d8"></i>
+                                Filtros de búsqueda
+                            </div>
+
+                            <div class="row g-2 align-items-end">
+
+                                <!-- Fecha Inicio -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroFechaInicio">
+                                        <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
+                                    </label>
+                                    <input type="date" class="filtro-input"
+                                           id="FiltroFechaInicio" name="FiltroFechaInicio">
+                                </div>
+
+                                <!-- Fecha Fin -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroFechaFin">
+                                        <i class="bi bi-calendar-x-fill"></i> Fecha Fin
+                                    </label>
+                                    <input type="date" class="filtro-input"
+                                           id="FiltroFechaFin" name="FiltroFechaFin">
+                                </div>
+
+                                <!-- Mes y Año -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroMesAnio">
+                                        <i class="bi bi-calendar2-month-fill"></i> Mes y Año
+                                    </label>
+                                    <input type="month" class="filtro-input"
+                                           id="FiltroMesAnio" name="FiltroMesAnio">
+                                </div>
+
+                                <!-- Línea de Producción -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroLinea">
+                                        <i class="bi bi-diagram-3-fill"></i> Línea de Producción
+                                    </label>
+                                    <div class="select-wrapper">
+                                        <select class="filtro-input"
+                                                id="FiltroLinea" name="FiltroLinea">
+                                            <option value="">Selecciona la línea de producción...</option>
+                                        </select>
+                                        <div class="select-loader d-none" id="loader_FiltroLinea">
+                                            <span class="spinner-border spinner-border-sm"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Botones -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                                    <button type="button"
+                                            class="btn-filtro-aplicar"
+                                            id="btnAplicarFiltros"
+                                            title="Aplicar filtros">
+                                        <i class="bi bi-search"></i>
+                                        Buscar
+                                    </button>
+                                    <button type="button"
+                                            class="btn-filtro-limpiar"
+                                            id="btnLimpiarFiltros"
+                                            title="Limpiar filtros">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                        Limpiar
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </form>
+                    <!-- PON ESTO EN SU LUGAR: -->
+                    <div class="cards-grid" id="cardsPlaneacionGrid"></div>
+                    <div id="cardsPlaneacionPaginacion"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL AGREGAR PLAN DE PRODUCCIÓN
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="addEventModal" tabindex="-1" aria-hidden="true" data-bs-keyboard="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-plus-circle-fill"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom" id="addEventModalLabel">Carga Plan de Producción</div>
+                        <div class="modal-subtitle-custom">Complete los datos para registrar el plan</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Body ── -->
+            <div class="modal-body-custom">
+                <form id="eventForm" class="needs-validation" novalidate>
+                    <input type="hidden" id="selectedDate">
+                    <input type="hidden" id="IdPlanEditar" value="">
+
+                    <!-- Sección 1: Periodo del Plan -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-calendar-month-fill me-2"></i>Periodo del Plan
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label-custom" for="MesAnioPlan">
+                                    <i class="bi bi-calendar-plus"></i> Mes y Año del Plan
+                                </label>
+                                <input type="month" class="form-control-custom" id="MesAnioPlan" name="MesAnioPlan" required autocomplete="off">
+                                <div class="modal-error-msg">⚠️ Seleccione el mes y año del plan.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 2: Línea y Proceso -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-diagram-3-fill me-2"></i>Línea y Proceso
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="PlanLinea">
+                                    <i class="bi bi-arrow-repeat"></i> Línea de Producción
+                                </label>
+                                <div class="select-wrapper">
+                                    <select class="filtro-input" id="PlanLinea" name="PlanLinea" required>
+                                        <option value="">Todas las líneas...</option>
+                                    </select>
+                                    <div class="modal-error-msg">⚠️ Seleccione la línea de producción.</div>
+                                    <div class="select-loader d-none" id="loader_PlanLinea">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="PlanProceso">
+                                    <i class="bi bi-gear"></i> Proceso
+                                </label>
+                                <div class="select-wrapper">
+                                    <select class="filtro-input" id="PlanProceso" name="PlanProceso" required>
+                                        <option value="">Selecciona el proceso...</option>
+                                    </select>
+                                    <div class="modal-error-msg">⚠️ Seleccione el proceso.</div>
+                                    <div class="select-loader d-none" id="loader_PlanProceso">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 3: Artículo -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-box-seam-fill me-2"></i>Artículo
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label-custom" for="BuscarArticulo">
+                                    <i class="bi bi-search"></i> Buscar Artículo <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control-custom" id="BuscarArticulo" name="BuscarArticulo"
+                                       placeholder="Búsqueda mediante código de artículo, nombre, descripción..." autocomplete="off">
+                                <div id="sugerenciasArticulos" class="autocomplete-sugerencias"></div>
+                                <div class="modal-error-msg">⚠️ Por favor busque y seleccione un artículo.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="CodigoArticulo">
+                                    <i class="bi bi-tag"></i> Código de Artículo <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control-custom" id="CodigoArticulo" name="CodigoArticulo" required readonly>
+                                <div class="modal-error-msg">⚠️ Por favor ingrese el código de artículo.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="DescripcionArticulo">
+                                    <i class="bi bi-card-text"></i> Descripción Artículo <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control-custom" id="DescripcionArticulo" name="DescripcionArticulo"
+                                       placeholder="Descripción del artículo" required readonly>
+                                <div class="modal-error-msg">⚠️ Por favor ingrese la descripción del artículo.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="PlanCap">
+                                    <i class="bi bi-speedometer2"></i> Capacidad
+                                </label>
+                                <input class="form-control-custom" type="text" id="PlanCap" name="PlanCap" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 4: Rango de Días -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-calendar-check-fill me-2"></i>Rango de Días para el Plan
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label-custom">
+                                    <i class="bi bi-calendar-range"></i> Rango de días para plan de producción
+                                </label>
+                                <div class="d-flex gap-2">
+                                    <!-- Fecha Inicio -->
+                                    <div class="col-md-6">
+                                        <label class="filtro-label" for="DiaInicioMant">
+                                            <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
+                                        </label>
+                                        <input type="date" class="filtro-input"
+                                               id="DiaInicioMant" name="DiaInicioMant">
+                                    </div>
+                                    <!-- Fecha Fin -->
+                                    <div class="col-md-6">
+                                        <label class="filtro-label" for="DiaFinMant">
+                                            <i class="bi bi-calendar-x-fill"></i> Fecha Fin
+                                        </label>
+                                        <input type="date" class="filtro-input"
+                                               id="DiaFinMant" name="DiaFinMant">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 5: Datos de Producción -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-bar-chart-fill me-2"></i>Datos de Producción
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="ProduccionTeorica">
+                                    <i class="bi bi-calculator"></i> Producción Teórica
+                                </label>
+                                <input type="text" class="form-control-custom" id="ProduccionTeorica" name="ProduccionTeorica"
+                                       placeholder="Ingrese producción teórica" required autocomplete="off" readonly>
+                                <div class="modal-error-msg">⚠️ Indique la producción teórica.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="ProduccionReal">
+                                    <i class="bi bi-check2-circle"></i> Producción Real
+                                </label>
+                                <input type="text" class="form-control-custom" id="ProduccionReal" name="ProduccionReal"
+                                       placeholder="Ingrese producción real"  autocomplete="off">
+                                <div class="modal-error-msg">⚠️ Indique la producción real.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label-custom" for="Comentarios">
+                                    <i class="bi bi-chat-left-text-fill"></i> Comentarios
+                                </label>
+                                <textarea class="form-control-custom" id="Comentarios" name="Comentarios"
+                                          rows="2" autocomplete="off"
+                                          placeholder="Ingrese observaciones o comentarios adicionales..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerta Container -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="alertPlanContainer"></div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- ── Footer ── -->
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Cancelar
+                </button>
+                <button type="button" class="btn-modal-guardar" id="btnGuardarEvento">
+                    <i class="bi bi-floppy-fill me-1"></i> Guardar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     MODAL REGISTRAR PARO DE PRODUCCIÓN
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalRegistrarParo" tabindex="-1" aria-labelledby="modalRegistrarParoLabel" aria-hidden="true" data-bs-keyboard="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-pause-circle-fill"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom" id="modalRegistrarParoLabel">Registrar Paro de Producción</div>
+                        <div class="modal-subtitle-custom">Complete los datos del paro ocurrido</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Body ── -->
+            <form id="formRegistrarParo" class="needs-validation" novalidate>
+                <div class="modal-body-custom">
+
+                    <!-- Banner advertencia -->
+                    <div class="modal-banner-warning">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size:1rem; flex-shrink:0;"></i>
+                        <span>Los paros registrados impactan directamente el reporte de producción.</span>
+                    </div>
+
+                    <!-- Línea de Producción -->
+                    <div class="mb-3">
+                        <label class="form-label-custom" for="ParoLinea">
+                            <i class="bi bi-diagram-3-fill"></i> Línea de Producción
+                        </label>
+                        <select class="form-select-custom" id="ParoLinea" name="ParoLinea" required>
+                            <option value="" disabled selected>— Selecciona una línea —</option>
+                            <!-- Se poblarán dinámicamente -->
+                        </select>
+                        <div class="modal-error-msg">Selecciona una línea de producción.</div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Comentarios -->
+                    <div class="mb-2">
+                        <label class="form-label-custom" for="ParoComentarios">
+                            <i class="bi bi-chat-left-text-fill"></i> Comentarios / Motivo del Paro
+                        </label>
+                        <textarea class="form-control-custom"
+                                  id="ParoComentarios"
+                                  name="ParoComentarios"
+                                  maxlength="500"
+                                  placeholder="Describe el motivo del paro, duración estimada u observaciones relevantes..."
+                                  required></textarea>
+                        <div class="char-counter" id="charCounter">0 / 500</div>
+                        <div class="modal-error-msg">El motivo del paro es requerido.</div>
+                    </div>
+
+                    <!-- Alerta Container -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="alertParoContainer"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn-modal-guardar" id="btnGuardarParo">
+                        <i class="bi bi-floppy-fill"></i> Guardar Paro
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Container para alerts de Bootstrap -->
+<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;"></div>
+
+<!-- Loader fullscreen -->
+<div id="calendarLoader" style="display: none;">
+    <div class="calendar-loader-overlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-3 text-white fw-semibold">Eliminando plan por favor espere...</p>
+    </div>
+</div>
+
+
+<script src="~/Scripts/planeacion_refactor.js?v1.0.0"></script>

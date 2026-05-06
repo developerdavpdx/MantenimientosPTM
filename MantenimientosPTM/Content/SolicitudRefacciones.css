@@ -1,0 +1,99 @@
+﻿:root {
+    --ptm-azul-principal: #0066b3;
+    --ptm-azul-claro: #1e9bd7;
+    --ptm-azul-oscuro: #004a8f;
+}
+
+
+.badge {
+    font-size: 0.85em;
+    padding: 0.35em 0.65em;
+}
+
+.table th {
+    /*background-color: #f8f9fa;*/
+    font-weight: 600;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.bg-bluePtm {
+    background: linear-gradient(135deg, #1569ad 0%, #0d4a7a 100%);
+}
+
+
+#tablaArticulos {
+    width: 140%;
+}
+
+
+/* ===== ESTILO TIPO SAP ===== */
+.sap-table {
+    font-size: 12px;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+    /* Encabezado */
+    .sap-table thead th {
+        background: #e9ecef;
+        color: #000;
+        font-weight: 600;
+        text-align: center;
+        border: 1px solid #c6c6c6;
+        padding: 4px 6px;
+    }
+
+    /* Celdas */
+    .sap-table tbody td {
+        padding: 3px 6px;
+        border: 1px solid #d0d0d0;
+        vertical-align: middle;
+    }
+
+    /* Filas alternadas */
+    .sap-table tbody tr:nth-child(even) {
+        background-color: #f7f7f7;
+    }
+
+    /* Hover similar a SAP */
+    .sap-table tbody tr:hover {
+        background-color: #fff3cd;
+    }
+
+    /* Columnas tipo SAP (amarillas) */
+    .sap-table td.sap-yellow {
+        background-color: #fff2cc;
+    }
+
+    /* Inputs dentro de la tabla */
+    .sap-table input,
+    .sap-table select {
+        font-size: 12px;
+        padding: 2px 4px;
+        height: 22px;
+    }
+
+    /* Quitar bordes redondeados */
+    .sap-table,
+    .sap-table th,
+    .sap-table td {
+        border-radius: 0 !important;
+    }
+
+/* Scroll horizontal limpio */
+.card-body.table-responsive {
+    padding: 0;
+}
+
+
+#tablaSolicitudesCompra td {
+    text-align: center; /* Centrar texto en las celdas */
+}
+
+#tablaSolicitudesCompra th {
+    text-align: center; /* Centrar texto en las celdas */
+}

@@ -1,0 +1,469 @@
+﻿/* ============================================================
+   CALENDARIO PLANEACIÓN - Estilos específicos
+   Nota: @import de fuentes, :root de variables y estilos de
+   filtros ya están en global.css — no se repiten aquí.
+   ============================================================ */
+
+/* ── Variables exclusivas del calendario ── */
+:root {
+    --cal-bg: #f0f2f6;
+    --cal-surface: #ffffff;
+    --cal-border: #d8dde6;
+    --cal-today: #fffbeb;
+    --cal-other: #eaecf0;
+    --cal-header-bg: #1a2035;
+    --cal-header-txt: #ffffff;
+}
+
+/* ── Contenedor general ── */
+#calendar {
+    background: var(--cal-surface);
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-md);
+    font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Toolbar / Cabecera ── */
+.fc .fc-toolbar {
+    background: var(--cal-header-bg);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem !important;
+    align-items: center;
+}
+
+.fc .fc-toolbar-title {
+    color: #ffffff !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-size: 1.6rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* ── Botones de navegación ── */
+.fc .fc-button {
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    color: #ffffff !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 0.35rem 0.75rem !important;
+    transition: background 0.2s ease, transform 0.15s ease !important;
+    box-shadow: none !important;
+}
+
+    .fc .fc-button:hover {
+        background: rgba(255,255,255,0.22) !important;
+        transform: translateY(-1px);
+    }
+
+    .fc .fc-button-active,
+    .fc .fc-button:active
+    {
+        background: #0ea5d8 !important;
+        border-color: #1a6fbd !important;
+    }
+
+/* ── Cabecera días de la semana ── */
+.fc .fc-col-header-cell {
+    background: #f8fafc;
+    border-color: var(--cal-border) !important;
+    padding: 0.5rem 0;
+}
+
+.fc .fc-col-header-cell-cushion {
+    color: var(--cal-header-bg) !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    text-decoration: none !important;
+}
+
+/* ── Celdas de días ── */
+.fc .fc-daygrid-day {
+    border-color: var(--cal-border) !important;
+    transition: background 0.2s;
+}
+
+    .fc .fc-daygrid-day:hover {
+        background: #f1f5fd !important;
+        cursor: pointer;
+    }
+
+.fc .fc-daygrid-day-number {
+    font-family: 'Rajdhani', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    color: #374151 !important;
+    text-decoration: none !important;
+    padding: 4px 8px !important;
+}
+
+/* ── Día actual ── */
+.fc .fc-day-today {
+    background: var(--cal-today) !important;
+}
+
+    .fc .fc-day-today .fc-daygrid-day-number {
+        background: #0ea5d8;
+        color: #fff !important;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 4px;
+        padding: 0 !important;
+        font-size: 0.85rem !important;
+    }
+
+/* ── Días de otros meses ── */
+.fc-day-other {
+    background-color: var(--cal-other) !important;
+    cursor: not-allowed !important;
+}
+
+    .fc-day-other * {
+        cursor: not-allowed !important;
+    }
+
+    .fc-day-other .fc-daygrid-day-number {
+        color: #9ca3af !important;
+    }
+
+    .fc-day-other .fc-event {
+        display: none !important;
+    }
+
+/* ============================================================
+   EVENTOS - Chips industriales
+   ============================================================ */
+
+.fc-event {
+    border: none !important;
+    border-radius: 8px !important;
+    margin: 2px 4px 3px !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: transform 0.2s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s ease !important;
+    cursor: pointer !important;
+    animation: eventSlideIn 0.25s ease forwards;
+}
+
+    .fc-event:hover {
+        transform: translateY(-3px) scale(1.01) !important;
+        box-shadow: var(--shadow-lg) !important;
+        z-index: 99 !important;
+    }
+
+.fc-event-main {
+    padding: 0 !important;
+    overflow: visible !important;
+}
+
+/* Estructura del chip */
+.cal-event-chip {
+    display: flex;
+    align-items: center;
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 30px;
+    height: 100%;
+    width: 100%;
+}
+
+    .cal-event-chip .chip-stripe {
+        width: 6px;
+        min-height: 30px;
+        flex-shrink: 0;
+        filter: brightness(0.75);
+    }
+
+    .cal-event-chip .chip-body {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px 10px 8px;
+        flex: 1;
+        position: relative;
+    }
+
+    .cal-event-chip .chip-icon {
+        font-size: 0.85rem;
+        flex-shrink: 0;
+        opacity: 0.9;
+    }
+
+    .cal-event-chip .chip-text {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .cal-event-chip .chip-title {
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 600;
+        font-size: 0.82rem; /* ← era 0.72rem */
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-shadow: 0 1px 2px rgba(0,0,0,.25);
+        line-height: 1.2;
+    }
+
+    .cal-event-chip .chip-sub {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.72rem; /* ← era 0.62rem */
+        color: rgba(255,255,255,0.78);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+        margin-top: 1px;
+    }
+
+    .cal-event-chip .chip-badge {
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 20px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        letter-spacing: 0.3px;
+        margin: 2px;
+        position: absolute;
+        bottom: 0;
+        right: 0;
+
+    }
+
+    /* ── Colores por línea ── */
+    .cal-event-chip.color-0 {
+        background: linear-gradient(135deg, #0ea5d8 0%, #1a6fbd 100%);
+    }
+
+        .cal-event-chip.color-0 .chip-stripe {
+            background: #0a4f8a;
+        }
+
+    .cal-event-chip.color-1 {
+        background: linear-gradient(135deg, #1a6fbd 0%, #0d3b6e 100%);
+    }
+
+        .cal-event-chip.color-1 .chip-stripe {
+            background: #082a52;
+        }
+
+    .cal-event-chip.color-2 {
+        background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+    }
+
+        .cal-event-chip.color-2 .chip-stripe {
+            background: #0c4a6e;
+        }
+
+    .cal-event-chip.color-3 {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+        .cal-event-chip.color-3 .chip-stripe {
+            background: #065f46;
+        }
+
+    .cal-event-chip.color-4 {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+        .cal-event-chip.color-4 .chip-stripe {
+            background: #92400e;
+        }
+
+    .cal-event-chip.color-5 {
+        background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+    }
+
+        .cal-event-chip.color-5 .chip-stripe {
+            background: #9f1239;
+        }
+
+/* ── Link "+N más" ── */
+.fc .fc-daygrid-more-link {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    color: #3b82f6 !important;
+    padding: 2px 6px;
+    background: #eff6ff;
+    border-radius: 20px;
+    margin: 2px 4px;
+    display: inline-block;
+}
+
+/* ── Popover ── */
+.fc .fc-popover {
+    border-radius: 12px !important;
+    box-shadow: var(--shadow-lg) !important;
+    border: 1px solid var(--cal-border) !important;
+    overflow: hidden;
+}
+
+.fc .fc-popover-header {
+    background: var(--cal-header-bg) !important;
+    color: #fff !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px;
+    padding: 8px 12px !important;
+}
+
+/* ── Animaciones ── */
+@keyframes eventSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulso {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.85;
+    }
+}
+
+/* ── Alerta paro activo ── */
+#alertaParoActivo {
+    border-left: 4px solid #dc3545;
+    animation: pulso 2s infinite;
+}
+
+.fc-today-button {
+    background: #0ea5d8 !important;
+    border-color: #1a6fbd !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+}
+
+
+/* ============================================================
+   PAROS DE PRODUCCIÓN - Chips
+   ============================================================ */
+
+/* Color base del chip de paro */
+.cal-event-chip.chip-paro {
+    background: linear-gradient(135deg, #f97316 0%, #dc2626 100%);
+}
+
+    .cal-event-chip.chip-paro .chip-stripe {
+        background: #7f1d1d;
+    }
+
+/* Paro cerrado — más apagado */
+.cal-event-chip.chip-paro-cerrado {
+    background: linear-gradient(135deg, #78716c 0%, #57534e 100%);
+}
+
+    .cal-event-chip.chip-paro-cerrado .chip-stripe {
+        background: #292524;
+    }
+
+/* Stripe distintivo para paros */
+.chip-stripe-paro {
+    background: #7f1d1d !important;
+}
+
+/* Badges de estatus para paros */
+.chip-badge-paro-activo {
+    background: rgba(254, 226, 226, 0.25);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.chip-badge-paro-cerrado {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Pulso en paros activos para llamar la atención */
+.fc-event:has(.chip-paro) {
+    animation: eventSlideIn 0.25s ease forwards, pulsoRojo 2.5s ease-in-out infinite !important;
+}
+
+@keyframes pulsoRojo {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.0) !important;
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.3) !important;
+    }
+}
+
+
+/* ══════════════════════════════════════════
+   MODAL DETALLE PARO DE PRODUCCIÓN
+   ══════════════════════════════════════════ */
+
+.paro-header {
+    background: var(--cal-header-bg) !important;
+}
+
+.paro-icon {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #fbbf24 !important;
+}
+
+.paro-header.paro-activo-header {
+    animation: pulsoRojo 2.5s ease-in-out infinite;
+}
+
+/* Estatus chip — reutiliza .estatus-chip del modal de planes */
+#paroEstatusChip.chip-O {
+    background: #fff3cd;
+    color: #b45309;
+    border-color: #fcd34d;
+}
+
+    #paroEstatusChip.chip-O .dot {
+        background: #b45309;
+    }
+
+#paroEstatusChip.chip-C {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+}
+
+    #paroEstatusChip.chip-C .dot {
+        background: #166534;
+    }
+
+/* Botón cerrar paro — amarillo */
+.btn-act.warn {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+}
+
+    .btn-act.warn:hover {
+        background: #fcd34d;
+        color: #78350f;
+    }

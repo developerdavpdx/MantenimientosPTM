@@ -1,0 +1,492 @@
+﻿/* ============================================
+   DATATABLES WRAPPER - Controles y UI
+   ============================================ */
+
+.dataTables_wrapper .dataTables_processing {
+    background: linear-gradient(135deg, #1569ad 0%, #0d4a7a 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(21, 105, 173, 0.3);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    border-radius: 4px;
+    margin: 0 2px;
+}
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        background: linear-gradient(135deg, #1569ad 0%, #0d4a7a 100%) !important;
+        border-color: #1569ad !important;
+        color: white !important;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: #e8f4fb !important;
+        border-color: #1569ad !important;
+        color: #1569ad !important;
+    }
+
+.dataTables_wrapper .dataTables_info {
+    color: #6c757d;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    border: 2px solid #e9ecef;
+    border-radius: 4px;
+    padding: 4px 8px;
+    transition: border-color 0.2s ease;
+}
+
+    .dataTables_wrapper .dataTables_filter input:focus {
+        border-color: #1569ad;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(21, 105, 173, 0.1);
+    }
+
+.dataTables_wrapper .dataTables_length select {
+    border: 2px solid #e9ecef;
+    border-radius: 4px;
+    padding: 4px 8px;
+    transition: border-color 0.2s ease;
+}
+
+    .dataTables_wrapper .dataTables_length select:focus {
+        border-color: #1569ad;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(21, 105, 173, 0.1);
+    }
+
+/* ============================================
+   CONTENEDOR RESPONSIVE
+   ============================================ */
+
+.table-responsive-custom {
+    position: relative;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+}
+
+    .table-responsive-custom::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #1569ad 0%, #29abe2 100%);
+        border-radius: 8px 8px 0 0;
+    }
+
+    .table-responsive-custom::-webkit-scrollbar {
+        width: 16px;
+        height: 16px;
+    }
+
+    .table-responsive-custom::-webkit-scrollbar-thumb {
+        background-color: #1e76bd;
+        border-radius: 10px;
+        border: 3px solid #fff;
+    }
+
+    .table-responsive-custom::-webkit-scrollbar-track {
+        background-color: #f1f1f1;
+        border-radius: 10px;
+    }
+
+/* ============================================
+   TABLA PRINCIPAL
+   ============================================ */
+
+.CustomTableResponsive {
+    table-layout: auto;
+    width: 100%;
+    white-space: nowrap;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+    .CustomTableResponsive thead {
+        background: linear-gradient(135deg, #1569ad 0%, #0d4a7a 100%);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+        .CustomTableResponsive thead th {
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            padding: 12px 18px;
+            border: none;
+            vertical-align: middle;
+        }
+
+            .CustomTableResponsive thead th:first-child {
+                border-top-left-radius: 8px;
+            }
+
+            .CustomTableResponsive thead th:last-child {
+                border-top-right-radius: 8px;
+            }
+
+    .CustomTableResponsive tbody td {
+        padding: 10px 18px;
+        vertical-align: middle;
+        font-size: 0.875rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.2s ease;
+    }
+
+    .CustomTableResponsive tbody tr:hover {
+        background-color: #e8f4fb;
+        box-shadow: 0 2px 4px rgba(21, 105, 173, 0.1);
+        transition: all 0.2s ease;
+    }
+
+    .CustomTableResponsive tbody tr:nth-child(even) {
+        background-color: #fafbfc;
+    }
+
+    .CustomTableResponsive tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .CustomTableResponsive .col-text-long {
+        max-width: 250px;
+        white-space: normal !important;
+        word-wrap: break-word;
+    }
+
+    .CustomTableResponsive .btn-sm {
+        padding: 4px 8px;
+        margin: 0 2px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+/* ============================================
+   DATATABLES RESPONSIVE - Control con Bootstrap Icons
+   ============================================ */
+
+/* ============================================
+   DATATABLES RESPONSIVE - Control FORZADO
+   ============================================ */
+
+/* Resetear TODOS los estilos del control de DataTables */
+table.dataTable tbody td.dtr-control:before,
+table.dataTable tbody th.dtr-control:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control:before {
+    content: '+' !important;
+    display: inline-block !important;
+    box-sizing: border-box !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 15px !important;
+    font-weight: bold !important;
+    color: white !important;
+    background: linear-gradient(135deg, #1569ad 0%, #0d4a7a 100%) !important;
+    width: 23px !important;
+    height: 23px !important;
+    line-height: 24px !important;
+    text-align: center !important;
+    border-radius: 50% !important;
+    border: none !important;
+    box-shadow: 0 2px 6px rgba(21, 105, 173, 0.3) !important;
+    transition: all 0.3s ease !important;
+    top: auto !important;
+    left: auto !important;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Cuando está expandido - Usando las clases correctas */
+table.dataTable tbody tr.dt-hasChild td.dtr-control:before,
+table.dataTable tbody tr.dtr-expanded td.dtr-control:before,
+table.dataTable tbody tr.dt-hasChild.dtr-expanded td.dtr-control:before {
+    content: '-' !important;
+    background: linear-gradient(135deg, #1569ad 0%, #0d4a7a 100%) !important;
+    box-shadow: 0 2px 6px rgb(73 78 86) !important;
+    line-height: 22px !important;
+    font-size: 18px !important;
+}
+
+/* Hover del control */
+table.dataTable tbody td.dtr-control:hover:before,
+table.dataTable tbody th.dtr-control:hover:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:hover:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control:hover:before {
+    transform: scale(1.15) !important;
+    box-shadow: 0 4px 10px rgba(21, 105, 173, 0.5) !important;
+    background: linear-gradient(135deg, #0d4a7a 0%, #1569ad 100%) !important;
+}
+
+/* Cuando está expandido (parent) */
+table.dataTable tbody tr.parent td.dtr-control:before,
+table.dataTable tbody tr.parent th.dtr-control:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr.parent > td.dtr-control:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr.parent > th.dtr-control:before {
+    content: '-' !important;
+    background: linear-gradient(135deg, #dc3545 0%, #bd2130 100%) !important;
+    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3) !important;
+}
+
+/* Hover cuando está expandido */
+table.dataTable tbody tr.parent td.dtr-control:hover:before,
+table.dataTable tbody tr.parent th.dtr-control:hover:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr.parent > td.dtr-control:hover:before,
+table.dataTable.dtr-inline.collapsed > tbody > tr.parent > th.dtr-control:hover:before {
+    background: linear-gradient(135deg, #0d4a7a 0%, #1569ad 100%) !important;
+    box-shadow: 0 4px 10px rgba(220, 53, 69, 0.5) !important;
+}
+
+/* Asegurar que la celda esté centrada */
+table.dataTable tbody td.dtr-control,
+table.dataTable tbody th.dtr-control {
+    cursor: pointer !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+    /* Eliminar cualquier after que pueda interferir */
+    table.dataTable tbody td.dtr-control:after,
+    table.dataTable tbody th.dtr-control:after {
+        display: none !important;
+        content: none !important;
+    }
+
+
+
+/* Hover cuando está expandido */
+table.dataTable tbody tr.dt-hasChild td.dtr-control:hover:before,
+table.dataTable tbody tr.dtr-expanded td.dtr-control:hover:before,
+table.dataTable tbody tr.dt-hasChild.dtr-expanded td.dtr-control:hover:before {
+    background: linear-gradient(135deg, #0d4a7a 0%, #1569ad 100%) !important;
+    box-shadow: 0 2px 6px rgb(73 78 86) !important;
+    transform: scale(1.15) !important;
+}
+/* ============================================
+   DATATABLES RESPONSIVE - Detalles expandidos
+   ============================================ */
+
+.dtr-details {
+    padding: 0 !important;
+    margin: 15px 0 !important;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dtr-detail-item {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+}
+
+    .dtr-detail-item:first-child {
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        border-left: 4px solid #1569ad;
+    }
+
+    .dtr-detail-item:last-child {
+        border-bottom: none;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+
+.dtr-title {
+    font-weight: 600;
+    color: #495057;
+    min-width: 180px;
+    margin-right: 15px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dtr-data {
+    background: linear-gradient(135deg, #1569ad 0%, #0d4a7a 100%);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(21, 105, 173, 0.2);
+    flex: 1;
+    text-align: center;
+    max-width: 400px;
+}
+
+    .dtr-data.badge-success {
+        background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    }
+
+    .dtr-data.badge-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        color: #212529;
+    }
+
+    .dtr-data.badge-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #bd2130 100%);
+    }
+
+    .dtr-data.badge-info {
+        background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+    }
+
+    .dtr-data.badge-secondary {
+        background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+    }
+.table.dataTable > tbody > tr.child ul.dtr-details > li {
+    padding-left:12px !important;
+}
+
+/* ============================================
+   DETALLES CARDS RESPONSIVE 
+   ============================================ */
+/* Mejoras visuales */
+.dtr-details .card {
+    border-radius: 12px !important;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+    .dtr-details .card:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+    }
+
+/* Bordes coloridos */
+.border-start-primary {
+    border-left-color: #4e73df !important;
+}
+
+.border-start-success {
+    border-left-color: #1cc88a !important;
+}
+
+.border-start-info {
+    border-left-color: #36b9cc !important;
+}
+
+.border-start-warning {
+    border-left-color: #f6c23e !important;
+}
+
+.border-start-danger {
+    border-left-color: #e74a3b !important;
+}
+
+.border-start-secondary {
+    border-left-color: #6c757d !important;
+}
+
+.border-start-light {
+    border-left-color: #e3e6f0 !important;
+}
+
+/* Gradiente para el header */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Efecto en las mini-cards */
+.dtr-details .card .card-body {
+    transition: all 0.3s ease;
+}
+
+.dtr-details .card:hover .card-body {
+    transform: translateX(5px);
+}
+
+/* Iconos circulares */
+.icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Animación para los iconos */
+.dtr-details .display-6 {
+    transition: transform 0.3s ease;
+}
+
+.dtr-details .card:hover .display-6 {
+    transform: scale(1.1);
+}
+
+/* Footer con iconos */
+.iconos-footer .badge {
+    border: 1px solid #dee2e6;
+    padding: 5px 10px;
+    border-radius: 20px;
+    transition: all 0.2s;
+}
+
+    .iconos-footer .badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+/* ============================================
+   RESPONSIVE - Mobile
+   ============================================ */
+@media (max-width: 768px) {
+    .CustomTableResponsive thead th, .CustomTableResponsive tbody td {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+
+    .CustomTableResponsive .col-text-long {
+        max-width: 150px;
+    }
+
+    .dtr-details {
+        padding: 10px !important;
+    }
+
+    .dtr-detail-item {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 15px;
+    }
+
+    .dtr-title {
+        margin-bottom: 8px;
+        min-width: auto;
+    }
+
+    .dtr-data {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .dtr-control:before {
+        font-size: 24px;
+    }
+}
