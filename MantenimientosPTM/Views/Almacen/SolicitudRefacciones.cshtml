@@ -17,7 +17,7 @@
                     <!-- Título -->
                     <div class="col-12 col-lg-4">
                         <h4 class="mb-0 text-color-logo">
-                            <i class="bi bi-tools me-2"></i>Solicitud de Refacciones UPD 2
+                            <i class="bi bi-tools me-2"></i>Solicitud de Refacciones
                         </h4>
                     </div>
                     <!-- Botones -->
@@ -132,7 +132,7 @@
                                     <th>Cantidad</th>
                                     <th>Atendidas</th>
                                     <th>Nivel Urgencia</th>
-                                    <th>Fechas</th>
+                                    <th>Fecha</th>
                                     <th>Estatus</th>
                                     <th>Solicitud Compra</th>
                                     <th>Usuario Solicita</th>
@@ -523,7 +523,7 @@
      MODAL: SALIDA DE MATERIALES
 ══════════════════════════════════════════════ -->
 <div class="modal fade" id="salidaMercancia" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:90%">
         <div class="modal-content">
 
             <div class="modal-header text-white bg-bluePtm pb-1 border-0">
@@ -655,13 +655,14 @@
                             <small class="text-muted">Artículos seleccionados: <strong id="contadorSeleccionados">0</strong></small>
                         </div>
                         <div class="table-responsive" style="max-height: 320px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
-                            <table class="table table-sm table-hover table-bordered mb-0" id="tablaArticulosSalida">
+                            <table class="table table-sm table-hover table-bordered mb-0 CustomTableResponsive" id="tablaArticulosSalida">
                                 <thead class="table-light text-center position-sticky top-0" style="z-index: 1;">
                                     <tr>
                                         <th style="width: 40px;">#</th>
                                         <th style="width: 40px;">
                                             <input type="checkbox" id="chkAllSelect" disabled>
                                         </th>
+                                        <th>Cambiar Refacción</th>
                                         <th>Código</th>
                                         <th>Artículo</th>
                                         <th style="width: 70px;">Cantidad</th>
@@ -1065,7 +1066,7 @@
             </div>
 
             <!-- ── Body ── -->
-            <form id="formSolicitarRefaccionAlm" class="needs-validation" novalidate autocomplete="on">
+            <form id="formIntercambiarRefaccionOT" class="needs-validation" novalidate autocomplete="on">
                 <div class="modal-body-custom">
 
                     <!-- Sección 2: Detalles de la Refacción -->
@@ -1112,6 +1113,12 @@
                                                 </tr>
                                             </tbody>
                                         </table>
+                                    </div>
+                                    <!-- Alerta Container -->
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div id="alertCambioRefaccionContainer"></div>
+                                        </div>
                                     </div>
                                     <div class="modal-error-msg" id="errorArticulosMP" style="display: none;">
                                         <img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Agregue al menos un artículo a la solicitud.
