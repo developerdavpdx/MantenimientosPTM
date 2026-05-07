@@ -520,21 +520,6 @@ namespace MantenimientosPTM.Controllers
                 // ✅ Insertar cada artículo por separado
                 foreach (var articulo in RequestData.Articulos)
                 {
-                    // Crear modelo individual para cada artículo
-                    //var solicitudIndividual = new AccesoDatosMantenimientosPreventivos.SolicitudRefaccion
-                    //{
-                    //    OrdenTrabajo = RequestData.OrdenTrabajo,
-                    //    IdEquipo = RequestData.IdEquipo,
-                    //    RefaccionSolicitada = articulo.RefaccionSolicitada,
-                    //    Cantidad = articulo.Cantidad,
-                    //    NivelUrgencia = RequestData.NivelUrgencia,
-                    //    DescripcionNecesidad = RequestData.DescripcionNecesidad,
-                    //    UsuarioSolicita = RequestData.UsuarioSolicita,
-                    //    Estatus = RequestData.Estatus,
-                    //    IdMantenimiento = RequestData.IdMantenimiento,
-                    //    Planta = RequestData.Planta
-                    //};
-
                     var solicitudIndividual = new AccesoDatosMantenimientosPreventivos.SolicitudRefaccion
                     {
                         OrdenTrabajo = RequestData.OrdenTrabajo,

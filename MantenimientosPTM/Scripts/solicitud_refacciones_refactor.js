@@ -164,6 +164,9 @@ class SolicitudRefaccionesApp {
         // Guardar refacción
         $('#formSolicitudCompra').on('submit', (e) => this.solicitudManager.enviarSolicitudCompra(e));
 
+        //Cambiar refacción
+        $('#formIntercambiarRefaccionOT').on('submit', (e) => this.solicitudManager.CambiarRefaccionOT(e));
+
         // Guardar devolución de mercancía
         $('#btnGuardarDevolucion').on('click', () => this.solicitudManager.enviarDevolucion());
 
@@ -421,8 +424,8 @@ class SolicitudRefaccionesApp {
             let payload = {
                 Planta: this.datos_usuario[0].PLANTA,
                 Usuario: this.datos_usuario[0].EMAIL,
-                IdEquipo:1,
-                IdMantenimiento:1, //Pendiente pasar
+                IdEquipo: 1,
+                IdMantenimiento: 1, //Pendiente pasar
                 Referencia: ordenTrabajo,
                 OrdenTrabajo: ordenTrabajo,
                 Contabilizacion: articulosSeleccionados,
@@ -510,15 +513,6 @@ class SolicitudRefaccionesApp {
                 }
             });
         });
-
-
-        $("#btnCargarRefacciones").on("click", () => {
-
-            //Obtener Articulos del listado seleccioandos
-            let articulos = this.solicitudManager.gestionArticulosMP.obtenerArticulos();
-            this.solicitudManager.addArticulosSalida(articulos)
-        });
-
     }
 
     obtenerNuevoIdSolicitud() {
@@ -949,16 +943,15 @@ class SolicitudManager {
     }
 
 
-    addArticulosSalida(articulos) {
+    CambiarRefaccionOT(e) {
+
+        e.preventDefault();
+
+
+        let articulos = this.gestionArticulosMP.obtenerArticulos();
 
         if (!articulos || articulos.length === 0) {
-            tbody.html(`
-                <tr>
-                    <td colspan="12" class="text-center text-muted py-4">
-                        <i class="bi bi-inbox me-2"></i>No hay artículos seleccionados
-                    </td>
-                </tr>
-            `);
+            AlertManager.mostrar('Debes seleccionar al menos un artículo para continuar.', 'warning', 'alertCambioRefaccionContainer');
             $('#badgeTotalArticulos').text('0');
             return;
         }
@@ -972,7 +965,7 @@ class SolicitudManager {
             let { CodigoArticulo, DescripcionArticulo, Cantidad
             } = art;
 
-            let NivelUrgencia = 'Normal' , Estatus = 'Pendiente';
+            let NivelUrgencia = 'Normal', Estatus = 'Pendiente';
 
             const urgenciaClass = NivelUrgencia === 'Critico' || NivelUrgencia === 'Crítico' ? 'bg-danger' :
                 NivelUrgencia === 'Urgente' ? 'bg-warning text-dark' : 'bg-primary';
@@ -1066,7 +1059,7 @@ class SolicitudManager {
         const gastosDefault = 'GIF';
 
         articulos.forEach((art, i) => {
-            let { STOCK:stock, NIVEL_URGENCIA: NivelUrgencia, ESTATUS: Estatus, NOMBRE_ARTICULO: NombreArticulo,
+            let { STOCK: stock, NIVEL_URGENCIA: NivelUrgencia, ESTATUS: Estatus, NOMBRE_ARTICULO: NombreArticulo,
                 REFACCION_SOLICITADA: RefaccionSolicitada, ID_SOLICITUD: IdSolicitud, CANTIDAD: Cantidad
             } = art;
 
@@ -1114,7 +1107,8 @@ class SolicitudManager {
                                data-cantidad="${Cantidad}"
                                data-cantidadoriginal="${Cantidad}"
                                ${Estatus === 'Atendida' ? 'disabled' : ''}>
-
+                    </td>
+                     <td class="text-center">
                         ${btnChangeRef}
                     </td>
                     <td><span class="badge bg-dark">${RefaccionSolicitada || 'N/A'}</span></td>
@@ -1294,6 +1288,7 @@ class SolicitudManager {
                         defaultContent: '',
                         width: '30px'
                     },
+
                     // ✅ Columna 1: Checkbox selección
                     {
                         data: null,
@@ -1302,12 +1297,13 @@ class SolicitudManager {
                         width: '40px',
                         render: (data, type, row) => {
                             return `<input type="checkbox"
-                            class="chk-solicitud form-check-input"
-                            data-ordentrabajo="${row.OrdenTrabajo || ''}"
-                            data-estatus="${row.Estatus || ''}"
-                            data-solicita="${row.UsuarioSolicita || ''}">`;
+                class="chk-solicitud form-check-input"
+                data-ordentrabajo="${row.OrdenTrabajo || ''}"
+                data-estatus="${row.Estatus || ''}"
+                data-solicita="${row.UsuarioSolicita || ''}">`;
                         }
                     },
+
                     // ✅ Columna 2: Acciones
                     {
                         data: null,
@@ -1315,6 +1311,7 @@ class SolicitudManager {
                         className: 'all text-center',
                         width: '100px',
                         render: (data, type, row) => {
+
                             const ordenTrabajo = row.OrdenTrabajo || '';
                             const estatus = row.Estatus || '';
                             const solicita = row.UsuarioSolicita || '';
@@ -1323,153 +1320,236 @@ class SolicitudManager {
                             const totalAtendidas = row.TotalAtendidas || 0;
 
                             const dataAttrs = `
-                            data-ordentrabajo="${ordenTrabajo}"
-                            data-estatus="${estatus}"
-                            data-solicita="${solicita}"
-                            data-totalatendidas="${totalAtendidas}"`;
+                data-ordentrabajo="${ordenTrabajo}"
+                data-estatus="${estatus}"
+                data-solicita="${solicita}"
+                data-totalatendidas="${totalAtendidas}"`;
 
                             const btn = (color, cssClass, icon, tooltip, attrs = '') =>
-                                `<button class="btn btn-sm btn-${color} ${cssClass}"
-                                data-bs-toggle="tooltip" title="${tooltip}" ${attrs}>
-                                <i class="bi bi-${icon}"></i>
-                            </button>`;
+                                `<button class="btn btn-sm ${color} ${cssClass}"
+                    data-bs-toggle="tooltip"
+                    title="${tooltip}" ${attrs}>
+                    <i class="bi bi-${icon}"></i>
+                </button>`;
 
                             const btnDisabled = (color, icon, tooltip) =>
-                                btn(color, '', icon, tooltip).replace('<button', '<button disabled');
+                                btn(color, '', icon, tooltip)
+                                    .replace('<button', '<button disabled');
 
                             const devolucionMercanciaBtn = esAdmin
                                 ? (totalAtendidas > 0
-                                    ? btn('warning', 'btn-devolucion-mercancia', 'arrow-return-left', 'Generar Devolución de Mercancía', dataAttrs)
-                                    : btnDisabled('secondary', 'arrow-return-left', 'Generar Devolución de Mercancía'))
+                                    ? btn(
+                                        'btn-ptm-primary',
+                                        'btn-devolucion-mercancia',
+                                        'arrow-return-left',
+                                        'Generar Devolución de Mercancía',
+                                        dataAttrs
+                                    )
+                                    : btnDisabled(
+                                        'bg-secondary',
+                                        'arrow-return-left',
+                                        'Generar Devolución de Mercancía'
+                                    ))
                                 : '';
 
                             const salidaMercanciaBtn = esAdmin
                                 ? (estatus === 'Pendiente'
-                                    ? btn('warning', 'btn-salida-mercancia', 'box-arrow-up', 'Generar Salida de Mercancía', dataAttrs)
-                                    : btnDisabled('secondary', 'box-arrow-up', 'Generar Salida de Mercancía'))
+                                    ? btn(
+                                        'btn-ptm-mid',
+                                        'btn-salida-mercancia',
+                                        'box-arrow-up',
+                                        'Generar Salida de Mercancía',
+                                        dataAttrs
+                                    )
+                                    : btnDisabled(
+                                        'bg-secondary',
+                                        'box-arrow-up',
+                                        'Generar Salida de Mercancía'
+                                    ))
                                 : '';
 
                             return `${devolucionMercanciaBtn}${salidaMercanciaBtn}`;
                         }
                     },
+
                     // ✅ Columna 3: Orden Trabajo
                     {
                         data: "OrdenTrabajo",
                         className: "text-center",
                         render: (data) =>
-                            data ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>` : ''
+                            data
+                                ? `<span class="badge bg-primary badge-custom">
+                    <i class="bi bi-clipboard-data me-1"></i>${data}
+                </span>`
+                                : ''
                     },
+
                     // ✅ Columna 4: Total Artículos
                     {
                         data: "TotalSolicitudes",
                         className: "text-center",
                         render: (data) => {
-                            if (!data) return '<em class="text-muted">0</em>';
-                            return `<span class="badge bg-info badge-custom">
-                                <i class="bi bi-box-seam me-1"></i>${data}
-                            </span>`;
+
+                            if (!data) {
+                                return '<em class="text-muted"><i class="bi bi-box-seam me-1"></i>0</em>';
+                            }
+
+                            return `<em class="text-muted">
+                <i class="bi bi-box-seam me-1"></i>${data}
+            </em>`;
                         }
                     },
+
                     // ✅ Columna 5: Total Cantidad
                     {
                         data: "TotalCantidad",
                         className: "text-center",
-                        render: (data) => data || '<em class="text-muted">0</em>'
+                        render: (data) => {
+
+                            if (!data) {
+                                return '<em class="text-muted"><i class="bi bi-boxes me-1"></i>0</em>';
+                            }
+
+                            return `<em class="text-muted">
+                <i class="bi bi-boxes me-1"></i>${data}
+            </em>`;
+                        }
                     },
+
                     // ✅ Columna 6: Total Atendidas
                     {
                         data: "TotalAtendidas",
                         className: "text-center",
                         render: (data) => {
-                            if (!data || data === 0) return '<em class="text-muted">0</em>';
-                            return `<span class="badge bg-success badge-custom">
-                                <i class="bi bi-check-circle me-1"></i>${data}
-                            </span>`;
+
+                            if (!data || data === 0) {
+                                return '<em class="text-muted"><i class="bi bi-check-circle me-1"></i>0</em>';
+                            }
+
+                            return `<span class="badge btn-ptm-primary badge-custom">
+                <i class="bi bi-check-circle me-1"></i>${data}
+            </span>`;
                         }
                     },
+
                     // ✅ Columna 7: Nivel Urgencia
                     {
                         data: "NivelUrgencia",
                         className: "text-center",
                         render: (data) => {
+
                             if (!data) return '';
+
                             switch (data) {
+
                                 case 'Normal':
-                                    return `<span class="badge bg-primary badge-custom">
-                                    <i class="bi bi-circle-fill me-1"></i>Normal
-                                </span>`;
+                                    return `<span class="badge btn-ptm-primary badge-custom">
+                        <i class="bi bi-circle-fill me-1"></i>Normal
+                    </span>`;
+
                                 case 'Urgente':
                                     return `<span class="badge bg-warning text-dark badge-custom">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Urgente
-                                </span>`;
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Urgente
+                    </span>`;
+
                                 case 'Crítico':
                                 case 'Critico':
                                     return `<span class="badge bg-danger badge-custom">
-                                    <i class="bi bi-exclamation-octagon-fill me-1"></i>Crítico
-                                </span>`;
+                        <i class="bi bi-exclamation-octagon-fill me-1"></i>Crítico
+                    </span>`;
+
                                 default:
-                                    return `<span class="badge bg-secondary badge-custom">${data}</span>`;
+                                    return `<span class="badge bg-secondary badge-custom">
+                        ${data}
+                    </span>`;
                             }
                         }
                     },
-                    // ✅ Columna 7: Fechas
+
+                    // ✅ Columna 8: Fechas
                     {
                         data: null,
                         className: "text-center",
                         render: (data, type, row) => {
+
                             return `<small class="text-muted">
-                                ${row.FechaPrimera || ''}
-                                ${row.FechaPrimera && row.FechaUltima ? ' - ' : ''}
-                                ${row.FechaUltima || ''}
-                            </small>`;
+                            <i class="bi bi-calendar-event me-1"></i>
+                            ${row.FechaPrimera || ''}
+                        </small>`;
                         }
                     },
-                    // ✅ Columna 8: Estatus
+
+                    // ✅ Columna 9: Estatus
                     {
                         data: "Estatus",
                         className: "all text-center",
                         render: (data) => {
+
                             if (!data) return '';
+
                             const map = {
-                                'Pendiente': { color: 'bg-warning text-dark', icon: 'clock' },
-                                'Atendida': { color: 'bg-success', icon: 'check-circle' },
-                                'Cancelado': { color: 'bg-danger', icon: 'x-circle' }
+                                'Pendiente': {
+                                    icon: 'clock'
+                                },
+                                'Atendida': {
+                                    icon: 'check-circle'
+                                },
+                                'Cancelado': {
+                                    icon: 'x-circle'
+                                }
                             };
-                            const cfg = map[data] || { color: 'bg-secondary', icon: 'circle' };
-                            return `<span class="badge ${cfg.color} badge-custom">
-                                    <i class="bi bi-${cfg.icon}"></i> ${data}
-                                </span>`;
+
+                            const cfg = map[data] || {
+                                icon: 'circle'
+                            };
+
+                            return `<span class="badge btn-ptm-primary badge-custom">
+                <i class="bi bi-${cfg.icon} me-1"></i>${data}
+            </span>`;
                         }
                     },
-                    // ✅ Columna 9: Folio Compra
+
+                    // ✅ Columna 10: Folio Compra
                     {
                         data: "FolioCompra",
                         className: "text-center",
                         render: (data) => {
-                            if (!data || data === '')
-                                return '<em class="text-muted">Sin OC</em>';
+
+                            if (!data || data === '') {
+                                return '<em class="text-muted"><i class="bi bi-receipt me-1"></i>Sin OC</em>';
+                            }
+
                             return `<span class="badge bg-primary badge-custom">
-                                        <i class="bi bi-cash-stack me-1"></i>${data}
-                                    </span>`;
+                <i class="bi bi-cash-stack me-1"></i>${data}
+            </span>`;
                         }
                     },
-                    // ✅ Columna 10: Usuario Solicita
+
+                    // ✅ Columna 11: Usuario Solicita
                     {
                         data: "UsuarioSolicita",
                         render: (data) =>
-                            data ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>` : 'N/A'
+                            data
+                                ? `<span class="badge btn-ptm-mid badge-custom">
+                    <i class="bi bi-person-circle me-1"></i>${data}
+                </span>`
+                                : '<em class="text-muted"><i class="bi bi-person-x me-1"></i>N/A</em>'
                     },
-                    // ✅ Columna 11: Usuario Atiende
+
+                    // ✅ Columna 12: Usuario Atiende
                     {
                         data: "UsuarioAtiende",
                         render: (data) =>
-                            data ? `<span class="badge bg-success badge-custom">${data}</span>`
-                                : '<em class="text-muted">Sin asignar</em>'
+                            data
+                                ? `<span class="badge btn-ptm-primary badge-custom">
+                    <i class="bi bi-person-check me-1"></i>${data}
+                </span>`
+                                : '<em class="text-muted"><i class="bi bi-person-dash me-1"></i>Sin asignar</em>'
                     }
                 ],
                 columnDefs: [
                     { orderable: false, targets: [0, 1, 2] },
-                    { className: "text-center", targets: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
+                    { className: "text-center", targets: '_all' },
 
                     // 🎯 Prioridades Responsive
                     { responsivePriority: 1, targets: 0 },  // Control +/-

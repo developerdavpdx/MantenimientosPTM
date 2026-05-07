@@ -97,3 +97,11 @@
 #tablaSolicitudesCompra th {
     text-align: center; /* Centrar texto en las celdas */
 }
+
+
+#tablaArticulosSalida th {
+    min-width: 150px;
+    white-space: nowrap;
+    vertical-align: middle;
+    text-align:center;
+}
