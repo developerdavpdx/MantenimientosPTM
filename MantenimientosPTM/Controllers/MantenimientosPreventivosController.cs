@@ -254,6 +254,11 @@ namespace MantenimientosPTM.Controllers
                     : $"{ordenesGeneradas} órdenes generadas. Algunas no pudieron ser procesadas:\n{OTsinGenerar.ToString()}, intente de nuevo más tarde.";
                 jsonResponse.Data = OT; // o el dato que necesites retornar
 
+                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+
                 return Json(jsonResponse);
             }
             catch (Exception ex)
@@ -370,8 +375,9 @@ namespace MantenimientosPTM.Controllers
 
 
                 //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
                 var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
-                context.Clients.All.actualizarTablaMantenimientosPreventivos();
+                context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
 
                 // Validar si ya se completó la CARÁTULA Y LA RUTINA ONLINE
                 //var parametrosMantenimiento = new
@@ -568,10 +574,6 @@ namespace MantenimientosPTM.Controllers
                 var allparametersOT = Logic.GlobalCommands.ConvertToHanaParameters(parametrosOT, false, null);
                 var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparametersOT);
 
-                // Notificar a los clientes
-                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
-                context.Clients.All.actualizarTablaSolicitudRefacciones();
-
                 // Construir respuesta
                 if (errores.Count > 0 && insertados == 0)
                 {
@@ -590,6 +592,11 @@ namespace MantenimientosPTM.Controllers
                     jsonResponse.Status = "SI";
                     jsonResponse.Message = $"Solicitud(es) de refacción insertada(s) correctamente. ({insertados} artículo(s))";
                     jsonResponse.Data = "";
+
+                    //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                    context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
                 }
 
                 return Json(jsonResponse);

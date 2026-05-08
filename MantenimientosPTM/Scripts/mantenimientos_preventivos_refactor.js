@@ -86,9 +86,6 @@ class MantenimientosPreventivoApp {
 
         $('#btnGuardarMantenimiento').on('click', () => this.mantenimientoManager.guardarMantenimiento());
 
-        // Filtros
-        $('#btnFiltrar').on('click', () => this.mantenimientoManager.aplicarFiltros());
-
         // Checkboxes
         $('#selectAll').on('change', (e) => this.mantenimientoManager.seleccionarTodos(e));
 
@@ -362,37 +359,52 @@ class MantenimientosPreventivoApp {
     // SIGNALR MANAGER - MANTENIMIENTOS
     // ========================================
     initHubMantenimientosPreventivos() {
-
         const self = this;
         const hub = $.connection.mantenimientoHub;
-
-        let isReloading = false; // 🔥 evita spam de reload
         let reconnectDelay = 5000;
+        let modalActualizacion = null;
+
+        const miRol = self.datos_usuario[0].TIPOUSUARIO;
+
+        // ── Todos reciben el aviso excepto quien hizo el cambio ──
+        const debeRecibirAviso = (rolQueCambio) => miRol !== rolQueCambio;
+
+        // ── Inicializar modal una sola vez ──
+        const $modalEl = document.getElementById('actualizacionDatosModal');
+        if ($modalEl) {
+            modalActualizacion = new bootstrap.Modal($modalEl, { backdrop: 'static', keyboard: false });
+
+            document.getElementById('btnConfirmarActualizacion')
+                .addEventListener('click', function () {
+                    modalActualizacion.hide();
+                    self._recargarTablaMantenimientos();
+                });
+        }
 
         // ========================================
         // 📡 EVENTO PRINCIPAL
         // ========================================
-        hub.client.actualizarTablaMantenimientosPreventivos = function () {
+        // El servidor debe enviar el rol de quien disparó el cambio:
+        //   Clients.Others.actualizarTablaMantenimientosPreventivos(rolQueCambio)
+        // Si tu hub aún no lo manda, pasa string vacío como fallback y filtra en el servidor.
+        hub.client.actualizarTablaMantenimientosPreventivos = function (rolQueCambio) {
+            console.warn("📡 Actualización recibida desde SignalR | Origen:", rolQueCambio || "desconocido");
 
-            console.warn("📡 Actualización recibida desde SignalR");
-
-            // 🔥 evitar reload si es técnico
-            /*            if (self.datos_usuario[0].TIPOUSUARIO === "TecnicoMtto") return;*/
-
-            // 🔥 evitar múltiples reload simultáneos
-            if (isReloading) return;
-
-            isReloading = true;
-
-            const table = $('#tablaMantenimientosRango').DataTable();
-
-            if (table) {
-                table.ajax.reload(() => {
-                    isReloading = false;
-                }, false);
-            } else {
-                isReloading = false;
+            // 🔥 Validar si este usuario debe recibir el aviso
+            if (!debeRecibirAviso(rolQueCambio)) {
+                console.info("🔕 Aviso ignorado — no corresponde a este rol:", miRol);
+                return;
             }
+
+            // 🔥 Evitar múltiples modales apilados
+            if ($modalEl && $modalEl.classList.contains('show')) return;
+
+            // 🔥 Evitar aviso si ya hay un reload en curso
+            if (self._isReloading) return;
+
+            modalActualizacion
+                ? modalActualizacion.show()
+                : self._recargarTablaMantenimientos();
         };
 
         // ========================================
@@ -401,7 +413,7 @@ class MantenimientosPreventivoApp {
         $.connection.hub.start({
             transport: ['webSockets', 'longPolling']
         }).done(function () {
-            console.log("✅ SignalR conectado");
+            console.log("✅ SignalR conectado | Rol:", miRol);
             console.log("🚚 Transporte:", $.connection.hub.transport.name);
         }).fail(function (error) {
             console.error("❌ Error al conectar SignalR:", error);
@@ -415,38 +427,44 @@ class MantenimientosPreventivoApp {
         });
 
         // ========================================
-        // 🔁 RECONNECTED
+        // 🔁 RECONNECTED — recarga silenciosa
         // ========================================
         $.connection.hub.reconnected(function () {
-
-            console.info("✅ SignalR reconectado");
-
-            // 🔥 refresco inteligente al reconectar
-            //if (self.datos_usuario[0].TIPOUSUARIO !== "TecnicoMtto") {
-            $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
-            //}
-
-            reconnectDelay = 5000; // reset delay
+            console.info("✅ SignalR reconectado | Rol:", miRol);
+            self._recargarTablaMantenimientos();
+            reconnectDelay = 5000;
         });
 
         // ========================================
         // ❌ DISCONNECTED (retry exponencial)
         // ========================================
         $.connection.hub.disconnected(function () {
-
             console.error("❌ SignalR desconectado");
-
             setTimeout(function () {
-
                 console.warn(`🔁 Reintentando conexión en ${reconnectDelay / 1000}s...`);
-
                 $.connection.hub.start();
-
-                // 🔥 backoff exponencial (máx 30s)
                 reconnectDelay = Math.min(reconnectDelay * 2, 30000);
-
             }, reconnectDelay);
         });
+    }
+
+    // ========================================
+    // 🔁 RECARGA CENTRALIZADA (reutilizable)
+    // ========================================
+
+    _recargarTablaMantenimientos() {
+        if (this._isReloading) return;
+
+        this._isReloading = true;
+
+        if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+            $('#tablaMantenimientosRango').DataTable().ajax.reload(() => {
+                this._isReloading = false;
+            }, false);
+        } else {
+            this.mantenimientoManager.llenarMantenimientosPorRango();
+            this._isReloading = false;
+        }
     }
 }
 
@@ -489,10 +507,10 @@ class UIManager {
 
 
 
-        if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
-            $("#btnGenerarOrdenes").addClass("d-none");
-            $("#btnExportarExcel").addClass("d-none");
-        }
+        //if (datos_usuario[0].TIPOUSUARIO != "AdminMtto" || datos_usuario[0].TIPOUSUARIO != "Administrador") {
+        //    $("#btnGenerarOrdenes").addClass("d-none");
+        //    $("#btnExportarExcel").addClass("d-none");
+        //}
 
         $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
         $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
@@ -1270,9 +1288,15 @@ class MantenimientoManager {
         $("#btnSolicitarRefaccion").html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
         $("#btnSolicitarRefaccion").prop("disabled", true);
 
+        let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+
         $.ajax({
             url: `/${this.URLBase}/InsertarSolicitudRefaccion`,
             type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Rol-Usuario': TipoUsuario  // 👈 esto
+            },
             contentType: 'application/json; charset=utf-8',
             data: JSON.stringify(datos),
             dataType: 'json',
@@ -1323,6 +1347,7 @@ class MantenimientoManager {
                 return;
             }
             let Usuario = this.datos_usuario[0].EMAIL;
+            let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
             // Obtener array de objetos con ID, Nombre y Fechas del Periodo
             const equiposSeleccionados = checkboxes.map(function () {
                 const fila = $(this).closest('tr');
@@ -1339,6 +1364,10 @@ class MantenimientoManager {
             $.ajax({
                 url: `/${this.URLBase}/InsertarMP`,
                 type: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Rol-Usuario': TipoUsuario  // 👈 esto
+                },
                 contentType: 'application/json; charset=utf-8',
                 data: JSON.stringify(equiposSeleccionados),
                 dataType: 'json',
@@ -1640,7 +1669,7 @@ class MantenimientoManager {
             estatusOrden: d.estatusorden,
             descEstatusOrden: d.descestatusorden,
             idMantenimiento: d.idmantenimiento,
-            comentariosRutina:d.comentariosrutina,
+            comentariosRutina: d.comentariosrutina,
 
             // 🔥 FIRMAS
             firmaRealizo: d.firmarealizo || '',
@@ -1824,6 +1853,16 @@ class MantenimientoManager {
         $("#nombreSuperviso").val(this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase()).attr('readonly', true);
         this.gestionFirmas.mostrarFirma('Mantenimiento', true);
 
+        //Cambiar títulos de firma dependiendo la planta
+        switch (this.datos_usuario[0].PLANTA) {
+            case 1:
+                $("#supervisor_mantenimiento_sign").text("Coordinador Mantenimiento");
+                break;
+            case 2:
+                break;
+
+        }
+
         // bloquear correctamente
         this.gestionFirmas._bloquearFirma("Realizo", true);
 
@@ -1916,14 +1955,23 @@ class MantenimientoManager {
         this.gestionFirmas.mostrarFirma('Mantenimiento', true);
         $("#nombreMantenimiento").val(this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase()).attr('readonly', true);
 
+        //Cambiar títulos de firma dependiendo la planta
+        switch (this.datos_usuario[0].PLANTA) {
+            case 1:
+                $("#supervisor_mantenimiento_sign").text("Coordinador Mantenimiento");
+                break;
+            case 2:
+               
+                break;
+
+        }
         // bloquear correctamente
         this.gestionFirmas._bloquearFirma("Realizo", true);
         if (FirmaSuperviso != "")
             this.gestionFirmas._bloquearFirma("Superviso", true);
         else
             this.gestionFirmas.deshabilitarFirma("Superviso", true);
-        //this.gestionFirmas._bloquearFirma("Realizo");
-        //this.gestionFirmas._bloquearFirma("Superviso");
+
 
         // 🔹 MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
         if (EstatusOrden == 4) {
@@ -2100,10 +2148,16 @@ class MantenimientoManager {
     }
     // 🔥 MÉTODO SEPARADO PARA GUARDAR LA OT (también async)
     async guardarOTDefinitivo(datos) {
+        let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+
         return new Promise((resolve, reject) => {
             $.ajax({
                 url: `/${this.URLBase}/InsertarOrdenTrabajoMP`,
                 type: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Rol-Usuario': TipoUsuario  // 👈 esto
+                },
                 contentType: 'application/json; charset=utf-8', // ✅ Importante
                 data: JSON.stringify(datos), // ✅ Convierte todo a JSON
                 dataType: 'json',
@@ -2343,7 +2397,7 @@ class MantenimientoManager {
 
     }
 
-    ConsultarActividadesPorOTMP(numeroOrden, idEquipo, Planta,ComentariosRutina) {
+    ConsultarActividadesPorOTMP(numeroOrden, idEquipo, Planta, ComentariosRutina) {
 
         const startTime = Date.now();
 
@@ -4110,7 +4164,7 @@ class PDFManagerMantenimiento {
                                 `;
             }
 
-                                return `
+            return `
                                 <div class="page-break-avoid" style="background-color: ${act.numero % 2 === 0 ? '#ffffff' : '#f9fafb'}; border: 1px solid #e5e7eb; padding: 10px; margin-bottom: 6px; border-radius: 6px;">
                                     <div style="display: flex; align-items: flex-start; gap: 10px;">
                                         <span style="display: inline-block; background-color: #2563eb; color: white; min-width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 11px; flex-shrink: 0;">${act.numero}</span>
@@ -4119,7 +4173,7 @@ class PDFManagerMantenimiento {
                                     </div>
                                 </div>
                             `;
-                                }).join('')}
+        }).join('')}
             
                         <!-- NOTA FINAL -->
                         ${datos.RutinaNotaFinal ? `

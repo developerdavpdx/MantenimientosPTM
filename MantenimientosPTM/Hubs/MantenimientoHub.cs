@@ -9,14 +9,14 @@ namespace MantenimientosPTM.Hubs
             Clients.All.actualizarTablaSolicitudRefacciones();
         }
 
-        public void NotificarAjustesOrdenTrabajoPreventivo()
+        public void NotificarAjustesOrdenTrabajoPreventivo(string rolQueCambio)
         {
-            Clients.All.actualizarTablaMantenimientosPreventivos();
+            Clients.Others.actualizarTablaMantenimientosPreventivos(rolQueCambio);
         }
 
-        public void NotificarAjustesOrdenTrabajoCorrectivo()
+        public void NotificarAjustesOrdenTrabajoCorrectivo(string rolQueCambio)
         {
-            Clients.All.actualizarTablaMantenimientosCorrectivos();
+            Clients.Others.actualizarTablaMantenimientosCorrectivos();
         }
     }
 }

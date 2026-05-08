@@ -19,15 +19,15 @@
                         </h4>
                     </div>
                     <!-- Botón -->
-                    <div class="col-12 col-lg-5">
-                        <div class="d-flex flex-wrap justify-content-start justify-content-lg-end gap-2">
-                            <button id="btnGenerarOrdenes" class="btn-filtro-aplicar d-flex align-items-center"
-                                    data-bs-toggle="tooltip" title="Generar Órdenes de Trabajo">
-                                <i class="bi bi-file-earmark-plus-fill me-2"></i>
-                                Generar Órdenes
-                            </button>
-                        </div>
-                    </div>
+                    @*<div class="col-12 col-lg-5">
+                            <div class="d-flex flex-wrap justify-content-start justify-content-lg-end gap-2">
+                                <button id="btnGenerarOrdenes" class="btn-filtro-aplicar d-flex align-items-center"
+                                        data-bs-toggle="tooltip" title="Generar Órdenes de Trabajo">
+                                    <i class="bi bi-file-earmark-plus-fill me-2"></i>
+                                    Generar Órdenes
+                                </button>
+                            </div>
+                        </div>*@
                 </div>
             </div>
             <div class="card-body">
@@ -128,7 +128,7 @@
                                 <th scope="col">Proceso</th>
                                 <th scope="col">Línea</th>
                                 <th scope="col">Estatus Orden</th>
-                                <th scope="col">Fecha Solicitud Mantenimiento</th> 
+                                <th scope="col">Fecha Solicitud Mantenimiento</th>
                                 <th scope="col">Hora Apertura</th>
                                 <th scope="col">Hora Cierre</th>
                                 <th scope="col">Tiempo Invertido (Hrs)</th>
@@ -737,6 +737,61 @@
         </div>
     </div>
 </div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL ACTUALIZACIÓN DE DATOS — MANTENIMIENTOS PREVENTIVOS
+═══════════════════════════════════════════════════ -->
+<div class="modal fade" id="actualizacionDatosModal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Actualización disponible</div>
+                        <div class="modal-subtitle-custom">Mantenimientos preventivos</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Body ── -->
+            <div class="modal-body-custom">
+                <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="alert"
+                     style="border-radius: 8px; font-size: 0.875rem;">
+                    <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
+                    <div>
+                        <strong>Se detectaron cambios</strong> en los datos de mantenimientos correctivos
+                        desde tu última carga.<br>
+                        ¿Deseas recargar la tabla ahora para ver la información actualizada?
+                    </div>
+                </div>
+
+                <p class="text-muted mb-0" style="font-size: 0.8125rem;">
+                    <i class="bi bi-clock me-1"></i>
+                    Los cambios se aplicarán sin perder tu rango de fechas seleccionado.
+                </p>
+            </div>
+
+            <!-- ── Footer ── -->
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal"
+                        id="btnCancelarActualizacion">
+                    <i class="bi bi-x-circle me-1"></i> Ahora no
+                </button>
+                <button type="button" class="btn-modal-guardar" id="btnConfirmarActualizacion">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Sí, recargar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
 
 <!-- Container para alerts de Bootstrap -->
 <div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;">

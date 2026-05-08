@@ -721,7 +721,7 @@ class PlaneacionManager {
                         GlobalUtil.mostrarLoader(false);
                     },
                     error: () => {
-                        AlertManager.mostrar('🔴 Error al conectar con el servidor', 'warning');
+                        AlertManager.mostrar('Error al conectar con el servidor', 'warning');
                         GlobalUtil.mostrarLoader(false);
                     }
                 });
@@ -973,7 +973,7 @@ class PlaneacionManager {
             dataType: 'json',
             success: (response) => {
                 if (response.Status === 'SI') {
-                    let message = idPlan != '' ? '✅ Plan actualizado correctamente' : '✅ Plan generado correctamente';
+                    let message = idPlan != '' ? 'Plan actualizado correctamente' : 'Plan generado correctamente';
                     $("#btnGuardarEvento").html(`<i class="bi bi-check-circle-fill me-2 text-white">${message}</i>`).prop("disabled", false);
 
                     // ✅ CAMBIO: refresca cards en vez de DataTable.ajax.reload()
@@ -989,17 +989,17 @@ class PlaneacionManager {
 
                     const diasTotal = parseInt(diaFin) - parseInt(diaInicio) + 1;
                     message = idPlan != '' ? 'Actualizado' : 'Programado';
-                    AlertManager.mostrar(`✅ Plan ${message} para línea ${lineaProduccionDesc} (${diasTotal} días)`, 'success');
+                    AlertManager.mostrar(`Plan ${message} para línea ${lineaProduccionDesc} (${diasTotal} días)`, 'success');
 
                 } else {
                     $("#btnGuardarEvento").html('<i class="bi bi-save me-1"></i>Guardar').prop("disabled", false);
-                    AlertManager.mostrar(`⚠️ ${response.Message || 'Error al insertar el plan de producción.'}`, 'warning', "alertPlanContainer");
+                    AlertManager.mostrar(`${response.Message || 'Error al insertar el plan de producción.'}`, 'warning', "alertPlanContainer");
                 }
             },
             error: () => {
                 $("#btnGuardarEvento").html('<i class="bi bi-save me-1"></i>Guardar').prop("disabled", false);
                 // ❌ Error del servidor en guardarPlan
-                AlertManager.mostrar('🔴 Error al conectar con el servidor', 'warning', "alertPlanContainer");
+                AlertManager.mostrar('Error al conectar con el servidor', 'warning', "alertPlanContainer");
             }
         });
     }
@@ -1039,12 +1039,12 @@ class PlaneacionManager {
                     }, 3000);
                 } else {
                     $("#btnGuardarParo").html('<i class="bi bi-save me-1"></i>Guardar').prop("disabled", false);
-                    AlertManager.mostrar(`⚠️ ${response.Message || 'Error al insertar el paro.'}`, 'warning', "alertParoContainer");
+                    AlertManager.mostrar(`${response.Message || 'Error al insertar el paro.'}`, 'warning', "alertParoContainer");
                 }
             },
             error: () => {
                 $("#btnGuardarParo").html('<i class="bi bi-save me-1"></i>Guardar').prop("disabled", false);
-                AlertManager.mostrar('🔴 Error al conectar con el servidor', 'warning', "alertParoContainer");
+                AlertManager.mostrar('Error al conectar con el servidor', 'warning', "alertParoContainer");
             }
         });
     }
@@ -1101,7 +1101,7 @@ class PlaneacionManager {
                     LINEA_PRODUCCION: val(ultimaEdic.NVO_LINEA_PRODUCCION, plan.LINEA_PRODUCCION),
                     ID_PROCESO: val(ultimaEdic.ID_NVO_PROCESO, plan.ID_PROCESO),
                     ARTICULO: val(ultimaEdic.NVO_ARTICULO, plan.ARTICULO),
-                    ARTICULO_DESC: plan.ARTICULO_DESC, // no está en bitácora, se queda del plan
+                    ARTICULO_DESC: ultimaEdic.NVO_ARTICULO_DESC, // no está en bitácora, se queda del plan
                     CAPACIDAD: val(ultimaEdic.NVO_CAPACIDAD, plan.CAPACIDAD),
                     DIA_INICIO_MANT: val(ultimaEdic.NVO_DIA_INICIO_MANT_STR, plan.DIA_INICIO_MANT_STR),
                     DIA_FIN_MANT: val(ultimaEdic.NVO_DIA_FIN_MANT_STR, plan.DIA_FIN_MANT_STR),
@@ -1160,7 +1160,7 @@ class PlaneacionManager {
             },
             error: () => {
                 if (btnEdit) btnEdit.innerHTML = '<i class="bi bi-pencil-square"></i>';
-                AlertManager.mostrar('🔴 Error al obtener los datos del plan.', 'warning');
+                AlertManager.mostrar('Error al obtener los datos del plan.', 'warning');
             }
         });
     }

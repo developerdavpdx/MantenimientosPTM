@@ -321,7 +321,7 @@
      MODAL ORDEN DE MANTENIMIENTO
 ══════════════════════════════════════════════ -->
 <div class="modal fade" id="modalOrdenMantenimiento" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
 
             <!-- ── Header ── -->
@@ -620,7 +620,7 @@
                                 <div class="col-md-4" id="firmaRealizoContainer">
                                     <div class="card border-primary shadow-sm h-100">
                                         <div class="card-header bg-primary text-white">
-                                            <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Técnico MTTO</h6>
+                                            <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i><span id="tecnico_mtto_sign">Técnico MTTO</span></h6>
                                         </div>
                                         <div class="card-body">
                                             <div class="firma-wrapper border border-2 border-primary rounded position-relative mb-3" style="background:#f8f9fa;">
@@ -653,7 +653,7 @@
                                 <div class="col-md-4" id="firmaSupervisoContainer">
                                     <div class="card border-success shadow-sm h-100">
                                         <div class="card-header bg-success text-white">
-                                            <h6 class="mb-0"><i class="bi bi-eye-fill me-2"></i>Supervisor Producción</h6>
+                                            <h6 class="mb-0"><i class="bi bi-eye-fill me-2"></i><span id="supervisor_producción_sign">Supervisor Producción</span></h6>
                                         </div>
                                         <div class="card-body">
                                             <div class="firma-wrapper border border-2 border-success rounded position-relative mb-3" style="background:#f8f9fa;">
@@ -686,7 +686,7 @@
                                 <div class="col-md-4" id="firmaMantenimientoContainer">
                                     <div class="card border-info shadow-sm h-100">
                                         <div class="card-header bg-info text-white">
-                                            <h6 class="mb-0"><i class="bi bi-gear-fill me-2"></i>Supervisor Mantenimiento</h6>
+                                            <h6 class="mb-0"><i class="bi bi-gear-fill me-2"></i><span id="supervisor_mantenimiento_sign">Supervisor Mantenimiento</span></h6>
                                         </div>
                                         <div class="card-body">
                                             <div class="firma-wrapper border border-2 border-info rounded position-relative mb-3" style="background:#f8f9fa;">
@@ -758,6 +758,61 @@
                 </div>
 
             </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     MODAL ACTUALIZACIÓN DE DATOS — MANTENIMIENTOS PREVENTIVOS
+═══════════════════════════════════════════════════ -->
+<div class="modal fade" id="actualizacionDatosModal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Actualización disponible</div>
+                        <div class="modal-subtitle-custom">Mantenimientos preventivos</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Body ── -->
+            <div class="modal-body-custom">
+                <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="alert"
+                     style="border-radius: 8px; font-size: 0.875rem;">
+                    <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
+                    <div>
+                        <strong>Se detectaron cambios</strong> en los datos de mantenimientos preventivos
+                        desde tu última carga.<br>
+                        ¿Deseas recargar la tabla ahora para ver la información actualizada?
+                    </div>
+                </div>
+
+                <p class="text-muted mb-0" style="font-size: 0.8125rem;">
+                    <i class="bi bi-clock me-1"></i>
+                    Los cambios se aplicarán sin perder tu rango de fechas seleccionado.
+                </p>
+            </div>
+
+            <!-- ── Footer ── -->
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal"
+                        id="btnCancelarActualizacion">
+                    <i class="bi bi-x-circle me-1"></i> Ahora no
+                </button>
+                <button type="button" class="btn-modal-guardar" id="btnConfirmarActualizacion">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Sí, recargar
+                </button>
+            </div>
+
         </div>
     </div>
 </div>
