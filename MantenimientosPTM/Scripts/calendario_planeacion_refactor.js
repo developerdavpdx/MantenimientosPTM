@@ -564,7 +564,7 @@ class CalendarManager {
             const labelPlanes = totalPlanes === 1 ? 'plan cargado' : 'planes cargados';
             const labelParos = totalParos === 1 ? 'paro cargado' : 'paros cargados';
 
-            AlertManager.mostrar(`✅ ${totalPlanes} ${labelPlanes} <br/> 🚨 ${totalParos} ${labelParos}`, 'success');
+            AlertManager.mostrar(`${totalPlanes} ${labelPlanes} <br/> 🚨 ${totalParos} ${labelParos}`, 'success');
 
         } catch (error) {
             console.error('❌ Error al cargar calendario:', error);

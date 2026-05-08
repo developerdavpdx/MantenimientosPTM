@@ -1331,7 +1331,7 @@ class GestionProveedores {
                 });
                 this._mostrarSugerencias(response);
             } catch (error) {
-                AlertManager.mostrar('🔴 No es posible mostrar la lista de proveedores: ' + error, 'warning');
+                AlertManager.mostrar('No es posible mostrar la lista de proveedores: ' + error, 'warning');
             }
         }, this._debounceDelay);
     }
@@ -1482,7 +1482,7 @@ class GestionCentrosCosto {
                 });
 
                 if (response.Status !== 'OK') {
-                    AlertManager.mostrar('🔴 Error al obtener centros de costo.', 'warning');
+                    AlertManager.mostrar('Error al obtener centros de costo.', 'warning');
                     return;
                 }
 
@@ -1490,7 +1490,7 @@ class GestionCentrosCosto {
                 this._filtrarYMostrar(query);
 
             } catch (error) {
-                AlertManager.mostrar('🔴 No es posible mostrar centros de costo: ' + error, 'warning');
+                AlertManager.mostrar('No es posible mostrar centros de costo: ' + error, 'warning');
             }
         }, this._debounceDelay);
     }
@@ -1638,7 +1638,7 @@ class GestionArticulos {
                 });
                 this._mostrarSugerencias(response);
             } catch (error) {
-                AlertManager.mostrar('🔴 No es posible mostrar la lista de artículos: ' + error, 'warning');
+                AlertManager.mostrar('No es posible mostrar la lista de artículos: ' + error, 'warning');
             }
         }, this._debounceDelay);
     }

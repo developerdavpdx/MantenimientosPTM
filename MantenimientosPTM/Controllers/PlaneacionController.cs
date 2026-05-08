@@ -641,18 +641,25 @@ namespace MantenimientosPTM.Controllers
                 // ✅ Preparar parámetros para el SP
                 var parametersEmail = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_PLANTA", (RequestData.PLANTA, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_PLANTA", (RequestData.PLANTA, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TIPO", ("P", ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
-
                 // Ejecutar stored procedure de actualización
                 var resultHanaEmails = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                     Logic.AD.GCGetUsuariosXPlanta,
                     parametersEmail
                 );
 
+                if (resultHanaEmails.JsonResult.Contains("ERROR") || resultHanaEmails.JsonResult.Contains("Error"))
+                {
+                    jsonResponse.Status = "SI";
+                    jsonResponse.Message = $"El plan fue actualizado correctamente, pero la notificación no pudo ser enviada.";
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse);
+                }
                 //Correos para notificaciones por cambio de plan
                 JArray ListaEmails = JArray.Parse(resultHanaEmails.JsonResult);
-                List<string> emails = new List<string>(); 
+                List<string> emails = new List<string>();
 
                 foreach (var itemEmail in ListaEmails)
                 {
@@ -662,7 +669,7 @@ namespace MantenimientosPTM.Controllers
                 var email = new EmailRequest
                 {
                     To = emails,
-                    Subject = "📢 Plan de Producción Actualizado",
+                    Subject = "Plan de Producción Actualizado",
                     Title = "Plan de Producción Actualizado",
                     Message = "Se realizaron cambios en el plan de producción.",
                     Data = changes
@@ -685,6 +692,69 @@ namespace MantenimientosPTM.Controllers
             {
                 jsonResponse.Status = "ERROR";
                 jsonResponse.Message = "No fue posible actualizar el plan de producción: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult EliminarPlanProduccion()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            try
+            {
+                // Leer el cuerpo de la solicitud JSON
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    var requestData = JsonConvert.DeserializeObject<dynamic>(jsonData);
+
+                    int idPlan = (int)requestData.ID_PLAN;
+                    int planta = (int)requestData.PLANTA;
+                    string usuario = (string)requestData.USUARIO;
+
+                    if (idPlan == 0)
+                        throw new Exception("No se recibió el ID del plan a eliminar.");
+
+                    // Crear parámetros en el formato correcto para HANA
+                    var parametros = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
+                    {
+                        { "P_ID_PLAN", (idPlan, ParameterDirection.Input, HanaDbType.Integer) },
+                        { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) },
+                        { "P_USUARIO", (string.IsNullOrEmpty(usuario) ? null : usuario, ParameterDirection.Input, HanaDbType.Date) }
+                    };
+
+                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCEliminarPlanProduccion,
+                        parametros
+                    );
+
+                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                    {
+                        jsonResponse.Status = "NO";
+                        jsonResponse.Message = $"No fue posible eliminar el plan: {resultHana.JsonResult}";
+                        jsonResponse.Data = string.Empty;
+                        return Json(jsonResponse);
+                    }
+
+                    var resultado = JArray.Parse(resultHana.JsonResult);
+                    string estatus = (string)resultado[0]["ESTATUS"];
+                    string mensaje = (string)resultado[0]["MENSAJE"];
+
+                    jsonResponse.Status = (estatus == "OK") ? "SI" : "NO";
+                    jsonResponse.Message = (estatus == "OK") ? "Plan eliminado correctamente." : mensaje;
+                    jsonResponse.Data = resultHana.JsonResult;
+                    return Json(jsonResponse);
+                }
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible eliminar el plan de producción: " + ex.Message;
                 jsonResponse.Data = string.Empty;
                 return Json(jsonResponse);
             }

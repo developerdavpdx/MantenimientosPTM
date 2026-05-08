@@ -71,6 +71,14 @@ namespace MantenimientosPTM.Controllers
                 jsonResponse.Message = nuevoId.Contains("ERROR") ? "No fue posible insertar la solicitud de mantenimiento correctivo." : "Solicitud de mantenimiento correctivo insertada correctamente.";
                 jsonResponse.Data = nuevoId;
 
+                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                if (jsonResponse.Status == "SI")
+                {
+                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                    context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
+                }
+
                 return Json(jsonResponse);
             }
             catch (Exception ex)
@@ -440,6 +448,13 @@ namespace MantenimientosPTM.Controllers
 
                     return Json(jsonResponse, JsonRequestBehavior.AllowGet);
                 }
+                else
+                {
+                    //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                    context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
+                }
                 //ACTUALIZAR STATUS A FINALIZADO DE TODAS FORMAS Y LA LOGICA ADICIONAL SE MANEJA EN EL FRONT
                 var parametrosFinOT = new
                 {
@@ -453,9 +468,8 @@ namespace MantenimientosPTM.Controllers
                 //Actualizar estatus de OT
                 var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMC, allparameters);
 
-                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
-                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
-                context.Clients.All.actualizarTablaMantenimientosCorrectivos();
+
+
 
                 //Validar si ya se completo la CARATULA Y LA RUTINA ONLINE (SE CAMBIO LA LOGICA DE ACTUALIZACION)
                 //var parametrosMantenimeinto = new

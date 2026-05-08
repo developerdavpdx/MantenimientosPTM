@@ -52,7 +52,7 @@ class MantenimientosPreventivoApp {
         this.configurarEventosImpresion();
         this.configurarEventosTecnicos(); //GESTION TECNICOS
         this.configurarEventosFirmas(); //FIRMAS
-        this.initHubMantenimientosPreventivos(); //Inicializar HUB mantenimientos correctivos
+        this.initHubMantenimientosCorrectivos(); //Inicializar HUB mantenimientos correctivos
 
         console.log('✅ Sistema Completo de Mantenimientos Preventivos inicializado correctamente');
     }
@@ -282,40 +282,49 @@ class MantenimientosPreventivoApp {
     }
 
     // ========================================
-    // SIGNALR MANAGER - MANTENIMIENTOS
+    // SIGNALR MANAGER - MANTENIMIENTOS CORRECTIVOS
     // ========================================
-    initHubMantenimientosPreventivos() {
-
+    initHubMantenimientosCorrectivos() {
         const self = this;
         const hub = $.connection.mantenimientoHub;
-
-        let isReloading = false; // 🔥 evita spam de reload
         let reconnectDelay = 5000;
+        let modalActualizacion = null;
+
+        const miRol = self.datos_usuario[0].TIPOUSUARIO;
+
+        // ── Todos reciben el aviso excepto quien hizo el cambio ──
+        const debeRecibirAviso = (rolQueCambio) => miRol !== rolQueCambio;
+
+        // ── Inicializar modal una sola vez ──
+        const $modalEl = document.getElementById('actualizacionDatosModal');
+        if ($modalEl) {
+            modalActualizacion = new bootstrap.Modal($modalEl, { backdrop: 'static', keyboard: false });
+
+            document.getElementById('btnConfirmarActualizacion')
+                .addEventListener('click', function () {
+                    modalActualizacion.hide();
+                    self._recargarTablaCorrectivos();
+                });
+        }
 
         // ========================================
         // 📡 EVENTO PRINCIPAL
         // ========================================
-        hub.client.actualizarTablaMantenimientosCorrectivos = function () {
+        hub.client.actualizarTablaMantenimientosCorrectivos = function (rolQueCambio) {
+            console.warn("📡 Actualización recibida desde SignalR | Origen:", rolQueCambio || "desconocido");
 
-            console.warn("📡 Actualización recibida desde SignalR");
-
-            // 🔥 evitar reload si es técnico
-            /*            if (self.datos_usuario[0].TIPOUSUARIO === "TecnicoMtto") return;*/
-
-            // 🔥 evitar múltiples reload simultáneos
-            if (isReloading) return;
-
-            isReloading = true;
-
-            const table = $('#tablaMantenimientosRango').DataTable();
-
-            if (table) {
-                table.ajax.reload(() => {
-                    isReloading = false;
-                }, false);
-            } else {
-                isReloading = false;
+            if (!debeRecibirAviso(rolQueCambio)) {
+                console.info("🔕 Aviso ignorado — no corresponde a este rol:", miRol);
+                return;
             }
+
+            if ($modalEl && $modalEl.classList.contains('show')) return;
+
+            if (self._isReloadingCorrectivos) return;
+
+            modalActualizacion
+                ? modalActualizacion.show()
+                : self._recargarTablaCorrectivos();
         };
 
         // ========================================
@@ -324,7 +333,7 @@ class MantenimientosPreventivoApp {
         $.connection.hub.start({
             transport: ['webSockets', 'longPolling']
         }).done(function () {
-            console.log("✅ SignalR conectado");
+            console.log("✅ SignalR conectado | Rol:", miRol);
             console.log("🚚 Transporte:", $.connection.hub.transport.name);
         }).fail(function (error) {
             console.error("❌ Error al conectar SignalR:", error);
@@ -338,38 +347,43 @@ class MantenimientosPreventivoApp {
         });
 
         // ========================================
-        // 🔁 RECONNECTED
+        // 🔁 RECONNECTED — recarga silenciosa
         // ========================================
         $.connection.hub.reconnected(function () {
-
-            console.info("✅ SignalR reconectado");
-
-            // 🔥 refresco inteligente al reconectar
-            //if (self.datos_usuario[0].TIPOUSUARIO !== "TecnicoMtto") {
-            $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
-            //}
-
-            reconnectDelay = 5000; // reset delay
+            console.info("✅ SignalR reconectado | Rol:", miRol);
+            self._recargarTablaCorrectivos();
+            reconnectDelay = 5000;
         });
 
         // ========================================
         // ❌ DISCONNECTED (retry exponencial)
         // ========================================
         $.connection.hub.disconnected(function () {
-
             console.error("❌ SignalR desconectado");
-
             setTimeout(function () {
-
                 console.warn(`🔁 Reintentando conexión en ${reconnectDelay / 1000}s...`);
-
                 $.connection.hub.start();
-
-                // 🔥 backoff exponencial (máx 30s)
                 reconnectDelay = Math.min(reconnectDelay * 2, 30000);
-
             }, reconnectDelay);
         });
+    }
+
+    // ========================================
+    // 🔁 RECARGA CENTRALIZADA CORRECTIVOS
+    // ========================================
+    _recargarTablaCorrectivos() {
+        if (this._isReloadingCorrectivos) return;
+
+        this._isReloadingCorrectivos = true;
+
+        if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+            $('#tablaMantenimientosRango').DataTable().ajax.reload(() => {
+                this._isReloadingCorrectivos = false;
+            }, false);
+        } else {
+            this.mantenimientoManager.llenarMantenimientosCorrectivosPorRango(); // 🔥 ajusta al método real
+            this._isReloadingCorrectivos = false;
+        }
     }
 }
 
@@ -641,6 +655,7 @@ class MantenimientoManager {
                             const tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
                             const esAdmin = tipoUsuario === "AdminMtto" || tipoUsuario === "Administrador";
                             const esTecnico = tipoUsuario === "TecnicoMtto";
+                            const esSupProduccion = tipoUsuario === "Produccion";
 
                             const estatusOrden = row.EstatusOrden || '';
                             const ordenFinalizada = row.OrdenTrabajoFinalizada || '';
@@ -648,7 +663,7 @@ class MantenimientoManager {
                             if (estatusOrden && estatusOrden !== '') {
 
                                 // ================= REFACCION =================
-                                if (estatusOrden == 3 || estatusOrden == 4 || ordenFinalizada === "SI") {
+                                if (estatusOrden == 3 || estatusOrden == 4 || ordenFinalizada === "SI" || esSupProduccion) {
                                     refaccionbutton = `
                             <button class="btn btn-sm btn-ptm-secondary" disabled
                                 data-bs-toggle="tooltip" title="Solicitar Refacción">
@@ -684,7 +699,7 @@ class MantenimientoManager {
                                 // ================= IMPRESION =================
                                 let impresionbutton = "";
 
-                                if (!esTecnico) {
+                                if (!esTecnico && !esSupProduccion) {
                                     if (estatusOrden == 4 || ordenFinalizada === "SI") {
                                         impresionbutton = `
                                 <button class="btn btn-sm btn-ptm-secondary" disabled
@@ -1548,10 +1563,15 @@ class MantenimientoManager {
     }
     // 🔥 MÉTODO SEPARADO PARA GUARDAR LA OT (también async)
     async guardarOTDefinitivo(datos) {
+        let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
         return new Promise((resolve, reject) => {
             $.ajax({
                 url: `/${this.URLBase}/InsertarOrdenTrabajoMC`,
                 type: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Rol-Usuario': TipoUsuario  // 👈 esto
+                },
                 contentType: 'application/json; charset=utf-8',
                 data: JSON.stringify(datos),
                 dataType: 'json',

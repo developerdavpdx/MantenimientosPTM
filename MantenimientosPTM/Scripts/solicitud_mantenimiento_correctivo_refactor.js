@@ -158,9 +158,15 @@ class MantenimientoManager {
         $("#btnGuardarCorrectivo").html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
         $("#btnGuardarCorrectivo").prop("disabled", true);
 
+        let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+
         $.ajax({
             url: `/${this.URLBase}/InsertarSolicitudMC`,
             type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Rol-Usuario': TipoUsuario  // 👈 esto
+            },
             contentType: 'application/json; charset=utf-8',
             data: JSON.stringify(datos),
             dataType: 'json',

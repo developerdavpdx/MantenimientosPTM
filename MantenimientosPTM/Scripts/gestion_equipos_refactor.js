@@ -966,11 +966,11 @@ class EquipoManager {
         e.preventDefault();
         $('#modalEquipoTitulo').text('Agregar Nuevo Equipo');
         $('#formEquipo')[0].reset();
+        ValidationManager.limpiarValidacion('#formEquipo'); // AGREGAR ESTA LÍNEA
         $('#equipoId').val('');
-        $('#Planta').val(this.PLANTA);
+        $('#Planta').val(`${this.PLANTA}`);
         var fechaActual = new Date().toISOString().split('T')[0];
         $("#FechaInicioMant").attr("min", fechaActual);
-        ValidationManager.limpiarValidacion('#formEquipo'); // AGREGAR ESTA LÍNEA
         $("#TipoEquipo").prop("disabled", false);
         $("#PeriodicidadMantenimiento").prop("disabled", false);
         $("#DiaInicioMant").prop("disabled", false);
