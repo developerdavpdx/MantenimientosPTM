@@ -64,6 +64,14 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOConsultarTiposEquipo\"";
             }
         }
+
+        public string GCConsultarPeriodicidadMP
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOConsultarPeriodicidadMP\"";
+            }
+        }
         public string GCMantenimientoAnual
         {
             get

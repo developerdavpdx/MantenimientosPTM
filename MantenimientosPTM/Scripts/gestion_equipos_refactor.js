@@ -106,6 +106,31 @@ class GestionEquiposApp {
 
         // ✅ CORRECTO - Debes pasar "e" como parámetro
         $('#formAgregarTipoEquipo').on('submit', (e) => this.equipoManager.InsertarTipoEquipo(e));
+
+        // Botón aplicar filtros
+        $('#btnAplicarFiltros').off('click').on('click', function () {
+            $('#tablaEquipos').DataTable().ajax.reload();
+        });
+
+        // Botón limpiar filtros
+        $('#btnLimpiarFiltros').off('click').on('click', function () {
+            $('#FiltroLinea').val('');
+            $('#FiltroProceso').val('');
+            $('#FiltroOrdenTrabajo').val('');
+            $('#FiltroFechaInicioMantenimiento').val('');
+            $('#tablaEquipos').DataTable().ajax.reload();
+        });
+
+        // Opcional: Filtrar automáticamente al cambiar los selects
+        $('#FiltroLinea, #FiltroProceso,#FiltroFechaInicioMantenimiento,#FiltroEstatus').off('change').on('change', function () {
+            $('#tablaEquipos').DataTable().ajax.reload();
+        });
+
+        $('#FiltroOrdenTrabajo').on('keypress', function (e) {
+            if (e.key === 'Enter') {
+                $('#tablaEquipos').DataTable().ajax.reload();
+            }
+        });
     }
 
     configurarEventosPDF() {
@@ -322,6 +347,7 @@ class EquipoManager {
         EquiposUtil.llenarProcesos(this.PLANTA, "Area", "FiltroProceso");
         EquiposUtil.llenarRangoDias();
         this.inicializarCorreos(); // 🔥 AGREGAR AQUÍ
+        this.llenarPeriodicidad("PeriodicidadMantenimiento");
         console.log('✅ EquipoManager inicializada correctamente');
     }
 
@@ -870,13 +896,56 @@ class EquipoManager {
                 }
             });
 
-            this.configurarEventosFiltros();
-
             return table;
 
         } catch (error) {
             AlertManager.mostrar('No es posible mostrar los equipos: ' + error, 'warning');
         }
+    }
+
+    llenarPeriodicidad(Fieldoptiongroup) {
+        const selectElement = $(`#${Fieldoptiongroup}`);
+
+        $.ajax({
+            url: `/${GlobalUtil.URLBaseEquipos}/GetPeriodicidadesMP`,
+            type: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            success: (data) => {
+                if (data.Status === 'OK') {
+                    let periodicidadData = data.Data;
+
+                    if (typeof periodicidadData === 'string') {
+                        try {
+                            periodicidadData = JSON.parse(periodicidadData);
+                        } catch (e) {
+                            console.warn('No se pudo parsear Data:', e);
+                        }
+                    }
+
+                    selectElement.empty();
+                    selectElement.append('<option value="">Seleccionar periodicidad...</option>');
+
+                    periodicidadData.forEach(p => {
+                        selectElement.append(
+                            `<option value="${p.ID_PERIODICIDAD}">🔹 ${p.DESCRIPCION}</option>`
+                        );
+                    });
+
+                } else if (data.Status === 'NO') {
+                    AlertManager.mostrar(data.Message, 'warning');
+                } else if (data.Status === 'warning') {
+                    AlertManager.mostrar('Error: ' + data.Message, 'warning');
+                }
+            },
+            error: () => {
+                AlertManager.mostrar(
+                    'Error de conexión. No fue posible obtener el listado de periodicidades.',
+                    'warning'
+                );
+            }
+        });
     }
 
     // Método auxiliar para cargar datos de periodicidad
@@ -892,38 +961,6 @@ class EquipoManager {
         $('#DiaFinMant').val(periodicidadData.fin);
     }
 
-    // ========================================
-    // EVENTOS
-    // ========================================
-    // Agregar al final de tu clase o después de inicializar la tabla
-    configurarEventosFiltros() {
-        const self = this;
-
-        // Botón aplicar filtros
-        $('#btnAplicarFiltros').off('click').on('click', function () {
-            $('#tablaEquipos').DataTable().ajax.reload();
-        });
-
-        // Botón limpiar filtros
-        $('#btnLimpiarFiltros').off('click').on('click', function () {
-            $('#FiltroLinea').val('');
-            $('#FiltroProceso').val('');
-            $('#FiltroOrdenTrabajo').val('');
-            $('#FiltroFechaInicioMantenimiento').val('');
-            $('#tablaEquipos').DataTable().ajax.reload();
-        });
-
-        // Opcional: Filtrar automáticamente al cambiar los selects
-        $('#FiltroLinea, #FiltroProceso,#FiltroFechaInicioMantenimiento,#FiltroEstatus').off('change').on('change', function () {
-            $('#tablaEquipos').DataTable().ajax.reload();
-        });
-
-        $('#FiltroOrdenTrabajo').on('keypress', function (e) {
-            if (e.key === 'Enter') {
-                $('#tablaEquipos').DataTable().ajax.reload();
-            }
-        });
-    }
     // Método auxiliar para convertir fecha de DD/MM/YYYY a YYYY-MM-DD
     convertirFechaParaInput(fecha) {
         if (!fecha || fecha === '--' || fecha === '') return '';
@@ -1255,8 +1292,8 @@ class EquipoManager {
     abrirModalAgregarLinea(e) {
         e.preventDefault();
         $('#formLinea')[0].reset();
-        $('#PlantaLine').val(this.PLANTA);
         ValidationManager.limpiarValidacion('#formLinea'); // AGREGAR ESTA LÍNEA
+        $('#PlantaLine').val(`${this.PLANTA}`);
         $('#lineaModal').modal('show');
     }
 
