@@ -610,6 +610,63 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        [HttpGet]
+        public JsonResult GetPeriodicidadesMP()
+        {
+            GlobalCommands.JsonResponseMtto jsonResponse;
+
+            try
+            {
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCConsultarPeriodicidadMP, null);
+
+                if (resultHana.JsonResult == "[]")
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+
+                        Status = "NO",
+                        Message = "No fue posible obtener el listado de periodicidades de mantenimientos, no se encontró información relacionada.",
+                        Data = string.Empty
+                    };
+                }
+                else if (resultHana.JsonResult.Contains("Error"))
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "ERROR",
+                        Message = "No fue posible obtener el listado de periodicidades de mantenimientos: " + resultHana.JsonResult,
+                        Data = string.Empty
+                    };
+                }
+                else
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+
+                        Status = "OK",
+                        Message = "Listado de periodicidades obtenida correctamente.",
+                        Data = resultHana.JsonResult
+                    };
+                }
+
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+
+            }
+            catch (Exception ex)
+            {
+                jsonResponse = new GlobalCommands.JsonResponseMtto()
+                {
+
+                    Status = "ERROR",
+                    Message = "No fue posible obtener el listado de periodicidades de mantenimientos: " + ex.ToString(),
+                    Data = string.Empty
+                };
+
+                return Json(jsonResponse);
+            }
+        }
+
         [HttpPost]
         public JsonResult GetEquipos()
         {

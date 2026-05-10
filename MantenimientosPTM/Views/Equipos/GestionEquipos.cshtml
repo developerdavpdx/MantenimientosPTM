@@ -11,7 +11,7 @@
                     <!-- Título -->
                     <div class="col-12 col-lg-4">
                         <h4 class="mb-0 text-color-logo">
-                            <i class="bi bi-gear-wide-connected me-2"></i>Equipos De Producción
+                            <i class="bi bi-gear-wide-connected me-2"></i>Equipos De Mantenimiento
                         </h4>
                     </div>
                     <!-- Botones -->
@@ -301,12 +301,13 @@
                                 </label>
                                 <select class="form-select-custom" id="PeriodicidadMantenimiento" name="PeriodicidadMantenimiento" required autocomplete="off">
                                     <option value="">Seleccionar periodicidad...</option>
-                                    <option value="mensual">🔹 Mensual</option>
+                                    @*<option value="mensual">🔹 Mensual</option>
                                     <option value="bimestral">🔹 Bimestral</option>
                                     <option value="trimestral">🔹 Trimestral</option>
+                                    <option value="cuatrimestral">🔹 Cuatrimestral</option>
                                     <option value="quinquemestre">🔹 Quinquemestre</option>
                                     <option value="semestral">🔹 Semestral</option>
-                                    <option value="anual">🔹 Anual</option>
+                                    <option value="anual">🔹 Anual</option>*@
                                 </select>
                                 <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione la periodicidad.</div>
                             </div>
@@ -491,12 +492,6 @@
 
                     <!-- Información -->
                     <div class="mb-3">
-                        <h6 class="mb-3 pb-2 border-bottom"
-                            style="color: var(--modal-primary); font-weight:700;">
-                            <i class="bi bi-gear-fill me-2"></i>
-                            Información del Tipo
-                        </h6>
-
                         <!-- Tipo de Equipo -->
                         <div class="col-12 mb-3">
                             <label class="form-label-custom" for="NombreTipoEquipo">
