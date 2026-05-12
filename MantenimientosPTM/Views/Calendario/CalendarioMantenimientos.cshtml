@@ -44,13 +44,28 @@
                                     </select>
                                 </div>
 
+                                <!-- Proceso -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroArea">
+                                        <i class="bi bi-gear-fill"></i> Proceso
+                                    </label>
+                                    <div class="select-wrapper">
+                                        <select class="filtro-input" id="FiltroArea" name="FiltroArea">
+                                            <option value="">Todos los procesos...</option>
+                                        </select>
+                                        <div class="select-loader d-none" id="loader_FiltroArea">
+                                            <span class="spinner-border spinner-border-sm"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Línea de Producción -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl-2">
                                     <label class="filtro-label" for="FiltroLineaProduccion">
-                                        <i class="bi bi-diagram-3-fill"></i> Línea Producción
+                                        <i class="bi bi-diagram-3-fill"></i> Línea de Producción
                                     </label>
                                     <div class="select-wrapper">
-                                        <select class="filtro-input" id="FiltroLineaProduccion" name="FiltroLineaProduccion">
+                                        <select class="filtro-input" id="FiltroLineaProduccion" name="FiltroLineaProduccion" disabled>
                                             <option value="">Todas las líneas...</option>
                                         </select>
                                         <div class="select-loader d-none" id="loader_FiltroLineaProduccion">

@@ -4,7 +4,8 @@
 class GestionEventosApp {
     constructor() {
         this.URLBase = "Calendario";
-        this.calendarManager = new CalendarManager(this.URLBase);
+        this.datos_usuario = GlobalUtil.getDatosUsuario(); // ✅ Variable local
+        this.calendarManager = new CalendarManager(this.URLBase, this.datos_usuario);
     }
 
     inicializar() {
@@ -16,6 +17,35 @@ class GestionEventosApp {
 
         // Configurar evento para guardar nuevo mantenimiento
         $('#btnGuardarEvento').on('click', () => this.guardarEvento());
+
+        // Botón aplicar filtros
+        $('#btnAplicarFiltros').on('click', () => this.calendarManager.aplicarFiltros());
+
+        // Botón limpiar filtros
+        $('#btnLimpiarFiltros').on('click', () => this.calendarManager.limpiarFiltros());
+
+        $('#FiltroLineaProduccion, #FiltroTipoMantenimiento, #FiltroFechaInicio, #FiltroFechaFin')
+            .off('change')
+            .on('change', () => {
+                this.calendarManager.aplicarFiltros();
+            });
+
+        // Cargar líneas de producción únicas para el filtro (se cargará después de obtener datos)
+
+        $("#FiltroArea")
+            .off('change')
+            .on('change', (e) => {
+
+                let Area = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Area,
+                    1,
+                    "FiltroLineaProduccion",
+                    null
+                );
+            });
 
         console.log('✅ Sistema Completo de Gestión de Eventos inicializado correctamente');
     }
@@ -89,8 +119,9 @@ class UIManager {
 // GESTOR DE CALENDARIO
 // ========================================
 class CalendarManager {
-    constructor(URLBase) {
+    constructor(URLBase, datos_usuario) {
         this.URLBase = URLBase;
+        this.datos_usuario = datos_usuario;
         this.calendarEl = document.getElementById('calendar');
         this.selectedDate = '';
         this.calendar = null;
@@ -128,22 +159,8 @@ class CalendarManager {
 
         this.calendar.render();
 
-        // Configurar eventos de filtros
-        this.configurarFiltros();
-
         // ✅ Cargar los eventos reales desde HANA
         this.cargarEventosReales();
-    }
-
-    // ✅ Configurar filtros
-    configurarFiltros() {
-        // Botón aplicar filtros
-        $('#btnAplicarFiltros').on('click', () => this.aplicarFiltros());
-
-        // Botón limpiar filtros
-        $('#btnLimpiarFiltros').on('click', () => this.limpiarFiltros());
-
-        // Cargar líneas de producción únicas para el filtro (se cargará después de obtener datos)
     }
 
     // ✅ Función para obtener mantenimientos completados del SP
@@ -281,9 +298,6 @@ class CalendarManager {
                     this.calendar.addEvent(evento);
                 });
 
-                // Cargar líneas de producción para el filtro
-                this.cargarLineasProduccion();
-
                 AlertManager.mostrar(
                     `Se cargaron ${eventosCalendario.length} mantenimientos completados`,
                     'success'
@@ -294,6 +308,10 @@ class CalendarManager {
                 this.calendar.removeAllEvents();
                 AlertManager.mostrar('No hay mantenimientos completados en el período seleccionado', 'info');
             }
+
+            // ✅ Cargar líneas de producción para el filtro
+            EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, null, "FiltroArea");
+
         } catch (error) {
             console.error('❌ Error al cargar mantenimientos:', error);
             AlertManager.mostrar('Error al cargar el calendario de mantenimientos', 'warning');
@@ -301,25 +319,6 @@ class CalendarManager {
             // ✅ Ocultar loader siempre (éxito o error)
             GlobalUtil.mostrarLoader(false);
         }
-    }
-
-    // ✅ Cargar líneas de producción para el filtro
-    cargarLineasProduccion() {
-        const lineasUnicas = new Set();
-
-        this.todosLosEventos.forEach(evento => {
-            if (evento.extendedProps.line) {
-                lineasUnicas.add(evento.extendedProps.line);
-            }
-        });
-
-        const selectLinea = $('#FiltroLineaProduccion');
-        selectLinea.empty();
-        selectLinea.append('<option value="">Todas las líneas...</option>');
-
-        Array.from(lineasUnicas).sort().forEach(linea => {
-            selectLinea.append(`<option value="${linea}">${linea}</option>`);
-        });
     }
 
     // ✅ Aplicar filtros

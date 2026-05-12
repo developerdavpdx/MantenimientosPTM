@@ -113,8 +113,8 @@ namespace MantenimientosPTM.Controllers
                 // ✅ TODOS LOS FILTROS SE ENVÍAN A HANA
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FECHA_INICIO", (AditionalFilter ? (object)null : dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_FECHA_FIN", (AditionalFilter ? (object)null : dtFechaFin, ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN", (dtFechaFin, ParameterDirection.Input, HanaDbType.Date) },
                     { "P_FILTRO_AREA", (string.IsNullOrEmpty(FiltroArea) ? (object)null : FiltroArea, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_ORDEN", (string.IsNullOrEmpty(FiltroOrdenTrabajo) ? (object)null : FiltroOrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },

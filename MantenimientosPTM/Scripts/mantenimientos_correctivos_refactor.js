@@ -209,6 +209,21 @@ class MantenimientosPreventivoApp {
 
             $("#DuracionHrs").val(horas.toFixed(2));
         });
+
+        $("#FiltroArea")
+            .off('change')
+            .on('change', (e) => {
+
+                let Area = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Area,
+                    1,
+                    "FiltroLinea",
+                    null
+                );
+            });
     }
 
     configurarEventosPDF() {
@@ -942,7 +957,23 @@ class MantenimientoManager {
                     }
                 },
                 drawCallback: function () {
+
                     table.columns.adjust();
+
+                    // 🔥 Corregir ancho del empty table
+                    const api = this.api();
+
+                    if (api.data().count() === 0) {
+
+                        const totalColumnas = api.columns().visible().reduce((a, b) => a + (b ? 1 : 0), 0);
+
+                        $('#tablaMantenimientosRango tbody td.dt-empty')
+                            .attr('colspan', totalColumnas)
+                            .css({
+                                'text-align': 'center',
+                                'width': '100%'
+                            });
+                    }
                 }
             });
 
@@ -1287,6 +1318,7 @@ class MantenimientoManager {
             HoraAperturaOT = horaParte.substring(0, 5);
             $("#FechaInicioExtrema").val(`${anio}-${mes}-${dia}`);
             $("#HoraInicio").val(HoraAperturaOT);
+            $("#HoraInicioTrabajo").val(HoraAperturaOT);
         }
 
         $("#Scrap").val(data.scrap);
