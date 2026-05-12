@@ -126,6 +126,36 @@ class GestionEquiposApp {
             $('#tablaEquipos').DataTable().ajax.reload();
         });
 
+        $("#Area")
+            .off('change')
+            .on('change', (e) => {
+
+                let Area = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Area,
+                    1,
+                    "LineaProduccion",
+                    null
+                );
+            });
+
+        $("#FiltroProceso")
+            .off('change')
+            .on('change', (e) => {
+
+                let Proceso = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Proceso,
+                    1,
+                    "FiltroLinea",
+                    null
+                );
+            });
+
         $('#FiltroOrdenTrabajo').on('keypress', function (e) {
             if (e.key === 'Enter') {
                 $('#tablaEquipos').DataTable().ajax.reload();
@@ -343,7 +373,6 @@ class EquipoManager {
         this.Email = datos_usuario[0].EMAIL;
         this.llenarEquipos();
         EquiposUtil.llenarTipoEquipos();
-        EquiposUtil.llenarLineas(this.PLANTA, "LineaProduccion", "FiltroLinea");
         EquiposUtil.llenarProcesos(this.PLANTA, "Area", "FiltroProceso");
         EquiposUtil.llenarRangoDias();
         this.inicializarCorreos(); // 🔥 AGREGAR AQUÍ
@@ -435,7 +464,6 @@ class EquipoManager {
         $("#errorCorreo").hide();
         this.renderCorreos();
     }
-
 
     llenarEquipos() {
         try {
@@ -805,7 +833,7 @@ class EquipoManager {
                 ordering: false,
                 info: true,
                 bPaginate: true,
-                pageLength: 200,
+                pageLength: 1000,
                 lengthMenu: [[10, 25, 50, 100, 200, 500, 1000], [10, 25, 50, 100, 200, 500, 1000]],
                 language: {
                     lengthMenu: "Mostrar _MENU_ registros",
@@ -1055,7 +1083,19 @@ class EquipoManager {
             $('#Estatus').val(equipoData.estatus);
             $('#Comentarios').val(equipoData.comentarios);
             $('#Area').val(equipoData.idarea);
-            $('#LineaProduccion').val(equipoData.idlineaproduccion);
+            //Seleccionar la linea
+            EquiposUtil.llenarLineas(
+                this.datos_usuario[0].PLANTA,
+                equipoData.idarea,
+                1,
+                "LineaProduccion",
+                null,
+                () => {
+
+                    $('#LineaProduccion')
+                        .val(equipoData.idlineaproduccion);
+                }
+            );
 
             // Cargar datos de periodicidad
             this.cargarPeriodicidad(periodicidadData);

@@ -140,13 +140,19 @@ namespace MantenimientosPTM
             // Planta
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
-            public string Planta { get; set; }
+            public int? Planta { get; set; }
 
-            // Planta
+            // Area
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
-            public string Area { get; set; }
+            public int? Area { get; set; }
+
+            // Produccion
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public int? Produccion { get; set; }
         }
+
         public class EquipoSeleccionado
         {
             // Planta
