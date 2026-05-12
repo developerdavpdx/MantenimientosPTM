@@ -927,7 +927,7 @@ namespace MantenimientosPTM.Controllers
             }
         }
         [HttpGet]
-        public JsonResult GetLineasPorPlanta(string PLANTA, string AREA)
+        public JsonResult GetLineasPorPlanta(int? PLANTA, int? AREA,int? PRODUCCION)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
             AccesoDatosEquipos.PlantaSeleccionada RequestData;
@@ -935,9 +935,21 @@ namespace MantenimientosPTM.Controllers
             try
             {
 
+                if (!PLANTA.HasValue)
+                {
+                    return Json(new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "NO",
+                        Message = "Falta seleccionar la planta.",
+                        Data = string.Empty
+                    }, JsonRequestBehavior.AllowGet);
+                }
+
+
                 RequestData = new AccesoDatosEquipos.PlantaSeleccionada();
                 RequestData.Planta = PLANTA;
                 RequestData.Area = AREA;
+                RequestData.Produccion = PRODUCCION;
                 // Convertir modelo a parámetros HANA
                 var parameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
 
@@ -992,7 +1004,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetProcesosPorPlanta(string PLANTA)
+        public JsonResult GetProcesosPorPlanta(int? PLANTA)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
             AccesoDatosEquipos.PlantaSeleccionada RequestData;
@@ -1005,7 +1017,7 @@ namespace MantenimientosPTM.Controllers
                 // Convertir modelo a parámetros HANA
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
 
-                var excludedParams = new[] { "P_AREA" }; // 🔹 Cambié a mayúsculas
+                var excludedParams = new[] { "P_AREA","P_PRODUCCION" }; // 🔹 Cambié a mayúsculas
                 var parameters = allparameters
                     .Where(p => !excludedParams.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value);

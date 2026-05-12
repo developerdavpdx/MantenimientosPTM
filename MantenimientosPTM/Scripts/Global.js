@@ -264,7 +264,7 @@ class ValidationManager {
 // ========================================
 class EquiposUtil {
 
-    static llenarLineas(Planta, Fieldoptiongroup, Fieldfilter) {
+    static llenarLineas(Planta, Area, Produccion, Fieldoptiongroup, Fieldfilter, callback = null) {
 
         const selectElement = $(`#${Fieldoptiongroup}`);
         const FiltroLinea = $(`#${Fieldfilter}`);
@@ -276,7 +276,7 @@ class EquiposUtil {
         $.ajax({
             url: `/${GlobalUtil.URLBaseEquipos}/GetLineasPorPlanta`,
             type: 'GET',
-            data: { "Planta": Planta },
+            data: { "PLANTA": Planta, "AREA": Area,"PRODUCCION":Produccion },
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -300,7 +300,8 @@ class EquiposUtil {
                     selectElement.empty();
                     FiltroLinea.empty();
 
-                    selectElement.append('<option value="">Selecciona la linea de producción</option>');
+                    selectElement.append('<option value="">Todas las líneas</option>');
+                    selectElement.prop("disabled", false);
                     FiltroLinea.append('<option value="">Todas las líneas</option>');
 
                     // 🔥 Agrupar por planta
@@ -327,6 +328,11 @@ class EquiposUtil {
                         selectElement.append(optgroup1);
                         FiltroLinea.append(optgroup2);
                     });
+
+
+                    if (callback) {
+                        callback();
+                    }
 
                 } else if (data.Status === 'NO') {
 

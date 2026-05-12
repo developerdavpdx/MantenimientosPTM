@@ -29,7 +29,7 @@ class GestionEventosApp {
         $('#btnLimpiarFiltros').on('click', () => this.calendarManager.limpiarFiltros());
 
         //Filtrar
-        $('#FiltroFechaInicio, #FiltroFechaFin, #FiltroMesAnio, #FiltroLinea').on('change', () => {
+        $('#FiltroFechaInicio, #FiltroFechaFin, #FiltroMesAnio, #FiltroLinea,#FiltroProceso').on('change', () => {
             if (this.calendarManager._navegandoCalendario) return; // ✅ ignorar si viene del calendario
             this.calendarManager.cargarEventosReales();
         });
