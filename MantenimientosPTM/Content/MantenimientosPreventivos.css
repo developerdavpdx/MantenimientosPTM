@@ -601,3 +601,27 @@ textarea.form-control-document {
         opacity: 0;
     }
 }
+
+.radio-transition {
+    transition: all 0.35s ease;
+}
+
+    .radio-transition .form-check {
+        animation: fadeRadioIn 0.4s ease;
+    }
+
+@keyframes fadeRadioIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#actualizacionDatosModal {
+    background-color: #ffffffba;
+}

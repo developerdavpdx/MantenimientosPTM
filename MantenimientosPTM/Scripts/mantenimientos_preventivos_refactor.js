@@ -9,6 +9,7 @@ class MantenimientosPreventivoApp {
         this.gestionTecnicos = new GestionTecnicos(this.URLBase);
         this.gestionFirmas = new GestionFirmas();
         this.datos_usuario = GlobalUtil.getDatosUsuario();
+        this.UIManager = new UIManager(this.datos_usuario);
 
         // ✅ Inicializar gestión de artículos custom para MP
         this.gestionArticulosMP = new GestionArticulosCustom(
@@ -42,7 +43,7 @@ class MantenimientosPreventivoApp {
     }
 
     inicializar() {
-        UIManager.inicializarUI(this.datos_usuario);
+        this.UIManager.inicializarUI();
         this.mantenimientoManager.inicializar();
         this.pdfManager.inicializar();
         this.printManager.inicializar();
@@ -125,7 +126,7 @@ class MantenimientosPreventivoApp {
         // ❌ Ya no necesitas esto con arrow functions
         // const self = this;
         // ✅ Arrow function - mantiene el contexto de this automáticamente
-        $('#FiltroFechaInicio, #FiltroFechaFin, #FiltroArea, #FiltroLinea, #FiltroPeriodicidad').on('change', () => {
+        $('#FiltroFechaInicio, #FiltroFechaFin, #FiltroLinea, #FiltroPeriodicidad').on('change', () => {
             const fechaInicio = $('#FiltroFechaInicio').val();
             const fechaFin = $('#FiltroFechaFin').val();
 
@@ -185,6 +186,51 @@ class MantenimientosPreventivoApp {
                 this.mantenimientoManager.llenarMantenimientosPorRango();
             }
         });
+
+        $('#HoraInicio, #HoraFin').on('change', () => {
+            const inicio = $('#HoraInicio').val();
+            const fin = $('#HoraFin').val();
+
+            if (!inicio || !fin) return;
+
+            const toDate = (t) => new Date(`1970-01-01T${t}`);
+
+            const d1 = toDate(inicio);
+            const d2 = toDate(fin);
+
+            if (isNaN(d1) || isNaN(d2)) {
+                $("#DuracionHrs").val('');
+                return;
+            }
+
+            // 🔥 Validación
+            if (d2 < d1) {
+                alert('La hora fin no puede ser menor a la hora inicio.');
+                $('#HoraFin').val('');
+                $("#DuracionHrs").val('');
+                return;
+            }
+
+            const diffMs = d2 - d1;
+            const horas = diffMs / (1000 * 60 * 60);
+
+            $("#DuracionHrs").val(horas.toFixed(2));
+        });
+
+        $("#FiltroArea")
+            .off('change')
+            .on('change', (e) => {
+
+                let Area = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Area,
+                    1,
+                    "FiltroLinea",
+                    null
+                );
+            });
 
         // Lista de refacciones
         $(document).on('click', '.btn-list-refacciones', function () {
@@ -453,6 +499,9 @@ class MantenimientosPreventivoApp {
     // ========================================
 
     _recargarTablaMantenimientos() {
+
+        $('.modal.show').modal('hide');
+
         if (this._isReloading) return;
 
         this._isReloading = true;
@@ -495,7 +544,10 @@ $(document).ready(function () {
 // GESTOR DE UI
 // ========================================
 class UIManager {
-    static inicializarUI(datos_usuario) {
+    constructor(datos_usuario) {
+        this.datos_usuario = datos_usuario;
+    }
+      inicializarUI() {
         // Seleccionar el padre "MantenimientosContainer" y expandir
         $("#MantenimientosContainer").addClass("selected");
         $("#MantenimientosContainer a").addClass("whiteText");
@@ -507,10 +559,10 @@ class UIManager {
 
 
 
-        //if (datos_usuario[0].TIPOUSUARIO != "AdminMtto" || datos_usuario[0].TIPOUSUARIO != "Administrador") {
-        //    $("#btnGenerarOrdenes").addClass("d-none");
-        //    $("#btnExportarExcel").addClass("d-none");
-        //}
+          if (this.datos_usuario[0].TIPOUSUARIO != "AdminMtto" && this.datos_usuario[0].TIPOUSUARIO != "Administrador") {
+            $("#btnGenerarOrdenes").addClass("d-none");
+            $("#btnExportarExcel").addClass("d-none");
+        }
 
         $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
         $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
@@ -812,10 +864,9 @@ class MantenimientoManager {
                         data: "NumeroOrden",
                         className: "text-center",
                         render: (data, type, row) => {
-                            let orden = data || '';
-                            return `<span class="badge bg-primary badge-custom">
-                                <i class="bi bi-clipboard-data me-1"></i>${orden}
-                            </span>`;
+                            const esNueva = row.DescEstatusOrden === 'Liberado';
+                            const punto = esNueva ? `<span class="punto-pulso"></span>` : '';
+                            return `${punto}<span class="badge bg-primary badge-custom"><i class="bi bi-clipboard-data me-1"></i>${data || ''}</span>`;
                         }
                     },
                     // ✅ Col 4: Equipo
@@ -1021,7 +1072,7 @@ class MantenimientoManager {
                 ordering: false,
                 info: true,
                 bPaginate: true,
-                pageLength: 200,
+                pageLength: 1000,
                 lengthMenu: [[10, 25, 50, 100, 200, 500, 1000], [10, 25, 50, 100, 200, 500, 1000]],
                 language: {
                     lengthMenu: "Mostrar _MENU_ registros",
@@ -1063,7 +1114,23 @@ class MantenimientoManager {
                     });
                 },
                 drawCallback: function () {
+
                     table.columns.adjust();
+
+                    // 🔥 Corregir ancho del empty table
+                    const api = this.api();
+
+                    if (api.data().count() === 0) {
+
+                        const totalColumnas = api.columns().visible().reduce((a, b) => a + (b ? 1 : 0), 0);
+
+                        $('#tablaMantenimientosRango tbody td.dt-empty')
+                            .attr('colspan', totalColumnas)
+                            .css({
+                                'text-align': 'center',
+                                'width': '100%'
+                            });
+                    }
                 }
             });
 
@@ -1693,16 +1760,16 @@ class MantenimientoManager {
 
         const key = `${numeroOrden}_${tipo}`;
 
-        if (!this.cacheTecnicos) {
-            this.cacheTecnicos = {};
-        }
+        //if (!this.cacheTecnicos) {
+        //    this.cacheTecnicos = {};
+        //}
 
-        // 🔥 CACHE
-        if (this.cacheTecnicos[key]) {
-            if (this.cacheTecnicos[key].length > 0)
-                this.gestionTecnicos.cargarTecnicosDesdeDB(this.cacheTecnicos[key]);
-            return;
-        }
+        //// 🔥 CACHE
+        //if (this.cacheTecnicos[key]) {
+        //    if (this.cacheTecnicos[key].length > 0)
+        //        this.gestionTecnicos.cargarTecnicosDesdeDB(this.cacheTecnicos[key]);
+        //    return;
+        //}
 
         $.ajax({
             url: `/${this.URLBaseCorrectivos}/ObtenerTecnicosOT`,
@@ -1723,7 +1790,7 @@ class MantenimientoManager {
 
             success: (data) => {
 
-                this.cacheTecnicos[key] = data;
+                //this.cacheTecnicos[key] = data;
 
                 this.gestionTecnicos.cargarTecnicosDesdeDB(data);
             },
@@ -2317,30 +2384,77 @@ class MantenimientoManager {
                                 //✅ TRANSFORMAR LAS FIRMAS A RADIOBUTTONS PARA TECNICO
                                 if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
                                     $('#rutinaChecklist .actividad').each(function (index) {
+
                                         const actividadNum = index + 1;
                                         const firmaContainer = $(this).find('.d-flex.gap-4.mt-2');
-                                        // Crear los radiobuttons
+
                                         const radioHTML = `
-                                        <div class="d-flex gap-4 mt-2">
-                                            <div class="form-check position-relative">
-                                                <input class="form-check-input" type="radio" name="actividad_${actividadNum}" id="actividad_${actividadNum}_realizado" value="realizado" required>
-                                                <label class="form-check-label fw-semibold" for="actividad_${actividadNum}_realizado">
-                                                    Realizado
-                                                </label>
-                                                 <div class="invalid-feedback custom-invalid-feedback">
-                                                    ⚠️ Por favor complete la actividad.
+                                            <div class="radio-transition d-flex gap-4 mt-2" style="display:none;">
+            
+                                                <div class="form-check position-relative">
+                                                    <input class="form-check-input" 
+                                                           type="radio" 
+                                                           name="actividad_${actividadNum}" 
+                                                           id="actividad_${actividadNum}_realizado" 
+                                                           value="realizado" 
+                                                           required>
+
+                                                    <label class="form-check-label fw-semibold"
+                                                           for="actividad_${actividadNum}_realizado">
+                                                        Realizado
+                                                    </label>
+
+                                                    <div class="invalid-feedback custom-invalid-feedback">
+                                                        ⚠️ Por favor complete la actividad.
+                                                    </div>
                                                 </div>
+
+                                                <div class="form-check">
+                                                    <input class="form-check-input"
+                                                           type="radio"
+                                                           name="actividad_${actividadNum}"
+                                                           id="actividad_${actividadNum}_no_realizado"
+                                                           value="no_realizado">
+
+                                                    <label class="form-check-label fw-semibold"
+                                                           for="actividad_${actividadNum}_no_realizado">
+                                                        No Realizado
+                                                    </label>
+                                                </div>
+
                                             </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="actividad_${actividadNum}" id="actividad_${actividadNum}_no_realizado" value="no_realizado">
-                                                <label class="form-check-label fw-semibold" for="actividad_${actividadNum}_no_realizado">
-                                                    No Realizado
-                                                </label>
-                                            </div>
-                                        </div>
-                                    `;
-                                        // Reemplazar el contenido
-                                        firmaContainer.replaceWith(radioHTML);
+                                        `;
+
+                                        // 🔥 Animación fluida
+                                        firmaContainer.fadeOut(250, function () {
+
+                                            $(this).replaceWith(radioHTML);
+
+                                            const nuevoRadio = $(
+                                                `input[name="actividad_${actividadNum}"]`
+                                            ).closest('.radio-transition');
+
+                                            nuevoRadio
+                                                .hide()
+                                                .css({
+                                                    opacity: 0,
+                                                    transform: 'translateY(10px)'
+                                                })
+                                                .slideDown(250)
+                                                .animate({
+                                                    opacity: 1
+                                                }, {
+                                                    duration: 300,
+                                                    step: function (now) {
+                                                        $(this).css(
+                                                            'transform',
+                                                            `translateY(${10 - (10 * now)}px)`
+                                                        );
+                                                    }
+                                                });
+
+                                        });
+
                                     });
                                 }
 
