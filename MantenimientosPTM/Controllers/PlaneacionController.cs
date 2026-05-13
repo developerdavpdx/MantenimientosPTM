@@ -360,7 +360,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarArticulo(string query, string Usuario)
+        public JsonResult BuscarArticulo(string query, string Usuario,string Planta)
         {
             try
             {
@@ -374,12 +374,13 @@ namespace MantenimientosPTM.Controllers
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
                     { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_USUARIO", (Usuario, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_USUARIO", (Usuario, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA", (Planta, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCConsultaArticulos, // ⬅️ Nombre de tu SP
+                    Logic.AD.GCBuscarArticulos, // ⬅️ Nombre de tu SP
                     parameters
                 );
 
