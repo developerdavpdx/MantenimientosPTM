@@ -43,7 +43,7 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOConsultaOrdenesFabricacion\"";
             }
         }
-        public string GCConsultaArticulos
+        public string GCBuscarArticulos
         {
             get
             {

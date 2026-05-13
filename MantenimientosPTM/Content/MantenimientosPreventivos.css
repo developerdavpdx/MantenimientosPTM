@@ -399,7 +399,6 @@ textarea.form-control-document {
 /* Estilos para autocompletado de técnicos */
 .autocomplete-sugerencias {
     position: absolute;
-    background: white;
     border: 1px solid #ddd;
     border-radius: 4px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -412,7 +411,8 @@ textarea.form-control-document {
 }
 
     .autocomplete-sugerencias.show {
-        display: block;
+        display: flex;
+        flex-direction:column;
     }
 
 .sugerencia-item {
@@ -620,8 +620,4 @@ textarea.form-control-document {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-#actualizacionDatosModal {
-    background-color: #ffffffba;
 }

@@ -18,10 +18,10 @@ x86/
 [Aa][Rr][Mm]64/
 bld/
 
-# Config sensible (excluir, pero crear plantilla)
-Web.config
-Web.Debug.config
-Web.Release.config
+# NO excluir Web.config
+# Web.config
+# Web.Debug.config
+# Web.Release.config
 
 # Logs
 Logs/

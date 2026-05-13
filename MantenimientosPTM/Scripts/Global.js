@@ -276,7 +276,7 @@ class EquiposUtil {
         $.ajax({
             url: `/${GlobalUtil.URLBaseEquipos}/GetLineasPorPlanta`,
             type: 'GET',
-            data: { "PLANTA": Planta, "AREA": Area,"PRODUCCION":Produccion },
+            data: { "PLANTA": Planta, "AREA": Area, "PRODUCCION": Produccion },
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -1763,7 +1763,8 @@ class GestionArticulosCustom {
         inputBuscar, contenedorSugerencias, inputCodigo,
         inputDescripcion, tbodyId = '#bodyArticulosRefaccionMP',
         urlBase = 'Mantenimientos', ModalContainer,
-        excludeArt = [], includeArt = []
+        excludeArt = [], includeArt = [],
+        datos_usuario
     ) {
         this.URLBase = urlBase;
         this._inputBuscar = inputBuscar;
@@ -1777,17 +1778,20 @@ class GestionArticulosCustom {
         this.articulosAgregados = [];
         this.excludeArt = excludeArt;
         this.includeArt = includeArt;
+        this.datos_usuario = datos_usuario;
     }
 
     buscarArticulos(query, Usuario) {
         clearTimeout(this._debounceTimer);
+        let Planta = this.datos_usuario[0].PLANTA;
+
         this._debounceTimer = setTimeout(async () => {
             try {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     // url: `/ProgramaMantenimientos/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario },
+                    data: { query, Usuario, Planta },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);
@@ -1823,10 +1827,26 @@ class GestionArticulosCustom {
     }
 
     _renderItem(articulo) {
-        const item = $(`<div class="sugerencia-item"><div class="sugerencia-nomina">🏷️ ${articulo.CodigoArticulo}</div><div class="sugerencia-nombre">📦 ${articulo.DescripcionArticulo}</div></div>`);
+        const sinStock = articulo.StockDisponible <= 0;
+
+        const badgeStock = sinStock
+            ? `<span class="badge-stock sin-stock-badge"><span class="circulo-badge"></span> Sin stock</span>`
+            : `<span class="badge-stock con-stock-badge"><span class="circulo-badge"></span> Disponible</span>`;
+
+        const item = $(`
+        <div class="sugerencia-item ${sinStock ? 'sin-stock' : ''}">
+            <div class="sugerencia-info">
+                <div class="sugerencia-nomina">🏷️ ${articulo.CodigoArticulo}</div>
+                <div class="sugerencia-nombre">📦 ${articulo.DescripcionArticulo}</div>
+            </div>
+            ${badgeStock}
+        </div>
+    `);
+
         item.on('click', () => {
             this._seleccionarArticulo(articulo);
         });
+
         return item;
     }
 

@@ -519,36 +519,115 @@ class SolicitudRefaccionesApp {
         return this.solicitudIdCounter++;
     }
 
+    // ========================================
+    // SIGNALR MANAGER - SOLICITUD REFACCIONES
+    // ========================================
     initHubSolicitudRefacciones() {
-        //Escuchando eventos con SinalR
-        var hubRefacciones = $.connection.mantenimientoHub;
+        const self = this;
+        const hub = $.connection.mantenimientoHub;
+        let reconnectDelay = 5000;
+        let modalActualizacion = null;
 
-        hubRefacciones.client.actualizarTablaSolicitudRefacciones = function (refaccion) {
-            $('#tablaSolicitudesRefacciones').DataTable().ajax.reload(null, false);
-            console.warn("Posible solicitud de refacciones por técnico de mantenimiento....");
+        const miRol = self.datos_usuario[0].TIPOUSUARIO;
+
+        // ── Todos reciben el aviso excepto quien hizo el cambio ──
+        const debeRecibirAviso = (rolQueCambio) => miRol !== rolQueCambio;
+
+        // ── Inicializar modal una sola vez ──
+        const $modalEl = document.getElementById('actualizacionRefaccionesModal');
+        if ($modalEl) {
+            modalActualizacion = new bootstrap.Modal($modalEl, { backdrop: 'static', keyboard: false });
+
+            document.getElementById('btnConfirmarActualizacion')
+                .addEventListener('click', function () {
+                    modalActualizacion.hide();
+                    self._recargarTablaSolicitudRefacciones();
+                });
+        }
+
+        // ========================================
+        // 📡 EVENTO PRINCIPAL
+        // ========================================
+        hub.client.actualizarTablaSolicitudRefacciones = function (rolQueCambio) {
+            console.warn("📡 Actualización refacciones recibida desde SignalR | Origen:", rolQueCambio || "desconocido");
+
+            // 🔥 Validar si este usuario debe recibir el aviso
+            if (!debeRecibirAviso(rolQueCambio)) {
+                console.info("🔕 Aviso ignorado — no corresponde a este rol:", miRol);
+                return;
+            }
+
+            // 🔥 Evitar múltiples modales apilados
+            if ($modalEl && $modalEl.classList.contains('show')) return;
+
+            // 🔥 Evitar aviso si ya hay un reload en curso
+            if (self._isReloadingRefacciones) return;
+
+            modalActualizacion
+                ? modalActualizacion.show()
+                : self._recargarTablaSolicitudRefacciones();
         };
 
-        $.connection.hub.start().done(function () {
-            console.log("SignalR conectado como:");
+        // ========================================
+        // 🚀 START HUB (con fallback controlado)
+        // ========================================
+        $.connection.hub.start({
+            transport: ['webSockets', 'longPolling']
+        }).done(function () {
+            console.log("✅ SignalR Refacciones conectado | Rol:", miRol);
+            console.log("🚚 Transporte:", $.connection.hub.transport.name);
+        }).fail(function (error) {
+            console.error("❌ Error al conectar SignalR Refacciones:", error);
         });
 
+        // ========================================
+        // 🔄 RECONNECTING
+        // ========================================
         $.connection.hub.reconnecting(function () {
-            console.warn("SignalR reconectando... 🔄");
+            console.warn("🔄 SignalR Refacciones reconectando...");
         });
 
+        // ========================================
+        // 🔁 RECONNECTED — recarga silenciosa
+        // ========================================
         $.connection.hub.reconnected(function () {
-            console.info("SignalR reconectado ✔");
-            $('#tablaSolicitudesRefacciones').DataTable().ajax.reload(null, false);
+            console.info("✅ SignalR Refacciones reconectado | Rol:", miRol);
+            self._recargarTablaSolicitudRefacciones();
+            reconnectDelay = 5000;
         });
 
+        // ========================================
+        // ❌ DISCONNECTED (retry exponencial)
+        // ========================================
         $.connection.hub.disconnected(function () {
-            console.error("SignalR desconectado ❌");
-
-            // Reintento manual
+            console.error("❌ SignalR Refacciones desconectado");
             setTimeout(function () {
+                console.warn(`🔁 Reintentando conexión en ${reconnectDelay / 1000}s...`);
                 $.connection.hub.start();
-            }, 5000);
+                reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+            }, reconnectDelay);
         });
+    }
+
+    // ========================================
+    // 🔁 RECARGA CENTRALIZADA (reutilizable)
+    // ========================================
+    _recargarTablaSolicitudRefacciones() {
+
+        $('.modal.show').modal('hide');
+
+        if (this._isReloadingRefacciones) return;
+
+        this._isReloadingRefacciones = true;
+
+        if ($.fn.DataTable.isDataTable('#tablaSolicitudesRefacciones')) {
+            $('#tablaSolicitudesRefacciones').DataTable().ajax.reload(() => {
+                this._isReloadingRefacciones = false;
+            }, false);
+        } else {
+            this.solicitudManager.llenarSolicitudesRefacciones();
+            this._isReloadingRefacciones = false;
+        }
     }
 
     initDateInputsEM() {
@@ -816,8 +895,9 @@ class SolicitudManager {
             '#bodyArticulosRefaccionMP',
             'Planeacion',
             'alertRefaccionContainer',
-            [110] // Grupos de articulos excluidos
-            // 110 -> Producto Terminado
+            [110],
+            null,
+            this.datos_usuario// Grupos de articulos excluidos 110 -> Producto Terminado
         );
 
         // AUTO COMPLETE NOMBRES CLIENTES

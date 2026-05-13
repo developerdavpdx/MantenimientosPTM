@@ -20,7 +20,9 @@ class MantenimientosPreventivoApp {
             '#bodyArticulosRefaccionMP',
             'Planeacion',
             'alertRefaccionContainer',
-            [110] // Grupos de articulos excluidos 110 -> Producto Terminado
+            [110],
+            null,
+            this.datos_usuario// Grupos de articulos excluidos 110 -> Producto Terminado
         );
 
         this.mantenimientoManager = new MantenimientoManager(
