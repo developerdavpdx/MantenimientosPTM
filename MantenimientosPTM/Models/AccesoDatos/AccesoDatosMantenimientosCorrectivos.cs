@@ -327,7 +327,8 @@ namespace MantenimientosPTM
             [JsonProperty("Estatus")]
             public int Estatus { get; set; }
 
-            [JsonProperty("NivelUrgencia")]
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("Urgente")]
             public string NivelUrgencia { get; set; }
 
             [JsonProperty("DescripcionNecesidad")]

@@ -360,7 +360,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarArticulo(string query, string Usuario,string Planta)
+        public JsonResult BuscarArticulo(string query, string Usuario,string Planta,int? GrupoArticulos)
         {
             try
             {
@@ -375,7 +375,8 @@ namespace MantenimientosPTM.Controllers
                 {
                     { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_USUARIO", (Usuario, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA", (Planta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_PLANTA", (Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_GRUPO_ART", (GrupoArticulos, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure

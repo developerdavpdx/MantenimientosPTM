@@ -270,7 +270,7 @@ namespace MantenimientosPTM
             public int Cantidad { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
+            [DefaultValue("Crítico")]
             public string NivelUrgencia { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]

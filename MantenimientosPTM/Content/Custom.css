@@ -920,8 +920,9 @@ footer {
 .sugerencia-item {
     position: relative;
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     padding: 8px 12px;
 }
