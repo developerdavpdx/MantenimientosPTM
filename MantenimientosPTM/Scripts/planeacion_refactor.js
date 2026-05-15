@@ -5,8 +5,8 @@ class GestionEventosApp {
     constructor() {
         this.URLBase = "Planeacion";
         this.calendarManager = new PlaneacionManager(this.URLBase);
-        this.gestionArticulos = new GestionArticulos();
         this.datos_usuario = GlobalUtil.getDatosUsuario();
+        this.gestionArticulos = new GestionArticulos(this.datos_usuario,110);
     }
 
     inicializar() {
@@ -130,6 +130,21 @@ class GestionEventosApp {
                 real: btn.data('real')
             });
         });
+
+        $("#PlanProceso")
+            .off('change')
+            .on('change', (e) => {
+
+                let Area = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Area,
+                    1,
+                    "PlanLinea",
+                    null
+                );
+            });
     }
 }
 

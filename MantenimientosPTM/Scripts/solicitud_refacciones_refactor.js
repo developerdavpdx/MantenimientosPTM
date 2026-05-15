@@ -1080,7 +1080,7 @@ class SolicitudManager {
                                value="${Cantidad}"
                                ${Estatus === 'Atendida' ? 'readonly' : ''}>
                     </td>
-                    <td>${stock}</td>
+                    <td>${Stock}</td>
                     <td class="text-center">
                         <span class="badge ${urgenciaClass}">${urgenciaText}</span>
                     </td>
@@ -1123,12 +1123,12 @@ class SolicitudManager {
 
         if (!articulos || articulos.length === 0) {
             tbody.html(`
-                <tr>
-                    <td colspan="12" class="text-center text-muted py-4">
-                        <i class="bi bi-inbox me-2"></i>No hay artículos disponibles
-                    </td>
-                </tr>
-            `);
+            <tr>
+                <td colspan="14" class="text-center text-muted py-4">
+                    <i class="bi bi-inbox me-2"></i>No hay artículos disponibles
+                </td>
+            </tr>
+        `);
             $('#badgeTotalArticulos').text('0');
             return;
         }
@@ -1139,97 +1139,127 @@ class SolicitudManager {
         const gastosDefault = 'GIF';
 
         articulos.forEach((art, i) => {
-            let { STOCK: stock, NIVEL_URGENCIA: NivelUrgencia, ESTATUS: Estatus, NOMBRE_ARTICULO: NombreArticulo,
-                REFACCION_SOLICITADA: RefaccionSolicitada, ID_SOLICITUD: IdSolicitud, CANTIDAD: Cantidad
+            let {
+                STOCK: Stock,
+                NIVEL_URGENCIA: NivelUrgencia,
+                ESTATUS: Estatus,
+                NOMBRE_ARTICULO: NombreArticulo,
+                REFACCION_SOLICITADA: RefaccionSolicitada,
+                ID_SOLICITUD: IdSolicitud,
+                CANTIDAD: Cantidad
             } = art;
 
-            stock = 0;
+            // ✅ Guardar la cantidad original ANTES de restar salidas
+            const cantidadOriginal = Cantidad;
 
-            let sa = salidas.find((s) => (s.ItemCode == RefaccionSolicitada));
-
+            const sa = salidas.find(s => s.ItemCode === RefaccionSolicitada);
             if (sa) {
                 Cantidad -= sa.CantidadTotal;
-                console.log("Salida de ese articulo:", sa)
+                console.log('Salida de ese artículo:', sa);
             }
 
-            const urgenciaClass = NivelUrgencia === 'Critico' || NivelUrgencia === 'Crítico' ? 'bg-danger' :
-                NivelUrgencia === 'Urgente' ? 'bg-warning text-dark' : 'bg-primary';
+            // ✅ Evitar cantidad negativa o cero en el max del input
+            const cantidadFinal = Math.max(Cantidad, 0);
+
+            const urgenciaClass = NivelUrgencia === 'Critico' || NivelUrgencia === 'Crítico'
+                ? 'bg-danger'
+                : NivelUrgencia === 'Urgente'
+                    ? 'bg-warning text-dark'
+                    : 'bg-primary';
+
+            const estatusClass = Estatus === 'Atendida'
+                ? 'bg-success'
+                : Estatus === 'Pendiente'
+                    ? 'bg-warning text-dark'
+                    : 'bg-primary';
+
             const urgenciaText = NivelUrgencia || 'N/A';
-
-            const estatusClass = Estatus === 'Atendida' ? 'bg-success' :
-                Estatus === 'Pendiente' ? 'bg-warning text-dark' : 'bg-primary';
             const estatusText = Estatus || 'N/A';
-
             const nombreArticulo = NombreArticulo || RefaccionSolicitada || 'N/A';
+            const isAtendida = Estatus === 'Atendida';
 
-            let btnChangeRef = "";
-
-            if (stock <= 0) {
-                btnChangeRef = `<button class="btn btn-sm btn-ptm-primary btn-change-ref"     
-                                    data-idsolicitud="${IdSolicitud}"
-                                    data-codigo="${RefaccionSolicitada || ''}"
-                                    data-nombre="${nombreArticulo}" >
-                                 <i class="bi bi-arrow-counterclockwise"></i>
-                               </button>`;
+            let btnChangeRef = '';
+            if (Stock <= 0) {
+                btnChangeRef = `
+                <button class="btn btn-sm btn-ptm-primary btn-change-ref"
+                        data-idsolicitud="${IdSolicitud}"
+                        data-codigo="${RefaccionSolicitada || ''}"
+                        data-nombre="${nombreArticulo}">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>`;
             }
-
 
             tbody.append(`
-                <tr class="${Estatus === 'Atendida' ? 'table-success' : ''}">
-                    <td class="text-center">${i + 1}</td>
-                    <td class="text-center">
+            <tr class="${isAtendida ? 'table-success' : ''}">
 
-                     
-                        <input type="checkbox" class="form-check-input chk-articuloSalida"
-                               data-idsolicitud="${IdSolicitud}"
-                               data-codigo="${RefaccionSolicitada || ''}"
-                               data-nombre="${nombreArticulo}"
-                               data-cantidad="${Cantidad}"
-                               data-cantidadoriginal="${Cantidad}"
-                               ${Estatus === 'Atendida' ? 'disabled' : ''}>
-                    </td>
-                     <td class="text-center">
-                        ${btnChangeRef}
-                    </td>
-                    <td><span class="badge bg-dark">${RefaccionSolicitada || 'N/A'}</span></td>
-                    <td>${nombreArticulo}</td>
-                    <td class="text-center">
-                        <input type="number" min="1" max="${Cantidad}" 
-                               class="form-control form-control-sm text-center fw-bold cantidadEditable"
-                               value="${Cantidad}"
-                               ${Estatus === 'Atendida' ? 'readonly' : ''}>
-                    </td>
-                    <td>${stock}</td>
-                    <td class="text-center">
-                        <span class="badge ${urgenciaClass}">${urgenciaText}</span>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge ${estatusClass}">${estatusText}</span>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm departamento text-center" 
-                               value="${this.datosUsuarioSalida.dept || ''}" readonly>
-                    </td>
-                    <td>
-                        <select class="form-select form-select-sm proceso">
-                            ${this.buildOptions(this.ListProcesos, 'PrcCode', procesoDefault)}
-                        </select>
-                    </td>
-                    <td>
-                        <select class="form-select form-select-sm gastos">
-                            ${this.buildOptions(this.ListGastos, 'PrcCode', gastosDefault)}
-                        </select>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm cedis text-center" 
-                               value="${this.datosUsuarioSalida.cedis || ''}" readonly>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm nombre_empleado" 
-                               value="${this.datosUsuarioSalida.nombre || ''}">
-                    </td>
-                </tr>
-            `);
+                <td class="text-center align-middle">${i + 1}</td>
+
+                <td class="text-center align-middle">
+                    <input type="checkbox" class="form-check-input chk-articuloSalida"
+                           data-idsolicitud="${IdSolicitud}"
+                           data-codigo="${RefaccionSolicitada || ''}"
+                           data-nombre="${nombreArticulo}"
+                           data-cantidad="${cantidadFinal}"
+                           data-cantidadoriginal="${cantidadOriginal}"
+                           ${isAtendida ? 'disabled' : ''}>
+                </td>
+
+                <td class="text-center align-middle">
+                    ${btnChangeRef}
+                </td>
+
+                <td class="text-center align-middle">
+                    <span class="badge bg-dark">${RefaccionSolicitada || 'N/A'}</span>
+                </td>
+
+                <td class="align-middle">${nombreArticulo}</td>
+
+                <td class="text-center align-middle">
+                    <input type="number" min="1" max="${cantidadFinal}"
+                           class="form-control form-control-sm text-center fw-bold cantidadEditable"
+                           value="${cantidadFinal}"
+                           ${isAtendida ? 'readonly' : ''}>
+                </td>
+
+                <td class="text-center align-middle">${Stock}</td>
+
+                <td class="text-center align-middle">
+                    <span class="badge ${urgenciaClass}">${urgenciaText}</span>
+                </td>
+
+                <td class="text-center align-middle">
+                    <span class="badge ${estatusClass}">${estatusText}</span>
+                </td>
+
+                <td class="text-center align-middle">
+                    <input type="text" class="form-control form-control-sm departamento text-center"
+                           value="${this.datosUsuarioSalida.dept || ''}" readonly>
+                </td>
+
+                <td class="text-center align-middle">
+                    <select class="form-select form-select-sm proceso">
+                        ${this.buildOptions(this.ListProcesos, 'PrcCode', procesoDefault)}
+                    </select>
+                </td>
+
+                <td class="text-center align-middle">
+                    <select class="form-select form-select-sm gastos">
+                        ${this.buildOptions(this.ListGastos, 'PrcCode', gastosDefault)}
+                    </select>
+                </td>
+
+                <td class="text-center align-middle">
+                    <input type="text" class="form-control form-control-sm cedis text-center"
+                           value="${this.datosUsuarioSalida.cedis || ''}" readonly>
+                </td>
+
+                <td class="text-center align-middle">
+                    <input type="text" class="form-control form-control-sm nombre_empleado text-center"
+                           value="${this.datosUsuarioSalida.nombre || ''}">
+                </td>
+
+            </tr>
+        `);
         });
 
         this.actualizarContadorArticulos();

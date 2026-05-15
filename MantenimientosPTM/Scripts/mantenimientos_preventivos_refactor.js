@@ -798,6 +798,7 @@ class MantenimientoManager {
                             const tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
                             const esAdmin = tipoUsuario === "AdminMtto" || tipoUsuario === "Administrador";
                             const esTecnico = tipoUsuario === "TecnicoMtto";
+                            const esSupProduccion = tipoUsuario === "Produccion";
                             const tieneRefacciones = data.TieneRefaciones;
 
                             const estatusOrden = row.EstatusOrden || '';
@@ -2032,7 +2033,7 @@ class MantenimientoManager {
             case 2:
                
                 break;
-
+                GestionArticulosCustom
         }
         // bloquear correctamente
         this.gestionFirmas._bloquearFirma("Realizo", true);
@@ -3682,6 +3683,8 @@ class GestionFirmas {
             // 5. Agregar clase visual al contenedor
             container.addClass('firma-deshabilitada');
 
+            container.removeClass('firma-readonly');
+
 
         } else {
             // ✅ HABILITAR
@@ -3795,6 +3798,8 @@ class GestionFirmas {
 
         // 🔥 5. Clase ligera (por si quieres estilos después)
         container.addClass('firma-readonly');
+
+        container.removeClass('firma-deshabilitada')
     }
 
     _desbloquearFirmas() {

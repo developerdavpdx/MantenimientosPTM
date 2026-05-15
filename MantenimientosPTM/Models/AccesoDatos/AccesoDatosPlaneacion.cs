@@ -103,8 +103,35 @@ namespace MantenimientosPTM
 
         public class Articulos
         {
+            [JsonProperty("CodigoArticulo")]
             public string CodigoArticulo { get; set; }
+
+            [JsonProperty("DescripcionArticulo")]
             public string DescripcionArticulo { get; set; }
+
+            [JsonProperty("Planta")]
+            public string Planta { get; set; }
+
+            [JsonProperty("Linea")]
+            public string Linea { get; set; }
+
+            [JsonProperty("PzsDia")]
+            public decimal PzsDia { get; set; }
+
+            [JsonProperty("KgsDia")]
+            public decimal KgsDia { get; set; }
+
+            [JsonProperty("GrupoArt")]
+            public string GrupoArt { get; set; }
+
+            [JsonProperty("StockTotal")]
+            public decimal StockTotal { get; set; }
+
+            [JsonProperty("Comprometido")]
+            public decimal Comprometido { get; set; }
+
+            [JsonProperty("StockDisponible")]
+            public decimal StockDisponible { get; set; }
         }
 
         public class PlanProduccion

@@ -1617,14 +1617,16 @@ class GestionCentrosCosto {
 
 // ✅ Clase para gestionar artículos con selección automática a tabla
 class GestionArticulos {
-    constructor(includeArt = [], debounceDelay = 300) {
+    constructor(datos_usuario,grupo_articulos) {
         this.articuloSeleccionado = null;
         this.URLBase = "Planeacion";
         this._debounceTimer = null;
-        this._debounceDelay = debounceDelay;
+        this._debounceDelay = 300;
         this._inputBuscar = '#BuscarArticulo';
         this._contenedorSugerencias = '#sugerenciasArticulos'; // ⬅️ faltaba
-        this.includeArt = includeArt;
+        this.includeArt = [];
+        this.grupo_articulos = grupo_articulos;
+        this.datos_usuario = datos_usuario;
     }
 
     inicializar() {
@@ -1633,13 +1635,15 @@ class GestionArticulos {
 
     // ─── Búsqueda con debounce integrado ──────────────────────────────────────
     buscarArticulos(query, Usuario) {
+        let Planta = this.datos_usuario[0].PLANTA;
+        let GrupoArticulos = this.grupo_articulos;
         clearTimeout(this._debounceTimer);
         this._debounceTimer = setTimeout(async () => {
             try {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario },
+                    data: { query, Usuario, Planta, GrupoArticulos },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);
@@ -1784,14 +1788,14 @@ class GestionArticulosCustom {
     buscarArticulos(query, Usuario) {
         clearTimeout(this._debounceTimer);
         let Planta = this.datos_usuario[0].PLANTA;
-
+        let GrupoArticulos = 104; //cualquiera diferente de 110
         this._debounceTimer = setTimeout(async () => {
             try {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     // url: `/ProgramaMantenimientos/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario, Planta },
+                    data: { query, Usuario, Planta,GrupoArticulos },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);

@@ -7,6 +7,7 @@ class GestionEventosApp {
         this.URLBaseProduccion = "Produccion";
         this.URLBaseMantenimientos = "MantenimientosPreventivos";
         this.calendarManager = new CalendarManager(this.URLBasePlaneacion, this.URLBaseProduccion, this.URLBaseMantenimientos);
+        this.datos_usuario = GlobalUtil.getDatosUsuario();
     }
 
     inicializar() {
@@ -62,6 +63,21 @@ class GestionEventosApp {
             $(this).find('.bit-chevron')
                 .css('transform', !isOpen ? 'rotate(180deg)' : '');
         });
+
+        $("#FiltroProceso")
+            .off('change')
+            .on('change', (e) => {
+
+                let Area = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Area,
+                    1,
+                    "FiltroLinea",
+                    null
+                );
+            });
     }
 
 }

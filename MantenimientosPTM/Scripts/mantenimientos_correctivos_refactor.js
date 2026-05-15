@@ -17,7 +17,10 @@ class MantenimientosPreventivoApp {
             '#DescripcionArticuloMC',
             '#bodyArticulosRefaccionMC',
             'Planeacion',
-            'alertRefaccionContainer'
+            'alertRefaccionContainer',
+            [110],
+            null,
+            this.datos_usuario// Grupos de articulos excluidos 110 -> Producto Terminado
         );
 
         // 🔥 Pasar gestionTecnicos al manager + referencia a la app
@@ -666,14 +669,25 @@ class MantenimientoManager {
 
                             let refaccionbutton = "";
                             let caratulabutton = "";
+                            let listRefBtn = '';
 
                             const tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
                             const esAdmin = tipoUsuario === "AdminMtto" || tipoUsuario === "Administrador";
                             const esTecnico = tipoUsuario === "TecnicoMtto";
                             const esSupProduccion = tipoUsuario === "Produccion";
+                            const tieneRefacciones = data.TieneRefaciones;
 
                             const estatusOrden = row.EstatusOrden || '';
                             const ordenFinalizada = row.OrdenTrabajoFinalizada || '';
+
+
+                            const btn = (color, cssClass, icon, tooltip, attrs = '') =>
+                                `<button class="btn btn-sm ${color} ${cssClass}" data-bs-toggle="tooltip" title="${tooltip}" ${attrs}>
+                                <i class="bi bi-${icon}"></i>
+                            </button>`;
+
+                            const btnDisabled = (color, icon, tooltip) =>
+                                btn(color, 'disabled', icon, tooltip).replace('<button', '<button disabled');
 
                             if (estatusOrden && estatusOrden !== '') {
 
@@ -732,7 +746,14 @@ class MantenimientoManager {
                                     }
                                 }
 
-                                return `${refaccionbutton}${caratulabutton}${impresionbutton}`;
+                                // 🔧 LISTADO DE REFACCIÓNES
+                                if (tieneRefacciones === "SI") {
+                                    listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Solicitar Refacción', dataAttrs);
+                                } else {
+                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Solicitar Refacción');
+                                }
+
+                                return `${refaccionbutton}${caratulabutton}${impresionbutton}${listRefBtn}`;
 
                             } else {
 
@@ -1175,7 +1196,8 @@ class MantenimientoManager {
                 Estatus: 3,
                 NivelUrgencia: $('#RurgenciaRefaccion').val(),
                 DescripcionNecesidad: $('#RdescripcionNecesidad').val(),
-                UsuarioSolicita: this.datos_usuario[0].EMAIL
+                UsuarioSolicita: this.datos_usuario[0].EMAIL,
+                Planta: this.datos_usuario[0].PLANTA
             })),
             OrdenTrabajo: $('#ROT').val(),
             IdEquipo: this.ID_EQUIPO,
@@ -1184,15 +1206,22 @@ class MantenimientoManager {
             Estatus: 3,
             NivelUrgencia: $('#RurgenciaRefaccion').val(),
             DescripcionNecesidad: $('#RdescripcionNecesidad').val(),
-            UsuarioSolicita: this.datos_usuario[0].EMAIL
+            UsuarioSolicita: this.datos_usuario[0].EMAIL,
+            Planta: this.datos_usuario[0].PLANTA
         };
 
         $("#btnSolicitarRefaccion").html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
         $("#btnSolicitarRefaccion").prop("disabled", true);
 
+        let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+
         $.ajax({
             url: `/${this.URLBase}/InsertarSolicitudRefaccion`,
             type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Rol-Usuario': TipoUsuario  // 👈 esto
+            },
             contentType: 'application/json; charset=utf-8',
             data: JSON.stringify(datos),
             dataType: 'json',

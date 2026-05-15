@@ -645,6 +645,12 @@ namespace MantenimientosPTM.Controllers
                     jsonResponse.Status = "SI";
                     jsonResponse.Message = $"Solicitud(es) de refacción insertada(s) correctamente. ({insertados} artículo(s))";
                     jsonResponse.Data = "";
+
+                    //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                    context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
+                    context.Clients.All.actualizarTablaSolicitudRefacciones(rolQueCambio);
                 }
 
                 return Json(jsonResponse);
