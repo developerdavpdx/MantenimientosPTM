@@ -170,6 +170,8 @@ namespace MantenimientosPTM.Controllers
                         fila.PROCESO,
                         fila.ARTICULO,
                         fila.ARTICULO_DESC,
+                        fila.KGSXDIA,
+                        fila.PZSXDIA,
                         fila.CAPACIDAD,
                         fila.DIA_INICIO_MANT_STR,
                         fila.DIA_FIN_MANT_STR,
@@ -183,10 +185,10 @@ namespace MantenimientosPTM.Controllers
                         fila.ANIO_PLAN,
                         fila.MES_PLAN,
                         fila.DIAS_TOTALES,
-                        fila.ID_PARO,
-                        fila.FECHA_PARO,
-                        fila.COMENTARIOS_PARO,
-                        fila.TIENE_PARO_ACTIVO,
+                        //fila.ID_PARO,
+                        //fila.FECHA_PARO,
+                        //fila.COMENTARIOS_PARO,
+                        //fila.TIENE_PARO_ACTIVO,
                         fila.COLOR_EVENTO,
                         BITACORA = new List<object>()   // ← se llenará abajo
                     };
@@ -206,7 +208,9 @@ namespace MantenimientosPTM.Controllers
                         fila.ID_NVO_PROCESO,
                         fila.NVO_ARTICULO,
                         fila.NVO_ARTICULO_DESC,
-                        fila.NVO_CAPACIDAD,
+                        fila.KGSXDIA,
+                        fila.PZSXDIA,
+                        //fila.NVO_CAPACIDAD,
                         fila.NVO_DIA_INICIO_MANT_STR,
                         fila.NVO_DIA_FIN_MANT_STR,
                         fila.NVO_PRODUCCION_TEORICA,
@@ -360,7 +364,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarArticulo(string query, string Usuario,string Planta,int? GrupoArticulos)
+        public JsonResult BuscarArticulo(string query, string Usuario,string Planta,int? Linea, int? GrupoArticulos)
         {
             try
             {
@@ -376,6 +380,7 @@ namespace MantenimientosPTM.Controllers
                     { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_USUARIO", (Usuario, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA", (Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_LINEA", (Linea, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_GRUPO_ART", (GrupoArticulos, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
@@ -448,6 +453,8 @@ namespace MantenimientosPTM.Controllers
                 "P_ID_PLAN",
                 "P_ID_PROCESO",
                 "P_ARTICULO_DESC",
+                "P_PZSXDIA",
+                "P_KGSXDIA",
                 "P_FECHA_CREACION",
                 "P_FECHA_PLAN",
                 "P_ESTATUS",
@@ -571,6 +578,8 @@ namespace MantenimientosPTM.Controllers
                 "P_LINEA_PRODUCCION_DESC",
                 "P_ID_PROCESO",
                 "P_ARTICULO_DESC",
+                "P_PZSXDIA",
+                "P_KGSXDIA",
                 "P_FECHA_CREACION",
                 "P_FECHA_PLAN",
                 "P_ESTATUS",

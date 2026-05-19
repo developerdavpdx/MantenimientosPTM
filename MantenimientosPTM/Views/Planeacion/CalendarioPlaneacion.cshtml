@@ -12,10 +12,25 @@
             <div class="card-header header-fijo-custom text-dark">
                 <div class="row g-3 align-items-center">
                     <!-- Título -->
-                    <div class="col-12">
+                    <div class="col-12 col-sm-6 col-md-4 col-xl-4 text-center text-sm-start">
                         <h4 class="mb-0 text-color-logo">
-                            <i class="bi bi-calendar-event me-2"></i>Calendario Planeación
+                            <i class="bi bi-calendar-event me-2"></i>
+                            Calendario Planeación
                         </h4>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="col-12 col-sm-6 col-md-8 col-xl-8">
+                        <div class="d-flex flex-column flex-sm-row justify-content-center justify-content-sm-end gap-2">
+                            <button id="btnExportarExcel"
+                                    class="btn-filtro-limpiar"
+                                    data-bs-toggle="tooltip"
+                                    title="Exportar a Excel">
+                                <i class="bi bi-file-earmark-excel-fill me-1"></i>
+                                Exportar
+                            </button>
+
+                        </div>
                     </div>
                 </div>
             </div>
@@ -193,12 +208,39 @@
                     <span class="info-badge-value" id="eptArticulo">—</span>
                 </div>
 
-                <!-- Cap. diaria -->
-                <div class="info-badge-row">
-                    <span class="info-badge-label">
-                        <i class="bi bi-speedometer2"></i> Cap. diaria
-                    </span>
-                    <span class="info-badge-value highlight" id="eptCapacidad">— <small>PZ/día</small></span>
+                <!-- Stats capacidades -->
+                <div class="capacity-grid">
+
+                    <div class="capacity-card piezas">
+                        <div class="capacity-top">
+                            <i class="bi bi-box-seam-fill"></i>
+                            <span>Piezas</span>
+                        </div>
+
+                        <div class="capacity-number" id="eptCapacidadPZ">
+                            —
+                        </div>
+
+                        <div class="capacity-unit">
+                            PZ / día
+                        </div>
+                    </div>
+
+                    <div class="capacity-card kilos">
+                        <div class="capacity-top">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Kilos</span>
+                        </div>
+
+                        <div class="capacity-number" id="eptCapacidadKGS">
+                            —
+                        </div>
+
+                        <div class="capacity-unit">
+                            KG / día
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Stats producción -->

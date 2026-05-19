@@ -1634,7 +1634,7 @@ class GestionArticulos {
     }
 
     // ─── Búsqueda con debounce integrado ──────────────────────────────────────
-    buscarArticulos(query, Usuario) {
+    buscarArticulos(query, Usuario,Linea) {
         let Planta = this.datos_usuario[0].PLANTA;
         let GrupoArticulos = this.grupo_articulos;
         clearTimeout(this._debounceTimer);
@@ -1643,7 +1643,7 @@ class GestionArticulos {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario, Planta, GrupoArticulos },
+                    data: { query, Usuario, Planta,Linea, GrupoArticulos },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);
@@ -1683,7 +1683,7 @@ class GestionArticulos {
 
         if (articulos.length === 0) {
             container.html(`
-                <div class="sugerencia-item text-muted">
+                <div class="sugerencia-item-empty text-muted">
                     <i class="bi bi-exclamation-circle"></i> No se encontraron artículos.
                 </div>
             `);
@@ -1723,7 +1723,8 @@ class GestionArticulos {
         this.articuloSeleccionado = articulo;
         $('#CodigoArticulo').val(articulo.CodigoArticulo || '');
         $('#DescripcionArticulo').val(articulo.DescripcionArticulo || '');
-        $('#PlanCap').val(articulo.PzsDia || 0);
+        $('#PlanCapPiezas').val(articulo.PzsDia || 0);
+        $('#PlanCapKilos').val(articulo.KgsDia || 0);
 
         $('#BuscarArticulo').removeClass('is-invalid').addClass('is-valid');
         $('#CodigoArticulo, #DescripcionArticulo').each(function () {

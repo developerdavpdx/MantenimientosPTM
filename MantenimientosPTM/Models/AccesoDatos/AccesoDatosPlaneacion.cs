@@ -116,22 +116,22 @@ namespace MantenimientosPTM
             public string Linea { get; set; }
 
             [JsonProperty("PzsDia")]
-            public decimal PzsDia { get; set; }
+            public decimal? PzsDia { get; set; }
 
             [JsonProperty("KgsDia")]
-            public decimal KgsDia { get; set; }
+            public decimal? KgsDia { get; set; }
 
             [JsonProperty("GrupoArt")]
             public string GrupoArt { get; set; }
 
             [JsonProperty("StockTotal")]
-            public decimal StockTotal { get; set; }
+            public decimal? StockTotal { get; set; }
 
             [JsonProperty("Comprometido")]
-            public decimal Comprometido { get; set; }
+            public decimal? Comprometido { get; set; }
 
             [JsonProperty("StockDisponible")]
-            public decimal StockDisponible { get; set; }
+            public decimal? StockDisponible { get; set; }
         }
 
         public class PlanProduccion
@@ -172,11 +172,24 @@ namespace MantenimientosPTM
             [DefaultValue("")]
             public string CAPACIDAD { get; set; }
 
+            // ══════════════════════════════════════════
+            // NUEVOS CAMPOS CAPACIDAD REAL
+            // ══════════════════════════════════════════
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? PZSXDIA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? KGSXDIA { get; set; }
+
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public DateTime? DIA_INICIO_MANT { get; set; }
 
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public DateTime? DIA_FIN_MANT { get; set; }
+
             public string DIA_INICIO_MANT_STR =>
                 DIA_INICIO_MANT?.ToString("dd/MM/yyyy");
 
@@ -234,23 +247,8 @@ namespace MantenimientosPTM
             public int DIAS_TOTALES { get; set; }
 
             // ══════════════════════════════════════════
-            // DATOS DEL PARO
+            // COLOR EVENTO
             // ══════════════════════════════════════════
-
-            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            public int? ID_PARO { get; set; }
-
-            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string FECHA_PARO { get; set; }
-
-            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string COMENTARIOS_PARO { get; set; }
-
-            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue(0)]
-            public int TIENE_PARO_ACTIVO { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
@@ -283,6 +281,7 @@ namespace MantenimientosPTM
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public string NVO_PROCESO { get; set; }
+
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public string ID_NVO_PROCESO { get; set; }
 

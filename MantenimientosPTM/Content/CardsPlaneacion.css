@@ -1104,3 +1104,58 @@
     color: #475569;
     line-height: 1.25;
 }
+
+.capacity-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.capacity-card {
+    border-radius: 14px;
+    padding: 14px;
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    transition: .2s ease;
+}
+
+    .capacity-card:hover {
+        transform: translateY(-2px);
+    }
+
+.capacity-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .82rem;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+
+    .capacity-top i {
+        font-size: 1rem;
+    }
+
+.capacity-number {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.1;
+}
+
+.capacity-unit {
+    font-size: .75rem;
+    color: #94a3b8;
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+.capacity-card.piezas {
+    border-left: 4px solid #3b82f6;
+}
+
+.capacity-card.kilos {
+    border-left: 4px solid #3b82f6;
+}

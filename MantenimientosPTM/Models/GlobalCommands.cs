@@ -102,11 +102,6 @@ namespace MantenimientosPTM
                 {
                     result.JsonResult = $"Error: {ex.Message} | Inner: {ex.InnerException?.Message}";
                 }
-                finally
-                {
-                    if (myConnection.State == ConnectionState.Open)
-                        myConnection.Close();
-                }
             }
 
             return result;

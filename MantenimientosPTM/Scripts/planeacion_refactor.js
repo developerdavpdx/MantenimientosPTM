@@ -6,7 +6,7 @@ class GestionEventosApp {
         this.URLBase = "Planeacion";
         this.calendarManager = new PlaneacionManager(this.URLBase);
         this.datos_usuario = GlobalUtil.getDatosUsuario();
-        this.gestionArticulos = new GestionArticulos(this.datos_usuario,110);
+        this.gestionArticulos = new GestionArticulos(this.datos_usuario, 110);
     }
 
     inicializar() {
@@ -23,9 +23,30 @@ class GestionEventosApp {
     configurarEventosGestionArticulos() {
         // ✅ Input de búsqueda
         $('#BuscarArticulo').on('input', (e) => {
+
             const query = $(e.target).val().trim();
+            const linea = $("#PlanLinea").val();
+
             if (query.length >= 2) {
-                this.gestionArticulos.buscarArticulos(query, this.datos_usuario[0].EMAIL);
+
+                if (!linea) {
+                    AlertManager.mostrar(
+                        'Por favor seleccione la línea de producción.',
+                        'warning'
+                    );
+
+                    this.gestionArticulos.ocultarSugerencias();
+
+                    $("#BuscarArticulo").val('');
+
+                    return;
+                }
+
+                this.gestionArticulos.buscarArticulos(
+                    query,
+                    this.datos_usuario[0].EMAIL,
+                    linea
+                );
             } else {
                 this.gestionArticulos.ocultarSugerencias();
             }
@@ -145,6 +166,35 @@ class GestionEventosApp {
                     null
                 );
             });
+
+        $("#FiltroProceso")
+            .off('change')
+            .on('change', (e) => {
+
+                let Proceso = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Proceso,
+                    1,
+                    "FiltroLinea",
+                    null
+                );
+            });
+
+        $("#PlanLinea")
+            .off('change')
+            .on('change', (e) => {
+                this.LimpiarAreaBusqueda();
+            });
+    }
+
+    LimpiarAreaBusqueda() {
+        $("#BuscarArticulo").val('');
+        $("#CodigoArticulo").val('');
+        $("#DescripcionArticulo").val('');
+        $("#PlanCapPiezas").val('');
+        $("#PlanCapKilos").val('');
     }
 }
 
@@ -222,7 +272,7 @@ class PlaneacionManager {
     // ─────────────────────────────────────────────
     inicializar() {
         this.llenarTablaPlanProduccion(); // ✅ Sigue siendo el punto de entrada
-        EquiposUtil.llenarProcesos(this.PLANTA, "PlanProceso", null);
+        EquiposUtil.llenarProcesos(this.PLANTA, "PlanProceso", "FiltroProceso");
         console.log('✅ Planeación inicializado correctamente');
     }
 
@@ -299,7 +349,7 @@ class PlaneacionManager {
             : null;
 
         return `
-    <div class="prod-card ${estatusC} ${tieneParoActivo ? 'tiene-paro' : ''}"
+        <div class="prod-card ${estatusC} ${tieneParoActivo ? 'tiene-paro' : ''}"
          data-id="${d.ID_PLAN}"
          style="animation-delay:${idx * 55}ms">
 
@@ -366,15 +416,40 @@ class PlaneacionManager {
 
             ` : ''}
 
-            <!-- Capacidad -->
-            ${d.CAPACIDAD ? `
-            <div class="info-badge-row">
-                <span class="info-badge-label">
-                    <i class="bi bi-speedometer2"></i> Cap. diaria
-                </span>
-                <span class="info-badge-value highlight">
-                    ${this._fmtNum(d.CAPACIDAD)} <small>PZ/día</small>
-                </span>
+            <!-- Capacidades -->
+            ${(d.PZSXDIA || d.KGSXDIA) ? `
+            <div class="capacity-grid">
+
+                <div class="capacity-card piezas">
+                    <div class="capacity-top">
+                        <i class="bi bi-box-seam-fill"></i>
+                        <span>Piezas</span>
+                    </div>
+
+                    <div class="capacity-number">
+                        ${this._fmtNum(d.PZSXDIA || 0)}
+                    </div>
+
+                    <div class="capacity-unit">
+                        PZ / día
+                    </div>
+                </div>
+
+                <div class="capacity-card kilos">
+                    <div class="capacity-top">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Kilos</span>
+                    </div>
+
+                    <div class="capacity-number">
+                        ${this._fmtNum(d.KGSXDIA || 0)}
+                    </div>
+
+                    <div class="capacity-unit">
+                        KG / día
+                    </div>
+                </div>
+
             </div>` : ''}
 
             <!-- Stats producción -->
@@ -516,11 +591,47 @@ class PlaneacionManager {
 
             // Campos normales (grid compacto)
             const campos = [
-                { icon: 'bi-gear-fill', label: 'Proceso', val: b.NVO_PROCESO },
-                { icon: 'bi-box-seam-fill', label: 'Artículo', val: b.NVO_ARTICULO },
-                { icon: 'bi-calculator-fill', label: 'Prod. Teórica', val: b.NVO_PRODUCCION_TEORICA },
-                { icon: 'bi-graph-up-arrow', label: 'Prod. Real', val: b.NVO_PRODUCCION_REAL },
-                { icon: 'bi-speedometer2', label: 'Capacidad', val: b.NVO_CAPACIDAD },
+
+                {
+                    icon: 'bi-gear-fill',
+                    label: 'Proceso',
+                    val: b.NVO_PROCESO
+                },
+
+                {
+                    icon: 'bi-box-seam-fill',
+                    label: 'Artículo',
+                    val: b.NVO_ARTICULO
+                },
+
+                {
+                    icon: 'bi-box-seam-fill',
+                    label: 'Cap. Piezas',
+                    val: b.PZSXDIA
+                        ? `${this._fmtNum(b.PZSXDIA)} PZ/día`
+                        : null
+                },
+
+                {
+                    icon: 'bi-speedometer2',
+                    label: 'Cap. Kilos',
+                    val: b.KGSXDIA
+                        ? `${this._fmtNum(b.KGSXDIA)} KG/día`
+                        : null
+                },
+
+                {
+                    icon: 'bi-calculator-fill',
+                    label: 'Prod. Teórica',
+                    val: b.NVO_PRODUCCION_TEORICA
+                },
+
+                {
+                    icon: 'bi-graph-up-arrow',
+                    label: 'Prod. Real',
+                    val: b.NVO_PRODUCCION_REAL
+                },
+
             ]
                 .filter(f => f.val && String(f.val).trim() !== '');
 
@@ -681,7 +792,7 @@ class PlaneacionManager {
                                     <i class="bi bi-exclamation-triangle-fill"></i>
                                     <p>${json.error}</p>
                                 </div>`;
-                if (callback) callback();
+                    if (callback) callback();
                 }
                 else {
                     this._renderGrid(json.data || []);
@@ -748,14 +859,16 @@ class PlaneacionManager {
     // EXPORTAR EXCEL
     // ─────────────────────────────────────────────
     async exportarExcel() {
+
         try {
-            // ✅ obtener datos directamente del endpoint en vez del DataTable
+
+            // ✅ Obtener datos directamente del endpoint
             const response = await $.ajax({
                 url: `/${this.URLBase}/obtenerPlanesProgramados`,
                 type: 'POST',
                 data: {
                     start: 0,
-                    length: 9999, // todos los registros
+                    length: 9999,
                     FiltroFechaInicio: $("#FiltroFechaInicio").val() || null,
                     FiltroFechaFin: $("#FiltroFechaFin").val() || null,
                     FiltroMesAnio: $("#FiltroMesAnio").val() || null,
@@ -767,68 +880,166 @@ class PlaneacionManager {
             const data = response.data || [];
 
             if (!data.length) {
-                AlertManager.mostrar('📭 No hay datos para exportar', 'warning');
+                AlertManager.mostrar('No hay datos para exportar', 'warning');
                 return;
             }
 
-            $('#btnExportarExcel').html('<span class="spinner-border spinner-border-sm me-2"></span>Exportando...').prop('disabled', true);
+            $('#btnExportarExcel')
+                .html('<span class="spinner-border spinner-border-sm me-2"></span>Exportando...')
+                .prop('disabled', true);
 
             const workbook = new ExcelJS.Workbook();
+
             const worksheet = workbook.addWorksheet('PlanProduccion', {
-                pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
+                pageSetup: {
+                    paperSize: 9,
+                    orientation: 'landscape',
+                    fitToPage: true,
+                    fitToWidth: 1,
+                    fitToHeight: 0
+                }
             });
 
-            // ── Título principal (A1:I1) ──────────────────────────────────────
+            // ─────────────────────────────────────────
+            // TÍTULO
+            // ─────────────────────────────────────────
             worksheet.mergeCells('A1:I1');
+
             const headerCell = worksheet.getCell('A1');
+
             headerCell.value = '📊 PROGRAMACIÓN PLAN PRODUCCIÓN';
-            headerCell.font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
-            headerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0058A1' } };
-            headerCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+            headerCell.font = {
+                name: 'Segoe UI',
+                size: 18,
+                bold: true,
+                color: { argb: 'FFFFFFFF' }
+            };
+
+            headerCell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF0058A1' }
+            };
+
+            headerCell.alignment = {
+                vertical: 'middle',
+                horizontal: 'center'
+            };
+
             worksheet.getRow(1).height = 40;
 
-            // ── Fila de info (fila 2) ─────────────────────────────────────────
+            // ─────────────────────────────────────────
+            // INFO
+            // ─────────────────────────────────────────
             worksheet.mergeCells('A2:D2');
+
             const infoCell1 = worksheet.getCell('A2');
-            const fechaActual = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            const fechaActual = new Date().toLocaleDateString('es-MX', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
             infoCell1.value = `📅 Fecha de Generación: ${fechaActual}`;
-            infoCell1.font = { name: 'Segoe UI', size: 11, bold: true };
-            infoCell1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3F2FD' } };
-            infoCell1.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+
+            infoCell1.font = {
+                name: 'Segoe UI',
+                size: 11,
+                bold: true
+            };
+
+            infoCell1.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE3F2FD' }
+            };
+
+            infoCell1.alignment = {
+                vertical: 'middle',
+                horizontal: 'left',
+                indent: 1
+            };
+
             worksheet.getRow(2).height = 25;
 
             worksheet.mergeCells('E2:I2');
-            const infoCell2 = worksheet.getCell('E2');
-            infoCell2.value = `📈 Total de Registros: ${data.length}`;
-            infoCell2.font = { name: 'Segoe UI', size: 11, bold: true };
-            infoCell2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
-            infoCell2.alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
 
-            // ── Fila separadora ───────────────────────────────────────────────
+            const infoCell2 = worksheet.getCell('E2');
+
+            infoCell2.value = `📈 Total de Registros: ${data.length}`;
+
+            infoCell2.font = {
+                name: 'Segoe UI',
+                size: 11,
+                bold: true
+            };
+
+            infoCell2.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE8F5E9' }
+            };
+
+            infoCell2.alignment = {
+                vertical: 'middle',
+                horizontal: 'right',
+                indent: 1
+            };
+
             worksheet.getRow(3).height = 10;
 
-            // ── Headers (fila 4) ──────────────────────────────────────────────
+            // ─────────────────────────────────────────
+            // HEADERS
+            // ─────────────────────────────────────────
             const headerRow = worksheet.getRow(4);
+
             const headers = [
                 { text: '🏭 Línea de Producción', width: 30 },
                 { text: '📦 Artículo', width: 70 },
-                { text: '⚙️ Capacidad', width: 20 },
+                { text: '⚙️ Capacidades', width: 30 },
                 { text: '🔧 Proceso', width: 30 },
                 { text: '📆 Mes/Año', width: 22 },
-                { text: '📅 Rango Días', width: 22 },
-                { text: '📋 Producción Teórica', width: 20 },
-                { text: '📊 Producción Real', width: 20 },
+                { text: '📅 Rango Días', width: 26 },
+                { text: '📋 Producción Teórica', width: 24 },
+                { text: '📊 Producción Real', width: 24 },
                 { text: '💬 Comentarios', width: 44 }
             ];
 
             headers.forEach((header, index) => {
+
                 const col = String.fromCharCode(65 + index);
+
                 worksheet.getColumn(col).width = header.width;
+
                 const cell = headerRow.getCell(index + 1);
+
                 cell.value = header.text;
-                cell.font = { name: 'Segoe UI', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
-                cell.fill = { type: 'gradient', gradient: 'angle', degree: 90, stops: [{ position: 0, color: { argb: 'FF1976D2' } }, { position: 1, color: { argb: 'FF0058A1' } }] };
-                cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+
+                cell.font = {
+                    name: 'Segoe UI',
+                    size: 12,
+                    bold: true,
+                    color: { argb: 'FFFFFFFF' }
+                };
+
+                cell.fill = {
+                    type: 'gradient',
+                    gradient: 'angle',
+                    degree: 90,
+                    stops: [
+                        { position: 0, color: { argb: 'FF1976D2' } },
+                        { position: 1, color: { argb: 'FF0058A1' } }
+                    ]
+                };
+
+                cell.alignment = {
+                    vertical: 'middle',
+                    horizontal: 'center',
+                    wrapText: true
+                };
+
                 cell.border = {
                     top: { style: 'medium', color: { argb: 'FF0058A1' } },
                     left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
@@ -836,39 +1047,80 @@ class PlaneacionManager {
                     right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
                 };
             });
+
             headerRow.height = 35;
 
-            // ── Filas de datos ────────────────────────────────────────────────
-            data.forEach((row, index) => {
-                const rowNumber = 5 + index;
-                const excelRow = worksheet.getRow(rowNumber);
-                const bgColor = index % 2 === 0 ? 'FFFFFFFF' : 'FFF5F5F5';
+            // ─────────────────────────────────────────
+            // HELPERS
+            // ─────────────────────────────────────────
+            const fmtNum = (n) => {
+                return (parseFloat(n) || 0)
+                    .toLocaleString('es-MX', {
+                        minimumFractionDigits: 2
+                    });
+            };
 
-                const ProReal = (parseFloat(row.PRODUCCION_REAL) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-                const ProTe = (parseFloat(row.PRODUCCION_TEORICA) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+            let currentRow = 5;
+
+            // ─────────────────────────────────────────
+            // DATA
+            // ─────────────────────────────────────────
+            data.forEach((row, index) => {
+
+                const excelRow = worksheet.getRow(currentRow);
+
+                const bgColor = index % 2 === 0
+                    ? 'FFFFFFFF'
+                    : 'FFF7F9FC';
+
+                const capacidades = [
+                    row.PZSXDIA
+                        ? `${fmtNum(row.PZSXDIA)} PZ/día`
+                        : null,
+
+                    row.KGSXDIA
+                        ? `${fmtNum(row.KGSXDIA)} KG/día`
+                        : null
+                ]
+                    .filter(Boolean)
+                    .join(' | ');
 
                 const rowData = [
                     row.LINEA_PRODUCCION_DESC || '',
-                    `${row.ARTICULO} - ${row.ARTICULO_DESC}`,
-                    row.CAPACIDAD || '',
+                    `${row.ARTICULO || ''} - ${row.ARTICULO_DESC || ''}`,
+                    capacidades,
                     row.PROCESO || '',
                     `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`,
                     `Del ${row.DIA_INICIO_MANT_STR} - Al ${row.DIA_FIN_MANT_STR}`,
-                    ProTe,
-                    ProReal,
+                    fmtNum(row.PRODUCCION_TEORICA),
+                    fmtNum(row.PRODUCCION_REAL),
                     row.COMENTARIOS || ''
                 ];
 
                 rowData.forEach((value, colIndex) => {
+
                     const cell = excelRow.getCell(colIndex + 1);
+
                     cell.value = value;
-                    cell.font = { name: 'Segoe UI', size: 10 };
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+
+                    cell.font = {
+                        name: 'Segoe UI',
+                        size: 10
+                    };
+
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: bgColor }
+                    };
+
                     cell.alignment = {
                         vertical: 'middle',
                         horizontal: colIndex <= 1 ? 'left' : 'center',
-                        indent: colIndex <= 1 ? 1 : 0
+                        indent: colIndex <= 1 ? 1 : 0,
+                        wrapText: true
                     };
+
                     cell.border = {
                         top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
                         left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
@@ -876,44 +1128,199 @@ class PlaneacionManager {
                         right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
                     };
                 });
-                excelRow.height = 22;
+
+                // Fila principal
+                excelRow.height = 38;
+
+                currentRow++;
+
+                // ─────────────────────────────────────
+                // BITÁCORA UPDATE
+                // ─────────────────────────────────────
+                const updates = (row.BITACORA || [])
+                    .filter(b => b.BIT_ACCION === 'UPDATE');
+
+                updates.forEach((bit) => {
+
+                    const histRow = worksheet.getRow(currentRow);
+
+                    const capacidadesHist = [
+                        bit.PZSXDIA
+                            ? `${fmtNum(bit.PZSXDIA)} PZ/día`
+                            : null,
+
+                        bit.KGSXDIA
+                            ? `${fmtNum(bit.KGSXDIA)} KG/día`
+                            : null
+                    ]
+                        .filter(Boolean)
+                        .join(' | ');
+
+                    const histData = [
+
+                        `↳ HISTORIAL ${row.LINEA_PRODUCCION_DESC || ''}`,
+
+                        bit.NVO_ARTICULO
+                            ? `${bit.NVO_ARTICULO} - ${bit.NVO_ARTICULO_DESC || ''}`
+                            : '',
+
+                        capacidadesHist,
+
+                        bit.NVO_PROCESO || '',
+
+                        `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`,
+
+                        (bit.NVO_DIA_INICIO_MANT_STR && bit.NVO_DIA_FIN_MANT_STR)
+                            ? `Del ${bit.NVO_DIA_INICIO_MANT_STR} - Al ${bit.NVO_DIA_FIN_MANT_STR}`
+                            : '',
+
+                        fmtNum(bit.NVO_PRODUCCION_TEORICA),
+
+                        fmtNum(bit.NVO_PRODUCCION_REAL),
+
+                        bit.NVO_COMENTARIOS || ''
+                    ];
+
+                    histData.forEach((value, colIndex) => {
+
+                        const cell = histRow.getCell(colIndex + 1);
+
+                        cell.value = value;
+
+                        cell.font = {
+                            name: 'Segoe UI',
+                            size: 9,
+                            italic: true,
+                            color: { argb: 'FF546E7A' }
+                        };
+
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FFE3F2FD' }
+                        };
+
+                        cell.alignment = {
+                            vertical: 'middle',
+                            horizontal: colIndex <= 1 ? 'left' : 'center',
+                            indent: colIndex <= 1 ? 2 : 0,
+                            wrapText: true
+                        };
+
+                        cell.border = {
+                            top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                            left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                            bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                            right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+                        };
+                    });
+
+                    // Historial
+                    histRow.height = 34;
+
+                    currentRow++;
+                });
             });
 
-            // ── Footer ────────────────────────────────────────────────────────
-            const lastRow = worksheet.getRow(5 + data.length);
-            worksheet.mergeCells(`A${lastRow.number}:I${lastRow.number}`);
-            const summaryCell = worksheet.getCell(`A${lastRow.number}`);
-            summaryCell.value = `✅ Fin del reporte - ${data.length} registros exportados`;
-            summaryCell.font = { name: 'Segoe UI', size: 11, bold: true, italic: true, color: { argb: 'FF666666' } };
-            summaryCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
-            summaryCell.alignment = { vertical: 'middle', horizontal: 'center' };
+            // ─────────────────────────────────────────
+            // FOOTER
+            // ─────────────────────────────────────────
+            const footerRow = worksheet.getRow(currentRow);
+
+            worksheet.mergeCells(`A${currentRow}:I${currentRow}`);
+
+            const summaryCell = worksheet.getCell(`A${currentRow}`);
+
+            summaryCell.value =
+                `✅ Fin del reporte - ${data.length} planes exportados`;
+
+            summaryCell.font = {
+                name: 'Segoe UI',
+                size: 11,
+                bold: true,
+                italic: true,
+                color: { argb: 'FF666666' }
+            };
+
+            summaryCell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF0F0F0' }
+            };
+
+            summaryCell.alignment = {
+                vertical: 'middle',
+                horizontal: 'center'
+            };
+
             summaryCell.border = {
                 top: { style: 'medium', color: { argb: 'FF0058A1' } },
                 bottom: { style: 'medium', color: { argb: 'FF0058A1' } }
             };
-            lastRow.height = 30;
 
-            // ── Freeze & AutoFilter ───────────────────────────────────────────
-            worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 4 }];
-            worksheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: 9 } };
+            footerRow.height = 30;
 
-            // ── Descargar ─────────────────────────────────────────────────────
+            // ─────────────────────────────────────────
+            // FREEZE & FILTER
+            // ─────────────────────────────────────────
+            worksheet.views = [{
+                state: 'frozen',
+                xSplit: 0,
+                ySplit: 4
+            }];
+
+            worksheet.autoFilter = {
+                from: { row: 4, column: 1 },
+                to: { row: 4, column: 9 }
+            };
+
+            // ─────────────────────────────────────────
+            // DESCARGAR
+            // ─────────────────────────────────────────
             const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            const fecha = new Date().toISOString().split('T')[0];
-            const nombreArchivo = `PlanProduccion_PTM_${fecha}.xlsx`;
+
+            const blob = new Blob(
+                [buffer],
+                {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                }
+            );
+
+            const fecha = new Date()
+                .toISOString()
+                .split('T')[0];
+
+            const nombreArchivo =
+                `PlanProduccion_PTM_${fecha}.xlsx`;
+
             const link = document.createElement('a');
+
             link.href = URL.createObjectURL(blob);
+
             link.download = nombreArchivo;
+
             link.click();
 
-            AlertManager.mostrar('📊 ¡Excel exportado con éxito! 🎉', 'success');
+            AlertManager.mostrar(
+                '📊 ¡Excel exportado con éxito! 🎉',
+                'success'
+            );
 
-        } catch (error) {
+        }
+        catch (error) {
+
             console.error('Error al exportar:', error);
-            AlertManager.mostrar('❌ Error al exportar: ' + error.message, 'warning');
-        } finally {
-            $('#btnExportarExcel').html('<i class="bi bi-file-earmark-excel-fill me-1"></i>Exportar').prop('disabled', false);
+
+            AlertManager.mostrar(
+                '❌ Error al exportar: ' + error.message,
+                'warning'
+            );
+        }
+        finally {
+
+            $('#btnExportarExcel')
+                .html('<i class="bi bi-file-earmark-excel-fill me-1"></i>Exportar')
+                .prop('disabled', false);
         }
     }
 
@@ -924,7 +1331,7 @@ class PlaneacionManager {
         e.preventDefault();
 
         if (!ValidationManager.validarFormulario('#eventForm')) {
-            AlertManager.mostrar('⚠️ Por favor, complete correctamente todos los campos', 'warning', 'alertPlanContainer');
+            AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', 'alertPlanContainer');
             return false;
         }
 
@@ -1118,6 +1525,8 @@ class PlaneacionManager {
                     ARTICULO: val(ultimaEdic.NVO_ARTICULO, plan.ARTICULO),
                     ARTICULO_DESC: ultimaEdic.NVO_ARTICULO_DESC, // no está en bitácora, se queda del plan
                     CAPACIDAD: val(ultimaEdic.NVO_CAPACIDAD, plan.CAPACIDAD),
+                    PZSXDIA: val(ultimaEdic.PZSXDIA),
+                    KGSXDIA: val(ultimaEdic.KGSXDIA),
                     DIA_INICIO_MANT: val(ultimaEdic.NVO_DIA_INICIO_MANT_STR, plan.DIA_INICIO_MANT_STR),
                     DIA_FIN_MANT: val(ultimaEdic.NVO_DIA_FIN_MANT_STR, plan.DIA_FIN_MANT_STR),
                     PRODUCCION_TEORICA: val(ultimaEdic.NVO_PRODUCCION_TEORICA, plan.PRODUCCION_TEORICA),
@@ -1138,24 +1547,34 @@ class PlaneacionManager {
                     $('#MesAnioPlan').val(`${anio}-${mes}`);
                 }
 
+                // ── Proceso ──────────────────────────────────────────────────────────
+                $('#PlanProceso').val(datos.ID_PROCESO);
+
                 // ── Línea ────────────────────────────────────────────────────────────
-                $('#PlanLinea').val(datos.LINEA_PRODUCCION).trigger('change');
-                $('#PlanLinea').prop("disabled", true);
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    datos.ID_PROCESO,
+                    1,
+                    "PlanLinea",
+                    null,
+                    () => {
+
+                        $('#PlanLinea')
+                            .val(datos.LINEA_PRODUCCION);
+                    }
+                );
+
 
                 // ── Rango de días ────────────────────────────────────────────────────
                 $('#DiaInicioMant').val(DateUtils.convertirFecha(datos.DIA_INICIO_MANT));
                 $('#DiaFinMant').val(DateUtils.convertirFecha(datos.DIA_FIN_MANT));
 
-                // ── Proceso ──────────────────────────────────────────────────────────
-                setTimeout(() => {
-                    $('#PlanProceso').val(datos.ID_PROCESO);
-                }, 100);
-
 
                 // ── Artículo ─────────────────────────────────────────────────────────
                 $('#CodigoArticulo').val(datos.ARTICULO);
                 $('#DescripcionArticulo').val(datos.ARTICULO_DESC);
-                $('#PlanCap').val(datos.CAPACIDAD);
+                $('#PlanCapPiezas').val(datos.PZSXDIA);
+                $('#PlanCapKilos').val(datos.KGSXDIA);
 
                 // ── Producción ───────────────────────────────────────────────────────
                 $('#ProduccionTeorica').val(datos.PRODUCCION_TEORICA);
