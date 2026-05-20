@@ -20,7 +20,7 @@ class MantenimientosPreventivoApp {
             '#bodyArticulosRefaccionMP',
             'Planeacion',
             'alertRefaccionContainer',
-            [110],
+            110,
             null,
             this.datos_usuario// Grupos de articulos excluidos 110 -> Producto Terminado
         );
@@ -69,7 +69,7 @@ class MantenimientosPreventivoApp {
         $('#BuscarArticuloMP').on('input', (e) => {
             const query = $(e.target).val().trim();
             if (query.length >= 2) {
-                this.gestionArticulosMP.buscarArticulos(query, this.datos_usuario[0].EMAIL);
+                this.gestionArticulosMP.buscarArticulos(query, this.datos_usuario[0].EMAIL,0);
             } else {
                 this.gestionArticulosMP.ocultarSugerencias();
             }

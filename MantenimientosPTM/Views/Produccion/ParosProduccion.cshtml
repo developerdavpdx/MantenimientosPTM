@@ -65,13 +65,27 @@
                                 <option value="2">🛠️ 2</option>
                             </select>
                         </div>
+                        <!-- Proceso -->
+                        <div class="col-12 col-sm-6 col-md-3 col-xl-2">
+                            <label class="filtro-label" for="FiltroProceso">
+                                <i class="bi bi-gear-fill"></i> Proceso
+                            </label>
+                            <div class="select-wrapper">
+                                <select class="filtro-input" id="FiltroProceso" name="FiltroProceso">
+                                    <option value="">Todos los procesos...</option>
+                                </select>
+                                <div class="select-loader d-none" id="loader_FiltroProceso">
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                </div>
+                            </div>
+                        </div>
                         <!-- Línea de Producción -->
                         <div class="col-12 col-sm-6 col-md-3 col-xl-2">
                             <label class="filtro-label" for="FiltroLinea">
                                 <i class="bi bi-diagram-3-fill"></i> Línea
                             </label>
                             <div class="select-wrapper">
-                                <select class="filtro-input" id="FiltroLinea" name="FiltroLinea">
+                                <select class="filtro-input" id="FiltroLinea" name="FiltroLinea" disabled>
                                     <option value="">Todas las líneas...</option>
                                 </select>
                                 <div class="select-loader d-none" id="loader_FiltroLinea">
@@ -82,15 +96,15 @@
 
                         <!-- Estado -->
                         @*<div class="col-12 col-sm-6 col-md-3 col-xl-2">
-                            <label class="filtro-label" for="FiltroEstadoParo">
-                                <i class="bi bi-toggle-on"></i> Estado
-                            </label>
-                            <select class="filtro-input" id="FiltroEstadoParo" name="FiltroEstadoParo">
-                                <option value="">Todos los estatus...</option>
-                                <option value="Activo">Activos</option>
-                                <option value="Resuelto">Resueltos</option>
-                            </select>
-                        </div>*@
+            <label class="filtro-label" for="FiltroEstadoParo">
+                <i class="bi bi-toggle-on"></i> Estado
+            </label>
+            <select class="filtro-input" id="FiltroEstadoParo" name="FiltroEstadoParo">
+                <option value="">Todos los estatus...</option>
+                <option value="Activo">Activos</option>
+                <option value="Resuelto">Resueltos</option>
+            </select>
+        </div>*@
 
                         <!-- Fecha Inicio -->
                         <div class="col-12 col-sm-6 col-md-3 col-xl-2">
@@ -342,13 +356,19 @@
                     <div class="row mb-3">
                         <div class="col-md-12">
 
-                            <div class="table-responsive small table-responsive-custom" id="tablaParosContainer">
-                                <table class="table table-striped table-sm CustomTableResponsive" id="tablaParos">
+                            <div class="table-responsive small table-responsive-custom"
+                                 id="tablaParosContainer"
+                                 style="overflow-x:auto;">
+
+                                <table class="table table-striped table-sm CustomTableResponsive"
+                                       id="tablaParos"
+                                       style="width:max(100%, 1000px);">
                                     <thead>
                                         <tr>
-                                            <th style="width:180px;">Línea</th>
-                                            <th style="width:180px;">Categoría</th>
-                                            <th style="width:120px;">Duración (hrs)</th>
+                                            <th>Línea</th>
+                                            <th>Categoría</th>
+                                            <th>Artículo</th>
+                                            <th>Duración (hrs)</th>
                                             <th>Comentarios</th>
                                             <th style="width:50px;"></th>
                                         </tr>

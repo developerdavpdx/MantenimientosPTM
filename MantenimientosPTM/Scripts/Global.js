@@ -407,12 +407,12 @@ class EquiposUtil {
 
     }
 
-    static llenarLineasCheckbox(Planta, Area, FieldContainer) {
+    static llenarLineasCheckbox(Planta, Area, Produccion, FieldContainer) {
 
         $.ajax({
             url: `/${GlobalUtil.URLBaseEquipos}/GetLineasPorPlanta`,
             type: 'GET',
-            data: { "PLANTA": Planta, "AREA": Area },
+            data: { "PLANTA": Planta, "AREA": Area, "PRODUCCION": Produccion },
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -447,7 +447,7 @@ class EquiposUtil {
                                         id="linea_${linea.ID_LINEA}">
                     
                                     <label class="form-check-label" for="linea_${linea.ID_LINEA}">
-                                        🔹 ${linea.LINEA}
+                                         ${linea.LINEA}
                                     </label>
                                 </div>
                             </div>
@@ -1617,7 +1617,7 @@ class GestionCentrosCosto {
 
 // ✅ Clase para gestionar artículos con selección automática a tabla
 class GestionArticulos {
-    constructor(datos_usuario,grupo_articulos) {
+    constructor(datos_usuario, grupo_articulos) {
         this.articuloSeleccionado = null;
         this.URLBase = "Planeacion";
         this._debounceTimer = null;
@@ -1634,7 +1634,7 @@ class GestionArticulos {
     }
 
     // ─── Búsqueda con debounce integrado ──────────────────────────────────────
-    buscarArticulos(query, Usuario,Linea) {
+    buscarArticulos(query, Usuario, Linea) {
         let Planta = this.datos_usuario[0].PLANTA;
         let GrupoArticulos = this.grupo_articulos;
         clearTimeout(this._debounceTimer);
@@ -1643,7 +1643,7 @@ class GestionArticulos {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario, Planta,Linea, GrupoArticulos },
+                    data: { query, Usuario, Planta, Linea, GrupoArticulos },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);
@@ -1654,14 +1654,15 @@ class GestionArticulos {
     }
 
     // ─── Metodo para AcGrid ───────────────────────────────────────────────────────────
-    async obtenerArticulos(query, Usuario) {
-
+    async obtenerArticulos(query, Usuario, ValidarCap) {
+        let Planta = this.datos_usuario[0].PLANTA;
+        let GrupoArticulos = this.grupo_articulos;
+        let Linea = null;
         try {
-
             const response = await $.ajax({
                 url: `/${this.URLBase}/BuscarArticulo`,
                 method: 'GET',
-                data: { query, Usuario },
+                data: { query, Usuario, Planta, Linea, GrupoArticulos, ValidarCap },
                 dataType: 'json'
             });
 
@@ -1768,7 +1769,7 @@ class GestionArticulosCustom {
         inputBuscar, contenedorSugerencias, inputCodigo,
         inputDescripcion, tbodyId = '#bodyArticulosRefaccionMP',
         urlBase = 'Mantenimientos', ModalContainer,
-        excludeArt = [], includeArt = [],
+        GrupoArticulos = 0, includeArt = [],
         datos_usuario
     ) {
         this.URLBase = urlBase;
@@ -1781,22 +1782,22 @@ class GestionArticulosCustom {
         this._debounceDelay = 300;
         this._ModalContainer = ModalContainer;
         this.articulosAgregados = [];
-        this.excludeArt = excludeArt;
+        this.GrupoArticulos = GrupoArticulos;
         this.includeArt = includeArt;
         this.datos_usuario = datos_usuario;
     }
 
-    buscarArticulos(query, Usuario) {
+    buscarArticulos(query, Usuario, ValidarCap) {
         clearTimeout(this._debounceTimer);
         let Planta = this.datos_usuario[0].PLANTA;
-        let GrupoArticulos = 104; //cualquiera diferente de 110
+        let GrupoArticulos = this.GrupoArticulos; //cualquiera diferente de 110
         this._debounceTimer = setTimeout(async () => {
             try {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     // url: `/ProgramaMantenimientos/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario, Planta,GrupoArticulos },
+                    data: { query, Usuario, Planta, GrupoArticulos, ValidarCap },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);
@@ -1813,19 +1814,8 @@ class GestionArticulosCustom {
             container.html(`<div class="sugerencia-item text-muted"><i class="bi bi-exclamation-circle"></i> No se encontraron artículos.</div>`);
         } else {
             articulos.forEach(articulo => {
-                if (!this.excludeArt.includes(articulo.GrupoArt)) {
-
-                    //Solo los incluidos en el arreglo en caso de exisitir
-                    container.append(this._renderItem(articulo))
-                    //if (this.includeArt.length > 0) {
-                    //    if (this.includeArt.includes(articulo.GrupoArt)) {
-                    //        container.append(this._renderItem(articulo))
-                    //    }
-                    //}
-                    //else {
-                    //    container.append(this._renderItem(articulo))
-                    //}
-                }
+                //Solo los incluidos en el arreglo en caso de exisitir
+                container.append(this._renderItem(articulo))
             });
         }
         container.addClass('show');

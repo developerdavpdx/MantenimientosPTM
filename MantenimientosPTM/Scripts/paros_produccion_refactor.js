@@ -2,7 +2,8 @@
 // GESTION DE EVENTOS
 // ========================================
 class GestionEventosApp {
-    constructor() {
+    constructor(datos_usuario) {
+        this.datos_usuario = GlobalUtil.getDatosUsuario();
         this.URLBase = "Produccion";
         this.ProduccionManager = new ProduccionManager(this.URLBase);
     }
@@ -158,7 +159,7 @@ class GestionEventosApp {
         $('#btnAplicarFiltrosParo').on('click', () => {
             const Planta = $("#FiltroPlantaParo").val();
             const Proceso = $("#FiltroProcesoParo").val() || null;
-            EquiposUtil.llenarLineasCheckbox(Planta, Proceso, "contenedorLineasParo");
+            EquiposUtil.llenarLineasCheckbox(Planta, Proceso,1, "contenedorLineasParo");
             $("#LineasProduccionContainer").removeClass("d-none");
         });
 
@@ -186,6 +187,21 @@ class GestionEventosApp {
             $('#modalReanudarParo').modal('show');
 
         });
+
+        $("#FiltroProceso")
+            .off('change')
+            .on('change', (e) => {
+
+                let Proceso = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Proceso,
+                    1,
+                    "FiltroLinea",
+                    null
+                );
+            });
     }
 }
 
@@ -243,8 +259,8 @@ class ProduccionManager {
 
     // ✅ Función para inicializar el calendario
     inicializar() {
-        EquiposUtil.llenarLineas(null, "ParoLinea", "FiltroLinea");
         this.llenarTablaParos();
+        EquiposUtil.llenarProcesos(this.PLANTA, null, "FiltroProceso");
         EquiposUtil.llenarCategoriasParo("ParoCategoria");
         console.log('✅ Calendar Manager inicializado correctamente');
     }
@@ -833,6 +849,11 @@ class ProduccionManager {
                 <select class="form-select form-select-sm paro-categoria" data-value="${categoria}">
                     ${this.generarOpcionesCategorias(categoria)}
                 </select>
+            </td>
+
+            <td>
+                <input type="text" step="0.1"
+                       class="form-control form-control-sm paro-artículo" />
             </td>
 
             <td>

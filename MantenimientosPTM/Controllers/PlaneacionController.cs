@@ -364,12 +364,12 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarArticulo(string query, string Usuario,string Planta,int? Linea, int? GrupoArticulos)
+        public JsonResult BuscarArticulo(string query, string Usuario,string Planta,int? Linea, int? GrupoArticulos,int? ValidarCap)
         {
             try
             {
                 // ✅ Validar que venga el parámetro
-                if (string.IsNullOrEmpty(query))
+               if (string.IsNullOrEmpty(query))
                 {
                     return Json(new List<object>(), JsonRequestBehavior.AllowGet);
                 }
@@ -381,7 +381,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_USUARIO", (Usuario, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA", (Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_LINEA", (Linea, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_GRUPO_ART", (GrupoArticulos, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_GRUPO_ART", (GrupoArticulos, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_VALIDAR_CAP", (ValidarCap, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure
