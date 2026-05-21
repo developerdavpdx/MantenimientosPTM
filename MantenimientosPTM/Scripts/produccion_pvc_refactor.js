@@ -12,139 +12,6 @@ class UIManager {
 }
 
 // ========================================
-// GESTOR DE EVENTOS
-// ========================================
-class GestionEventosPVC {
-    constructor() {
-        this.URLBase = "Produccion";
-        this.datos_usuario = GlobalUtil.getDatosUsuario();
-        this.appProduccion = new GestionProduccionPVC(this.datos_usuario, this.URLBase);
-    }
-
-    inicializar() {
-        // Inicializar UI
-        UIManager.inicializarUI();
-
-        // Inicializar la aplicación principal
-        this.appProduccion.inicializar();
-
-        console.log('✅ Sistema Completo PVC inicializado');
-    }
-}
-
-// ========================================
-// INICIALIZACIÓN
-// ========================================
-$(document).ready(function () {
-    const app = new GestionEventosPVC();
-    app.inicializar();
-});
-
-class ArticuloAutocompleteEditor {
-
-    init(params) {
-
-        this.params = params;
-
-        this.eContainer = document.createElement('div');
-        this.eContainer.style.position = 'relative';
-
-        this.eInput = document.createElement('input');
-        this.eInput.className = 'form-control';
-        this.eInput.value = params.value || '';
-
-        this.eDropdown = document.createElement('div');
-        this.eDropdown.className = 'autocomplete-dropdown';
-
-        this.eContainer.appendChild(this.eInput);
-        this.eContainer.appendChild(this.eDropdown);
-
-        this.gestionArticulos = params.context.gestionArticulos;
-        this.datos_usuario = params.context.datos_usuario;
-        this.URLBase = params.context.URLBase;
-
-        $(this.eInput).on('input', async (e) => {
-
-            const query = e.target.value;
-
-            if (query.length >= 2) {
-
-                const articulos = await this.gestionArticulos.obtenerArticulos(
-                    query,
-                    this.datos_usuario[0].EMAIL,
-                    0
-                );
-
-                this.mostrarSugerencias(articulos);
-
-            } else {
-
-                this.eDropdown.innerHTML = '';
-
-            }
-
-        });
-
-    }
-
-    mostrarSugerencias(articulos) {
-
-        this.eDropdown.innerHTML = '';
-
-        const rect = this.eInput.getBoundingClientRect();
-
-        this.eDropdown.style.top = rect.bottom + 'px';
-        this.eDropdown.style.left = rect.left + 'px';
-        this.eDropdown.style.width = Math.max(rect.width, 450) + 'px';
-
-        articulos.forEach(articulo => {
-
-            const item = document.createElement('div');
-            item.className = 'autocomplete-item';
-
-            item.innerHTML = `
-            <strong>${articulo.CodigoArticulo}</strong><br>
-            <small>${articulo.DescripcionArticulo}</small>
-        `;
-
-            item.addEventListener('click', () => {
-
-                this.eInput.value = articulo.CodigoArticulo;
-
-                this.eDropdown.innerHTML = '';
-
-                this.params.stopEditing(); // 🔥 cerrar editor automáticamente
-
-            });
-
-            this.eDropdown.appendChild(item);
-
-        });
-
-    }
-
-    getGui() {
-        return this.eContainer;
-    }
-
-    afterGuiAttached() {
-        this.eInput.focus();
-        this.eInput.select();
-        this.eInput.value = ''; // 🔥 limpiar input
-    }
-
-    getValue() {
-        return this.eInput.value;
-    }
-
-    destroy() { }
-
-    isPopup() {
-        return true;
-    }
-}
-
-// ========================================
 // APLICACIÓN PRINCIPAL - GESTIÓN PVC
 // ========================================
 class GestionProduccionPVC {
@@ -157,7 +24,7 @@ class GestionProduccionPVC {
         this.cambiosPendientes = [];
         this.columnDefs = null;
         this.listaLineas = [];
-        this.gestionArticulos = new GestionArticulos(this.datos_usuario,0);
+        this.gestionArticulos = new GestionArticulos(this.datos_usuario, 0);
     }
 
     async inicializar() {
@@ -1266,12 +1133,147 @@ class GestionProduccionPVC {
 
     formatearRangoFechas(fechaInicio, fechaFin) {
 
-        const inicio = DateUtils.formatearFechaTexto(fechaInicio,false);
-        const fin = DateUtils.formatearFechaTexto(fechaFin,true);
+        const inicio = DateUtils.formatearFechaTexto(fechaInicio, false);
+        const fin = DateUtils.formatearFechaTexto(fechaFin, true);
 
         return `Del ${inicio} al ${fin}`;
     }
 }
+
+// ========================================
+// GESTOR DE EVENTOS
+// ========================================
+class GestionEventosPVC {
+    constructor() {
+        this.URLBase = "Produccion";
+        this.datos_usuario = GlobalUtil.getDatosUsuario();
+        this.appProduccion = new GestionProduccionPVC(this.datos_usuario, this.URLBase);
+    }
+
+    inicializar() {
+        // Inicializar UI
+        UIManager.inicializarUI();
+
+        // Inicializar la aplicación principal
+        this.appProduccion.inicializar();
+
+        console.log('✅ Sistema Completo PVC inicializado');
+    }
+}
+
+// ========================================
+// INICIALIZACIÓN
+// ========================================
+$(document).ready(function () {
+    const app = new GestionEventosPVC();
+    app.inicializar();
+});
+
+class ArticuloAutocompleteEditor {
+
+    init(params) {
+
+        this.params = params;
+
+        this.eContainer = document.createElement('div');
+        this.eContainer.style.position = 'relative';
+
+        this.eInput = document.createElement('input');
+        this.eInput.className = 'form-control';
+        this.eInput.value = params.value || '';
+
+        this.eDropdown = document.createElement('div');
+        this.eDropdown.className = 'autocomplete-dropdown';
+
+        this.eContainer.appendChild(this.eInput);
+        this.eContainer.appendChild(this.eDropdown);
+
+        this.gestionArticulos = params.context.gestionArticulos;
+        this.datos_usuario = params.context.datos_usuario;
+        this.URLBase = params.context.URLBase;
+
+        $(this.eInput).on('input', async (e) => {
+
+            const query = e.target.value;
+
+            if (query.length >= 2) {
+
+                const articulos = await this.gestionArticulos.obtenerArticulos(
+                    query,
+                    this.datos_usuario[0].EMAIL,
+                    0
+                );
+
+                this.mostrarSugerencias(articulos);
+
+            } else {
+
+                this.eDropdown.innerHTML = '';
+
+            }
+
+        });
+
+    }
+
+    mostrarSugerencias(articulos) {
+
+        this.eDropdown.innerHTML = '';
+
+        const rect = this.eInput.getBoundingClientRect();
+
+        this.eDropdown.style.top = rect.bottom + 'px';
+        this.eDropdown.style.left = rect.left + 'px';
+        this.eDropdown.style.width = Math.max(rect.width, 450) + 'px';
+
+        articulos.forEach(articulo => {
+
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+
+            item.innerHTML = `
+            <strong>${articulo.CodigoArticulo}</strong><br>
+            <small>${articulo.DescripcionArticulo}</small>
+        `;
+
+            item.addEventListener('click', () => {
+
+                this.eInput.value = articulo.CodigoArticulo;
+
+                this.eDropdown.innerHTML = '';
+
+                this.params.stopEditing(); // 🔥 cerrar editor automáticamente
+
+            });
+
+            this.eDropdown.appendChild(item);
+
+        });
+
+    }
+
+    getGui() {
+        return this.eContainer;
+    }
+
+    afterGuiAttached() {
+        this.eInput.focus();
+        this.eInput.select();
+        this.eInput.value = ''; // 🔥 limpiar input
+    }
+
+    getValue() {
+        return this.eInput.value;
+    }
+
+    destroy() { }
+
+    isPopup() {
+        return true;
+    }
+}
+
+
 
 // ========================================
 // EXPORTADOR EXCEL PARA PVC

@@ -314,10 +314,18 @@
                         </h6>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label-custom" for="ProduccionTeorica">
-                                    <i class="bi bi-calculator"></i> Producción Teórica
+                                <label class="form-label-custom" for="ProduccionTeoricaPzs">
+                                    <i class="bi bi-calculator"></i> Producción Teórica PZS
                                 </label>
-                                <input type="text" class="form-control-custom" id="ProduccionTeorica" name="ProduccionTeorica"
+                                <input type="text" class="form-control-custom" id="ProduccionTeoricaPzs" name="ProduccionTeoricaPzs"
+                                       placeholder="Ingrese producción teórica" required autocomplete="off" readonly>
+                                <div class="modal-error-msg">⚠️ Indique la producción teórica.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="ProduccionTeoricaKgs">
+                                    <i class="bi bi-calculator"></i> Producción Teórica KGS
+                                </label>
+                                <input type="text" class="form-control-custom" id="ProduccionTeoricaKgs" name="ProduccionTeoricaKgs"
                                        placeholder="Ingrese producción teórica" required autocomplete="off" readonly>
                                 <div class="modal-error-msg">⚠️ Indique la producción teórica.</div>
                             </div>
@@ -326,7 +334,7 @@
                                     <i class="bi bi-check2-circle"></i> Producción Real
                                 </label>
                                 <input type="text" class="form-control-custom" id="ProduccionReal" name="ProduccionReal"
-                                       placeholder="Ingrese producción real"  autocomplete="off">
+                                       placeholder="Ingrese producción real" autocomplete="off" readonly>
                                 <div class="modal-error-msg">⚠️ Indique la producción real.</div>
                             </div>
                             <div class="col-12">

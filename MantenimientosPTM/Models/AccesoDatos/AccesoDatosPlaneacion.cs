@@ -197,8 +197,12 @@ namespace MantenimientosPTM
                 DIA_FIN_MANT?.ToString("dd/MM/yyyy");
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string PRODUCCION_TEORICA { get; set; }
+            [DefaultValue(0)]
+            public decimal? PRODUCCION_TEORICA_PZS { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? PRODUCCION_TEORICA_KGS { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]

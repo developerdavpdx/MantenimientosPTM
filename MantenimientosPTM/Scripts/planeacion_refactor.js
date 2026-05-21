@@ -98,34 +98,70 @@ class GestionEventosApp {
 
         $("#btnExportarExcel").on('click', () => this.calendarManager.exportarExcel());
 
-        $("#DiaFinMant, #DiaInicioMant, #PlanCap").on('change', function () {
+        $("#DiaFinMant, #DiaInicioMant").on('change', function () {
+
             const FI = $("#DiaInicioMant").val();
+
             const FF = $("#DiaFinMant").val();
-            const Cap = $("#PlanCap").val();
 
-            let CapTeorica = 0, diff = 0;
+            const CapPzs = parseFloat($("#PlanCapPiezas").val()) || 0;
 
-            if (FI && FF && Cap) {
-                const fechaInicio = new Date(FI);
-                const fechaFin = new Date(FF);
+            const CapKgs = parseFloat($("#PlanCapKilos").val()) || 0;
 
-                if (fechaInicio > fechaFin) {
-                    AlertManager.mostrar('La fecha de inicio no puede ser mayor a la fecha de fin.', 'warning');
-                    //$("#DiaInicioMant").val('');
-                    //$("#DiaFinMant").val('');
-                    return;
-                }
-                // Diferencia en milisegundos → convertir a días
-                const diffMs = fechaFin - fechaInicio;
-                diff = Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1; // +1 para incluir día inicio
+            if (!FI || !FF) {
 
-                // Protección: si las fechas están invertidas no calcules
-                if (diff > 0) {
-                    CapTeorica = parseFloat(Cap) * diff;
-                }
+                $("#ProduccionTeoricaPzs").val('');
+
+                $("#ProduccionTeoricaKgs").val('');
+
+                return;
+
             }
 
-            $("#ProduccionTeorica").val(CapTeorica);
+            const fechaInicio = new Date(FI);
+
+            const fechaFin = new Date(FF);
+
+            // 🔥 validar rango
+            if (fechaInicio > fechaFin) {
+
+                AlertManager.mostrar(
+                    'La fecha de inicio no puede ser mayor a la fecha de fin.',
+                    'warning'
+                );
+
+                $("#ProduccionTeoricaPzs").val('');
+
+                $("#ProduccionTeoricaKgs").val('');
+
+                return;
+
+            }
+
+            // 🔥 diferencia en milisegundos
+            const diferenciaMs =
+                fechaFin - fechaInicio;
+
+            // 🔥 convertir a días
+            const dias =
+                Math.floor(
+                    diferenciaMs / (1000 * 60 * 60 * 24)
+                ) + 1;
+
+            // 🔥 cálculos
+            const produccionPzs =
+                dias * CapPzs;
+
+            const produccionKgs =
+                dias * CapKgs;
+
+            // 🔥 pintar resultados
+            $("#ProduccionTeoricaPzs")
+                .val(produccionPzs.toFixed(2));
+
+            $("#ProduccionTeoricaKgs")
+                .val(produccionKgs.toFixed(2));
+
         });
 
         // ✅ Event delegation — seguro contra manipulación del DOM
@@ -326,201 +362,330 @@ class PlaneacionManager {
     // CARDS — template de una card
     // ─────────────────────────────────────────────
     _renderCard(d, idx) {
-        const p = this._calcPct(d.PRODUCCION_TEORICA, d.PRODUCCION_REAL);
-        const bw = Math.min(p, 100);
-        const estatusC = `estatus-${d.ESTATUS || 'P'}`;
-        const chipC = `chip-${d.ESTATUS || 'P'}`;
 
-        const comentario = (d.COMENTARIOS && d.COMENTARIOS.trim())
-            ? d.COMENTARIOS
-            : '<em>Sin comentarios</em>';
+                const p = this._calcPct(
+                    d.PRODUCCION_TEORICA_PZS,
+                    d.PRODUCCION_REAL
+                );
 
-        // ── Paro activo ──────────────────────────
-        const tieneParoActivo = d.TIENE_PARO_ACTIVO === 1 || d.TIENE_PARO_ACTIVO === '1';
-        const paroBanner = tieneParoActivo ? `
-        <div class="paro-banner">
-            <i class="bi bi-exclamation-octagon-fill"></i>
-            <span>Paro activo registrado el ${d.FECHA_PARO || ''}</span>
-        </div>` : '';
+                const bw = Math.min(p, 100);
 
-        // ── Artículo (truncado si es muy largo) ──
-        const articulo = d.ARTICULO
-            ? (d.ARTICULO.length > 45 ? d.ARTICULO.substring(0, 45) + '…' : d.ARTICULO)
-            : null;
+                const estatusC = `estatus-${d.ESTATUS || 'P'}`;
 
-        return `
+                const chipC = `chip-${d.ESTATUS || 'P'}`;
+
+                const comentario = (d.COMENTARIOS && d.COMENTARIOS.trim())
+                    ? d.COMENTARIOS
+                    : '<em>Sin comentarios</em>';
+
+                // ── Paro activo ──────────────────────────
+                const tieneParoActivo =
+                    d.TIENE_PARO_ACTIVO === 1 ||
+                    d.TIENE_PARO_ACTIVO === '1';
+
+                const paroBanner = tieneParoActivo ? `
+            <div class="paro-banner">
+                <i class="bi bi-exclamation-octagon-fill"></i>
+                <span>
+                    Paro activo registrado el ${d.FECHA_PARO || ''}
+                </span>
+            </div>` : '';
+
+                // ── Artículo truncado ────────────────────
+                const articulo = d.ARTICULO
+                    ? (
+                        d.ARTICULO.length > 45
+                            ? d.ARTICULO.substring(0, 45) + '…'
+                            : d.ARTICULO
+                    )
+                    : null;
+
+                return `
+
         <div class="prod-card ${estatusC} ${tieneParoActivo ? 'tiene-paro' : ''}"
-         data-id="${d.ID_PLAN}"
-         style="animation-delay:${idx * 55}ms">
+             data-id="${d.ID_PLAN}"
+             style="animation-delay:${idx * 55}ms">
 
-        ${paroBanner}
+            ${paroBanner}
 
-        <!-- HEADER -->
-        <div class="card-head">
-            <div class="linea-info">
-                <div class="linea-icon ${tieneParoActivo ? 'linea-icon-paro' : ''}">
-                    <i class="bi bi-diagram-3-fill"></i>
+            <!-- HEADER -->
+            <div class="card-head">
+
+                <div class="linea-info">
+
+                    <div class="linea-icon ${tieneParoActivo ? 'linea-icon-paro' : ''}">
+                        <i class="bi bi-diagram-3-fill"></i>
+                    </div>
+
+                    <div>
+                        <div class="linea-nombre">
+                            ${d.LINEA_PRODUCCION_DESC || 'N/A'}
+                        </div>
+
+                        <div class="linea-sub">
+                            ID #${d.ID_PLAN}
+                        </div>
+                    </div>
+
                 </div>
-                <div>
-                    <div class="linea-nombre">${d.LINEA_PRODUCCION_DESC || 'N/A'}</div>
-                    <div class="linea-sub">ID #${d.ID_PLAN}</div>
+
+                <span class="mes-pill">
+                    <i class="bi bi-calendar3"></i>
+                    ${this._getMesAnio(d.FECHA_PLAN_STRING)}
+                </span>
+
+            </div>
+
+            <!-- BODY -->
+            <div class="card-body">
+
+                <!-- Badge -->
+                <div class="plan-original-badge">
+                    <i class="bi bi-clipboard-check-fill"></i>
+                    Plan original
                 </div>
-            </div>
-            <span class="mes-pill">
-                <i class="bi bi-calendar3"></i> ${this._getMesAnio(d.FECHA_PLAN_STRING)}
-            </span>
-        </div>
 
-        <!-- BODY -->
-        <div class="card-body">
-            <!-- Badge Plan Original -->
-            <div class="plan-original-badge">
-                <i class="bi bi-clipboard-check-fill"></i> Plan original
-            </div>
-            <!-- Rango de días + Proceso -->
-            <div class="card-tags-row">
-                <span class="rango-tag">
-                    <i class="bi bi-calendar-range"></i>
-                    <span class="tag-label">Período:</span> Del ${d.DIA_INICIO_MANT_STR || 0} — Al ${d.DIA_FIN_MANT_STR || 0}
-                </span>
-                ${d.PROCESO ? `
-                <span class="proceso-tag">
-                    <i class="bi bi-gear-fill"></i>
-                    <span class="tag-label">Proceso:</span> ${d.PROCESO}
-                </span>` : ''}
-            </div>
+                <!-- Tags -->
+                <div class="card-tags-row">
 
-            <!-- Artículo -->
-            ${articulo ? `
-            <div class="info-badge-row">
-                <span class="info-badge-label">
-                    <i class="bi bi-box-seam-fill"></i> Artículo
-                </span>
-                <span class="info-badge-value" data-bs-toggle="tooltip" title="${d.ARTICULO}">
-                    ${articulo}
-                </span>
-            </div>
+                    <span class="rango-tag">
+                        <i class="bi bi-calendar-range"></i>
 
-            <!-- Artículo Desc -->
-            ${d.ARTICULO_DESC ? `
-            <div class="info-badge-row articulo-desc">
-                <span class="info-badge-label">
-                    <i class="bi bi-card-text"></i> Descripción
-                </span>
-                <span class="info-badge-value articulo-desc-text" 
-                      data-bs-toggle="tooltip" 
-                      title="${d.ARTICULO_DESC}">
-                    ${d.ARTICULO_DESC}
-                </span>
-            </div>` : ''}
+                        <span class="tag-label">
+                            Período:
+                        </span>
 
-            ` : ''}
+                        Del ${d.DIA_INICIO_MANT_STR || 0}
+                        — Al ${d.DIA_FIN_MANT_STR || 0}
+                    </span>
 
-            <!-- Capacidades -->
-            ${(d.PZSXDIA || d.KGSXDIA) ? `
-            <div class="capacity-grid">
+                    ${d.PROCESO ? `
+                    <span class="proceso-tag">
 
-                <div class="capacity-card piezas">
-                    <div class="capacity-top">
+                        <i class="bi bi-gear-fill"></i>
+
+                        <span class="tag-label">
+                            Proceso:
+                        </span>
+
+                        ${d.PROCESO}
+
+                    </span>` : ''}
+
+                </div>
+
+                <!-- Artículo -->
+                ${articulo ? `
+
+                <div class="info-badge-row">
+
+                    <span class="info-badge-label">
                         <i class="bi bi-box-seam-fill"></i>
-                        <span>Piezas</span>
-                    </div>
+                        Artículo
+                    </span>
 
-                    <div class="capacity-number">
-                        ${this._fmtNum(d.PZSXDIA || 0)}
-                    </div>
+                    <span class="info-badge-value"
+                          data-bs-toggle="tooltip"
+                          title="${d.ARTICULO}">
 
-                    <div class="capacity-unit">
-                        PZ / día
-                    </div>
+                        ${articulo}
+
+                    </span>
+
                 </div>
 
-                <div class="capacity-card kilos">
-                    <div class="capacity-top">
-                        <i class="bi bi-speedometer2"></i>
-                        <span>Kilos</span>
-                    </div>
+                ${d.ARTICULO_DESC ? `
 
-                    <div class="capacity-number">
-                        ${this._fmtNum(d.KGSXDIA || 0)}
-                    </div>
+                <div class="info-badge-row articulo-desc">
 
-                    <div class="capacity-unit">
-                        KG / día
-                    </div>
+                    <span class="info-badge-label">
+                        <i class="bi bi-card-text"></i>
+                        Descripción
+                    </span>
+
+                    <span class="info-badge-value articulo-desc-text"
+                          data-bs-toggle="tooltip"
+                          title="${d.ARTICULO_DESC}">
+
+                        ${d.ARTICULO_DESC}
+
+                    </span>
+
                 </div>
 
-            </div>` : ''}
+                ` : ''}
 
-            <!-- Stats producción -->
-            <div class="stats-row">
-                <div class="stat-box teorica">
-                    <div class="stat-label">
-                        <i class="bi bi-calculator-fill teorica-icon"></i> Prod. Teórica
+                ` : ''}
+
+                <!-- Capacidades -->
+                ${(d.PZSXDIA || d.KGSXDIA) ? `
+
+                <div class="capacity-grid">
+
+                    <div class="capacity-card piezas">
+
+                        <div class="capacity-top">
+                            <i class="bi bi-box-seam-fill"></i>
+                            <span>Piezas</span>
+                        </div>
+
+                        <div class="capacity-number">
+                            ${this._fmtNum(d.PZSXDIA || 0)}
+                        </div>
+
+                        <div class="capacity-unit">
+                            PZ / día
+                        </div>
+
                     </div>
-                    <div class="stat-value">
-                        ${this._fmtNum(d.PRODUCCION_TEORICA)}<span class="stat-unit">PZ</span>
+
+                    <div class="capacity-card kilos">
+
+                        <div class="capacity-top">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Kilos</span>
+                        </div>
+
+                        <div class="capacity-number">
+                            ${this._fmtNum(d.KGSXDIA || 0)}
+                        </div>
+
+                        <div class="capacity-unit">
+                            KG / día
+                        </div>
+
                     </div>
-                    <div class="stat-sublabel">Meta del período</div>
+
                 </div>
-                <div class="stat-box real">
-                    <div class="stat-label">
-                        <i class="bi bi-graph-up-arrow real-icon"></i> Prod. Real
+
+                ` : ''}
+
+                <!-- Producción -->
+                    <div class="prod-grid">
+
+                        <!-- Teórica PZ -->
+                        <div class="stat-box teorica">
+
+                            <div class="stat-label">
+                                <i class="bi bi-box-fill teorica-icon"></i>
+                                Producción Teórica PZ
+                            </div>
+
+                            <div class="stat-value">
+                                ${this._fmtNum(d.PRODUCCION_TEORICA_PZS || 0)}
+                                <span class="stat-unit">
+                                    PZ
+                                </span>
+                            </div>
+
+                            <div class="stat-sublabel">
+                                Piezas esperadas
+                            </div>
+
+                        </div>
+
+                        <!-- Teórica KG -->
+                        <div class="stat-box teorica">
+
+                            <div class="stat-label">
+                                <i class="bi bi-speedometer2 teorica-icon"></i>
+                                Producción Teórica KG
+                            </div>
+
+                            <div class="stat-value">
+                                ${this._fmtNum(d.PRODUCCION_TEORICA_KGS || 0)}
+                                <span class="stat-unit">
+                                    KG
+                                </span>
+                            </div>
+
+                            <div class="stat-sublabel">
+                                Kilos esperados
+                            </div>
+
+                        </div>
+
                     </div>
-                    <div class="stat-value real">
-                        ${this._fmtNum(d.PRODUCCION_REAL)}<span class="stat-unit">PZ</span>
+
+                    <!-- Producción Real -->
+                    <div class="real-row">
+
+                        <div class="stat-box real real-full">
+
+                            <div class="stat-label">
+                                <i class="bi bi-graph-up-arrow real-icon"></i>
+                                Producción Real
+                            </div>
+
+                            <div class="stat-value real">
+                                ${this._fmtNum(d.PRODUCCION_REAL || 0)}
+                                <span class="stat-unit">
+                                    PZ
+                                </span>
+                            </div>
+
+                            <div class="stat-sublabel">
+                                Producción registrada
+                            </div>
+
+                        </div>
+
                     </div>
-                    <div class="stat-sublabel">Piezas producidas</div>
+
+                <!-- Comentarios -->
+                <div class="info-badge-row mt-2">
+
+                    <span class="info-badge-label">
+                        <i class="bi bi-chat-left-text-fill"></i>
+                        Comentarios
+                    </span>
+
+                    <span class="info-badge-value">
+                        ${comentario}
+                    </span>
+
                 </div>
+
             </div>
 
-            <!-- Barra de cumplimiento 
-            <div class="progress-section">
-                <div class="progress-labels">
-                    <span><i class="bi bi-bar-chart-fill me-1"></i>% Cumplimiento del plan</span>
-                    <strong>${p}%</strong>
-                </div>
-                <div class="progress-track">
-                    <div class="progress-fill ${this._getFillClass(p)}" style="width:${bw}%"></div>
-                </div>
-            </div>-->
+            <!-- Historial -->
+            ${this._renderBitacora(d.BITACORA || [])}
 
-            <!-- Comentarios -->
-            <div class="info-badge-row">
-                <span class="info-badge-label">
-                    <i class="bi bi-chat-left-text-fill"></i> Comentarios
-                </span>
-                <span class="info-badge-value">${comentario}</span>
+            <!-- FOOTER -->
+            <div class="card-foot">
+
+                <div class="actions">
+
+                    <button class="btn-act edit"
+                            title="Extender plan Actual"
+                            data-id="${d.ID_PLAN}"
+                            data-linea="${d.LINEA_PRODUCCION_DESC || 'N/A'}">
+
+                        <i class="bi bi-pencil-square"></i>
+
+                    </button>
+
+                    <button class="btn-act del"
+                            title="Eliminar plan"
+                            data-id="${d.ID_PLAN}"
+                            data-linea="${d.LINEA_PRODUCCION_DESC || 'N/A'}"
+                            data-mes="${this._getMesAnio(d.FECHA_PLAN_STRING)}"
+                            data-periodo="Del ${d.DIA_INICIO_MANT_STR || 0} — Al ${d.DIA_FIN_MANT_STR || 0}"
+                            data-articulo="${d.ARTICULO ? d.ARTICULO.substring(0, 45) : 'Sin artículo'}"
+                            data-teoricapzs="${this._fmtNum(d.PRODUCCION_TEORICA_PZS || 0)}"
+                            data-teoricakgs="${this._fmtNum(d.PRODUCCION_TEORICA_KGS || 0)}"
+                            data-real="${this._fmtNum(d.PRODUCCION_REAL || 0)}">
+
+                        <i class="bi bi-trash3-fill"></i>
+
+                    </button>
+
+                </div>
+
             </div>
 
         </div>
-
-        <!-- Historial -->
-        ${this._renderBitacora(d.BITACORA || [])}
-
-        <!-- FOOTER -->
-        <div class="card-foot">
-            <!--<span class="estatus-chip ${chipC}">
-                <span class="dot"></span>${this._getEstatusLabel(d.ESTATUS)}
-            </span>-->
-            <div class="actions">   
-                <button class="btn-act edit" title="Extender plan Actual"
-                    data-id="${d.ID_PLAN}" data-linea="${d.LINEA_PRODUCCION_DESC || 'N/A'}">
-                    <i class="bi bi-pencil-square"></i>
-                </button>
-                <button class="btn-act del" title="Eliminar plan"
-                data-id="${d.ID_PLAN}"
-                data-linea="${d.LINEA_PRODUCCION_DESC || 'N/A'}"
-                data-mes="${this._getMesAnio(d.FECHA_PLAN_STRING)}"
-                data-periodo="Del ${d.DIA_INICIO_MANT_STR || 0} — Al ${d.DIA_FIN_MANT_STR || 0}"
-                data-articulo="${d.ARTICULO ? d.ARTICULO.substring(0, 45) : 'Sin artículo'}"
-                data-teorica="${this._fmtNum(d.PRODUCCION_TEORICA)}"
-                data-real="${this._fmtNum(d.PRODUCCION_REAL)}">
-                <i class="bi bi-trash3-fill"></i>
-            </button>
-            </div>
-        </div>
-    </div>`;
+        `;
     }
 
     // ─────────────────────────────────────────────
@@ -567,193 +732,205 @@ class PlaneacionManager {
 
     _renderBitacora(bitacora = []) {
 
-        // Si no hay registros, no renderiza nada
-        if (!bitacora.length) return '';
+                // Si no hay registros, no renderiza nada
+                if (!bitacora.length) return '';
 
-        // Configuración visual según tipo de acción
-        const cfg = {
-            CREATE: { icon: 'bi-plus-circle-fill', cls: 'bit-create', label: 'Plan creado' },
-            UPDATE: { icon: 'bi-pencil-fill', cls: 'bit-update', label: 'Ajuste' },
-            DELETE: { icon: 'bi-trash3-fill', cls: 'bit-delete', label: 'Eliminado' },
-        };
+                // Configuración visual según tipo de acción
+                const cfg = {
+                    CREATE: { icon: 'bi-plus-circle-fill', cls: 'bit-create', label: 'Plan creado' },
+                    UPDATE: { icon: 'bi-pencil-fill', cls: 'bit-update', label: 'Ajuste' },
+                    DELETE: { icon: 'bi-trash3-fill', cls: 'bit-delete', label: 'Eliminado' },
+                };
 
-        // Recorrer bitácora (ya viene orden cronológico)
-        const items = bitacora.map((b, i) => {
+                // Recorrer bitácora (ya viene orden cronológico)
+                const items = bitacora.map((b, i) => {
 
-            // Configuración visual del registro
-            const c = cfg[b.BIT_ACCION] || cfg.UPDATE;
+                    // Configuración visual del registro
+                    const c = cfg[b.BIT_ACCION] || cfg.UPDATE;
 
-            // Determinar si es el último (más reciente)
-            const esUltimo = i === bitacora.length - 1;
+                    // Determinar si es el último (más reciente)
+                    const esUltimo = i === bitacora.length - 1;
 
-            // Dibujar línea vertical solo si no es el último
-            const esLinea = !esUltimo;
+                    // Dibujar línea vertical solo si no es el último
+                    const esLinea = !esUltimo;
 
-            // Campos normales (grid compacto)
-            const campos = [
+                    // Campos normales (grid compacto)
+                    const campos = [
 
-                {
-                    icon: 'bi-gear-fill',
-                    label: 'Proceso',
-                    val: b.NVO_PROCESO
-                },
+                        {
+                            icon: 'bi-gear-fill',
+                            label: 'Proceso',
+                            val: b.NVO_PROCESO
+                        },
 
-                {
-                    icon: 'bi-box-seam-fill',
-                    label: 'Artículo',
-                    val: b.NVO_ARTICULO
-                },
+                        {
+                            icon: 'bi-box-seam-fill',
+                            label: 'Artículo',
+                            val: b.NVO_ARTICULO
+                        },
 
-                {
-                    icon: 'bi-box-seam-fill',
-                    label: 'Cap. Piezas',
-                    val: b.PZSXDIA
-                        ? `${this._fmtNum(b.PZSXDIA)} PZ/día`
-                        : null
-                },
+                        {
+                            icon: 'bi-box-seam-fill',
+                            label: 'Cap. Piezas',
+                            val: b.PZSXDIA
+                                ? `${this._fmtNum(b.PZSXDIA)} PZ/día`
+                                : null
+                        },
 
-                {
-                    icon: 'bi-speedometer2',
-                    label: 'Cap. Kilos',
-                    val: b.KGSXDIA
-                        ? `${this._fmtNum(b.KGSXDIA)} KG/día`
-                        : null
-                },
+                        {
+                            icon: 'bi-speedometer2',
+                            label: 'Cap. Kilos',
+                            val: b.KGSXDIA
+                                ? `${this._fmtNum(b.KGSXDIA)} KG/día`
+                                : null
+                        },
 
-                {
-                    icon: 'bi-calculator-fill',
-                    label: 'Prod. Teórica',
-                    val: b.NVO_PRODUCCION_TEORICA
-                },
+                        {
+                            icon: 'bi-box-fill',
+                            label: 'Prod. Teórica PZ',
+                            val: b.PRODUCCION_TEORICA_PZS
+                                ? `${this._fmtNum(b.PRODUCCION_TEORICA_PZS)} PZ`
+                                : null
+                        },
 
-                {
-                    icon: 'bi-graph-up-arrow',
-                    label: 'Prod. Real',
-                    val: b.NVO_PRODUCCION_REAL
-                },
+                        {
+                            icon: 'bi-speedometer2',
+                            label: 'Prod. Teórica KG',
+                            val: b.PRODUCCION_TEORICA_KGS
+                                ? `${this._fmtNum(b.PRODUCCION_TEORICA_KGS)} KG`
+                                : null
+                        },
 
-            ]
-                .filter(f => f.val && String(f.val).trim() !== '');
+                        {
+                            icon: 'bi-graph-up-arrow',
+                            label: 'Prod. Real',
+                            val: b.NVO_PRODUCCION_REAL
+                                ? `${this._fmtNum(b.NVO_PRODUCCION_REAL)} PZ`
+                                : null
+                        },
+
+                    ]
+                        .filter(f => f.val && String(f.val).trim() !== '');
 
 
-            // Campos ancho completo (al final)
-            const camposFull = [
-                { icon: 'bi-card-text', label: 'Descripción', val: b.NVO_ARTICULO_DESC },
+                    // Campos ancho completo (al final)
+                    const camposFull = [
+                        { icon: 'bi-card-text', label: 'Descripción', val: b.NVO_ARTICULO_DESC },
 
-                {
-                    icon: 'bi-calendar-range',
-                    label: 'Período',
-                    val: (b.NVO_DIA_INICIO_MANT_STR && b.NVO_DIA_FIN_MANT_STR)
-                        ? `${b.NVO_DIA_INICIO_MANT_STR} — ${b.NVO_DIA_FIN_MANT_STR}`
-                        : null
-                },
+                        {
+                            icon: 'bi-calendar-range',
+                            label: 'Período',
+                            val: (b.NVO_DIA_INICIO_MANT_STR && b.NVO_DIA_FIN_MANT_STR)
+                                ? `${b.NVO_DIA_INICIO_MANT_STR} — ${b.NVO_DIA_FIN_MANT_STR}`
+                                : null
+                        },
 
-                { icon: 'bi-chat-left-text', label: 'Comentarios', val: b.NVO_COMENTARIOS },
+                        { icon: 'bi-chat-left-text', label: 'Comentarios', val: b.NVO_COMENTARIOS },
 
-            ].filter(f => f.val && String(f.val).trim() !== '');
+                    ].filter(f => f.val && String(f.val).trim() !== '');
 
-            // Renderizar campos dinámicamente
-            const detalle = (campos.length || camposFull.length) ? `
-            <div class="bit-fields">
-                ${campos.map(f => `
-                <div class="bit-field">
-                    <span class="bit-field-label">
-                        <i class="bi ${f.icon}"></i> ${f.label}
-                    </span>
-                    <span class="bit-field-val">
-                        ${f.val}
-                    </span>
+                    // Renderizar campos dinámicamente
+                    const detalle = (campos.length || camposFull.length) ? `
+                    <div class="bit-fields">
+                        ${campos.map(f => `
+                        <div class="bit-field">
+                            <span class="bit-field-label">
+                                <i class="bi ${f.icon}"></i> ${f.label}
+                            </span>
+                            <span class="bit-field-val">
+                                ${f.val}
+                            </span>
+                        </div>
+                        `).join('')}
+
+                        ${camposFull.map(f => `
+                        <div class="bit-field full">
+                            <span class="bit-field-label">
+                                <i class="bi ${f.icon}"></i> ${f.label}
+                            </span>
+                            <span class="bit-field-val ${f.label === 'Descripción' ? 'desc-articulo' : ''}">
+                                ${f.val}
+                            </span>
+                        </div>
+                        `).join('')}
+
+                    </div>` : '';
+
+                    // Retornar estructura del timeline
+                    return `
+            <div class="bit-item ${c.cls}">
+
+                <!-- Línea lateral -->
+                <div class="bit-left">
+                    <div class="bit-dot">
+                        <i class="bi ${c.icon}"></i>
+                    </div>
+                    ${esLinea ? '<div class="bit-line"></div>' : ''}
                 </div>
-                `).join('')}
 
-                ${camposFull.map(f => `
-                <div class="bit-field full">
-                    <span class="bit-field-label">
-                        <i class="bi ${f.icon}"></i> ${f.label}
-                    </span>
-                    <span class="bit-field-val ${f.label === 'Descripción' ? 'desc-articulo' : ''}">
-                        ${f.val}
-                    </span>
+                <!-- Contenido -->
+                <div class="bit-body ${esUltimo ? 'bit-body-last' : ''}">
+
+                    <!-- Header -->
+                    <div class="bit-header">
+                        <span class="bit-chip ${c.cls}">
+                            ${c.label}
+                        </span>
+                        ${esUltimo ? '<span class="bit-reciente">Más reciente</span>' : ''}
+                    </div>
+
+                    <!-- Meta -->
+                    <div class="bit-meta">
+                        <span>
+                            <i class="bi bi-person-circle"></i> 
+                            ${b.BIT_USUARIO || 'Sistema'}
+                        </span>
+                        <span>
+                            <i class="bi bi-clock-history"></i> 
+                            ${b.BIT_FECHA_MOVIMIENTO || ''}
+                        </span>
+                    </div>
+
+                    <!-- Detalle -->
+                    ${detalle}
+
                 </div>
-                `).join('')}
+            </div>`;
+                });
 
-            </div>` : '';
+                // Contenedor general
+                return `
+        <div class="bitacora-wrap" data-open="false">
 
-            // Retornar estructura del timeline
-            return `
-    <div class="bit-item ${c.cls}">
+            <!-- Botón toggle -->
+            <button class="bit-toggle-btn" onclick="
+                const w = this.closest('.bitacora-wrap');
+                const isOpen = w.dataset.open === 'true';
+                w.dataset.open = String(!isOpen);
+                this.querySelector('.bit-chevron').style.transform = isOpen ? '' : 'rotate(180deg)';
+            ">
 
-        <!-- Línea lateral -->
-        <div class="bit-left">
-            <div class="bit-dot">
-                <i class="bi ${c.icon}"></i>
-            </div>
-            ${esLinea ? '<div class="bit-line"></div>' : ''}
-        </div>
-
-        <!-- Contenido -->
-        <div class="bit-body ${esUltimo ? 'bit-body-last' : ''}">
-
-            <!-- Header -->
-            <div class="bit-header">
-                <span class="bit-chip ${c.cls}">
-                    ${c.label}
+                <span class="bit-toggle-left">
+                    <i class="bi bi-clock-history"></i>
+                    Historial de cambios
                 </span>
-                ${esUltimo ? '<span class="bit-reciente">Más reciente</span>' : ''}
-            </div>
 
-            <!-- Meta -->
-            <div class="bit-meta">
-                <span>
-                    <i class="bi bi-person-circle"></i> 
-                    ${b.BIT_USUARIO || 'Sistema'}
+                <span class="bit-toggle-right">
+                    <span class="bit-count-pill">
+                        ${bitacora.length} 
+                        ${bitacora.length === 1 ? 'registro' : 'registros'}
+                    </span>
+                    <i class="bi bi-chevron-down bit-chevron"></i>
                 </span>
-                <span>
-                    <i class="bi bi-clock-history"></i> 
-                    ${b.BIT_FECHA_MOVIMIENTO || ''}
-                </span>
+
+            </button>
+
+            <!-- Timeline -->
+            <div class="bit-timeline">
+                ${items.join('')}
             </div>
 
-            <!-- Detalle -->
-            ${detalle}
-
-        </div>
-    </div>`;
-        });
-
-        // Contenedor general
-        return `
-<div class="bitacora-wrap" data-open="false">
-
-    <!-- Botón toggle -->
-    <button class="bit-toggle-btn" onclick="
-        const w = this.closest('.bitacora-wrap');
-        const isOpen = w.dataset.open === 'true';
-        w.dataset.open = String(!isOpen);
-        this.querySelector('.bit-chevron').style.transform = isOpen ? '' : 'rotate(180deg)';
-    ">
-
-        <span class="bit-toggle-left">
-            <i class="bi bi-clock-history"></i>
-            Historial de cambios
-        </span>
-
-        <span class="bit-toggle-right">
-            <span class="bit-count-pill">
-                ${bitacora.length} 
-                ${bitacora.length === 1 ? 'registro' : 'registros'}
-            </span>
-            <i class="bi bi-chevron-down bit-chevron"></i>
-        </span>
-
-    </button>
-
-    <!-- Timeline -->
-    <div class="bit-timeline">
-        ${items.join('')}
-    </div>
-
-</div>`;
+        </div>`;
     }
 
     // ─────────────────────────────────────────────
@@ -839,10 +1016,10 @@ class PlaneacionManager {
                     }),
                     success: (response) => {
                         if (response.Status === 'SI') {
-                            AlertManager.mostrar(`🗑️ Plan #${id} de ${linea} eliminado correctamente`, 'success');
+                            AlertManager.mostrar(`Plan #${id} de ${linea} eliminado correctamente`, 'success');
                             this.cargarCards();
                         } else {
-                            AlertManager.mostrar(`❌ ${response.Message || 'Error al eliminar'}`, 'warning');
+                            AlertManager.mostrar(`${response.Message || 'Error al eliminar'}`, 'warning');
                         }
                         GlobalUtil.mostrarLoader(false);
                     },
@@ -1092,7 +1269,17 @@ class PlaneacionManager {
                     row.PROCESO || '',
                     `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`,
                     `Del ${row.DIA_INICIO_MANT_STR} - Al ${row.DIA_FIN_MANT_STR}`,
-                    fmtNum(row.PRODUCCION_TEORICA),
+                    [
+                        row.PRODUCCION_TEORICA_PZS
+                            ? `${fmtNum(row.PRODUCCION_TEORICA_PZS)} PZ`
+                            : null,
+
+                        row.PRODUCCION_TEORICA_KGS
+                            ? `${fmtNum(row.PRODUCCION_TEORICA_KGS)} KG`
+                            : null
+                    ]
+                        .filter(Boolean)
+                        .join(' | '),
                     fmtNum(row.PRODUCCION_REAL),
                     row.COMENTARIOS || ''
                 ];
@@ -1174,7 +1361,17 @@ class PlaneacionManager {
                             ? `Del ${bit.NVO_DIA_INICIO_MANT_STR} - Al ${bit.NVO_DIA_FIN_MANT_STR}`
                             : '',
 
-                        fmtNum(bit.NVO_PRODUCCION_TEORICA),
+                        [
+                            bit.NVO_PRODUCCION_TEORICA_PZS
+                                ? `${fmtNum(bit.NVO_PRODUCCION_TEORICA_PZS)} PZ`
+                                : null,
+
+                            bit.NVO_PRODUCCION_TEORICA_KGS
+                                ? `${fmtNum(bit.NVO_PRODUCCION_TEORICA_KGS)} KG`
+                                : null
+                        ]
+                            .filter(Boolean)
+                            .join(' | '),
 
                         fmtNum(bit.NVO_PRODUCCION_REAL),
 
@@ -1351,7 +1548,7 @@ class PlaneacionManager {
         const fechaFin = new Date(diaFin);
 
         if (fechaFin < fechaInicio) {
-            AlertManager.mostrar('📅 El día final debe ser mayor o igual al día inicial', 'warning');
+            AlertManager.mostrar('El día final debe ser mayor o igual al día inicial', 'warning');
             return;
         }
 
@@ -1433,7 +1630,7 @@ class PlaneacionManager {
         e.preventDefault();
 
         if (!ValidationManager.validarFormulario('#formRegistrarParo')) {
-            AlertManager.mostrar('⚠️ Por favor, complete correctamente todos los campos', 'warning', 'alertParoContainer');
+            AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', 'alertParoContainer');
             return false;
         }
 
@@ -1504,7 +1701,7 @@ class PlaneacionManager {
                 if (btnEdit) btnEdit.innerHTML = '<i class="bi bi-pencil-square"></i>';
 
                 if (!response.data || !response.data.length) {
-                    AlertManager.mostrar('🔍 No se encontró el plan solicitado.', 'warning');
+                    AlertManager.mostrar('No se encontró el plan solicitado.', 'warning');
                     return;
                 }
 
@@ -1529,7 +1726,15 @@ class PlaneacionManager {
                     KGSXDIA: val(ultimaEdic.KGSXDIA),
                     DIA_INICIO_MANT: val(ultimaEdic.NVO_DIA_INICIO_MANT_STR, plan.DIA_INICIO_MANT_STR),
                     DIA_FIN_MANT: val(ultimaEdic.NVO_DIA_FIN_MANT_STR, plan.DIA_FIN_MANT_STR),
-                    PRODUCCION_TEORICA: val(ultimaEdic.NVO_PRODUCCION_TEORICA, plan.PRODUCCION_TEORICA),
+                    PRODUCCION_TEORICA_PZS: val(
+                        ultimaEdic.NVO_PRODUCCION_TEORICA_PZS,
+                        plan.PRODUCCION_TEORICA_PZS
+                    ),
+
+                    PRODUCCION_TEORICA_KGS: val(
+                        ultimaEdic.NVO_PRODUCCION_TEORICA_KGS,
+                        plan.PRODUCCION_TEORICA_KGS
+                    ),
                     PRODUCCION_REAL: val(ultimaEdic.NVO_PRODUCCION_REAL, plan.PRODUCCION_REAL),
                     COMENTARIOS: val(ultimaEdic.NVO_COMENTARIOS, plan.COMENTARIOS),
                     FECHA_PLAN_STRING: val(ultimaEdic.NVO_FECHA_PLAN, plan.FECHA_PLAN_STRING),
@@ -1577,7 +1782,9 @@ class PlaneacionManager {
                 $('#PlanCapKilos').val(datos.KGSXDIA);
 
                 // ── Producción ───────────────────────────────────────────────────────
-                $('#ProduccionTeorica').val(datos.PRODUCCION_TEORICA);
+                $('#ProduccionTeoricaPzs').val(datos.PRODUCCION_TEORICA_PZS);
+                $('#ProduccionTeoricaKgs').val(datos.PRODUCCION_TEORICA_KGS);
+
                 $('#ProduccionReal').val(datos.PRODUCCION_REAL);
 
                 // ── Comentarios ──────────────────────────────────────────────────────

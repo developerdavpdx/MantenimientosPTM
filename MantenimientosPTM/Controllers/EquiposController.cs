@@ -44,8 +44,8 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 // Convertir modelo a parámetros HANA
-                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null); // 🔹 true para que agregue P_
-                var excludedParams = new[] { "P_IDEQUIPO" }; // 🔹 Cambié a mayúsculas
+                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null); // true para que agregue P_
+                var excludedParams = new[] { "P_IDEQUIPO" }; // Cambié a mayúsculas
                 var parameters = allparameters
                     .Where(p => !excludedParams.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value);
@@ -799,7 +799,7 @@ namespace MantenimientosPTM.Controllers
                 // 🔥 Parámetros para el SP (modo SELECT)
                 var parameters = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
             {
-                // 🔹 Parámetros originales (NULL)
+                // Parámetros originales (NULL)
                 { "P_ID_EQUIPO", (null, ParameterDirection.Input, HanaDbType.Integer) },
                 { "P_NOMBRE", (null, ParameterDirection.Input, HanaDbType.NVarChar) },
                 { "P_PLANTA", (string.IsNullOrEmpty(Planta) ? (object)null : Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
@@ -879,7 +879,7 @@ namespace MantenimientosPTM.Controllers
                 // ✅ Preparar parámetros para el SP
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    // 🔹 Parámetros originales (en NULL)
+                    // Parámetros originales (en NULL)
                     { "P_ID_EQUIPO", (null, ParameterDirection.Input, HanaDbType.Integer) },
                     { "P_NOMBRE", (null, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA", (string.IsNullOrEmpty(Planta) ? (object)null : Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
@@ -1017,7 +1017,7 @@ namespace MantenimientosPTM.Controllers
                 // Convertir modelo a parámetros HANA
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
 
-                var excludedParams = new[] { "P_AREA","P_PRODUCCION" }; // 🔹 Cambié a mayúsculas
+                var excludedParams = new[] { "P_AREA","P_PRODUCCION" }; // Cambié a mayúsculas
                 var parameters = allparameters
                     .Where(p => !excludedParams.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value);

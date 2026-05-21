@@ -1850,22 +1850,22 @@ class MantenimientoManager {
     // ========================================
     configurarVistaTecnico(IdEquipo, Planta) {
 
-        // 🔹 SECCIONES
+        // SECCIONES
         $('#EvidenciaOrdenTrabajo').removeClass('d-none');
         $('#CierreOrdenTrabajo').removeClass('d-none');
         $('#SeccionFirmas').removeClass('d-none');
         $("#busqueda_tecnicosMainContainer").removeClass('d-none');
 
-        // 🔹 REQUIRED
+        // REQUIRED
         $('#EvidenciaOrdenTrabajo input:not(#fileInput)').prop('required', true);
         $('#CierreOrdenTrabajo input:not(#BuscarTecnico)').prop('required', true);
         $('#BuscarTecnico, #fileInput').prop('required', false);
 
-        // 🔹 BOTONES
+        // BOTONES
         $('#btnGuardarOT').removeClass('d-none');
         $('#btnExportMantenimientoPDF').addClass('d-none');
 
-        // 🔹 UPLOADER
+        // UPLOADER
         $('#previewArea').empty();
         $('#clearAll').hide();
         $('#uploadArea').removeClass('upload-area-disabled');
@@ -1876,7 +1876,7 @@ class MantenimientoManager {
             uploader.enableUpload();
         }
 
-        // 🔹 CAMPOS EDITABLES
+        // CAMPOS EDITABLES
         $("#Scrap").removeAttr('readonly').prop('required', true);
         $("#HoraCierreMan").removeAttr('readonly').prop('required', true);
 
@@ -1905,10 +1905,10 @@ class MantenimientoManager {
     // ========================================
     configurarVistaProduccion(EstatusOrden, FirmaSuperviso, FirmaMantenimiento, NumeroOrden, IdEquipo, Planta) {
 
-        // 🔹 MOSTRAR FIRMAS
+        // MOSTRAR FIRMAS
         $('#SeccionFirmas').removeClass('d-none');
 
-        // 🔹 REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
+        // REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
         $('#EvidenciaOrdenTrabajo input').prop('required', false);
         $('#EvidenciaOrdenTrabajo input').prop('readonly', true);
         $('#CierreOrdenTrabajo input').prop('required', false);
@@ -1941,7 +1941,7 @@ class MantenimientoManager {
         else
             this.gestionFirmas.deshabilitarFirma("Mantenimiento", true);
 
-        // 🔹 MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
+        // MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
         if (EstatusOrden == 4) {
             $('#EvidenciaOrdenTrabajo').removeClass('d-none');
             $('#CierreOrdenTrabajo').removeClass('d-none');
@@ -1949,7 +1949,7 @@ class MantenimientoManager {
             //TEXTO DE SECUENCIA
             $("#TextoSecuencia").prop('readonly', true);
 
-            // 🔹 BOTONES
+            // BOTONES
             $('#btnGuardarOT').removeClass('d-none');
             $('#btnExportMantenimientoPDF').removeClass('d-none');
 
@@ -1973,12 +1973,12 @@ class MantenimientoManager {
             //$("#EvidenciaOrdenTrabajo").addClass("d-none");
             //$("#rutinamaincontainer").addClass("d-none");
         }
-        // 🔹 OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
+        // OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
         else {
             $('#EvidenciaOrdenTrabajo').addClass('d-none');
             $('#CierreOrdenTrabajo').addClass('d-none');
 
-            // 🔹 BOTONES
+            // BOTONES
             $('#btnGuardarOT').addClass('d-none');
             $('#btnExportMantenimientoPDF').removeClass('d-none');
 
@@ -2006,10 +2006,10 @@ class MantenimientoManager {
     // ========================================
     configurarVistaAdministrador(EstatusOrden, FirmaMantenimiento, FirmaSuperviso, NumeroOrden, IdEquipo, Planta) {
 
-        // 🔹 MOSTRAR FIRMAS
+        // MOSTRAR FIRMAS
         $('#SeccionFirmas').removeClass('d-none');
 
-        // 🔹 REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
+        // REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
         $('#EvidenciaOrdenTrabajo input').prop('required', false);
         $('#EvidenciaOrdenTrabajo input').prop('readonly', true);
         $('#CierreOrdenTrabajo input').prop('required', false);
@@ -2043,7 +2043,7 @@ class MantenimientoManager {
             this.gestionFirmas.deshabilitarFirma("Superviso", true);
 
 
-        // 🔹 MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
+        // MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
         if (EstatusOrden == 4) {
             $('#EvidenciaOrdenTrabajo').removeClass('d-none');
             $('#CierreOrdenTrabajo').removeClass('d-none');
@@ -2051,7 +2051,7 @@ class MantenimientoManager {
             //TEXTO DE SECUENCIA
             $("#TextoSecuencia").prop('readonly', true);
 
-            // 🔹 BOTONES
+            // BOTONES
             $('#btnGuardarOT').removeClass('d-none');
             $('#btnExportMantenimientoPDF').removeClass('d-none');
 
@@ -2075,12 +2075,12 @@ class MantenimientoManager {
             //$("#EvidenciaOrdenTrabajo").addClass("d-none");
             //$("#rutinamaincontainer").addClass("d-none");
         }
-        // 🔹 OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
+        // OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
         else {
             $('#EvidenciaOrdenTrabajo').addClass('d-none');
             $('#CierreOrdenTrabajo').addClass('d-none');
 
-            // 🔹 BOTONES
+            // BOTONES
             $('#btnGuardarOT').addClass('d-none');
             $('#btnExportMantenimientoPDF').removeClass('d-none');
 

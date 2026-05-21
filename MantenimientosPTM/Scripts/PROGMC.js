@@ -89,7 +89,7 @@
                 .addClass('bg-warning')
                 .text('En espera de refacción');
 
-            // 🔹 Eliminar botón de solicitar refacción
+            // Eliminar botón de solicitar refacción
             fila.find('.btn-solicitar-refaccion').remove();
         }
     });

@@ -321,8 +321,8 @@ class EquiposUtil {
                         const optgroup2 = $(`<optgroup label="Planta ${planta}"></optgroup>`);
 
                         grouped[planta].forEach(linea => {
-                            optgroup1.append(`<option value="${linea.ID_LINEA}">🔹 ${linea.LINEA}</option>`);
-                            optgroup2.append(`<option value="${linea.ID_LINEA}">🔹 ${linea.LINEA}</option>`);
+                            optgroup1.append(`<option value="${linea.ID_LINEA}">${linea.LINEA}</option>`);
+                            optgroup2.append(`<option value="${linea.ID_LINEA}">${linea.LINEA}</option>`);
                         });
 
                         selectElement.append(optgroup1);
@@ -519,8 +519,8 @@ class EquiposUtil {
                     FiltroProceso.append('<option value="">Todos los procesos</option>');
 
                     AreasData.forEach(area => {
-                        selectElement.append(`<option value="${area.ID_AREA}">🔹 ${area.AREA}</option>`);
-                        FiltroProceso.append(`<option value="${area.ID_AREA}">🔹 ${area.AREA}</option>`);
+                        selectElement.append(`<option value="${area.ID_AREA}">${area.AREA}</option>`);
+                        FiltroProceso.append(`<option value="${area.ID_AREA}">${area.AREA}</option>`);
                     });
 
                 } else if (data.Status === 'NO') {
@@ -594,8 +594,8 @@ class EquiposUtil {
 
                     // 🔥 Llenado
                     equiposData.forEach(eq => {
-                        selectElement.append(`<option value="${eq.ID_EQUIPO}">🔹 ${eq.NOMBRE_EQUIPO}</option>`);
-                        filtroEquipo.append(`<option value="${eq.ID_EQUIPO}">🔹 ${eq.NOMBRE_EQUIPO}</option>`);
+                        selectElement.append(`<option value="${eq.ID_EQUIPO}">${eq.NOMBRE_EQUIPO}</option>`);
+                        filtroEquipo.append(`<option value="${eq.ID_EQUIPO}">${eq.NOMBRE_EQUIPO}</option>`);
                     });
 
                 } else if (data.Status === 'NO') {
@@ -671,7 +671,7 @@ class EquiposUtil {
 
                     // Recorrer los datos y agregar las opciones
                     equiposData.forEach(equipo => {
-                        selectElement.append(`<option value="${equipo.ID_TIPO_EQUIPO}">🔹 ${equipo.DESCRIPCION}</option>`);
+                        selectElement.append(`<option value="${equipo.ID_TIPO_EQUIPO}">${equipo.DESCRIPCION}</option>`);
                     });
                 } else if (data.Status === 'NO') {
                     AlertManager.mostrar(data.Message, 'warning');
@@ -718,7 +718,7 @@ class EquiposUtil {
                     categoriasData.forEach(categoria => {
                         selectElement.append(`
                         <option value="${categoria.ID_CATEGORIA_PARO}">
-                            🔹 ${categoria.NOMBRE}
+                            ${categoria.NOMBRE}
                         </option>
                     `);
                     });
@@ -1857,7 +1857,7 @@ class GestionArticulosCustom {
             AlertManager.mostrar('El artículo ya está en la lista.', 'warning', this._ModalContainer);
             return;
         }
-        this.articulosAgregados.push({ CodigoArticulo: articulo.CodigoArticulo, DescripcionArticulo: articulo.DescripcionArticulo, Cantidad: 1 });
+        this.articulosAgregados.push({ CodigoArticulo: articulo.CodigoArticulo,StockDisponible:articulo.StockDisponible, DescripcionArticulo: articulo.DescripcionArticulo, Cantidad: 1 });
         this.renderizarTabla();
     }
 
@@ -1870,7 +1870,7 @@ class GestionArticulosCustom {
             return;
         }
         this.articulosAgregados.forEach((articulo, index) => {
-            const row = $(`<tr><td class="text-center">${index + 1}</td><td class="text-center">${articulo.CodigoArticulo}</td><td>${articulo.DescripcionArticulo}</td><td class="text-center"><input type="number" class="form-control form-control-sm text-center cantidad-articulo" value="${articulo.Cantidad}" min="1" data-index="${index}"></td><td class="text-center"><button class="btn btn-sm btn-danger btn-eliminar-articulo" data-index="${index}"><i class="bi bi-x-lg"></i></button></td></tr>`);
+            const row = $(`<tr><td class="text-center">${index + 1}</td><td class="text-center">${articulo.CodigoArticulo}</td><td>${articulo.DescripcionArticulo}</td><td class="text-center">${articulo.StockDisponible}</td><td class="text-center"><input type="number" class="form-control form-control-sm text-center cantidad-articulo" value="${articulo.Cantidad}" min="1" data-index="${index}"></td><td class="text-center"><button class="btn btn-sm btn-danger btn-eliminar-articulo" data-index="${index}"><i class="bi bi-x-lg"></i></button></td></tr>`);
             tbody.append(row);
         });
         $('.cantidad-articulo').on('change', (e) => { const index = $(e.target).data('index'); this.articulosAgregados[index].Cantidad = parseInt($(e.target).val()) || 1; });

@@ -277,28 +277,28 @@ class MantenimientoManager {
 
         // ===== LLENAR EL MODAL CON LOS DATOS DEL CORRECTIVO =====
 
-        // 🔹 Datos de la Orden
+        // Datos de la Orden
         $('#AreaTecnica').val(areaTecnica || '');
         $('#NumeroOrden').val(numeroOrden || '');
         $('#Solicitante').val(solicitante || '');
         $('#NominaSolicitante').val(nominaSolicitante || '');
 
-        // 🔹 Clase de Mantenimiento
+        // Clase de Mantenimiento
         $('#ClaseMantenimiento').val(claseMantenimiento || 'Z10');
 
-        // 🔹 Nombre del equipo
+        // Nombre del equipo
         $('#NombreEquipo').val(nombreEquipo || '');
 
-        // 🔹 Descripcion del equipo
+        // Descripcion del equipo
         $('#DescEquipo').val(descripcionEquipo || '');
 
-        // 🔹 Texto Corto (Descripción de la falla)
+        // Texto Corto (Descripción de la falla)
         $('#TextoCorto').val(textoCorto || '');
 
-        // 🔹 Estatus de la Orden
+        // Estatus de la Orden
         $("#EstatusOrden").val(descEstatusOrden || '');
 
-        // 🔹 Fecha y Hora (usar horaApertura que trae ambos)
+        // Fecha y Hora (usar horaApertura que trae ambos)
         if (horaApertura) {
             // horaApertura = "15/12/2025 13:28:02"
             const [fechaParte, horaParte] = horaApertura.split(' ');
@@ -311,31 +311,31 @@ class MantenimientoManager {
             $("#HoraInicio").val(horaParte.substring(0, 5));
         }
 
-        // 🔹 Ubicación Técnica
+        // Ubicación Técnica
         $("#UbicacionTecnica").val(area ? `AREA ${area}` : '');
 
-        // 🔹 Centro de Costos
+        // Centro de Costos
         $("#CentroCostos").val(centrocostos || '');
 
-        // 🔹 Doc PM Calidad
+        // Doc PM Calidad
         $("#NumDocPmCalidad").val(numeroDocPmCalidad || '');
 
-        // 🔹 Línea
+        // Línea
         $("#Linea").val(lineaProduccion || '');
 
-        // 🔹 Tipo de Mantenimiento
+        // Tipo de Mantenimiento
         const tipoMtto = (this.datos_usuario[0].PLANTA == "2") ? "CORRECTIVO" : "Z10";
         $("#TipoMantenimiento").val(tipoMtto);
 
-        // 🔹 Fecha de impresión
+        // Fecha de impresión
         $("#fechaImpresion").text(DateUtils.obtenerFechaHora());
 
-        // 🔹 Guardar IDs para uso posterior
+        // Guardar IDs para uso posterior
         this.ID_SOLICITUD = idSolicitud;
         this.ID_EQUIPO = idEquipo;
         this.ID_MANTENIMIENTO = idMantenimiento;
 
-        // 🔹 Opciones para TECNICO DE MANTENIMIENTO
+        // Opciones para TECNICO DE MANTENIMIENTO
         if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
             $("#EvidenciaOrdenTrabajo").removeClass("d-none");
             $("#CierreOrdenTrabajo").addClass("d-none");
@@ -376,7 +376,7 @@ class MantenimientoManager {
             //$("#btnExportMantenimientoPDF").removeClass("d-none");
         }
 
-        // 🔹 Mostrar modal
+        // Mostrar modal
         $('#modalOrdenMantenimiento').modal('show');
     }
 

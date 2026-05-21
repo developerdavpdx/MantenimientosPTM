@@ -881,7 +881,7 @@ class GestionProduccionCorrugado {
 
                 AlertManager.mostrar(
                     response.Message,
-                    "warning"
+                    "info"
                 );
 
                 this.cargarDatosGrid(null);

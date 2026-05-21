@@ -957,7 +957,7 @@ class EquipoManager {
 
                     periodicidadData.forEach(p => {
                         selectElement.append(
-                            `<option value="${p.ID_PERIODICIDAD}">🔹 ${p.DESCRIPCION}</option>`
+                            `<option value="${p.ID_PERIODICIDAD}">${p.DESCRIPCION}</option>`
                         );
                     });
 

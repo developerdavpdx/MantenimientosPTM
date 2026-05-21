@@ -294,7 +294,7 @@ input[type="month"].filtro-input::-webkit-calendar-picker-indicator {
 
 .dividerblue {
     height: 27px;
-    background-color: #0d6efd;
+    background: linear-gradient(135deg, var(--modal-primary) 0%, var(--modal-primary-mid) 60%, var(--modal-primary-light) 100%);
 }
 
 .dividerbluefooter {

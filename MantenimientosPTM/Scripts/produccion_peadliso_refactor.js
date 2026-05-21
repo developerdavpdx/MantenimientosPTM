@@ -262,11 +262,10 @@ class GestionProduccionPeadLiso {
 
                 AlertManager.mostrar(
                     response.Message,
-                    "warning"
+                    "info"
                 );
 
                 this.cargarDatosGrid(null);
-
             }
 
         } catch (error) {

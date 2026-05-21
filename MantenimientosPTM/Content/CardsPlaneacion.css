@@ -172,7 +172,6 @@
 
 .stat-label {
     font-size: .67rem;
-    text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--text-muted);
     margin-bottom: .2rem;
@@ -1113,11 +1112,9 @@
 }
 
 .capacity-card {
-    border-radius: 14px;
-    padding: 14px;
-    background: #f8fafc;
-    border: 1px solid #dbeafe;
-    transition: .2s ease;
+    border-radius: 10px;
+    padding: 7px 9px;
+    min-height: 72px;
 }
 
     .capacity-card:hover {
@@ -1127,11 +1124,11 @@
 .capacity-top {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: .82rem;
+    gap: 6px;
+    font-size: .72rem;
     font-weight: 700;
     color: #64748b;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
 }
 
     .capacity-top i {
@@ -1139,17 +1136,19 @@
     }
 
 .capacity-number {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 800;
-    color: #0f172a;
-    line-height: 1.1;
+    line-height: 1;
 }
 
 .capacity-unit {
-    font-size: .75rem;
-    color: #94a3b8;
-    margin-top: 4px;
-    font-weight: 600;
+    font-size: .62rem;
+    margin-top: 3px;
+    opacity: .72;
+}
+
+.capacity-card {
+    background: #fbfdff;
 }
 
 .capacity-card.piezas {
@@ -1158,4 +1157,142 @@
 
 .capacity-card.kilos {
     border-left: 4px solid #3b82f6;
+}
+
+/*STATS*/
+.stats-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.stat-box {
+    padding: 12px 14px;
+    border-radius: 14px;
+    min-height: 96px;
+}
+.dual-prod-values {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.dual-prod-item {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.dual-prod-number {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.dual-prod-unit {
+    font-size: 13px;
+    font-weight: 600;
+    opacity: .8;
+}
+
+.stat-label {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: .2px;
+}
+
+.prod-grid .stat-value {
+    font-size: 1.65rem;
+    line-height: 1;
+    margin-top: 8px;
+}
+
+.stat-sublabel {
+    margin-top: 6px;
+    font-size: 10px;
+    opacity: .72;
+    line-height: 1.2;
+}
+
+.real-full {
+    padding: 14px 16px !important;
+    min-height: 105px !important;
+}
+
+    .real-full .stat-value {
+        font-size: 2rem !important;
+        margin-top: 6px;
+    }
+
+/* ─────────────────────────────────────
+   PRODUCCIÓN GRID NUEVO
+───────────────────────────────────── */
+
+.prod-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.real-row {
+    margin-top: 10px;
+}
+
+/* Cards teóricas */
+.prod-grid .stat-box {
+    min-height: 82px;
+    padding: 10px 12px;
+}
+
+/* Producción real */
+.real-full {
+    min-height: 90px !important;
+    padding: 12px 14px !important;
+}
+
+    /* Labels */
+    .prod-grid .stat-label,
+    .real-full .stat-label {
+        font-size: 11px;
+        margin-bottom: 4px;
+    }
+
+/* Valores */
+.prod-grid .stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-top: 2px;
+}
+
+.real-full .stat-value {
+    font-size: 1.2rem !important;
+    font-weight: 700;
+    line-height: 1;
+    margin-top: 4px;
+}
+
+/* Units */
+.stat-unit {
+    font-size: .68rem;
+}
+
+/* Sublabel */
+.stat-sublabel {
+    margin-top: 4px;
+    font-size: .64rem;
+    line-height: 1.15;
+    opacity: .72;
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+
+    .prod-grid {
+        grid-template-columns: 1fr 1fr;
+    }
 }
