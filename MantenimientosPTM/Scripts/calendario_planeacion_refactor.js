@@ -460,10 +460,12 @@ class CalendarManager {
                     articulo: item.NVO_ARTICULO || '',
                     articulo_desc: item.NVO_ARTICULO_DESC || '',
                     capacidad: item.NVO_CAPACIDAD || 0,
-                    pzsxdia: item.PZSXDIA || 0,
-                    kgsxdia: item.KGSXDIA || 0,
-                    produccion_teorica: item.NVO_PRODUCCION_TEORICA || 0,
-                    produccion_real: item.NVO_PRODUCCION_REAL || 0,
+                    pzsxdia: item.PZSXDIA || data.PZSXDIA || 0,
+                    kgsxdia: item.KGSXDIA || data.KGSXDIA || 0,
+                    // Preferir valores de la bitácora (item), si no están usar valores del plan (data)
+                    produccion_teorica_pzs: (item.PRODUCCION_TEORICA_PZS || data.PRODUCCION_TEORICA_PZS) || 0,
+                    produccion_teorica_kgs: (item.PRODUCCION_TEORICA_KGS || data.PRODUCCION_TEORICA_KGS) || 0,
+                    produccion_real: (item.NVO_PRODUCCION_REAL != null ? item.NVO_PRODUCCION_REAL : (data.PRODUCCION_REAL != null ? data.PRODUCCION_REAL : 0)),
                     comentarios: item.NVO_COMENTARIOS || '',
                     dias_totales: data.DIAS_TOTALES || 0,
                     anio_plan: data.ANIO_PLAN || '',
@@ -697,7 +699,12 @@ class CalendarManager {
         const fmtNum = n => n ? Number(n).toLocaleString('es-MX') : '0';
 
         // ── Header ──
-        $('#eptLineaNombre').text(props.equipment || 'Sin nombre');
+        const lineaNumero = props.line || props.id_equipo || props.numero_orden || '—';
+        const tituloLinea = props.equipment
+            ? props.equipment
+            : `PLAN LÍNEA ${lineaNumero}`;
+
+        $('#eptLineaNombre').text(tituloLinea);
         $('#eptLineaSub').text(`ID #${props.numero_orden || '—'}`);
 
         const mesPill = props.mes_plan
@@ -741,11 +748,16 @@ class CalendarManager {
         );
 
         // ── Stats producción ──
-        $('#eptProdTeorica').html(`${fmtNum(props.produccion_teorica)}<span class="stat-unit">PZ</span>`);
-        $('#eptProdReal').html(`${fmtNum(props.produccion_real)}<span class="stat-unit">PZ</span>`);
+        const prodTeoricaPzs = parseFloat(props.produccion_teorica_pzs) || 0;
+        const prodTeoricaKgs = parseFloat(props.produccion_teorica_kgs) || 0;
+
+        $('#eptProdTeoricaPZ').text(prodTeoricaPzs > 0 ? fmtNum(prodTeoricaPzs) : '—');
+        $('#eptProdTeoricaKGS').text(prodTeoricaKgs > 0 ? fmtNum(prodTeoricaKgs) : '—');
+
+        $('#eptProdReal').text(props.produccion_real != null ? fmtNum(props.produccion_real) : '—');
 
         // ── Barra de cumplimiento ──
-        const teo = parseFloat(props.produccion_teorica) || 0;
+        const teo = prodTeoricaPzs;
         const real = parseFloat(props.produccion_real) || 0;
         const pct = teo > 0 ? Math.round((real / teo) * 100) : 0;
         const bw = Math.min(pct, 100);
@@ -906,6 +918,18 @@ class CalendarManager {
             const esLinea = !esUltimo;
 
             // Campos normales (grid compacto)
+            // Preparar valores de producción teórica (intentar distintas propiedades que pueda traer la bitácora)
+            const bitProdPzsRaw = b.NVO_PRODUCCION_TEORICA_PZS || b.PRODUCCION_TEORICA_PZS || b.NVO_PRODUCCION_TEORICA;
+            const bitProdKgsRaw = b.NVO_PRODUCCION_TEORICA_KGS || b.PRODUCCION_TEORICA_KGS || b.NVO_PRODUCCION_TEORICA_KGS;
+
+            const bitProdPzsVal = bitProdPzsRaw != null && String(bitProdPzsRaw).trim() !== ''
+                ? `${Number(bitProdPzsRaw).toLocaleString('es-MX')} PZ`
+                : null;
+
+            const bitProdKgsVal = bitProdKgsRaw != null && String(bitProdKgsRaw).trim() !== ''
+                ? `${Number(bitProdKgsRaw).toLocaleString('es-MX')} KG`
+                : null;
+
             const campos = [
                 { icon: 'bi-gear-fill', label: 'Proceso', val: b.NVO_PROCESO },
 
@@ -927,9 +951,10 @@ class CalendarManager {
                         : null
                 },
 
-                { icon: 'bi-calculator-fill', label: 'Prod. Teórica', val: b.NVO_PRODUCCION_TEORICA },
+                { icon: 'bi-calculator-fill', label: 'Prod. Teórica PZ', val: bitProdPzsVal },
+                { icon: 'bi-calculator-fill', label: 'Prod. Teórica KGS', val: bitProdKgsVal },
 
-                { icon: 'bi-graph-up-arrow', label: 'Prod. Real', val: b.NVO_PRODUCCION_REAL }
+                { icon: 'bi-graph-up-arrow', label: 'Prod. Real', val: (b.NVO_PRODUCCION_REAL != null && String(b.NVO_PRODUCCION_REAL).trim() !== '') ? `${Number(b.NVO_PRODUCCION_REAL).toLocaleString('es-MX')} PZ` : null }
             ]
                 .filter(f => f.val && String(f.val).trim() !== '');
 
@@ -1078,10 +1103,7 @@ class CalendarManager {
     // EXPORTAR EXCEL
     // ─────────────────────────────────────────────
     async exportarExcel() {
-
         try {
-
-            // ✅ Obtener datos directamente del endpoint
             const response = await $.ajax({
                 url: `/${this.URLBasePlaneacion}/obtenerPlanesProgramados`,
                 type: 'POST',
@@ -1107,439 +1129,15 @@ class CalendarManager {
                 .html('<span class="spinner-border spinner-border-sm me-2"></span>Exportando...')
                 .prop('disabled', true);
 
-            const workbook = new ExcelJS.Workbook();
-
-            const worksheet = workbook.addWorksheet('PlanProduccion', {
-                pageSetup: {
-                    paperSize: 9,
-                    orientation: 'landscape',
-                    fitToPage: true,
-                    fitToWidth: 1,
-                    fitToHeight: 0
-                }
-            });
-
-            // ─────────────────────────────────────────
-            // TÍTULO
-            // ─────────────────────────────────────────
-            worksheet.mergeCells('A1:I1');
-
-            const headerCell = worksheet.getCell('A1');
-
-            headerCell.value = '📊 PROGRAMACIÓN PLAN PRODUCCIÓN';
-
-            headerCell.font = {
-                name: 'Segoe UI',
-                size: 18,
-                bold: true,
-                color: { argb: 'FFFFFFFF' }
-            };
-
-            headerCell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FF0058A1' }
-            };
-
-            headerCell.alignment = {
-                vertical: 'middle',
-                horizontal: 'center'
-            };
-
-            worksheet.getRow(1).height = 40;
-
-            // ─────────────────────────────────────────
-            // INFO
-            // ─────────────────────────────────────────
-            worksheet.mergeCells('A2:D2');
-
-            const infoCell1 = worksheet.getCell('A2');
-
-            const fechaActual = new Date().toLocaleDateString('es-MX', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-
-            infoCell1.value = `📅 Fecha de Generación: ${fechaActual}`;
-
-            infoCell1.font = {
-                name: 'Segoe UI',
-                size: 11,
-                bold: true
-            };
-
-            infoCell1.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFE3F2FD' }
-            };
-
-            infoCell1.alignment = {
-                vertical: 'middle',
-                horizontal: 'left',
-                indent: 1
-            };
-
-            worksheet.getRow(2).height = 25;
-
-            worksheet.mergeCells('E2:I2');
-
-            const infoCell2 = worksheet.getCell('E2');
-
-            infoCell2.value = `📈 Total de Registros: ${data.length}`;
-
-            infoCell2.font = {
-                name: 'Segoe UI',
-                size: 11,
-                bold: true
-            };
-
-            infoCell2.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFE8F5E9' }
-            };
-
-            infoCell2.alignment = {
-                vertical: 'middle',
-                horizontal: 'right',
-                indent: 1
-            };
-
-            worksheet.getRow(3).height = 10;
-
-            // ─────────────────────────────────────────
-            // HEADERS
-            // ─────────────────────────────────────────
-            const headerRow = worksheet.getRow(4);
-
-            const headers = [
-                { text: '🏭 Línea de Producción', width: 30 },
-                { text: '📦 Artículo', width: 70 },
-                { text: '⚙️ Capacidades', width: 30 },
-                { text: '🔧 Proceso', width: 30 },
-                { text: '📆 Mes/Año', width: 22 },
-                { text: '📅 Rango Días', width: 26 },
-                { text: '📋 Producción Teórica', width: 24 },
-                { text: '📊 Producción Real', width: 24 },
-                { text: '💬 Comentarios', width: 44 }
-            ];
-
-            headers.forEach((header, index) => {
-
-                const col = String.fromCharCode(65 + index);
-
-                worksheet.getColumn(col).width = header.width;
-
-                const cell = headerRow.getCell(index + 1);
-
-                cell.value = header.text;
-
-                cell.font = {
-                    name: 'Segoe UI',
-                    size: 12,
-                    bold: true,
-                    color: { argb: 'FFFFFFFF' }
-                };
-
-                cell.fill = {
-                    type: 'gradient',
-                    gradient: 'angle',
-                    degree: 90,
-                    stops: [
-                        { position: 0, color: { argb: 'FF1976D2' } },
-                        { position: 1, color: { argb: 'FF0058A1' } }
-                    ]
-                };
-
-                cell.alignment = {
-                    vertical: 'middle',
-                    horizontal: 'center',
-                    wrapText: true
-                };
-
-                cell.border = {
-                    top: { style: 'medium', color: { argb: 'FF0058A1' } },
-                    left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-                    bottom: { style: 'medium', color: { argb: 'FF0058A1' } },
-                    right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
-                };
-            });
-
-            headerRow.height = 35;
-
-            // ─────────────────────────────────────────
-            // HELPERS
-            // ─────────────────────────────────────────
-            const fmtNum = (n) => {
-                return (parseFloat(n) || 0)
-                    .toLocaleString('es-MX', {
-                        minimumFractionDigits: 2
-                    });
-            };
-
-            let currentRow = 5;
-
-            // ─────────────────────────────────────────
-            // DATA
-            // ─────────────────────────────────────────
-            data.forEach((row, index) => {
-
-                const excelRow = worksheet.getRow(currentRow);
-
-                const bgColor = index % 2 === 0
-                    ? 'FFFFFFFF'
-                    : 'FFF7F9FC';
-
-                const capacidades = [
-                    row.PZSXDIA
-                        ? `${fmtNum(row.PZSXDIA)} PZ/día`
-                        : null,
-
-                    row.KGSXDIA
-                        ? `${fmtNum(row.KGSXDIA)} KG/día`
-                        : null
-                ]
-                    .filter(Boolean)
-                    .join(' | ');
-
-                const rowData = [
-                    row.LINEA_PRODUCCION_DESC || '',
-                    `${row.ARTICULO || ''} - ${row.ARTICULO_DESC || ''}`,
-                    capacidades,
-                    row.PROCESO || '',
-                    `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`,
-                    `Del ${row.DIA_INICIO_MANT_STR} - Al ${row.DIA_FIN_MANT_STR}`,
-                    fmtNum(row.PRODUCCION_TEORICA),
-                    fmtNum(row.PRODUCCION_REAL),
-                    row.COMENTARIOS || ''
-                ];
-
-                rowData.forEach((value, colIndex) => {
-
-                    const cell = excelRow.getCell(colIndex + 1);
-
-                    cell.value = value;
-
-                    cell.font = {
-                        name: 'Segoe UI',
-                        size: 10
-                    };
-
-                    cell.fill = {
-                        type: 'pattern',
-                        pattern: 'solid',
-                        fgColor: { argb: bgColor }
-                    };
-
-                    cell.alignment = {
-                        vertical: 'middle',
-                        horizontal: colIndex <= 1 ? 'left' : 'center',
-                        indent: colIndex <= 1 ? 1 : 0,
-                        wrapText: true
-                    };
-
-                    cell.border = {
-                        top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-                        left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-                        bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-                        right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
-                    };
-                });
-
-                // Fila principal
-                excelRow.height = 38;
-
-                currentRow++;
-
-                // ─────────────────────────────────────
-                // BITÁCORA UPDATE
-                // ─────────────────────────────────────
-                const updates = (row.BITACORA || [])
-                    .filter(b => b.BIT_ACCION === 'UPDATE');
-
-                updates.forEach((bit) => {
-
-                    const histRow = worksheet.getRow(currentRow);
-
-                    const capacidadesHist = [
-                        bit.PZSXDIA
-                            ? `${fmtNum(bit.PZSXDIA)} PZ/día`
-                            : null,
-
-                        bit.KGSXDIA
-                            ? `${fmtNum(bit.KGSXDIA)} KG/día`
-                            : null
-                    ]
-                        .filter(Boolean)
-                        .join(' | ');
-
-                    const histData = [
-
-                        `↳ HISTORIAL ${row.LINEA_PRODUCCION_DESC || ''}`,
-
-                        bit.NVO_ARTICULO
-                            ? `${bit.NVO_ARTICULO} - ${bit.NVO_ARTICULO_DESC || ''}`
-                            : '',
-
-                        capacidadesHist,
-
-                        bit.NVO_PROCESO || '',
-
-                        `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`,
-
-                        (bit.NVO_DIA_INICIO_MANT_STR && bit.NVO_DIA_FIN_MANT_STR)
-                            ? `Del ${bit.NVO_DIA_INICIO_MANT_STR} - Al ${bit.NVO_DIA_FIN_MANT_STR}`
-                            : '',
-
-                        fmtNum(bit.NVO_PRODUCCION_TEORICA),
-
-                        fmtNum(bit.NVO_PRODUCCION_REAL),
-
-                        bit.NVO_COMENTARIOS || ''
-                    ];
-
-                    histData.forEach((value, colIndex) => {
-
-                        const cell = histRow.getCell(colIndex + 1);
-
-                        cell.value = value;
-
-                        cell.font = {
-                            name: 'Segoe UI',
-                            size: 9,
-                            italic: true,
-                            color: { argb: 'FF546E7A' }
-                        };
-
-                        cell.fill = {
-                            type: 'pattern',
-                            pattern: 'solid',
-                            fgColor: { argb: 'FFE3F2FD' }
-                        };
-
-                        cell.alignment = {
-                            vertical: 'middle',
-                            horizontal: colIndex <= 1 ? 'left' : 'center',
-                            indent: colIndex <= 1 ? 2 : 0,
-                            wrapText: true
-                        };
-
-                        cell.border = {
-                            top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-                            left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-                            bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-                            right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
-                        };
-                    });
-
-                    // Historial
-                    histRow.height = 34;
-
-                    currentRow++;
-                });
-            });
-
-            // ─────────────────────────────────────────
-            // FOOTER
-            // ─────────────────────────────────────────
-            const footerRow = worksheet.getRow(currentRow);
-
-            worksheet.mergeCells(`A${currentRow}:I${currentRow}`);
-
-            const summaryCell = worksheet.getCell(`A${currentRow}`);
-
-            summaryCell.value =
-                `✅ Fin del reporte - ${data.length} planes exportados`;
-
-            summaryCell.font = {
-                name: 'Segoe UI',
-                size: 11,
-                bold: true,
-                italic: true,
-                color: { argb: 'FF666666' }
-            };
-
-            summaryCell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFF0F0F0' }
-            };
-
-            summaryCell.alignment = {
-                vertical: 'middle',
-                horizontal: 'center'
-            };
-
-            summaryCell.border = {
-                top: { style: 'medium', color: { argb: 'FF0058A1' } },
-                bottom: { style: 'medium', color: { argb: 'FF0058A1' } }
-            };
-
-            footerRow.height = 30;
-
-            // ─────────────────────────────────────────
-            // FREEZE & FILTER
-            // ─────────────────────────────────────────
-            worksheet.views = [{
-                state: 'frozen',
-                xSplit: 0,
-                ySplit: 4
-            }];
-
-            worksheet.autoFilter = {
-                from: { row: 4, column: 1 },
-                to: { row: 4, column: 9 }
-            };
-
-            // ─────────────────────────────────────────
-            // DESCARGAR
-            // ─────────────────────────────────────────
-            const buffer = await workbook.xlsx.writeBuffer();
-
-            const blob = new Blob(
-                [buffer],
-                {
-                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                }
-            );
-
-            const fecha = new Date()
-                .toISOString()
-                .split('T')[0];
-
-            const nombreArchivo =
-                `PlanProduccion_PTM_${fecha}.xlsx`;
-
-            const link = document.createElement('a');
-
-            link.href = URL.createObjectURL(blob);
-
-            link.download = nombreArchivo;
-
-            link.click();
-
-            AlertManager.mostrar(
-                '📊 ¡Excel exportado con éxito! 🎉',
-                'success'
-            );
-
-        }
-        catch (error) {
-
-            console.error('Error al exportar:', error);
-
-            AlertManager.mostrar(
-                'Error al exportar: ' + error.message,
-                'warning'
-            );
-        }
-        finally {
-
-            $('#btnExportarExcel')
-                .html('<i class="bi bi-file-earmark-excel-fill me-1"></i>Exportar')
-                .prop('disabled', false);
+            await GlobalUtil.exportPlanesAExcel(data, { fileName: null });
+
+            AlertManager.mostrar('📊 ¡Excel exportado con éxito! 🎉', 'success');
+
+        } catch (err) {
+            console.error('Error al exportar:', err);
+            AlertManager.mostrar('Error al exportar: ' + (err.message || err), 'warning');
+        } finally {
+            $('#btnExportarExcel').html('<i class="bi bi-file-earmark-excel-fill me-1"></i>Exportar').prop('disabled', false);
         }
     }
 }

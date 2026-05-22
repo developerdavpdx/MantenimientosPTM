@@ -1160,17 +1160,9 @@
 }
 
 /*STATS*/
-.stats-row {
-    display: grid;
-    grid-template-columns: 1.4fr 1fr;
-    gap: 14px;
-    margin-top: 18px;
-}
-
 .stat-box {
     padding: 12px 14px;
     border-radius: 14px;
-    min-height: 96px;
 }
 .dual-prod-values {
     display: flex;

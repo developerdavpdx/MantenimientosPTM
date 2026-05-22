@@ -10,6 +10,7 @@ using System.Linq;
 using System.Reflection;
 using System.Web.Mvc;
 using static MantenimientosPTM.EmailNotificationService;
+using MantenimientosPTM.Models.Dto;
 
 namespace MantenimientosPTM.Controllers
 {
@@ -110,8 +111,8 @@ namespace MantenimientosPTM.Controllers
                     filas = JsonConvert.DeserializeObject<List<AccesoDatosPlaneacion.PlanProduccion>>(resultHana.JsonResult);
                 }
 
-                // ✅ NUEVO — Agrupar filas por ID_PLAN e incrustar la bitácora
-                var planesAgrupados = AgruparPlanesConBitacora(filas);
+                // ✅ Agrupar filas por ID_PLAN usando helper centralizado
+                var planesAgrupados = AccesoDatosPlaneacion.GroupPlans(filas).Cast<object>().ToList();
 
                 // ── Paginación sobre los planes ya agrupados ──────────────────────────
                 int totalRegistrosFiltrados = planesAgrupados.Count;
@@ -151,79 +152,7 @@ namespace MantenimientosPTM.Controllers
                 }, JsonRequestBehavior.AllowGet);
             }
         }
-        // ── Método auxiliar — mismo controller o en una clase helper ─────────────
-        private List<object> AgruparPlanesConBitacora(List<AccesoDatosPlaneacion.PlanProduccion> filas)
-        {
-            var map = new Dictionary<int, dynamic>();
-
-            foreach (var fila in filas)
-            {
-                if (!map.ContainsKey(fila.ID_PLAN))
-                {
-                    // Primera vez que aparece este plan — guardar datos base
-                    map[fila.ID_PLAN] = new
-                    {
-                        fila.ID_PLAN,
-                        fila.LINEA_PRODUCCION,
-                        fila.LINEA_PRODUCCION_DESC,
-                        fila.ID_PROCESO,
-                        fila.PROCESO,
-                        fila.ARTICULO,
-                        fila.ARTICULO_DESC,
-                        fila.KGSXDIA,
-                        fila.PZSXDIA,
-                        fila.CAPACIDAD,
-                        fila.DIA_INICIO_MANT_STR,
-                        fila.DIA_FIN_MANT_STR,
-                        fila.PRODUCCION_TEORICA_KGS,
-                        fila.PRODUCCION_TEORICA_PZS,
-                        fila.PRODUCCION_REAL,
-                        fila.COMENTARIOS,
-                        fila.FECHA_PLAN_STRING,
-                        fila.FECHA_CREACION_STRING,
-                        fila.PLANTA,
-                        fila.ESTATUS,
-                        fila.ANIO_PLAN,
-                        fila.MES_PLAN,
-                        fila.DIAS_TOTALES,
-                        //fila.ID_PARO,
-                        //fila.FECHA_PARO,
-                        //fila.COMENTARIOS_PARO,
-                        //fila.TIENE_PARO_ACTIVO,
-                        fila.COLOR_EVENTO,
-                        BITACORA = new List<object>()   // ← se llenará abajo
-                    };
-                }
-
-                // Agregar entrada de bitácora si existe
-                if (fila.ID_BITACORA.HasValue)
-                {
-                    ((List<object>)map[fila.ID_PLAN].BITACORA).Add(new
-                    {
-                        fila.ID_BITACORA,
-                        fila.BIT_ACCION,
-                        fila.BIT_FECHA_MOVIMIENTO,
-                        fila.BIT_USUARIO,
-                        fila.NVO_LINEA_PRODUCCION,
-                        fila.NVO_PROCESO,
-                        fila.ID_NVO_PROCESO,
-                        fila.NVO_ARTICULO,
-                        fila.NVO_ARTICULO_DESC,
-                        fila.KGSXDIA,
-                        fila.PZSXDIA,
-                        fila.NVO_DIA_INICIO_MANT_STR,
-                        fila.NVO_DIA_FIN_MANT_STR,
-                        fila.PRODUCCION_TEORICA_KGS,
-                        fila.PRODUCCION_TEORICA_PZS,
-                        fila.NVO_PRODUCCION_REAL,
-                        fila.NVO_COMENTARIOS,
-                        fila.NVO_FECHA_PLAN,
-                    });
-                }
-            }
-
-            return map.Values.Cast<object>().ToList();
-        }
+        // Agrupación de filas planas a planes con bitácora se realiza en AccesoDatosPlaneacion.GroupPlans
 
         [HttpPost]
         public JsonResult obtenerOrdenesFabricacion()
@@ -421,7 +350,8 @@ namespace MantenimientosPTM.Controllers
         public JsonResult InsertarPlanProduccion()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            AccesoDatosPlaneacion.PlanProduccion RequestData;
+            // Usar DTO para insertar
+            Models.Dto.PlanProduccionCreateDto requestDto;
             try
             {
                 // Leer el cuerpo de la solicitud JSON
@@ -431,82 +361,30 @@ namespace MantenimientosPTM.Controllers
                     string jsonData = reader.ReadToEnd();
                     if (string.IsNullOrEmpty(jsonData))
                         throw new Exception("No se recibió información.");
-                    // Deserializar JSON al modelo PlanProduccion
-                    RequestData = JsonConvert.DeserializeObject<AccesoDatosPlaneacion.PlanProduccion>(jsonData);
+                    // Deserializar JSON al DTO de creación
+                    requestDto = JsonConvert.DeserializeObject<PlanProduccionCreateDto>(jsonData);
                 }
 
                 // 🔥 CONVERTIR FECHA AL FORMATO CORRECTO ANTES DE ENVIAR A HANA
-                if (RequestData.FECHA_PLAN.HasValue)
+                // Normalizar FECHA_PLAN_STRING en el DTO (usado para enviar al SP)
+                if (string.IsNullOrWhiteSpace(requestDto.FECHA_PLAN_STRING))
+                    requestDto.FECHA_PLAN_STRING = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                // Convertir DTO a parámetros HANA (sin excludedParams)
+                var parameters = Logic.GlobalCommands.ConvertToHanaParameters(requestDto, true, null);
+
+                // Asegurar que los parámetros de fecha sean enviados como DATE a HANA
+                if (parameters.ContainsKey("P_DIA_INICIO_MANT"))
                 {
-                    // Formato: YYYY-MM-DD HH:mm:ss
-                    RequestData.FECHA_PLAN_STRING = RequestData.FECHA_PLAN.Value.ToString("yyyy-MM-dd HH:mm:ss");
+                    var p = parameters["P_DIA_INICIO_MANT"];
+                    parameters["P_DIA_INICIO_MANT"] = (p.Item1 is DBNull ? (object)DBNull.Value : (p.Item1 is DateTime dt ? (object)dt.Date : p.Item1), p.Item2, Sap.Data.Hana.HanaDbType.Date);
                 }
-                else
+
+                if (parameters.ContainsKey("P_DIA_FIN_MANT"))
                 {
-                    // Si no hay fecha, usar la fecha actual
-                    RequestData.FECHA_PLAN_STRING = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    var p = parameters["P_DIA_FIN_MANT"];
+                    parameters["P_DIA_FIN_MANT"] = (p.Item1 is DBNull ? (object)DBNull.Value : (p.Item1 is DateTime dt ? (object)dt.Date : p.Item1), p.Item2, Sap.Data.Hana.HanaDbType.Date);
                 }
-
-                // Convertir modelo a parámetros HANA
-                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
-                var excludedParams = new[] {
-                // — Campos que no usa el SP de Insertar —
-                "P_LINEA_PRODUCCION_DESC",
-                "P_ID_PLAN",
-                "P_ID_PROCESO",
-                "P_ARTICULO_DESC",
-                "P_PZSXDIA",
-                "P_KGSXDIA",
-                "P_PRODUCCION_TEORICA_PZS",
-                "P_PRODUCCION_TEORICA_KGS",
-                "P_FECHA_CREACION",
-                "P_FECHA_PLAN",
-                "P_ESTATUS",
-                "P_ANIO_PLAN",
-                "P_MES_PLAN",
-                "P_DIAS_TOTALES",
-                "P_FECHA_CREACION_STRING",
-
-                // — Campos STR / INPUT (frontend only) —
-                "P_DIA_INICIO_MANT_STR",
-                "P_DIA_FIN_MANT_STR",
-                "P_DIA_INICIO_MANT_INPUT",
-                "P_DIA_FIN_MANT_INPUT",
-
-                // — Campos de paro —
-                "P_ID_PARO",
-                "P_FECHA_PARO",
-                "P_COMENTARIOS_PARO",
-                "P_TIENE_PARO_ACTIVO",
-                "P_COLOR_EVENTO",
-
-                // — Campos de bitácora —
-                "P_ID_BITACORA",
-                "P_BIT_ACCION",
-                "P_BIT_FECHA_MOVIMIENTO",
-                "P_BIT_USUARIO",
-
-                "P_NVO_LINEA_PRODUCCION",
-                "P_NVO_PROCESO",
-                "P_ID_NVO_PROCESO",
-                "P_NVO_ARTICULO",
-                "P_NVO_ARTICULO_DESC",
-                "P_NVO_CAPACIDAD",
-
-                "P_NVO_DIA_INICIO_MANT",
-                "P_NVO_DIA_FIN_MANT",
-
-                "P_NVO_DIA_INICIO_MANT_STR",
-                "P_NVO_DIA_FIN_MANT_STR",
-
-                "P_NVO_PRODUCCION_TEORICA",
-                "P_NVO_PRODUCCION_REAL",
-                "P_NVO_COMENTARIOS",
-                "P_NVO_FECHA_PLAN"
-            };
-                var parameters = allparameters
-                    .Where(p => !excludedParams.Contains(p.Key))
-                    .ToDictionary(p => p.Key, p => p.Value);
 
                 // Ejecutar stored procedure para insertar plan
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertarPlanProduccion, parameters);
@@ -545,7 +423,7 @@ namespace MantenimientosPTM.Controllers
         public JsonResult ActualizarPlanProduccion()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            AccesoDatosPlaneacion.PlanProduccion RequestData;
+            MantenimientosPTM.Models.Dto.PlanProduccionUpdateDto requestDto;
             try
             {
                 // Leer el cuerpo de la solicitud JSON
@@ -555,91 +433,22 @@ namespace MantenimientosPTM.Controllers
                     string jsonData = reader.ReadToEnd();
                     if (string.IsNullOrEmpty(jsonData))
                         throw new Exception("No se recibió información.");
-
-                    RequestData = JsonConvert.DeserializeObject<AccesoDatosPlaneacion.PlanProduccion>(jsonData);
+                    requestDto = JsonConvert.DeserializeObject<PlanProduccionUpdateDto>(jsonData);
                 }
 
                 // Validar que venga el ID del plan a actualizar
-                if (RequestData.ID_PLAN == 0)
+                if (requestDto.ID_PLAN == 0)
                     throw new Exception("No se recibió el ID del plan a actualizar.");
 
-                // Convertir FECHA_PLAN al formato correcto antes de enviar a HANA
-                if (RequestData.FECHA_PLAN.HasValue)
-                {
-                    RequestData.FECHA_PLAN_STRING = RequestData.FECHA_PLAN.Value.ToString("yyyy-MM-dd HH:mm:ss");
-                }
-                else
-                {
-                    RequestData.FECHA_PLAN_STRING = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                }
+                // Normalizar FECHA_PLAN_STRING en el DTO (se recibe como string desde el frontend)
+                if (string.IsNullOrWhiteSpace(requestDto.FECHA_PLAN_STRING))
+                    requestDto.FECHA_PLAN_STRING = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-                // Convertir modelo a parámetros HANA
-                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
-
-                // Excluir los mismos campos que en Insertar + mantener P_ID_PLAN
-                var excludedParams = new[] {
-                // — Campos que no usa el SP de Insertar —
-                "P_LINEA_PRODUCCION_DESC",
-                "P_ID_PROCESO",
-                "P_ARTICULO_DESC",
-                "P_PZSXDIA",
-                "P_KGSXDIA",
-                "P_PRODUCCION_TEORICA_PZS",
-                "P_PRODUCCION_TEORICA_KGS",
-                "P_FECHA_CREACION",
-                "P_FECHA_PLAN",
-                "P_ESTATUS",
-                "P_ANIO_PLAN",
-                "P_MES_PLAN",
-                "P_DIAS_TOTALES",
-                "P_FECHA_CREACION_STRING",
-
-                // — Campos STR / INPUT (frontend only) —
-                "P_DIA_INICIO_MANT_STR",
-                "P_DIA_FIN_MANT_STR",
-                "P_DIA_INICIO_MANT_INPUT",
-                "P_DIA_FIN_MANT_INPUT",
-
-                // — Campos de paro —
-                "P_ID_PARO",
-                "P_FECHA_PARO",
-                "P_COMENTARIOS_PARO",
-                "P_TIENE_PARO_ACTIVO",
-                "P_COLOR_EVENTO",
-
-                // — Campos de bitácora —
-                "P_ID_BITACORA",
-                "P_BIT_ACCION",
-                "P_BIT_FECHA_MOVIMIENTO",
-                "P_BIT_USUARIO",
-
-                "P_NVO_LINEA_PRODUCCION",
-                "P_NVO_PROCESO",
-                "P_ID_NVO_PROCESO",
-                "P_NVO_ARTICULO",
-                "P_NVO_ARTICULO_DESC",
-                "P_NVO_CAPACIDAD",
-
-                "P_NVO_DIA_INICIO_MANT",
-                "P_NVO_DIA_FIN_MANT",
-
-                "P_NVO_DIA_INICIO_MANT_STR",
-                "P_NVO_DIA_FIN_MANT_STR",
-
-                "P_NVO_PRODUCCION_TEORICA",
-                "P_NVO_PRODUCCION_REAL",
-                "P_NVO_COMENTARIOS",
-                "P_NVO_FECHA_PLAN"
-            };
-
-                var parameters = allparameters
-                    .Where(p => !excludedParams.Contains(p.Key))
-                    .ToDictionary(p => p.Key, p => p.Value);
-
-                // Ejecutar stored procedure de actualización
+                // Convertir DTO a parámetros HANA y ejecutar SP
+                var parametersUpdate = Logic.GlobalCommands.ConvertToHanaParameters(requestDto, true, null);
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                     Logic.AD.GCActualizarPlanProduccion,
-                    parameters
+                    parametersUpdate
                 );
 
                 if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
@@ -652,13 +461,34 @@ namespace MantenimientosPTM.Controllers
 
                 string errorEmail;
 
-                var changes = BuildChanges(RequestData);
+                // Mapear manualmente DTO a PlanProduccion para reutilizar BuildChanges y notificaciones (sin AutoMapper)
+                var modelForEmail = new AccesoDatosPlaneacion.PlanProduccion
+                {
+                    ID_PLAN = requestDto.ID_PLAN,
+                    LINEA_PRODUCCION = requestDto.LINEA_PRODUCCION,
+                    ID_PROCESO = requestDto.PROCESO,
+                    PROCESO = requestDto.PROCESO,
+                    ARTICULO = requestDto.ARTICULO,
+                    DIA_INICIO_MANT = requestDto.DIA_INICIO_MANT,
+                    DIA_FIN_MANT = requestDto.DIA_FIN_MANT,
+                    PRODUCCION_TEORICA_PZS = null,
+                    PRODUCCION_TEORICA_KGS = null,
+                    PRODUCCION_REAL = null,
+                    COMENTARIOS = requestDto.COMENTARIOS,
+                    FECHA_PLAN_STRING = requestDto.FECHA_PLAN_STRING,
+                    PLANTA = requestDto.PLANTA,
+                    ESTATUS = null,
+                    USUARIO = requestDto.USUARIO,
+                    CAPACIDAD = requestDto.CAPACIDAD
+                };
+
+                var changes = BuildChanges(modelForEmail);
 
 
                 // ✅ Preparar parámetros para el SP
                 var parametersEmail = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_PLANTA", (RequestData.PLANTA, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA", (requestDto.PLANTA, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_TIPO", ("P", ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
                 // Ejecutar stored procedure de actualización
@@ -728,22 +558,18 @@ namespace MantenimientosPTM.Controllers
                     if (string.IsNullOrEmpty(jsonData))
                         throw new Exception("No se recibió información.");
 
-                    var requestData = JsonConvert.DeserializeObject<dynamic>(jsonData);
+                    var requestDto = JsonConvert.DeserializeObject<Models.Dto.PlanProduccionDeleteDto>(jsonData);
 
-                    int idPlan = (int)requestData.ID_PLAN;
-                    int planta = (int)requestData.PLANTA;
-                    string usuario = (string)requestData.USUARIO;
+                    int idPlan = requestDto.ID_PLAN;
+                    int planta = requestDto.PLANTA;
+                    string usuario = requestDto.USUARIO;
 
                     if (idPlan == 0)
                         throw new Exception("No se recibió el ID del plan a eliminar.");
 
                     // Crear parámetros en el formato correcto para HANA
-                    var parametros = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
-                    {
-                        { "P_ID_PLAN", (idPlan, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_USUARIO", (string.IsNullOrEmpty(usuario) ? null : usuario, ParameterDirection.Input, HanaDbType.Date) }
-                    };
+                    // Convertir DTO a parámetros HANA (ConvertToHanaParameters asigna tipos apropiados)
+                    var parametros = Logic.GlobalCommands.ConvertToHanaParameters(requestDto, true, null);
 
                     var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                         Logic.AD.GCEliminarPlanProduccion,

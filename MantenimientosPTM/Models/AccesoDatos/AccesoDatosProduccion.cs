@@ -155,6 +155,10 @@ namespace MantenimientosPTM
             public decimal? DURACION_HRS { get; set; }
             public string COLOR_EVENTO { get; set; }
 
+            // Nuevo: información de artículo
+            public string ARTICULO { get; set; }
+            public string ARTICULO_DESC { get; set; }
+
             // 🆕 Nuevos campos
             public string TIPO_PARO { get; set; }
             public string CATEGORIA { get; set; }

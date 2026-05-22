@@ -2,6 +2,8 @@
 using System;
 using System.ComponentModel;
 using System.Configuration;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MantenimientosPTM
 {
@@ -205,8 +207,8 @@ namespace MantenimientosPTM
             public decimal? PRODUCCION_TEORICA_KGS { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string PRODUCCION_REAL { get; set; }
+            [DefaultValue(0)]
+            public decimal? PRODUCCION_REAL { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
@@ -235,12 +237,12 @@ namespace MantenimientosPTM
             public string ESTATUS { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string ANIO_PLAN { get; set; }
+            [DefaultValue(0)]
+            public int ANIO_PLAN { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string MES_PLAN { get; set; }
+            [DefaultValue(0)]
+            public int MES_PLAN { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
@@ -318,8 +320,8 @@ namespace MantenimientosPTM
             public string NVO_PRODUCCION_TEORICA { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string NVO_PRODUCCION_REAL { get; set; }
+            [DefaultValue(0)]
+            public decimal? NVO_PRODUCCION_REAL { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
@@ -329,6 +331,128 @@ namespace MantenimientosPTM
             [DefaultValue("")]
             public string NVO_FECHA_PLAN { get; set; }
         }
+
+        // Nuevo: representación de una entrada de bitácora
+        public class BitacoraEntry
+        {
+            public int? ID_BITACORA { get; set; }
+            public string BIT_ACCION { get; set; }
+            public string BIT_FECHA_MOVIMIENTO { get; set; }
+            public string BIT_USUARIO { get; set; }
+            public int? NVO_LINEA_PRODUCCION { get; set; }
+            public string NVO_PROCESO { get; set; }
+            public string ID_NVO_PROCESO { get; set; }
+            public string NVO_ARTICULO { get; set; }
+            public string NVO_ARTICULO_DESC { get; set; }
+            public decimal? KGSXDIA { get; set; }
+            public decimal? PZSXDIA { get; set; }
+            public string NVO_DIA_INICIO_MANT_STR { get; set; }
+            public string NVO_DIA_FIN_MANT_STR { get; set; }
+            public decimal? PRODUCCION_TEORICA_KGS { get; set; }
+            public decimal? PRODUCCION_TEORICA_PZS { get; set; }
+            public decimal? NVO_PRODUCCION_REAL { get; set; }
+            public string NVO_COMENTARIOS { get; set; }
+            public string NVO_FECHA_PLAN { get; set; }
+        }
+
+        // Nuevo: plan agrupado con bitácora
+        public class GroupedPlanProduccion
+        {
+            public int ID_PLAN { get; set; }
+            public int LINEA_PRODUCCION { get; set; }
+            public string LINEA_PRODUCCION_DESC { get; set; }
+            public string ID_PROCESO { get; set; }
+            public string PROCESO { get; set; }
+            public string ARTICULO { get; set; }
+            public string ARTICULO_DESC { get; set; }
+            public decimal? KGSXDIA { get; set; }
+            public decimal? PZSXDIA { get; set; }
+            public string CAPACIDAD { get; set; }
+            public string DIA_INICIO_MANT_STR { get; set; }
+            public string DIA_FIN_MANT_STR { get; set; }
+            public decimal? PRODUCCION_TEORICA_KGS { get; set; }
+            public decimal? PRODUCCION_TEORICA_PZS { get; set; }
+            public decimal? PRODUCCION_REAL { get; set; }
+            public string COMENTARIOS { get; set; }
+            public string FECHA_PLAN_STRING { get; set; }
+            public string FECHA_CREACION_STRING { get; set; }
+            public int PLANTA { get; set; }
+            public string ESTATUS { get; set; }
+            public string ANIO_PLAN { get; set; }
+            public string MES_PLAN { get; set; }
+            public int DIAS_TOTALES { get; set; }
+            public string COLOR_EVENTO { get; set; }
+            public List<BitacoraEntry> BITACORA { get; set; } = new List<BitacoraEntry>();
+        }
+
+        // Helper para agrupar filas planas en objetos GroupedPlanProduccion
+        public static List<GroupedPlanProduccion> GroupPlans(List<PlanProduccion> flatRows)
+        {
+            var map = new Dictionary<int, GroupedPlanProduccion>();
+
+            foreach (var fila in flatRows ?? Enumerable.Empty<PlanProduccion>())
+            {
+                if (!map.ContainsKey(fila.ID_PLAN))
+                {
+                    map[fila.ID_PLAN] = new GroupedPlanProduccion
+                    {
+                        ID_PLAN = fila.ID_PLAN,
+                        LINEA_PRODUCCION = fila.LINEA_PRODUCCION,
+                        LINEA_PRODUCCION_DESC = fila.LINEA_PRODUCCION_DESC,
+                        ID_PROCESO = fila.ID_PROCESO,
+                        PROCESO = fila.PROCESO,
+                        ARTICULO = fila.ARTICULO,
+                        ARTICULO_DESC = fila.ARTICULO_DESC,
+                        KGSXDIA = fila.KGSXDIA,
+                        PZSXDIA = fila.PZSXDIA,
+                        CAPACIDAD = fila.CAPACIDAD,
+                        DIA_INICIO_MANT_STR = fila.DIA_INICIO_MANT_STR,
+                        DIA_FIN_MANT_STR = fila.DIA_FIN_MANT_STR,
+                        PRODUCCION_TEORICA_KGS = fila.PRODUCCION_TEORICA_KGS,
+                        PRODUCCION_TEORICA_PZS = fila.PRODUCCION_TEORICA_PZS,
+                        PRODUCCION_REAL = fila.PRODUCCION_REAL,
+                        COMENTARIOS = fila.COMENTARIOS,
+                        FECHA_PLAN_STRING = fila.FECHA_PLAN_STRING,
+                        FECHA_CREACION_STRING = fila.FECHA_CREACION_STRING,
+                        PLANTA = fila.PLANTA,
+                        ESTATUS = fila.ESTATUS,
+                        ANIO_PLAN = fila.ANIO_PLAN.ToString(),
+                        MES_PLAN = fila.MES_PLAN.ToString(),
+                        DIAS_TOTALES = fila.DIAS_TOTALES,
+                        COLOR_EVENTO = fila.COLOR_EVENTO,
+                        BITACORA = new List<BitacoraEntry>()
+                    };
+                }
+
+                if (fila.ID_BITACORA.HasValue)
+                {
+                    map[fila.ID_PLAN].BITACORA.Add(new BitacoraEntry
+                    {
+                        ID_BITACORA = fila.ID_BITACORA,
+                        BIT_ACCION = fila.BIT_ACCION,
+                        BIT_FECHA_MOVIMIENTO = fila.BIT_FECHA_MOVIMIENTO,
+                        BIT_USUARIO = fila.BIT_USUARIO,
+                        NVO_LINEA_PRODUCCION = fila.NVO_LINEA_PRODUCCION,
+                        NVO_PROCESO = fila.NVO_PROCESO,
+                        ID_NVO_PROCESO = fila.ID_NVO_PROCESO,
+                        NVO_ARTICULO = fila.NVO_ARTICULO,
+                        NVO_ARTICULO_DESC = fila.NVO_ARTICULO_DESC,
+                        KGSXDIA = fila.KGSXDIA,
+                        PZSXDIA = fila.PZSXDIA,
+                        NVO_DIA_INICIO_MANT_STR = fila.NVO_DIA_INICIO_MANT_STR,
+                        NVO_DIA_FIN_MANT_STR = fila.NVO_DIA_FIN_MANT_STR,
+                        PRODUCCION_TEORICA_KGS = fila.PRODUCCION_TEORICA_KGS,
+                        PRODUCCION_TEORICA_PZS = fila.PRODUCCION_TEORICA_PZS,
+                        NVO_PRODUCCION_REAL = fila.NVO_PRODUCCION_REAL,
+                        NVO_COMENTARIOS = fila.NVO_COMENTARIOS,
+                        NVO_FECHA_PLAN = fila.NVO_FECHA_PLAN
+                    });
+                }
+            }
+
+            return map.Values.ToList();
+        }
+
         #endregion
     }
 }

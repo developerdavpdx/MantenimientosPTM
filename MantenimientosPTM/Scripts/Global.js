@@ -218,6 +218,140 @@ class GlobalUtil {
         });
     }
 
+    // Exportar planes a Excel — función reutilizable para planeación
+    static async exportPlanesAExcel(data, options = {}) {
+        if (!Array.isArray(data) || data.length === 0) {
+            throw new Error('No hay datos para exportar');
+        }
+
+        const workbook = new ExcelJS.Workbook();
+
+        const worksheet = workbook.addWorksheet('PlanProduccion', {
+            pageSetup: {
+                paperSize: 9,
+                orientation: 'landscape',
+                fitToPage: true,
+                fitToWidth: 1,
+                fitToHeight: 0
+            }
+        });
+
+        worksheet.mergeCells('A1:I1');
+        const headerCell = worksheet.getCell('A1');
+        headerCell.value = '📊 PROGRAMACIÓN PLAN PRODUCCIÓN';
+        headerCell.font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+        headerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0058A1' } };
+        headerCell.alignment = { vertical: 'middle', horizontal: 'center' };
+        worksheet.getRow(1).height = 40;
+
+        worksheet.mergeCells('A2:D2');
+        const infoCell1 = worksheet.getCell('A2');
+        const fechaActual = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+        infoCell1.value = `📅 Fecha de Generación: ${fechaActual}`;
+        infoCell1.font = { name: 'Segoe UI', size: 11, bold: true };
+        infoCell1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3F2FD' } };
+        infoCell1.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+        worksheet.getRow(2).height = 25;
+
+        worksheet.mergeCells('E2:I2');
+        const infoCell2 = worksheet.getCell('E2');
+        infoCell2.value = `📈 Total de Registros: ${data.length}`;
+        infoCell2.font = { name: 'Segoe UI', size: 11, bold: true };
+        infoCell2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+        infoCell2.alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+        worksheet.getRow(3).height = 10;
+
+        const headerRow = worksheet.getRow(4);
+        const headers = [
+            { text: '🏭 Línea de Producción', width: 30 },
+            { text: '📦 Artículo', width: 70 },
+            { text: '⚙️ Capacidades', width: 30 },
+            { text: '🔧 Proceso', width: 30 },
+            { text: '📆 Mes/Año', width: 22 },
+            { text: '📅 Rango Días', width: 26 },
+            { text: '📋 Producción Teórica', width: 24 },
+            { text: '📊 Producción Real', width: 24 },
+            { text: '💬 Comentarios', width: 44 }
+        ];
+
+        headers.forEach((header, index) => {
+            const col = String.fromCharCode(65 + index);
+            worksheet.getColumn(col).width = header.width;
+            const cell = headerRow.getCell(index + 1);
+            cell.value = header.text;
+            cell.font = { name: 'Segoe UI', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'gradient', gradient: 'angle', degree: 90, stops: [{ position: 0, color: { argb: 'FF1976D2' } }, { position: 1, color: { argb: 'FF0058A1' } }] };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+            cell.border = { top: { style: 'medium', color: { argb: 'FF0058A1' } }, left: { style: 'thin', color: { argb: 'FFCCCCCC' } }, bottom: { style: 'medium', color: { argb: 'FF0058A1' } }, right: { style: 'thin', color: { argb: 'FFCCCCCC' } } };
+        });
+        headerRow.height = 35;
+
+        const fmtNum = (n) => (parseFloat(n) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+
+        let currentRow = 5;
+
+        data.forEach((row, index) => {
+            const excelRow = worksheet.getRow(currentRow);
+            const bgColor = index % 2 === 0 ? 'FFFFFFFF' : 'FFF7F9FC';
+            const capacidades = [row.PZSXDIA ? `${fmtNum(row.PZSXDIA)} PZ/día` : null, row.KGSXDIA ? `${fmtNum(row.KGSXDIA)} KG/día` : null].filter(Boolean).join(' | ');
+            const rowData = [row.LINEA_PRODUCCION_DESC || '', `${row.ARTICULO || ''} - ${row.ARTICULO_DESC || ''}`, capacidades, row.PROCESO || '', `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`, `Del ${row.DIA_INICIO_MANT_STR} - Al ${row.DIA_FIN_MANT_STR}`, [row.PRODUCCION_TEORICA_PZS ? `${fmtNum(row.PRODUCCION_TEORICA_PZS)} PZ` : null, row.PRODUCCION_TEORICA_KGS ? `${fmtNum(row.PRODUCCION_TEORICA_KGS)} KG` : null].filter(Boolean).join(' | '), fmtNum(row.PRODUCCION_REAL), row.COMENTARIOS || ''];
+
+            rowData.forEach((value, colIndex) => {
+                const cell = excelRow.getCell(colIndex + 1);
+                cell.value = value;
+                cell.font = { name: 'Segoe UI', size: 10 };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                cell.alignment = { vertical: 'middle', horizontal: colIndex <= 1 ? 'left' : 'center', indent: colIndex <= 1 ? 1 : 0, wrapText: true };
+                cell.border = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+            });
+
+            excelRow.height = 38;
+            currentRow++;
+
+            const updates = (row.BITACORA || []).filter(b => b.BIT_ACCION === 'UPDATE');
+            updates.forEach((bit) => {
+                const histRow = worksheet.getRow(currentRow);
+                const capacidadesHist = [bit.PZSXDIA ? `${fmtNum(bit.PZSXDIA)} PZ/día` : null, bit.KGSXDIA ? `${fmtNum(bit.KGSXDIA)} KG/día` : null].filter(Boolean).join(' | ');
+                const histData = [`↳ HISTORIAL ${row.LINEA_PRODUCCION_DESC || ''}`, bit.NVO_ARTICULO ? `${bit.NVO_ARTICULO} - ${bit.NVO_ARTICULO_DESC || ''}` : '', capacidadesHist, bit.NVO_PROCESO || '', `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`, (bit.NVO_DIA_INICIO_MANT_STR && bit.NVO_DIA_FIN_MANT_STR) ? `Del ${bit.NVO_DIA_INICIO_MANT_STR} - Al ${bit.NVO_DIA_FIN_MANT_STR}` : '', [bit.PRODUCCION_TEORICA_PZS ? `${fmtNum(bit.PRODUCCION_TEORICA_PZS)} PZ` : null, bit.PRODUCCION_TEORICA_KGS ? `${fmtNum(bit.PRODUCCION_TEORICA_KGS)} KG` : null].filter(Boolean).join(' | '), fmtNum(bit.NVO_PRODUCCION_REAL), bit.NVO_COMENTARIOS || ''];
+
+                histData.forEach((value, colIndex) => {
+                    const cell = histRow.getCell(colIndex + 1);
+                    cell.value = value;
+                    cell.font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF546E7A' } };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3F2FD' } };
+                    cell.alignment = { vertical: 'middle', horizontal: colIndex <= 1 ? 'left' : 'center', indent: colIndex <= 1 ? 2 : 0, wrapText: true };
+                    cell.border = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+                });
+
+                histRow.height = 34;
+                currentRow++;
+            });
+        });
+
+        const footerRow = worksheet.getRow(currentRow);
+        worksheet.mergeCells(`A${currentRow}:I${currentRow}`);
+        const summaryCell = worksheet.getCell(`A${currentRow}`);
+        summaryCell.value = `✅ Fin del reporte - ${data.length} planes exportados`;
+        summaryCell.font = { name: 'Segoe UI', size: 11, bold: true, italic: true, color: { argb: 'FF666666' } };
+        summaryCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
+        summaryCell.alignment = { vertical: 'middle', horizontal: 'center' };
+        summaryCell.border = { top: { style: 'medium', color: { argb: 'FF0058A1' } }, bottom: { style: 'medium', color: { argb: 'FF0058A1' } } };
+        footerRow.height = 30;
+
+        worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 4 }];
+        worksheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: 9 } };
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const fecha = new Date().toISOString().split('T')[0];
+        const nombreArchivo = options.fileName || `PlanProduccion_PTM_${fecha}.xlsx`;
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = nombreArchivo;
+        link.click();
+        return true;
+    }
+
 }
 
 // ========================================

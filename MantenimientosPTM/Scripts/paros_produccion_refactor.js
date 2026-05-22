@@ -432,6 +432,16 @@ class ProduccionManager {
                             return `<i class="bi bi-diagram-3-fill me-1"></i>${data || 'N/A'}`;
                         }
                     },
+                    // Columna: Artículo (nuevo)
+                    {
+                        data: "ARTICULO",
+                        render: (data, type, row) => {
+                            const codigo = row.ARTICULO || '';
+                            const desc = row.ARTICULO_DESC || '';
+                            const texto = codigo ? (desc ? `${codigo} — ${desc}` : codigo) : (desc || 'N/A');
+                            return `<i class="bi bi-box-seam-fill me-1"></i>${texto}`;
+                        }
+                    },
                     // Columna: Categoría
                     {
                         data: "CATEGORIA",
@@ -513,20 +523,23 @@ class ProduccionManager {
                 ],
 
                 columnDefs: [
-                    { orderable: false, targets: [0, 6, 7] },
-                    { visible: false, targets: [6, 9] },
-                    { className: "text-center", targets: [0, 1, 4, 5, 6, 8] },
+                    // Ajustes tras agregar la columna ARTICULO (desplaza índices a la derecha a partir de la posición 3)
+                    { orderable: false, targets: [0, 7, 8] },
+                    { visible: false, targets: [7, 10] },
+                    { className: "text-center", targets: [0, 1, 5, 6, 7, 9] },
 
+                    // Prioridades responsive (ahora 11 columnas: 0..10)
                     { responsivePriority: 1, targets: 0 },
                     { responsivePriority: 2, targets: 1 }, // Planta
                     { responsivePriority: 3, targets: 2 }, // Línea
-                    { responsivePriority: 4, targets: 3 }, // Categoria
-                    { responsivePriority: 5, targets: 4 }, // Usuario
-                    { responsivePriority: 6, targets: 5 }, // Fecha Inicio
-                    { responsivePriority: 7, targets: 6 }, // Fecha Fin
-                    { responsivePriority: 8, targets: 7 }, // Duracion
-                    { responsivePriority: 9, targets: 8 },  // Comentarios
-                    { responsivePriority: 10, targets: 9 }  // Estado
+                    { responsivePriority: 4, targets: 3 }, // Artículo (nuevo)
+                    { responsivePriority: 5, targets: 4 }, // Categoria
+                    { responsivePriority: 6, targets: 5 }, // Usuario
+                    { responsivePriority: 7, targets: 6 }, // Fecha Inicio
+                    { responsivePriority: 8, targets: 7 }, // Fecha Fin
+                    { responsivePriority: 9, targets: 8 }, // Duracion
+                    { responsivePriority: 10, targets: 9 },  // Comentarios
+                    { responsivePriority: 11, targets: 10 }  // Estado
                 ],
 
                 ordering: false,
@@ -1207,7 +1220,7 @@ class AutocompleteParoArticulo {
 
         this.gestionArticulos = new GestionArticulos(
             datos_usuario,
-            0
+            110
         );
 
     }
