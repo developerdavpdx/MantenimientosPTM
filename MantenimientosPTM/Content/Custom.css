@@ -998,3 +998,7 @@ footer {
 .actualizacionDatosModal {
     background-color: #ffffffba;
 }
+
+.bg_universal_ptm {
+    background: linear-gradient(135deg, var(--modal-primary) 0%, var(--modal-primary-mid) 60%, var(--modal-primary-light) 100%);
+}

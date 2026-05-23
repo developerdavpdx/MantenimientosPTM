@@ -714,6 +714,7 @@ class ProduccionManager {
                 .find('.paro-categoria')
                 .val();
 
+
             const duracion = $(this)
                 .find('.paro-duracion')
                 .val();
@@ -723,7 +724,7 @@ class ProduccionManager {
                 .val();
 
             const articulo = $(this)
-                .find('.paro-artículo')
+                .find('.paro-articulo')
                 .val()
                 .trim();
 
@@ -735,7 +736,7 @@ class ProduccionManager {
                 errorArticulo = true;
 
                 $(this)
-                    .find('.paro-artículo')
+                    .find('.paro-articulo')
                     .addClass('is-invalid');
 
                 AlertManager.mostrar(
@@ -755,7 +756,7 @@ class ProduccionManager {
             else {
 
                 $(this)
-                    .find('.paro-artículo')
+                    .find('.paro-articulo')
                     .removeClass('is-invalid');
 
             }
@@ -785,7 +786,7 @@ class ProduccionManager {
 
                 ID_CATEGORIA_PARO: categoria,
 
-                CODIGO_ARTICULO: articulo,
+                ARTICULO: articulo,
 
                 DURACION_HRS: duracion,
 
@@ -967,7 +968,7 @@ class ProduccionManager {
 
             <td>
                 <input type="text" step="0.1"
-                       class="form-control form-control-sm paro-artículo" />
+                       class="form-control form-control-sm paro-articulo" />
             </td>
 
             <td>
@@ -1229,7 +1230,7 @@ class AutocompleteParoArticulo {
 
         $(document).on(
             'input',
-            '.paro-artículo',
+            '.paro-articulo',
             async (e) => {
 
                 const input = $(e.currentTarget);

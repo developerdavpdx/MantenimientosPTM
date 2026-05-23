@@ -388,16 +388,11 @@ namespace MantenimientosPTM.Controllers
                 //Solo guardar la bandera
                 datos.FirmaSuperviso = rutaFirmaSuperviso && datos.FirmaSuperviso.Length > 0 ? "SI" : "";
 
-                bool rutaFirmaMantenimiento = GuardarFirmaDigital(
-                    datos.FirmaMantenimiento,
-                    datos.NumeroOrden,
-                    "Mantenimiento"
-                );
+                // Nota: Por petición temporal, la firma de "Mantenimiento" ya no es requerida
+                // y no se guarda ni se envía al stored procedure. Se deja el helper disponible
+                // por si en el futuro se necesita reactivar.
 
-                //Solo guardar la bandera
-                datos.FirmaMantenimiento = rutaFirmaMantenimiento && datos.FirmaMantenimiento.Length > 0 ? "SI" : "";
-
-                if (!rutaFirmaRealizo || !rutaFirmaSuperviso || !rutaFirmaMantenimiento)
+                if (!rutaFirmaRealizo || !rutaFirmaSuperviso)
                 {
                     // Construir respuesta JSON
                     jsonResponse.Status = "NO";
@@ -410,23 +405,14 @@ namespace MantenimientosPTM.Controllers
                 string[] excludedParams = null;
                 // ✅ Convertir a parámetros HANA
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(datos, true, null);
-                if (datos.TipoOperacion == "I") //INSERT
-                    excludedParams = new[]
-                    {
-                        "P_IDMANTENIMIENTO",
-                        "P_SOLICITANTE",
-                        "P_USUARIO",
-                        "P_TIPOOPERACION"
-                    };
 
-
-                if (datos.TipoOperacion == "U") // UPDATE
-                    excludedParams = new[]
+                excludedParams = new[]
                     {
                     "P_IDMANTENIMIENTO",
                     "P_SOLICITANTE",
                     "P_USUARIO",
                     "P_TIPOOPERACION"
+                    // Excluir temporalmente la firma de Mantenimiento del SP porque ya no es requerida
                     };
 
 

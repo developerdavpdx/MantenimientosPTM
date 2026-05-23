@@ -107,6 +107,11 @@ namespace MantenimientosPTM
             [DefaultValue(0)]
             public int ID_CATEGORIA_PARO { get; set; }
 
+            // ARTICULO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public string ARTICULO { get; set; }
+
             // DURACION_HRS
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
