@@ -1290,6 +1290,7 @@ class MantenimientoManager {
     abrirModalCaratulaOnline(btn) {
 
         const data = this.getDataFromButton(btn);
+        this.tecnicosAsignados = [];
 
         // 🔥 Tipo operación
         this.TIPO_OPERACION = (data.estatusOrden == "4" ? "U" : "I");
@@ -1406,7 +1407,7 @@ class MantenimientoManager {
             this.gestionFirmas.queueFirma('mantenimiento', data.firmaMantenimiento, data.nombreMantenimiento);
         }
 
-        this.cargarTecnicos(data.numeroOrden, "MC");
+        
 
         try {
             if (data.estatusOrden == 4) {
@@ -1429,6 +1430,8 @@ class MantenimientoManager {
                 $("#MaquinaDetenidaToggle").removeAttr('required');
             }
         } catch (e) { console.warn('MaquinaDetenida no disponible en data'); }
+
+        this.cargarTecnicos(data.numeroOrden, "MC");
 
         $('#modalOrdenMantenimiento').modal('show');
     }
