@@ -51,7 +51,7 @@
         right: -40px;
         width: 160px;
         height: 160px;
-        background: rgba(14, 165, 216, 0.12);
+        /*background: rgba(14, 165, 216, 0.12);*/
         border-radius: 50%;
         pointer-events: none;
     }

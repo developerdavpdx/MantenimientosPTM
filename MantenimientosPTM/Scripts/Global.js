@@ -933,8 +933,17 @@ class DateUtils {
     }
 
     static formatearPeriodicidad(periodicidad, diaInicio, diaFin, fechaEspecifica) {
-        periodicidad = this.capitalizarPrimeraLetra(periodicidad);
-        return `${periodicidad} (días ${diaInicio}–${diaFin})`;
+        try {
+            if (!periodicidad || !diaInicio || !diaFin) {
+                return 'N/A';
+            }
+
+            periodicidad = this.capitalizarPrimeraLetra(periodicidad);
+
+            return `${periodicidad} (días ${diaInicio}–${diaFin})`;
+        } catch (error) {
+            return 'N/A';
+        }
     }
 
     static formatearPeriodicidadSimple(diaInicio, diaFin) {
