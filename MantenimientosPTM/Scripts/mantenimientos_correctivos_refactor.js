@@ -2006,6 +2006,17 @@ class MantenimientoManager {
         $('#firmaRealizoContainer input[type="text"]').prop('required', true);
         $('#firmaSupervisoContainer input[type="text"]').prop('required', false);
         $('#firmaMantenimientoContainer input[type="text"]').prop('required', false);
+
+        if (typeof GlobalUtil !== 'undefined' && typeof GlobalUtil.ocultarFirmaMantenimiento === 'function') {
+            GlobalUtil.ocultarFirmaMantenimiento();
+        } else {
+            try {
+                $('#firmaMantenimientoContainer').addClass('d-none');
+                if (this.gestionFirmas && this.gestionFirmas.deshabilitarFirma) {
+                    this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
+                }
+            } catch (e) { console.warn('No fue posible ocultar firma Mantenimiento (fallback)', e); }
+        }
     }
 
     // ========================================
