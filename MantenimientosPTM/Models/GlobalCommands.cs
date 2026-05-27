@@ -102,11 +102,6 @@ namespace MantenimientosPTM
                 {
                     result.JsonResult = $"Error: {ex.Message} | Inner: {ex.InnerException?.Message}";
                 }
-                finally
-                {
-                    if (myConnection.State == ConnectionState.Open)
-                        myConnection.Close();
-                }
             }
 
             return result;
@@ -229,7 +224,7 @@ namespace MantenimientosPTM
                 else
                     type = HanaDbType.NVarChar;
 
-                // 🔹 Prefijo P_ y mayúsculas
+                // Prefijo P_ y mayúsculas
                 string paramName = ShouldRenameParams
                     ? "P_" + prop.Name.ToUpper()
                     : prop.Name;
@@ -290,7 +285,7 @@ namespace MantenimientosPTM
             return sb;
         }
 
-        // 🔹 Método para convertir un objeto a XML
+        // Método para convertir un objeto a XML
         public string SerializeToXml<T>(T obj)
         {
             XmlSerializer serializer = new XmlSerializer(typeof(T));

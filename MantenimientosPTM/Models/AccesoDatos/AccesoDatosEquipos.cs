@@ -193,17 +193,17 @@ namespace MantenimientosPTM
         {
             // IdEquipo
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string IdEquipo { get; set; }
+            [DefaultValue(0)]
+            public int IdEquipo { get; set; }
             // Planta
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string Planta { get; set; }
+            [DefaultValue(0)]
+            public int Planta { get; set; }
 
             // Tipo de equipo
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string TipoEquipo { get; set; }
+            [DefaultValue(0)]
+            public int TipoEquipo { get; set; }
 
             // Nombre del equipo
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -217,13 +217,13 @@ namespace MantenimientosPTM
 
             // Área
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string Area { get; set; }
+            [DefaultValue(0)]
+            public int Area { get; set; }
 
             // Línea de producción
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string LineaProduccion { get; set; }
+            [DefaultValue(0)]
+            public int LineaProduccion { get; set; }
 
             // Centro de costos
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -237,8 +237,8 @@ namespace MantenimientosPTM
 
             // Periodicidad de mantenimiento
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string PeriodicidadMantenimiento { get; set; }
+            [DefaultValue(0)]
+            public int PeriodicidadMantenimiento { get; set; }
 
             // Día de inicio de mantenimiento
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]

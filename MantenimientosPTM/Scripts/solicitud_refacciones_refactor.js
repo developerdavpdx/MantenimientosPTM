@@ -172,9 +172,8 @@ class SolicitudRefaccionesApp {
 
 
         $(document).on('click', '.btn-change-ref', (e) => {
-
+            e.preventDefault();
             $("#solicitarRefAlmModal").modal("show");
-
         });
 
         //Entrada de mercancía
@@ -895,7 +894,7 @@ class SolicitudManager {
             '#bodyArticulosRefaccionMP',
             'Planeacion',
             'alertRefaccionContainer',
-            [110],
+            104,
             null,
             this.datos_usuario// Grupos de articulos excluidos 110 -> Producto Terminado
         );
@@ -941,7 +940,7 @@ class SolicitudManager {
         $('#BuscarArticuloMP').on('input', (e) => {
             const query = $(e.target).val().trim();
             if (query.length >= 2) {
-                this.gestionArticulosMP.buscarArticulos(query, this.datos_usuario[0].EMAIL);
+                this.gestionArticulosMP.buscarArticulos(query, this.datos_usuario[0].EMAIL,0);
             } else {
                 this.gestionArticulosMP.ocultarSugerencias();
             }
@@ -1021,7 +1020,6 @@ class SolicitudManager {
             return [];
         }
     }
-
 
     CambiarRefaccionOT(e) {
 
@@ -1116,7 +1114,6 @@ class SolicitudManager {
         this.actualizarContadorArticulos();
     }
 
-
     renderTablaArticulosSalida(articulos, salidas = []) {
         const tbody = $('#bodyArticulosSalida');
         tbody.empty();
@@ -1179,15 +1176,20 @@ class SolicitudManager {
             const isAtendida = Estatus === 'Atendida';
 
             let btnChangeRef = '';
-            if (Stock <= 0) {
-                btnChangeRef = `
-                <button class="btn btn-sm btn-ptm-primary btn-change-ref"
+
+            btnChangeRef = `
+            <button class="btn btn-sm btn-ptm-edit btn-del-ref"
                         data-idsolicitud="${IdSolicitud}"
                         data-codigo="${RefaccionSolicitada || ''}"
-                        data-nombre="${nombreArticulo}">
-                    <i class="bi bi-arrow-counterclockwise"></i>
+                        data-nombre="${nombreArticulo}" data-bs-toggle="tooltip" data-bs-placement="top" title="❌ Eliminar refacción">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            <button class="btn btn-sm btn-ptm-edit btn-change-ref"
+                        data-idsolicitud="${IdSolicitud}"
+                        data-codigo="${RefaccionSolicitada || ''}"
+                        data-nombre="${nombreArticulo}" data-bs-toggle="tooltip" data-bs-placement="top" title="🔄 Cambiar refacción">
+                    <i class="bi bi-arrow-repeat"></i>
                 </button>`;
-            }
 
             tbody.append(`
             <tr class="${isAtendida ? 'table-success' : ''}">

@@ -218,6 +218,140 @@ class GlobalUtil {
         });
     }
 
+    // Exportar planes a Excel — función reutilizable para planeación
+    static async exportPlanesAExcel(data, options = {}) {
+        if (!Array.isArray(data) || data.length === 0) {
+            throw new Error('No hay datos para exportar');
+        }
+
+        const workbook = new ExcelJS.Workbook();
+
+        const worksheet = workbook.addWorksheet('PlanProduccion', {
+            pageSetup: {
+                paperSize: 9,
+                orientation: 'landscape',
+                fitToPage: true,
+                fitToWidth: 1,
+                fitToHeight: 0
+            }
+        });
+
+        worksheet.mergeCells('A1:I1');
+        const headerCell = worksheet.getCell('A1');
+        headerCell.value = '📊 PROGRAMACIÓN PLAN PRODUCCIÓN';
+        headerCell.font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+        headerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0058A1' } };
+        headerCell.alignment = { vertical: 'middle', horizontal: 'center' };
+        worksheet.getRow(1).height = 40;
+
+        worksheet.mergeCells('A2:D2');
+        const infoCell1 = worksheet.getCell('A2');
+        const fechaActual = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+        infoCell1.value = `📅 Fecha de Generación: ${fechaActual}`;
+        infoCell1.font = { name: 'Segoe UI', size: 11, bold: true };
+        infoCell1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3F2FD' } };
+        infoCell1.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+        worksheet.getRow(2).height = 25;
+
+        worksheet.mergeCells('E2:I2');
+        const infoCell2 = worksheet.getCell('E2');
+        infoCell2.value = `📈 Total de Registros: ${data.length}`;
+        infoCell2.font = { name: 'Segoe UI', size: 11, bold: true };
+        infoCell2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+        infoCell2.alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+        worksheet.getRow(3).height = 10;
+
+        const headerRow = worksheet.getRow(4);
+        const headers = [
+            { text: '🏭 Línea de Producción', width: 30 },
+            { text: '📦 Artículo', width: 70 },
+            { text: '⚙️ Capacidades', width: 30 },
+            { text: '🔧 Proceso', width: 30 },
+            { text: '📆 Mes/Año', width: 22 },
+            { text: '📅 Rango Días', width: 26 },
+            { text: '📋 Producción Teórica', width: 24 },
+            { text: '📊 Producción Real', width: 24 },
+            { text: '💬 Comentarios', width: 44 }
+        ];
+
+        headers.forEach((header, index) => {
+            const col = String.fromCharCode(65 + index);
+            worksheet.getColumn(col).width = header.width;
+            const cell = headerRow.getCell(index + 1);
+            cell.value = header.text;
+            cell.font = { name: 'Segoe UI', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'gradient', gradient: 'angle', degree: 90, stops: [{ position: 0, color: { argb: 'FF1976D2' } }, { position: 1, color: { argb: 'FF0058A1' } }] };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+            cell.border = { top: { style: 'medium', color: { argb: 'FF0058A1' } }, left: { style: 'thin', color: { argb: 'FFCCCCCC' } }, bottom: { style: 'medium', color: { argb: 'FF0058A1' } }, right: { style: 'thin', color: { argb: 'FFCCCCCC' } } };
+        });
+        headerRow.height = 35;
+
+        const fmtNum = (n) => (parseFloat(n) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+
+        let currentRow = 5;
+
+        data.forEach((row, index) => {
+            const excelRow = worksheet.getRow(currentRow);
+            const bgColor = index % 2 === 0 ? 'FFFFFFFF' : 'FFF7F9FC';
+            const capacidades = [row.PZSXDIA ? `${fmtNum(row.PZSXDIA)} PZ/día` : null, row.KGSXDIA ? `${fmtNum(row.KGSXDIA)} KG/día` : null].filter(Boolean).join(' | ');
+            const rowData = [row.LINEA_PRODUCCION_DESC || '', `${row.ARTICULO || ''} - ${row.ARTICULO_DESC || ''}`, capacidades, row.PROCESO || '', `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`, `Del ${row.DIA_INICIO_MANT_STR} - Al ${row.DIA_FIN_MANT_STR}`, [row.PRODUCCION_TEORICA_PZS ? `${fmtNum(row.PRODUCCION_TEORICA_PZS)} PZ` : null, row.PRODUCCION_TEORICA_KGS ? `${fmtNum(row.PRODUCCION_TEORICA_KGS)} KG` : null].filter(Boolean).join(' | '), fmtNum(row.PRODUCCION_REAL), row.COMENTARIOS || ''];
+
+            rowData.forEach((value, colIndex) => {
+                const cell = excelRow.getCell(colIndex + 1);
+                cell.value = value;
+                cell.font = { name: 'Segoe UI', size: 10 };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                cell.alignment = { vertical: 'middle', horizontal: colIndex <= 1 ? 'left' : 'center', indent: colIndex <= 1 ? 1 : 0, wrapText: true };
+                cell.border = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+            });
+
+            excelRow.height = 38;
+            currentRow++;
+
+            const updates = (row.BITACORA || []).filter(b => b.BIT_ACCION === 'UPDATE');
+            updates.forEach((bit) => {
+                const histRow = worksheet.getRow(currentRow);
+                const capacidadesHist = [bit.PZSXDIA ? `${fmtNum(bit.PZSXDIA)} PZ/día` : null, bit.KGSXDIA ? `${fmtNum(bit.KGSXDIA)} KG/día` : null].filter(Boolean).join(' | ');
+                const histData = [`↳ HISTORIAL ${row.LINEA_PRODUCCION_DESC || ''}`, bit.NVO_ARTICULO ? `${bit.NVO_ARTICULO} - ${bit.NVO_ARTICULO_DESC || ''}` : '', capacidadesHist, bit.NVO_PROCESO || '', `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`, (bit.NVO_DIA_INICIO_MANT_STR && bit.NVO_DIA_FIN_MANT_STR) ? `Del ${bit.NVO_DIA_INICIO_MANT_STR} - Al ${bit.NVO_DIA_FIN_MANT_STR}` : '', [bit.PRODUCCION_TEORICA_PZS ? `${fmtNum(bit.PRODUCCION_TEORICA_PZS)} PZ` : null, bit.PRODUCCION_TEORICA_KGS ? `${fmtNum(bit.PRODUCCION_TEORICA_KGS)} KG` : null].filter(Boolean).join(' | '), fmtNum(bit.NVO_PRODUCCION_REAL), bit.NVO_COMENTARIOS || ''];
+
+                histData.forEach((value, colIndex) => {
+                    const cell = histRow.getCell(colIndex + 1);
+                    cell.value = value;
+                    cell.font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF546E7A' } };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3F2FD' } };
+                    cell.alignment = { vertical: 'middle', horizontal: colIndex <= 1 ? 'left' : 'center', indent: colIndex <= 1 ? 2 : 0, wrapText: true };
+                    cell.border = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+                });
+
+                histRow.height = 34;
+                currentRow++;
+            });
+        });
+
+        const footerRow = worksheet.getRow(currentRow);
+        worksheet.mergeCells(`A${currentRow}:I${currentRow}`);
+        const summaryCell = worksheet.getCell(`A${currentRow}`);
+        summaryCell.value = `✅ Fin del reporte - ${data.length} planes exportados`;
+        summaryCell.font = { name: 'Segoe UI', size: 11, bold: true, italic: true, color: { argb: 'FF666666' } };
+        summaryCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
+        summaryCell.alignment = { vertical: 'middle', horizontal: 'center' };
+        summaryCell.border = { top: { style: 'medium', color: { argb: 'FF0058A1' } }, bottom: { style: 'medium', color: { argb: 'FF0058A1' } } };
+        footerRow.height = 30;
+
+        worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 4 }];
+        worksheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: 9 } };
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const fecha = new Date().toISOString().split('T')[0];
+        const nombreArchivo = options.fileName || `PlanProduccion_PTM_${fecha}.xlsx`;
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = nombreArchivo;
+        link.click();
+        return true;
+    }
+
 }
 
 // ========================================
@@ -321,8 +455,8 @@ class EquiposUtil {
                         const optgroup2 = $(`<optgroup label="Planta ${planta}"></optgroup>`);
 
                         grouped[planta].forEach(linea => {
-                            optgroup1.append(`<option value="${linea.ID_LINEA}">🔹 ${linea.LINEA}</option>`);
-                            optgroup2.append(`<option value="${linea.ID_LINEA}">🔹 ${linea.LINEA}</option>`);
+                            optgroup1.append(`<option value="${linea.ID_LINEA}">${linea.LINEA}</option>`);
+                            optgroup2.append(`<option value="${linea.ID_LINEA}">${linea.LINEA}</option>`);
                         });
 
                         selectElement.append(optgroup1);
@@ -407,12 +541,12 @@ class EquiposUtil {
 
     }
 
-    static llenarLineasCheckbox(Planta, Area, FieldContainer) {
+    static llenarLineasCheckbox(Planta, Area, Produccion, FieldContainer) {
 
         $.ajax({
             url: `/${GlobalUtil.URLBaseEquipos}/GetLineasPorPlanta`,
             type: 'GET',
-            data: { "PLANTA": Planta, "AREA": Area },
+            data: { "PLANTA": Planta, "AREA": Area, "PRODUCCION": Produccion },
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -447,7 +581,7 @@ class EquiposUtil {
                                         id="linea_${linea.ID_LINEA}">
                     
                                     <label class="form-check-label" for="linea_${linea.ID_LINEA}">
-                                        🔹 ${linea.LINEA}
+                                         ${linea.LINEA}
                                     </label>
                                 </div>
                             </div>
@@ -519,8 +653,8 @@ class EquiposUtil {
                     FiltroProceso.append('<option value="">Todos los procesos</option>');
 
                     AreasData.forEach(area => {
-                        selectElement.append(`<option value="${area.ID_AREA}">🔹 ${area.AREA}</option>`);
-                        FiltroProceso.append(`<option value="${area.ID_AREA}">🔹 ${area.AREA}</option>`);
+                        selectElement.append(`<option value="${area.ID_AREA}">${area.AREA}</option>`);
+                        FiltroProceso.append(`<option value="${area.ID_AREA}">${area.AREA}</option>`);
                     });
 
                 } else if (data.Status === 'NO') {
@@ -594,8 +728,8 @@ class EquiposUtil {
 
                     // 🔥 Llenado
                     equiposData.forEach(eq => {
-                        selectElement.append(`<option value="${eq.ID_EQUIPO}">🔹 ${eq.NOMBRE_EQUIPO}</option>`);
-                        filtroEquipo.append(`<option value="${eq.ID_EQUIPO}">🔹 ${eq.NOMBRE_EQUIPO}</option>`);
+                        selectElement.append(`<option value="${eq.ID_EQUIPO}">${eq.NOMBRE_EQUIPO}</option>`);
+                        filtroEquipo.append(`<option value="${eq.ID_EQUIPO}">${eq.NOMBRE_EQUIPO}</option>`);
                     });
 
                 } else if (data.Status === 'NO') {
@@ -671,7 +805,7 @@ class EquiposUtil {
 
                     // Recorrer los datos y agregar las opciones
                     equiposData.forEach(equipo => {
-                        selectElement.append(`<option value="${equipo.ID_TIPO_EQUIPO}">🔹 ${equipo.DESCRIPCION}</option>`);
+                        selectElement.append(`<option value="${equipo.ID_TIPO_EQUIPO}">${equipo.DESCRIPCION}</option>`);
                     });
                 } else if (data.Status === 'NO') {
                     AlertManager.mostrar(data.Message, 'warning');
@@ -718,7 +852,7 @@ class EquiposUtil {
                     categoriasData.forEach(categoria => {
                         selectElement.append(`
                         <option value="${categoria.ID_CATEGORIA_PARO}">
-                            🔹 ${categoria.NOMBRE}
+                            ${categoria.NOMBRE}
                         </option>
                     `);
                     });
@@ -799,8 +933,17 @@ class DateUtils {
     }
 
     static formatearPeriodicidad(periodicidad, diaInicio, diaFin, fechaEspecifica) {
-        periodicidad = this.capitalizarPrimeraLetra(periodicidad);
-        return `${periodicidad} (días ${diaInicio}–${diaFin})`;
+        try {
+            if (!periodicidad || !diaInicio || !diaFin) {
+                return 'N/A';
+            }
+
+            periodicidad = this.capitalizarPrimeraLetra(periodicidad);
+
+            return `${periodicidad} (días ${diaInicio}–${diaFin})`;
+        } catch (error) {
+            return 'N/A';
+        }
     }
 
     static formatearPeriodicidadSimple(diaInicio, diaFin) {
@@ -1617,7 +1760,7 @@ class GestionCentrosCosto {
 
 // ✅ Clase para gestionar artículos con selección automática a tabla
 class GestionArticulos {
-    constructor(datos_usuario,grupo_articulos) {
+    constructor(datos_usuario, grupo_articulos) {
         this.articuloSeleccionado = null;
         this.URLBase = "Planeacion";
         this._debounceTimer = null;
@@ -1634,7 +1777,7 @@ class GestionArticulos {
     }
 
     // ─── Búsqueda con debounce integrado ──────────────────────────────────────
-    buscarArticulos(query, Usuario) {
+    buscarArticulos(query, Usuario, Linea, ValidarCap) {
         let Planta = this.datos_usuario[0].PLANTA;
         let GrupoArticulos = this.grupo_articulos;
         clearTimeout(this._debounceTimer);
@@ -1643,7 +1786,7 @@ class GestionArticulos {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario, Planta, GrupoArticulos },
+                    data: { query, Usuario, Planta, Linea, GrupoArticulos, ValidarCap },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);
@@ -1654,14 +1797,15 @@ class GestionArticulos {
     }
 
     // ─── Metodo para AcGrid ───────────────────────────────────────────────────────────
-    async obtenerArticulos(query, Usuario) {
-
+    async obtenerArticulos(query, Usuario, ValidarCap) {
+        let Planta = this.datos_usuario[0].PLANTA;
+        let GrupoArticulos = this.grupo_articulos;
+        let Linea = null;
         try {
-
             const response = await $.ajax({
                 url: `/${this.URLBase}/BuscarArticulo`,
                 method: 'GET',
-                data: { query, Usuario },
+                data: { query, Usuario, Planta, Linea, GrupoArticulos, ValidarCap },
                 dataType: 'json'
             });
 
@@ -1683,7 +1827,7 @@ class GestionArticulos {
 
         if (articulos.length === 0) {
             container.html(`
-                <div class="sugerencia-item text-muted">
+                <div class="sugerencia-item-empty text-muted">
                     <i class="bi bi-exclamation-circle"></i> No se encontraron artículos.
                 </div>
             `);
@@ -1723,7 +1867,8 @@ class GestionArticulos {
         this.articuloSeleccionado = articulo;
         $('#CodigoArticulo').val(articulo.CodigoArticulo || '');
         $('#DescripcionArticulo').val(articulo.DescripcionArticulo || '');
-        $('#PlanCap').val(articulo.PzsDia || 0);
+        $('#PlanCapPiezas').val(articulo.PzsDia || 0);
+        $('#PlanCapKilos').val(articulo.KgsDia || 0);
 
         $('#BuscarArticulo').removeClass('is-invalid').addClass('is-valid');
         $('#CodigoArticulo, #DescripcionArticulo').each(function () {
@@ -1767,7 +1912,7 @@ class GestionArticulosCustom {
         inputBuscar, contenedorSugerencias, inputCodigo,
         inputDescripcion, tbodyId = '#bodyArticulosRefaccionMP',
         urlBase = 'Mantenimientos', ModalContainer,
-        excludeArt = [], includeArt = [],
+        GrupoArticulos = 0, includeArt = [],
         datos_usuario
     ) {
         this.URLBase = urlBase;
@@ -1780,22 +1925,22 @@ class GestionArticulosCustom {
         this._debounceDelay = 300;
         this._ModalContainer = ModalContainer;
         this.articulosAgregados = [];
-        this.excludeArt = excludeArt;
+        this.GrupoArticulos = GrupoArticulos;
         this.includeArt = includeArt;
         this.datos_usuario = datos_usuario;
     }
 
-    buscarArticulos(query, Usuario) {
+    buscarArticulos(query, Usuario, ValidarCap) {
         clearTimeout(this._debounceTimer);
         let Planta = this.datos_usuario[0].PLANTA;
-        let GrupoArticulos = 104; //cualquiera diferente de 110
+        let GrupoArticulos = this.GrupoArticulos; //cualquiera diferente de 110
         this._debounceTimer = setTimeout(async () => {
             try {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     // url: `/ProgramaMantenimientos/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario, Planta,GrupoArticulos },
+                    data: { query, Usuario, Planta, GrupoArticulos, ValidarCap },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);
@@ -1812,19 +1957,8 @@ class GestionArticulosCustom {
             container.html(`<div class="sugerencia-item text-muted"><i class="bi bi-exclamation-circle"></i> No se encontraron artículos.</div>`);
         } else {
             articulos.forEach(articulo => {
-                if (!this.excludeArt.includes(articulo.GrupoArt)) {
-
-                    //Solo los incluidos en el arreglo en caso de exisitir
-                    container.append(this._renderItem(articulo))
-                    //if (this.includeArt.length > 0) {
-                    //    if (this.includeArt.includes(articulo.GrupoArt)) {
-                    //        container.append(this._renderItem(articulo))
-                    //    }
-                    //}
-                    //else {
-                    //    container.append(this._renderItem(articulo))
-                    //}
-                }
+                //Solo los incluidos en el arreglo en caso de exisitir
+                container.append(this._renderItem(articulo))
             });
         }
         container.addClass('show');
@@ -1866,7 +2000,7 @@ class GestionArticulosCustom {
             AlertManager.mostrar('El artículo ya está en la lista.', 'warning', this._ModalContainer);
             return;
         }
-        this.articulosAgregados.push({ CodigoArticulo: articulo.CodigoArticulo, DescripcionArticulo: articulo.DescripcionArticulo, Cantidad: 1 });
+        this.articulosAgregados.push({ CodigoArticulo: articulo.CodigoArticulo,StockDisponible:articulo.StockDisponible, DescripcionArticulo: articulo.DescripcionArticulo, Cantidad: 1 });
         this.renderizarTabla();
     }
 
@@ -1879,7 +2013,7 @@ class GestionArticulosCustom {
             return;
         }
         this.articulosAgregados.forEach((articulo, index) => {
-            const row = $(`<tr><td class="text-center">${index + 1}</td><td class="text-center">${articulo.CodigoArticulo}</td><td>${articulo.DescripcionArticulo}</td><td class="text-center"><input type="number" class="form-control form-control-sm text-center cantidad-articulo" value="${articulo.Cantidad}" min="1" data-index="${index}"></td><td class="text-center"><button class="btn btn-sm btn-danger btn-eliminar-articulo" data-index="${index}"><i class="bi bi-x-lg"></i></button></td></tr>`);
+            const row = $(`<tr><td class="text-center">${index + 1}</td><td class="text-center">${articulo.CodigoArticulo}</td><td>${articulo.DescripcionArticulo}</td><td class="text-center">${articulo.StockDisponible}</td><td class="text-center"><input type="number" class="form-control form-control-sm text-center cantidad-articulo" value="${articulo.Cantidad}" min="1" data-index="${index}"></td><td class="text-center"><button class="btn btn-sm btn-danger btn-eliminar-articulo" data-index="${index}"><i class="bi bi-x-lg"></i></button></td></tr>`);
             tbody.append(row);
         });
         $('.cantidad-articulo').on('change', (e) => { const index = $(e.target).data('index'); this.articulosAgregados[index].Cantidad = parseInt($(e.target).val()) || 1; });

@@ -18,7 +18,7 @@ class MantenimientosPreventivoApp {
             '#bodyArticulosRefaccionMC',
             'Planeacion',
             'alertRefaccionContainer',
-            [110],
+            104,
             null,
             this.datos_usuario// Grupos de articulos excluidos 110 -> Producto Terminado
         );
@@ -40,6 +40,18 @@ class MantenimientosPreventivoApp {
         this.printManager = new PrintManagerMantenimiento(this.pdfManager, this.mantenimientoManager);
 
         window.AppMantenimientos = this;
+    }
+    // Ocultar contenedor de firma de Mantenimiento y deshabilitar botón guardar OT
+    static ocultarFirmaMantenimiento() {
+        try {
+            $('#firmaMantenimientoContainer').addClass('d-none');
+            $('#btnGuardarOT').addClass('d-none').prop('disabled', true).addClass('btn_disabled');
+            if (window.AppMantenimientos && window.AppMantenimientos.gestionFirmas && window.AppMantenimientos.gestionFirmas.deshabilitarFirma) {
+                window.AppMantenimientos.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
+            }
+        } catch (e) {
+            console.warn('Error en ocultarFirmaMantenimiento:', e);
+        }
     }
 
     inicializar() {
@@ -63,8 +75,6 @@ class MantenimientosPreventivoApp {
     configurarEventosMantenimientos() {
         // Agregar mantenimiento
         $('#btnAgregarMantenimiento').on('click', (e) => this.mantenimientoManager.abrirModalAgregar(e));
-
-        $('#btnGuardarMantenimiento').on('click', () => this.mantenimientoManager.guardarMantenimiento());
 
         // Filtros
         $('#btnFiltrar').on('click', () => this.mantenimientoManager.aplicarFiltros());
@@ -97,7 +107,7 @@ class MantenimientosPreventivoApp {
         $('#BuscarArticuloMC').on('input', (e) => {
             const query = $(e.target).val().trim();
             if (query.length >= 2) {
-                this.gestionArticulosMC.buscarArticulos(query, this.datos_usuario[0].EMAIL);
+                this.gestionArticulosMC.buscarArticulos(query, this.datos_usuario[0].EMAIL, 0);
             } else {
                 this.gestionArticulosMC.ocultarSugerencias();
             }
@@ -201,7 +211,7 @@ class MantenimientosPreventivoApp {
 
             // 🔥 Validación
             if (d2 < d1) {
-                alert('La hora fin no puede ser menor a la hora inicio.');
+                AlertManager.mostrar(`Hora Inicio no puede ser mayor a Hora Fin`, 'warning');
                 $('#HoraFin').val('');
                 $("#DuracionHrs").val('');
                 return;
@@ -390,6 +400,8 @@ class MantenimientosPreventivoApp {
     // 🔁 RECARGA CENTRALIZADA CORRECTIVOS
     // ========================================
     _recargarTablaCorrectivos() {
+        $('.modal.show').modal('hide');
+
         if (this._isReloadingCorrectivos) return;
 
         this._isReloadingCorrectivos = true;
@@ -1058,7 +1070,8 @@ class MantenimientoManager {
             firmasuperviso: row.FirmaSuperviso,
             nombresuperviso: row.NombreSuperviso,
             firmamantenimiento: row.FirmaMantenimiento,
-            nombremantenimiento: row.NombreMantenimiento
+            nombremantenimiento: row.NombreMantenimiento,
+            MaquinaDetenida: row.MaquinaDetenida
         };
 
         return Object.entries(map)
@@ -1072,47 +1085,6 @@ class MantenimientoManager {
     abrirModalAgregar(e) {
         e.preventDefault();
         $('#agregarMantenimientoModal').modal('show');
-    }
-
-    guardarMantenimiento() {
-        // Validar formulario
-        const equipo = $('#equipoSelect').val();
-        const linea = $('#lineaSelect').val();
-        const fecha = $('#fechaMantenimiento').val();
-        const estatus = $('#estatusSelect').val();
-        const ordenTrabajo = $('#ordenTrabajo').val();
-
-        if (!equipo || !linea || !fecha || !estatus) {
-            AlertManager.mostrar('Por favor, complete todos los campos obligatorios', 'warning');
-            return;
-        }
-
-        // Formatear fecha
-        const fechaFormateada = DateUtils.formatearFecha(fecha);
-        const claseBadge = EstatusManager.obtenerClaseBadge(estatus);
-
-        // Crear nueva fila
-        const nuevaFila = `
-            <tr>
-                <td>${equipo}</td>
-                <td>${linea}</td>
-                <td>${fechaFormateada}</td>
-                <td><span class="badge ${claseBadge}">${estatus}</span></td>
-                <td>${ordenTrabajo || ''}</td>
-                <td>
-                    <button class="btn btn-sm btn-info">Detalles</button>
-                </td>
-            </tr>
-        `;
-
-        // Agregar nueva fila a la tabla
-        $('#tablaMantenimientos tbody').append(nuevaFila);
-
-        // Cerrar modal y limpiar formulario
-        $('#agregarMantenimientoModal').modal('hide');
-        $('#formMantenimiento')[0].reset();
-
-        AlertManager.mostrar('Mantenimiento preventivo programado correctamente', 'success');
     }
 
     // ============================
@@ -1139,16 +1111,16 @@ class MantenimientoManager {
 
         // ===== LLENAR EL MODAL =====
 
-        // 🔹 Número de Orden
+        // Número de Orden
         $('#ROT').val(data.numeroOrden || '');
 
-        // 🔹 Equipo
+        // Equipo
         $('#REquipo').val((data.nombreEquipo || '') + ' ' + (data.numeroDocPmCalidad || ''));
 
-        // 🔹 Línea
+        // Línea
         $('#RLinea').val(data.lineaProduccion || '');
 
-        // 🔹 Fecha del Mantenimiento
+        // Fecha del Mantenimiento
         if (data.horaApertura) {
             const [fechaParte] = data.horaApertura.split(' ');
             $('#RFechaMantenimiento').val(fechaParte || '');
@@ -1156,15 +1128,15 @@ class MantenimientoManager {
             $('#RFechaMantenimiento').val(data.fechaCreacion);
         }
 
-        // 🔹 Limpiar artículos
+        // Limpiar artículos
         this.appReferencia.gestionArticulosMC.limpiar();
 
-        // 🔹 Guardar IDs
+        // Guardar IDs
         this.ID_MANTENIMIENTO = data.idMantenimiento;
         this.ID_SOLICITUD = data.idSolicitud;
         this.ID_EQUIPO = data.idEquipo;
 
-        // 🔹 Mostrar modal
+        // Mostrar modal
         $('#solicitarRefaccionModal').modal('show');
     }
 
@@ -1318,6 +1290,7 @@ class MantenimientoManager {
     abrirModalCaratulaOnline(btn) {
 
         const data = this.getDataFromButton(btn);
+        this.tecnicosAsignados = [];
 
         // 🔥 Tipo operación
         this.TIPO_OPERACION = (data.estatusOrden == "4" ? "U" : "I");
@@ -1370,17 +1343,17 @@ class MantenimientoManager {
         $("#fechaImpresion").text(DateUtils.obtenerFechaHora());
 
         // ================= REGISTRO DE TRABAJO =================
-        // 🔹 Hora Inicio
+        // Hora Inicio
         if (data.horaInicioTime) {
             $("#HoraInicioTrabajo").val(data.horaInicioTime.substring(0, 5));
         }
-        // 🔹 Hora Fin
+        // Hora Fin
         if (data.horaFinTime) {
             $("#HoraFin").val(data.horaFinTime.substring(0, 5));
         }
-        // 🔹 Texto Secuencia
+        // Texto Secuencia
         $("#TextoSecuencia").val(data.textoSecuencia || '');
-        // 🔹 Duración
+        // Duración
         $("#DuracionHrs").val(data.duracionHrs || '');
 
         // IDs
@@ -1399,16 +1372,64 @@ class MantenimientoManager {
         if (tipoUsuario === "TecnicoMtto") {
             this.configurarVistaTecnico();
         } else if (tipoUsuario === "Produccion") {
-            this.configurarVistaProduccion(data.estatusOrden, data.firmaSuperviso, data.firmaMantenimiento, data.horaApertura, data.horaCierre, data.horaInicio, data.horaFin);
+            this.configurarVistaProduccion(data.MaquinaDetenida,data.estatusOrden, data.firmaRealizo, data.firmaSuperviso, data.firmaMantenimiento, data.horaApertura, data.horaCierre, data.horaInicio, data.horaFin);
         }
         else {
-            this.configurarVistaAdministrador(data.estatusOrden, data.firmaMantenimiento, data.firmaSuperviso, data.horaApertura, data.horaCierre, data.horaInicio, data.horaFin);
+            this.configurarVistaAdministrador(data.MaquinaDetenida,data.estatusOrden, data.firmaRealizo, data.firmaMantenimiento, data.firmaSuperviso, data.horaApertura, data.horaCierre, data.horaInicio, data.horaFin);
         }
 
         // 🔥 Firma
-        this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo);
-        this.gestionFirmas.queueFirma('superviso', data.firmaSuperviso, data.nombreSuperviso);
-        this.gestionFirmas.queueFirma('mantenimiento', data.firmaMantenimiento, data.nombreMantenimiento);
+        // Si el usuario NO es Produccion ni TecnicoMtto -> ocultar el campo de firma Mantenimiento y no permitir guardar OT
+        if (tipoUsuario !== "Produccion" && tipoUsuario !== "TecnicoMtto") {
+            // Ocultar firma y botón mediante helper global (con fallback si no está disponible)
+            if (typeof GlobalUtil !== 'undefined' && typeof GlobalUtil.ocultarFirmaMantenimiento === 'function') {
+                GlobalUtil.ocultarFirmaMantenimiento();
+            } else {
+                try {
+                    $("#firmaMantenimientoContainer").addClass('d-none');
+                    $("#btnGuardarOT").addClass('d-none');
+                    $("#btnGuardarOT").prop('disabled', true).addClass('btn_disabled');
+                    if (this.gestionFirmas && this.gestionFirmas.deshabilitarFirma) {
+                        this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
+                    }
+                } catch (e) {
+                    console.warn('Error ocultando firma/btnGuardarOT:', e);
+                }
+            }
+
+            // Solo encolar firmas Realizo y Superviso
+            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo);
+            this.gestionFirmas.queueFirma('superviso', data.firmaSuperviso, data.nombreSuperviso);
+        } else {
+            // En usuarios Produccion o TecnicoMtto encolar todas las firmas
+            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo);
+            this.gestionFirmas.queueFirma('superviso', data.firmaSuperviso, data.nombreSuperviso);
+            this.gestionFirmas.queueFirma('mantenimiento', data.firmaMantenimiento, data.nombreMantenimiento);
+        }
+
+        
+
+        try {
+            if (data.estatusOrden == 4) {
+                $('#maquinaDetenidaBanner').addClass('maquina-detenida-banner maquina-detenida-banner-stopped');
+                $("#StopMachineInputContainer").addClass('d-none');
+                $("#MaquinaDetenidaToggle").prop('disabled', true);
+                if (data.MaquinaDetenida == 1) {
+                    $("#maquina_detenida_icon").removeClass("bi-check-circle-fill").addClass("bi-exclamation-octagon-fill");
+                    $("#maquina_detenida_title").text("El quipo se detuvo");
+                }
+                else {
+                    $("#maquina_detenida_icon").removeClass("bi-exclamation-octagon-fill").addClass("bi-check-circle-fill");
+                    $("#maquina_detenida_title").text("El equipo operó normalmente");
+                }
+            } else {
+                $('#maquinaDetenidaBanner').removeClass('maquina-detenida-banner maquina-detenida-banner-stopped');
+                $('#maquinaDetenidaToggle').prop('checked', (data.MaquinaDetenida == 1 ? true : false));
+                $("#StopMachineInputContainer").removeClass('d-none');
+                $("#MaquinaDetenidaToggle").prop('disabled', false);
+                $("#MaquinaDetenidaToggle").removeAttr('required');
+            }
+        } catch (e) { console.warn('MaquinaDetenida no disponible en data'); }
 
         this.cargarTecnicos(data.numeroOrden, "MC");
 
@@ -1569,6 +1590,10 @@ class MantenimientoManager {
             datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
             datos.IdMantenimiento = this.ID_MANTENIMIENTO;
 
+            // ✅ Incluir el estado real de "Máquina detenida" como entero (1 = detenido, 0 = funcionando)
+            // El input checkbox tiene id #MaquinaDetenidaToggle
+            datos.MaquinaDetenida = $('#MaquinaDetenidaToggle').is(':checked') ? 1 : 0;
+
             // 🔥 OBTENER Y AGREGAR FIRMAS DIGITALES
             const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
 
@@ -1717,7 +1742,8 @@ class MantenimientoManager {
             firmaSuperviso: d.firmasuperviso || '',
             nombreSuperviso: d.nombresuperviso || '',
             firmaMantenimiento: d.firmamantenimiento || '',
-            nombreMantenimiento: d.nombremantenimiento || ''
+            nombreMantenimiento: d.nombremantenimiento || '',
+            MaquinaDetenida: d.maquinadetenida || '',
         };
     }
 
@@ -1939,21 +1965,21 @@ class MantenimientoManager {
     // ========================================
     configurarVistaTecnico() {
 
-        // 🔹 SECCIONES
+        // SECCIONES
         $('#EvidenciaOrdenTrabajo').removeClass('d-none');
         $('#CierreOrdenTrabajo').removeClass('d-none');
         $('#SeccionFirmas').removeClass('d-none');
 
-        // 🔹 REQUIRED
+        // REQUIRED
         $('#EvidenciaOrdenTrabajo input:not(#fileInput)').prop('required', true);
         $('#CierreOrdenTrabajo input:not(#BuscarTecnico)').prop('required', true);
         $('#BuscarTecnico, #fileInput').prop('required', false);
 
-        // 🔹 BOTONES
+        // BOTONES
         $('#btnGuardarOT').removeClass('d-none');
         $('#btnExportMantenimientoPDF').addClass('d-none');
 
-        // 🔹 UPLOADER
+        // UPLOADER
         $('#previewArea').empty();
         $('#clearAll').hide();
         $('#uploadArea').removeClass('upload-area-disabled');
@@ -1964,7 +1990,7 @@ class MantenimientoManager {
             uploader.enableUpload();
         }
 
-        // 🔹 CAMPOS EDITABLES
+        // CAMPOS EDITABLES
         $("#Scrap").removeAttr('readonly').prop('required', true);
         $("#HoraCierreMan").removeAttr('readonly').prop('required', true);
 
@@ -1985,12 +2011,12 @@ class MantenimientoManager {
     // ========================================
     // 👨‍💼 CONFIGURAR VISTA ADMIN (CORRECTIVO)
     // ========================================
-    configurarVistaProduccion(EstatusOrden, FirmaSuperviso, FirmaMantenimiento, HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo) {
+    configurarVistaProduccion(MaquinaDetenida,EstatusOrden, FirmaTecnico, FirmaSuperviso, FirmaMantenimiento, HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo) {
 
-        // 🔹 MOSTRAR FIRMAS
+        // MOSTRAR FIRMAS
         $('#SeccionFirmas').removeClass('d-none');
 
-        // 🔹 REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
+        // REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
         $('#EvidenciaOrdenTrabajo input').prop('required', false);
         $('#EvidenciaOrdenTrabajo input').prop('readonly', true);
         $('#CierreOrdenTrabajo input').prop('required', false);
@@ -2003,17 +2029,29 @@ class MantenimientoManager {
         this.gestionFirmas.mostrarFirma('Realizo', true);
         this.gestionFirmas.mostrarFirma('Superviso', true);
         $("#nombreSuperviso").val(this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase()).attr('readonly', true);
-        this.gestionFirmas.mostrarFirma('Mantenimiento', true);
+        // Para perfil Producción NO se muestra la firma de Mantenimiento pero se permite guardar OT
+        this.gestionFirmas.mostrarFirma('Mantenimiento', false); // no mostrar en UI pero mantener referencia en gestionFirmas
+        // Ocultar únicamente la UI de la firma (no el botón GuardarOT)
+        try {
+            $('#firmaMantenimientoContainer').addClass('d-none');
+            $('#btnGuardarOT').removeClass('d-none').prop('disabled', false).removeClass('btn_disabled');
+            if (this.gestionFirmas && this.gestionFirmas.deshabilitarFirma) {
+                this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
+            }
+        } catch (e) { console.warn('No fue posible ocultar firma Mantenimiento (fallback)', e); }
 
         // bloquear correctamente
-        this.gestionFirmas._bloquearFirma("Realizo", true);
+        if (FirmaTecnico != "")
+            this.gestionFirmas._bloquearFirma("Realizo", true);
+        else
+            this.gestionFirmas.deshabilitarFirma("Realizo", true);
 
         if (FirmaMantenimiento != "")
             this.gestionFirmas._bloquearFirma("Mantenimiento", true);
         else
             this.gestionFirmas.deshabilitarFirma("Mantenimiento", true);
 
-        // 🔹 MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
+        // MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
         if (EstatusOrden == 4) {
             $('#EvidenciaOrdenTrabajo').removeClass('d-none');
             $('#CierreOrdenTrabajo').removeClass('d-none');
@@ -2021,7 +2059,7 @@ class MantenimientoManager {
             //TEXTO DE SECUENCIA
             $("#TextoSecuencia").prop('readonly', true);
 
-            // 🔹 BOTONES
+            // BOTONES
             $('#btnGuardarOT').removeClass('d-none');
             $('#btnExportMantenimientoPDF').removeClass('d-none');
 
@@ -2035,15 +2073,19 @@ class MantenimientoManager {
             $("#BusquedaTecnicosContainer").addClass("d-none");
 
             //TIEMPOS ANALITICOS
-            this.calcularTiemposCierreOT(HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo);
+            this.calcularTiemposCierreOT(MaquinaDetenida, HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo);
+
+            // Deshabilitar y dar estilo distintivo al switch
+            $('#MaquinaDetenidaToggle').prop('disabled', true);
+            $('#maquinaDetenidaBanner').addClass('maquina-detenida-banner');
 
         }
-        // 🔹 OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
+        // OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
         else {
             $('#EvidenciaOrdenTrabajo').addClass('d-none');
             $('#CierreOrdenTrabajo').addClass('d-none');
 
-            // 🔹 BOTONES
+            // BOTONES
             $('#btnGuardarOT').addClass('d-none');
             $('#btnExportMantenimientoPDF').removeClass('d-none');
 
@@ -2067,12 +2109,12 @@ class MantenimientoManager {
     // ========================================
     // 👨‍💼 CONFIGURAR VISTA ADMIN (CORRECTIVO)
     // ========================================
-    configurarVistaAdministrador(EstatusOrden, FirmaMantenimiento, FirmaSuperviso, HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo) {
+    configurarVistaAdministrador(MaquinaDetenida,EstatusOrden, FirmaTecnico, FirmaMantenimiento, FirmaSuperviso, HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo) {
 
-        // 🔹 MOSTRAR FIRMAS
+        // MOSTRAR FIRMAS
         $('#SeccionFirmas').removeClass('d-none');
 
-        // 🔹 REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
+        // REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
         $('#EvidenciaOrdenTrabajo input').prop('required', false);
         $('#EvidenciaOrdenTrabajo input').prop('readonly', true);
         $('#CierreOrdenTrabajo input').prop('required', false);
@@ -2084,11 +2126,29 @@ class MantenimientoManager {
         // 🔥 FIRMAS
         this.gestionFirmas.mostrarFirma('Realizo', true);
         this.gestionFirmas.mostrarFirma('Superviso', true);
-        this.gestionFirmas.mostrarFirma('Mantenimiento', true);
+        this.gestionFirmas.mostrarFirma('Mantenimiento', true); // mantener por si se reactiva
         $("#nombreMantenimiento").val(this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase()).attr('readonly', true);
 
+        // Para perfil Administrador no mostrar la firma de Mantenimiento ni permitir guardar OT
+        // Ocultar firma y botón mediante helper global (con fallback si no está disponible)
+        if (typeof GlobalUtil !== 'undefined' && typeof GlobalUtil.ocultarFirmaMantenimiento === 'function') {
+            GlobalUtil.ocultarFirmaMantenimiento();
+        } else {
+            try {
+                $('#firmaMantenimientoContainer').addClass('d-none');
+                $('#btnGuardarOT').addClass('d-none').prop('disabled', true).addClass('btn_disabled');
+                if (this.gestionFirmas && this.gestionFirmas.deshabilitarFirma) {
+                    this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
+                }
+            } catch (e) { console.warn('No fue posible ocultar firma Mantenimiento (fallback)', e); }
+        }
+
         // bloquear correctamente
-        this.gestionFirmas._bloquearFirma("Realizo", true);
+        if (FirmaTecnico != "")
+            this.gestionFirmas._bloquearFirma("Realizo", true);
+        else
+            this.gestionFirmas.deshabilitarFirma("Realizo", true);
+
         if (FirmaSuperviso != "")
             this.gestionFirmas._bloquearFirma("Superviso", true);
         else
@@ -2096,7 +2156,7 @@ class MantenimientoManager {
         //this.gestionFirmas._bloquearFirma("Realizo");
         //this.gestionFirmas._bloquearFirma("Superviso");
 
-        // 🔹 MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
+        // MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
         if (EstatusOrden == 4) {
             $('#EvidenciaOrdenTrabajo').removeClass('d-none');
             $('#CierreOrdenTrabajo').removeClass('d-none');
@@ -2104,12 +2164,12 @@ class MantenimientoManager {
             //TEXTO DE SECUENCIA
             $("#TextoSecuencia").prop('readonly', true);
 
-            // 🔹 BOTONES
+            // BOTONES
             $('#btnGuardarOT').removeClass('d-none');
             $('#btnExportMantenimientoPDF').removeClass('d-none');
 
-            //INPUTS FIRMAS
-            $('#firmaMantenimientoContainer input[type="text"]').prop('required', true);
+            //INPUTS FIRMAS (La firma de "Mantenimiento" ya no es requerida)
+            $('#firmaMantenimientoContainer input[type="text"]').prop('required', false);
             $('#firmaRealizoContainer input[type="text"]').prop('required', false);
             $('#firmaSupervisoContainer input[type="text"]').prop('required', false);
 
@@ -2118,14 +2178,18 @@ class MantenimientoManager {
             $("#BusquedaTecnicosContainer").addClass("d-none");
 
             //TIEMPOS ANALITICOS
-            this.calcularTiemposCierreOT(HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo);
+            this.calcularTiemposCierreOT(MaquinaDetenida, HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo);
+
+            // Deshabilitar y dar estilo distintivo al switch
+            $('#MaquinaDetenidaToggle').prop('disabled', true);
+            $('#maquinaDetenidaBanner').addClass('maquina-detenida-banner');
         }
-        // 🔹 OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
+        // OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
         else {
             $('#EvidenciaOrdenTrabajo').addClass('d-none');
             $('#CierreOrdenTrabajo').addClass('d-none');
 
-            // 🔹 BOTONES
+            // BOTONES
             $('#btnGuardarOT').addClass('d-none');
             $('#btnExportMantenimientoPDF').removeClass('d-none');
 
@@ -2143,9 +2207,16 @@ class MantenimientoManager {
             $("#btnGuardarOT").prop("disabled", true);
             $("#btnGuardarOT").addClass("btn_disabled");
         }
+
+        // Asegurar que para Administrador el botón siga oculto
+        $('#btnGuardarOT').addClass('d-none').prop('disabled', true).addClass('btn_disabled');
+
+        // Restaurar estilo y habilitar switch
+        $('#MaquinaDetenidaToggle').prop('disabled', false);
+        $('#maquinaDetenidaBanner').removeClass('maquina-detenida-banner');
     }
 
-    calcularTiemposCierreOT(HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo) {
+    calcularTiemposCierreOT(MaquinaDetenida,HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo) {
 
         //CALCULO DE TIEMPO DE ESPERA VA AQUI
         // Tiempo de espera
@@ -2155,8 +2226,13 @@ class MantenimientoManager {
         let TR = this.calcularDiferenciaHoras(HoraAperturaOT, HoraFinTrabajo);
         $('#TiempoReparacion').val(TR + ' HRS');
         // Tiempo muerto
-        let TM = this.calcularDiferenciaHoras(HoraAperturaOT, HoraCierreOT);
-        $('#TiempoMuerto').val(TM + ' HRS');
+        if (MaquinaDetenida) {
+            let TM = this.calcularDiferenciaHoras(HoraAperturaOT, HoraCierreOT);
+            $('#TiempoMuerto').val(TM + ' HRS');
+        }
+        else {
+            $('#TiempoMuerto').val('N/A');
+        }
 
         $("#TiempoEsperaContainer").removeClass("d-none");
         $("#TiempoReparacionContainer").removeClass("d-none");
@@ -2357,15 +2433,7 @@ class GestionFirmas {
                 break;
 
             case "Mantenimiento":
-                if ($('#firmaMantenimientoContainer').is(':visible') &&
-                    !$('#firmaMantenimientoContainer').hasClass('firma-deshabilitada')) {
-                    if (this.signaturePads.Mantenimiento && this.signaturePads.Mantenimiento.isEmpty()) {
-                        errores.push('"Mantenimiento"');
-                    }
-                    if (!$('#nombreMantenimiento').val().trim()) {
-                        errores.push('Falta el nombre en "Mantenimiento"');
-                    }
-                }
+                // Nota: temporalmente no se valida la firma de Mantenimiento (no requerida)
                 break;
         }
 
@@ -2378,8 +2446,8 @@ class GestionFirmas {
     }
 
     guardarTodasLasFirmas() {
-        // ✅ Usar 'Superviso'
-        ['Realizo', 'Superviso', 'Mantenimiento'].forEach(tipo => {
+        // ✅ Guardar solo las firmas necesarias (no incluir 'Mantenimiento' por ahora)
+        ['Realizo', 'Superviso'].forEach(tipo => {
             this.guardarFirmaEnCampo(tipo);
         });
     }
@@ -2412,9 +2480,10 @@ class GestionFirmas {
                 firma: $('#firmaSupervisoData').val(),
                 nombre: $('#nombreSuperviso').val()
             },
+            // No enviar firma de mantenimiento por ahora
             mantenimiento: {
-                firma: $('#firmaMantenimientoData').val(),
-                nombre: $('#nombreMantenimiento').val()
+                firma: '',
+                nombre: ''
             }
         };
     }
@@ -2427,8 +2496,8 @@ class GestionFirmas {
     }
 
     limpiarTodasLasFirmas() {
-        // ✅ Usar 'Superviso'
-        ['Realizo', 'Superviso', 'Mantenimiento'].forEach(tipo => {
+        // ✅ Usar 'Superviso' (no limpiar/usar 'Mantenimiento' por ahora)
+        ['Realizo', 'Superviso'].forEach(tipo => {
             this.limpiarFirma(tipo);
             $(`#nombre${tipo}`).val('');
         });
@@ -2775,12 +2844,7 @@ class GestionTecnicos {
     agregarTecnico(tecnico) {
         // Verificar si ya está asignado
         if (this.tecnicosAsignados.some(t => t.nomina === tecnico.nomina)) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Técnico ya asignado',
-                text: `El técnico ${tecnico.nombre} ya está en la lista`,
-                timer: 2000
-            });
+            AlertManager.mostrar(`El técnico ${tecnico.nombre} ya está en la lista`, 'warning', 'alertTecnicosContainer');
             return;
         }
 
@@ -3260,7 +3324,6 @@ class PDFManagerMantenimiento {
                     <tr>
                         ${firmaCard('Técnico MTTO', '#1d4ed8', firmas.Realizo)}
                         ${firmaCard('Supervisor Producción', '#15803d', firmas.Superviso)}
-                        ${firmaCard('Supervisor Mantenimiento', '#0369a1', firmas.Mantenimiento)}
                     </tr>
                 </table>
             </div>

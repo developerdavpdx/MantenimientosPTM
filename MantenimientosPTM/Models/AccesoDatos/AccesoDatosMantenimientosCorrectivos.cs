@@ -244,6 +244,9 @@ namespace MantenimientosPTM
 
             [JsonProperty("NOMBRE_MANTENIMIENTO")]
             public string NombreMantenimiento { get; set; }
+            // Nuevo campo: indicador si la máquina estaba detenida (1 = detenido, 0 = funcionando)
+            [JsonProperty("MAQUINA_DETENIDA")]
+            public int MaquinaDetenida { get; set; }
         }
         public class MantenimientoPreventivoGenerado
         {
@@ -386,6 +389,8 @@ namespace MantenimientosPTM
             public string FirmaMantenimiento { get; set; }    // Base64 PNG
             public string NombreMantenimiento { get; set; }
             public string TipoOperacion { get; set; }
+            // Indicador si la máquina estaba detenida al momento del registro (1 = detenido, 0 = funcionando)
+            public int MaquinaDetenida { get; set; }
         }
         public class ActividadRutina
         {

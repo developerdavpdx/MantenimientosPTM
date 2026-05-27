@@ -51,7 +51,7 @@
         right: -40px;
         width: 160px;
         height: 160px;
-        background: rgba(14, 165, 216, 0.12);
+        /*background: rgba(14, 165, 216, 0.12);*/
         border-radius: 50%;
         pointer-events: none;
     }
@@ -294,7 +294,7 @@ input[type="month"].filtro-input::-webkit-calendar-picker-indicator {
 
 .dividerblue {
     height: 27px;
-    background-color: #0d6efd;
+    background: linear-gradient(135deg, var(--modal-primary) 0%, var(--modal-primary-mid) 60%, var(--modal-primary-light) 100%);
 }
 
 .dividerbluefooter {
@@ -610,7 +610,7 @@ footer {
     border-top: none;
     max-height: 250px;
     overflow-y: auto;
-    width: calc(100% - 100px);
+    width: calc(100% - 30px);
     z-index: 1000;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     display: none;
@@ -926,6 +926,12 @@ footer {
     gap: 8px;
     padding: 8px 12px;
 }
+.sugerencia-item-empty {
+    position: relative;
+    display: block;
+    gap: 8px;
+    padding: 8px 12px;
+}
 
 .sugerencia-info {
     flex: 1;
@@ -991,4 +997,8 @@ footer {
 
 .actualizacionDatosModal {
     background-color: #ffffffba;
+}
+
+.bg_universal_ptm {
+    background: linear-gradient(135deg, var(--modal-primary) 0%, var(--modal-primary-mid) 60%, var(--modal-primary-light) 100%);
 }

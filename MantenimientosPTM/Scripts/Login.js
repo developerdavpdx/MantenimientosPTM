@@ -118,10 +118,6 @@ class ValidationManagerLogin {
                 ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
             }
         });
-
-        setTimeout(function () {
-            btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Validando credenciales...');
-        }, 4000);
     }
 
     // Habilitar botón de login con jQuery

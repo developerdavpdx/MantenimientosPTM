@@ -118,7 +118,7 @@
     --bs-focus-ring-opacity: 0.25;
     --bs-focus-ring-color: rgba(13, 110, 253, 0.25);
     --bs-form-valid-color: #198754;
-    --bs-form-valid-border-color: #198754;
+    --bs-form-valid-border-color: #1291ce;
     --bs-form-invalid-color: #dc3545;
     --bs-form-invalid-border-color: #dc3545
 }
@@ -2602,7 +2602,7 @@ textarea.form-control-lg {
     }
 
     .form-check-input:checked {
-        background-color: #0d6efd;
+        background-color: #0d6efd !important;
         border-color: #0d6efd
     }
 

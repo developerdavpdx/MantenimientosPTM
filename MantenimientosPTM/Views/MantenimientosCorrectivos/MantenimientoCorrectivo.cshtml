@@ -11,7 +11,7 @@
             <div class="card-header header-fijo-custom text-dark">
                 <div class="row g-2 align-items-center mb-3">
                     <!-- Título -->
-                    <div class="col-12 col-lg-7">
+                    <div class="col-12 col-lg-12">
                         <h4 class="mb-0 text-color-logo">
                             <i class="bi bi-clipboard-check-fill me-2"></i>
                             Órdenes de Trabajo Correctivo
@@ -157,7 +157,7 @@
      MODAL SOLICITAR REFACCIÓN PARA ORDEN DE TRABAJO
 ══════════════════════════════════════════════ -->
 <div class="modal fade" id="solicitarRefaccionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width:70%">
         <div class="modal-content">
 
             <!-- ── Header ── -->
@@ -246,6 +246,7 @@
                                                 <th style="width: 50px;">#</th>
                                                 <th>Código</th>
                                                 <th>Descripción</th>
+                                                <th>Stock Disponible</th>
                                                 <th style="width: 120px;">Cantidad <span class="text-danger">*</span></th>
                                                 <th style="width: 60px;">Acción</th>
                                             </tr>
@@ -536,9 +537,46 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="row pt-3">
+                                    <div class="col-12">
+                                        <div id="alertTecnicosContainer"></div>
+                                    </div>
+                                </div>
+                                <!-- Indicador: ¿Máquina detenida? (insertar arriba de ScrapEstimado) -->
+                                <div class="col-12 mb-2">
+                                    <div id="maquinaDetenidaBanner" class="modal-banner-warning d-flex align-items-center justify-content-between p-3" role="region" aria-label="Indicador máquina detenida">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-exclamation-octagon-fill" id="maquina_detenida_icon" aria-hidden="true"></i>
+                                            <div>
+                                                <strong id="maquina_detenida_title">Máquina detenida</strong>
+                                            </div>
+                                        </div>
+
+                                        <div id="StopMachineInputContainer" class="form-check form-switch m-0" title="Marcar si la máquina está detenida">
+                                            <input class="form-check-input" type="checkbox" id="MaquinaDetenidaToggle" name="MaquinaDetenida" aria-label="Máquina detenida">
+                                        </div>
+                                    </div>
+
+                                    <input type="hidden" id="MaquinaDetenidaHidden" name="MaquinaDetenidaHidden" value="false" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="ScrapEstimado">
+                                        <i class="bi bi-recycle"></i> Scrap Teórico
+                                    </label>
+                                    <input funcion_destino="darFormatoNum" type="text" class="validacion form-control-custom" id="ScrapEstimado" name="Scrap" readonly autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la cantidad de scrap teórico.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="DuracionHrs">
+                                        <i class="bi bi-hourglass-split"></i> Duración Hrs<span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="DuracionHrs" name="DuracionHrs"
+                                           placeholder="0.0" required readonly autocomplete="off">
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique la duración en horas.</div>
+                                </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="Scrap">
-                                        <i class="bi bi-recycle"></i> Scrap
+                                        <i class="bi bi-recycle"></i> Scrap Real
                                     </label>
                                     <input funcion_destino="darFormatoNum" type="text" class="validacion form-control-custom" id="Scrap" name="Scrap" readonly autocomplete="off">
                                     <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la cantidad de scrap.</div>
@@ -549,14 +587,6 @@
                                     </label>
                                     <input type="time" class="form-control-custom" id="HoraCierreMan" name="HoraCierreMan" readonly autocomplete="off">
                                     <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de cierre.</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label-custom" for="DuracionHrs">
-                                        <i class="bi bi-hourglass-split"></i> Duración Hrs<span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" class="form-control-custom" id="DuracionHrs" name="DuracionHrs"
-                                           placeholder="0.0" required readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique la duración en horas.</div>
                                 </div>
                                 <div id="TiempoEsperaContainer" class="col-md-6 d-none">
                                     <label class="form-label-custom" for="TiempoEspera">
@@ -569,7 +599,7 @@
                                     <label class="form-label-custom" for="TiempoReparacion">
                                         <i class="bi bi-clock-history"></i> Tiempo Reparación
                                     </label>
-                                    <input funcion_destino="darFormatoNum" type="text" class="validacion form-control-custom" id="TiempoReparacion" name="TiempoReparacion" readonly autocomplete="off" data-bs-toggle="tooltip" data-bs-placement="top" title="🛠️ Tiempo de reparación: tiempo transcurrido desde la apertura de la solicitud hasta la finalización del técnico">
+                                    <input funcion_destino="darFormatoNum" type="text" class="validacion form-control-custom" id="TiempoReparacion" name="TiempoReparacion" readonly autocomplete="off" data-bs-toggle="tooltip" data-bs-placement="top" title="Tiempo de reparación: tiempo transcurrido desde la apertura de la solicitud hasta la finalización del técnico">
                                     <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique el tiempo de reparación manual.</div>
                                 </div>
                                 <div id="TiempoMuertoContainer" class="col-md-6 d-none">
@@ -594,7 +624,7 @@
                                 <!-- Firma 1: Realizó -->
                                 <div class="col-md-4" id="firmaRealizoContainer">
                                     <div class="card border-primary shadow-sm h-100">
-                                        <div class="card-header bg-primary text-white">
+                                        <div class="card-header bg_universal_ptm text-white">
                                             <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Técnico MTTO</h6>
                                         </div>
                                         <div class="card-body">
@@ -627,7 +657,7 @@
                                 <!-- Firma 2: Supervisó -->
                                 <div class="col-md-4" id="firmaSupervisoContainer">
                                     <div class="card border-success shadow-sm h-100">
-                                        <div class="card-header bg-success text-white">
+                                        <div class="card-header bg_universal_ptm text-white">
                                             <h6 class="mb-0"><i class="bi bi-eye-fill me-2"></i>Supervisor Producción</h6>
                                         </div>
                                         <div class="card-body">
@@ -660,7 +690,7 @@
                                 <!-- Firma 3: Mantenimiento -->
                                 <div class="col-md-4" id="firmaMantenimientoContainer">
                                     <div class="card border-info shadow-sm h-100">
-                                        <div class="card-header bg-info text-white">
+                                        <div class="card-header bg_universal_ptm text-white">
                                             <h6 class="mb-0"><i class="bi bi-gear-fill me-2"></i>Supervisor Mantenimiento</h6>
                                         </div>
                                         <div class="card-body">

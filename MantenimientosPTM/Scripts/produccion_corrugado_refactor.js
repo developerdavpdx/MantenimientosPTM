@@ -71,7 +71,8 @@ class ArticuloAutocompleteEditor {
 
                 const articulos = await this.gestionArticulos.obtenerArticulos(
                     query,
-                    this.datos_usuario[0].EMAIL
+                    this.datos_usuario[0].EMAIL,
+                    0
                 );
 
                 this.mostrarSugerencias(articulos);
@@ -157,7 +158,7 @@ class GestionProduccionCorrugado {
         this.columnDefs = null;
         this.listaLineas = [];
 
-        this.gestionArticulos = new GestionArticulos(); // 🔥 IMPORTANTE
+        this.gestionArticulos = new GestionArticulos(this.datos_usuario, 0);
     }
 
     async inicializar() {
@@ -880,7 +881,7 @@ class GestionProduccionCorrugado {
 
                 AlertManager.mostrar(
                     response.Message,
-                    "warning"
+                    "info"
                 );
 
                 this.cargarDatosGrid(null);

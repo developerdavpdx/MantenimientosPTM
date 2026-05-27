@@ -135,7 +135,7 @@ class GestionEquiposApp {
                 EquiposUtil.llenarLineas(
                     this.datos_usuario[0].PLANTA,
                     Area,
-                    1,
+                    null,
                     "LineaProduccion",
                     null
                 );
@@ -150,7 +150,7 @@ class GestionEquiposApp {
                 EquiposUtil.llenarLineas(
                     this.datos_usuario[0].PLANTA,
                     Proceso,
-                    1,
+                    null,
                     "FiltroLinea",
                     null
                 );
@@ -957,7 +957,7 @@ class EquipoManager {
 
                     periodicidadData.forEach(p => {
                         selectElement.append(
-                            `<option value="${p.ID_PERIODICIDAD}">🔹 ${p.DESCRIPCION}</option>`
+                            `<option value="${p.ID_PERIODICIDAD}">${p.DESCRIPCION}</option>`
                         );
                     });
 
