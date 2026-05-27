@@ -41,3 +41,26 @@
     .autocomplete-item:hover {
         background: #f1f5f9;
     }
+
+.celda-amarilla {
+    background: #ffe699;
+}
+
+.celda-verde-formula {
+    background: #d9ead3;
+    font-weight: bold;
+}
+
+.celda-blanca {
+    background: #ffffff;
+}
+
+.header-grupo-amarillo {
+    background: #f1c232 !important;
+    color: #000 !important;
+}
+
+.header-grupo-morado {
+    background: #b4a7d6 !important;
+    color: #000 !important;
+}

@@ -45,7 +45,8 @@ class GestionEventosApp {
                 this.gestionArticulos.buscarArticulos(
                     query,
                     this.datos_usuario[0].EMAIL,
-                    linea
+                    linea,
+                    0
                 );
             } else {
                 this.gestionArticulos.ocultarSugerencias();
@@ -518,7 +519,7 @@ class PlaneacionManager {
                 ` : ''}
 
                 <!-- Capacidades -->
-                ${(d.PZSXDIA || d.KGSXDIA) ? `
+                ${`
 
                 <div class="capacity-grid">
 
@@ -558,7 +559,7 @@ class PlaneacionManager {
 
                 </div>
 
-                ` : ''}
+                `}
 
                 <!-- Producción -->
                     <div class="prod-grid">
@@ -774,7 +775,7 @@ class PlaneacionManager {
                             label: 'Cap. Piezas',
                             val: b.PZSXDIA
                                 ? `${this._fmtNum(b.PZSXDIA)} PZ/día`
-                                : null
+                                : `0 PZ/día`
                         },
 
                         {
@@ -782,7 +783,7 @@ class PlaneacionManager {
                             label: 'Cap. Kilos',
                             val: b.KGSXDIA
                                 ? `${this._fmtNum(b.KGSXDIA)} KG/día`
-                                : null
+                                : `0 KG/día`
                         },
 
                         {
@@ -790,7 +791,7 @@ class PlaneacionManager {
                             label: 'Prod. Teórica PZ',
                             val: b.PRODUCCION_TEORICA_PZS
                                 ? `${this._fmtNum(b.PRODUCCION_TEORICA_PZS)} PZ`
-                                : null
+                                : `0 PZ`
                         },
 
                         {
@@ -798,16 +799,8 @@ class PlaneacionManager {
                             label: 'Prod. Teórica KG',
                             val: b.PRODUCCION_TEORICA_KGS
                                 ? `${this._fmtNum(b.PRODUCCION_TEORICA_KGS)} KG`
-                                : null
-                        },
-
-                        {
-                            icon: 'bi-graph-up-arrow',
-                            label: 'Prod. Real',
-                            val: b.NVO_PRODUCCION_REAL
-                                ? `${this._fmtNum(b.NVO_PRODUCCION_REAL)} PZ`
-                                : null
-                        },
+                                : `0 KG`
+                        }
 
                     ]
                         .filter(f => f.val && String(f.val).trim() !== '');
@@ -815,6 +808,13 @@ class PlaneacionManager {
 
                     // Campos ancho completo (al final)
                     const camposFull = [
+                        {
+                            icon: 'bi-graph-up-arrow',
+                            label: 'Prod. Real',
+                            val: b.NVO_PRODUCCION_REAL
+                                ? `${this._fmtNum(b.NVO_PRODUCCION_REAL)} PZ`
+                                : `0 PZ`
+                        },
                         { icon: 'bi-card-text', label: 'Descripción', val: b.NVO_ARTICULO_DESC },
 
                         {

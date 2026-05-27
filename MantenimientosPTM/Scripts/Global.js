@@ -1777,7 +1777,7 @@ class GestionArticulos {
     }
 
     // ─── Búsqueda con debounce integrado ──────────────────────────────────────
-    buscarArticulos(query, Usuario, Linea) {
+    buscarArticulos(query, Usuario, Linea, ValidarCap) {
         let Planta = this.datos_usuario[0].PLANTA;
         let GrupoArticulos = this.grupo_articulos;
         clearTimeout(this._debounceTimer);
@@ -1786,7 +1786,7 @@ class GestionArticulos {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario, Planta, Linea, GrupoArticulos },
+                    data: { query, Usuario, Planta, Linea, GrupoArticulos, ValidarCap },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);

@@ -211,6 +211,39 @@ namespace MantenimientosPTM
             [DefaultValue("")]
             public string TRIP { get; set; }
 
+            // Producción
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string MES { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PESO_MINIMO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal TR_FABRICADOS { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PRODUCCION_NETA_REAL { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PESO_ESTANDAR { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_SOBREPESO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal TOTAL_SCRAP_KG { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_SCRAP { get; set; }
             // Disponibilidad
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]

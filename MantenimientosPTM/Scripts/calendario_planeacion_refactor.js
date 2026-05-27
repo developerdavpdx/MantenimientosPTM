@@ -555,9 +555,9 @@ class CalendarManager {
 
         try {
             // ✅ Ambas peticiones en paralelo — un solo loader
-            const [datosPlanes, datosParos] = await Promise.all([
-                this.obtenerPlanesProduccion(),
-                this.obtenerParosProduccion()
+            const [datosPlanes /*datosParos*/] = await Promise.all([
+                this.obtenerPlanesProduccion()
+                // this.obtenerParosProduccion()
             ]);
 
             this.calendar.removeAllEvents();
@@ -570,22 +570,22 @@ class CalendarManager {
             }
 
             // ── Paros ──
-            if (datosParos && datosParos.length > 0) {
-                const eventosParos = this.transformarParosCalendario(datosParos);
-                this.todosLosParos = eventosParos;
-                eventosParos.forEach(e => this.calendar.addEvent(e));
-            }
+            // if (datosParos && datosParos.length > 0) {
+            //     const eventosParos = this.transformarParosCalendario(datosParos);
+            //     this.todosLosParos = eventosParos;
+            //     eventosParos.forEach(e => this.calendar.addEvent(e));
+            // }
 
             // todosLosEventos sigue funcionando para cargarLineasProduccion
             this.todosLosEventos = [...this.todosLosPlanes, ...this.todosLosParos];
 
             const totalPlanes = datosPlanes?.length || 0;
-            const totalParos = datosParos?.length || 0;
+            // const totalParos = datosParos?.length || 0;
 
             const labelPlanes = totalPlanes === 1 ? 'plan cargado' : 'planes cargados';
-            const labelParos = totalParos === 1 ? 'paro cargado' : 'paros cargados';
+            // const labelParos = totalParos === 1 ? 'paro cargado' : 'paros cargados';
 
-            AlertManager.mostrar(`${totalPlanes} ${labelPlanes} <br/> 🚨 ${totalParos} ${labelParos}`, 'success');
+            AlertManager.mostrar(`${totalPlanes} ${labelPlanes} <br/>`, 'success');
 
         } catch (error) {
             console.error('❌ Error al cargar calendario:', error);
@@ -738,23 +738,23 @@ class CalendarManager {
         $('#eptCapacidadPZ').text(
             props.pzsxdia
                 ? fmtNum(props.pzsxdia)
-                : '—'
+                : '0'
         );
 
         $('#eptCapacidadKGS').text(
             props.kgsxdia
                 ? fmtNum(props.kgsxdia)
-                : '—'
+                : '0'
         );
 
         // ── Stats producción ──
         const prodTeoricaPzs = parseFloat(props.produccion_teorica_pzs) || 0;
         const prodTeoricaKgs = parseFloat(props.produccion_teorica_kgs) || 0;
 
-        $('#eptProdTeoricaPZ').text(prodTeoricaPzs > 0 ? fmtNum(prodTeoricaPzs) : '—');
-        $('#eptProdTeoricaKGS').text(prodTeoricaKgs > 0 ? fmtNum(prodTeoricaKgs) : '—');
+        $('#eptProdTeoricaPZ').text(prodTeoricaPzs > 0 ? fmtNum(prodTeoricaPzs) : '0');
+        $('#eptProdTeoricaKGS').text(prodTeoricaKgs > 0 ? fmtNum(prodTeoricaKgs) : '0');
 
-        $('#eptProdReal').text(props.produccion_real != null ? fmtNum(props.produccion_real) : '—');
+        $('#eptProdReal').text(props.produccion_real != null ? fmtNum(props.produccion_real) : '0');
 
         // ── Barra de cumplimiento ──
         const teo = prodTeoricaPzs;
@@ -924,11 +924,11 @@ class CalendarManager {
 
             const bitProdPzsVal = bitProdPzsRaw != null && String(bitProdPzsRaw).trim() !== ''
                 ? `${Number(bitProdPzsRaw).toLocaleString('es-MX')} PZ`
-                : null;
+                : `0 PZ`;
 
             const bitProdKgsVal = bitProdKgsRaw != null && String(bitProdKgsRaw).trim() !== ''
                 ? `${Number(bitProdKgsRaw).toLocaleString('es-MX')} KG`
-                : null;
+                : `0 KG`;
 
             const campos = [
                 { icon: 'bi-gear-fill', label: 'Proceso', val: b.NVO_PROCESO },
@@ -940,7 +940,7 @@ class CalendarManager {
                     label: 'Cap. PZ',
                     val: b.PZSXDIA
                         ? `${Number(b.PZSXDIA).toLocaleString('es-MX')} PZ/día`
-                        : null
+                        : `0 PZ/día`
                 },
 
                 {
@@ -948,19 +948,19 @@ class CalendarManager {
                     label: 'Cap. KGS',
                     val: b.KGSXDIA
                         ? `${Number(b.KGSXDIA).toLocaleString('es-MX')} KG/día`
-                        : null
+                        : `0 KG/día`
                 },
 
                 { icon: 'bi-calculator-fill', label: 'Prod. Teórica PZ', val: bitProdPzsVal },
-                { icon: 'bi-calculator-fill', label: 'Prod. Teórica KGS', val: bitProdKgsVal },
-
-                { icon: 'bi-graph-up-arrow', label: 'Prod. Real', val: (b.NVO_PRODUCCION_REAL != null && String(b.NVO_PRODUCCION_REAL).trim() !== '') ? `${Number(b.NVO_PRODUCCION_REAL).toLocaleString('es-MX')} PZ` : null }
+                { icon: 'bi-calculator-fill', label: 'Prod. Teórica KGS', val: bitProdKgsVal }
             ]
                 .filter(f => f.val && String(f.val).trim() !== '');
 
 
             // Campos ancho completo (al final)
             const camposFull = [
+                { icon: 'bi-graph-up-arrow', label: 'Prod. Real', val: (b.NVO_PRODUCCION_REAL != null && String(b.NVO_PRODUCCION_REAL).trim() !== '') ? `${Number(b.NVO_PRODUCCION_REAL).toLocaleString('es-MX')} PZ` : null },
+
                 { icon: 'bi-card-text', label: 'Descripción', val: b.NVO_ARTICULO_DESC },
 
                 {
@@ -1131,7 +1131,7 @@ class CalendarManager {
 
             await GlobalUtil.exportPlanesAExcel(data, { fileName: null });
 
-            AlertManager.mostrar('📊 ¡Excel exportado con éxito! 🎉', 'success');
+            AlertManager.mostrar('¡Excel exportado con éxito!', 'success');
 
         } catch (err) {
             console.error('Error al exportar:', err);

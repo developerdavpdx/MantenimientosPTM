@@ -42,12 +42,28 @@ class GestionProduccionPVC {
         this.datosOriginales = [
             {
                 id: 1,
+
+                // GENERALES
+                Mes: null,
                 Fecha: null,
                 Linea: null,
                 Producto: null,
                 Turno: null,
                 TRIP: null,
+
+                // PRODUCCIÓN
+                PesoMinimo: 3,
+                TRFabricados: null,
+                ProduccionNetaReal: null,
+                PesoEstandar: null,
+                PorcentajeSobrepeso: null,
+                TotalScrapKg: null,
+                PorcentajeScrap: null,
+
+                // DISPONIBILIDAD
                 HorasProgramadas: null,
+
+                // TIEMPO NO DISPONIBLE
                 MantenimientoPreventivo: null,
                 ControlInventarios: null,
                 FaltaMateriaInsumos: null,
@@ -55,6 +71,8 @@ class GestionProduccionPVC {
                 Calentamiento: null,
                 ParoArranqueNoProgramado: null,
                 ArranqueEstabilizacion: null,
+
+                // TIEMPO NO PRODUCTIVO
                 MttoCorrectivos: null,
                 FallaElectrica: null,
                 Servicios: null,
@@ -65,6 +83,8 @@ class GestionProduccionPVC {
                 FaltaMaterial: null,
                 FaltaPersonal: null,
                 FaltaRefacciones: null,
+
+                // KPIS
                 TiempoDisponible: null,
                 TiempoProductivo: null
             }
@@ -158,6 +178,31 @@ class GestionProduccionPVC {
                 Calentamiento: item.CALENTAMIENTO_HR,
                 ParoArranqueNoProgramado: item.PARO_ARRANQUE_NO_PROGRAMADO,
                 ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION_HR,
+                Mes: item.MES || (
+                    item.FECHA
+                        ? [
+                            'ENERO',
+                            'FEBRERO',
+                            'MARZO',
+                            'ABRIL',
+                            'MAYO',
+                            'JUNIO',
+                            'JULIO',
+                            'AGOSTO',
+                            'SEPTIEMBRE',
+                            'OCTUBRE',
+                            'NOVIEMBRE',
+                            'DICIEMBRE'
+                        ][new Date(item.FECHA).getMonth()]
+                        : null
+                ),
+                PesoMinimo: item.PESO_MINIMO || 3,
+                TRFabricados: item.TR_FABRICADOS,
+                ProduccionNetaReal: item.PRODUCCION_NETA_REAL,
+                PesoEstandar: item.PESO_ESTANDAR,
+                PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
+                TotalScrapKg: item.TOTAL_SCRAP_KG,
+                PorcentajeScrap: item.PORCENTAJE_SCRAP,
 
                 MttoCorrectivos: item.MTTO_CORRECTIVOS,
                 FallaElectrica: item.FALLA_ELECTRICA,
@@ -190,20 +235,33 @@ class GestionProduccionPVC {
     }
 
     inicializarGrid() {
+
         const gridDiv = document.querySelector('#tablaProduccion');
 
-        // ========================================
-        // DEFINICIÓN DE COLUMNAS PVC
-        // ========================================
         const columnDefs = [
+
+            // =====================================================
+            // DATOS GENERALES
+            // =====================================================
             {
-                headerName: '',
+                headerName: 'DATOS GENERALES',
+                headerClass: 'header-grupo-morado',
                 children: [
+
+                    {
+                        field: 'Mes',
+                        headerName: 'Mes',
+                        editable: false,
+                        width: 100,
+                        cellClass: 'celda-gris',
+                        pinned: 'left'
+                    },
+
                     {
                         field: 'Fecha',
                         headerName: 'Fecha',
                         editable: true,
-                        width: 110,
+                        width: 120,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'agDateCellEditor',
@@ -217,6 +275,7 @@ class GestionProduccionPVC {
                             return new Date(params.value).toLocaleDateString('es-MX');
                         }
                     },
+
                     {
                         field: 'Linea',
                         headerName: 'Línea',
@@ -229,12 +288,9 @@ class GestionProduccionPVC {
                             return {
                                 values: this.listaLineas.map(x => x.label)
                             };
-                        },
-                        valueFormatter: params => {
-                            if (params.data && params.data.id === 'TOTALES') return '';
-                            return params.value || '';
                         }
                     },
+
                     {
                         field: 'Producto',
                         headerName: 'Producto',
@@ -242,42 +298,103 @@ class GestionProduccionPVC {
                         width: 140,
                         cellClass: 'celda-azul',
                         pinned: 'left',
-                        cellEditor: 'articuloAutocompleteEditor',
-                        valueFormatter: params => {
-                            if (params.data && params.data.id === 'TOTALES') return '';
-                            return params.value || '';
-                        }
+                        cellEditor: 'articuloAutocompleteEditor'
                     },
+
                     {
                         field: 'Turno',
                         headerName: 'Turno',
                         editable: true,
-                        width: 80,
+                        width: 90,
                         cellClass: 'celda-azul',
-                        pinned: 'left',
-                        valueFormatter: params => {
-                            if (params.data && params.data.id === 'TOTALES') return '';
-                            return params.value || '';
-                        }
+                        pinned: 'left'
                     },
+
                     {
                         field: 'TRIP',
                         headerName: 'TRIP',
                         editable: true,
-                        width: 80,
+                        width: 90,
                         cellClass: 'celda-azul',
+                        pinned: 'left',
                         cellEditor: 'agSelectCellEditor',
                         cellEditorParams: {
                             values: ['A', 'B', 'C', 'D']
-                        },
-                        pinned: 'left',
-                        valueFormatter: params => {
-                            if (params.data && params.data.id === 'TOTALES') return '';
-                            return params.value || '';
                         }
                     }
                 ]
             },
+
+            // =====================================================
+            // PRODUCCIÓN
+            // =====================================================
+            {
+                headerName: 'PRODUCCIÓN',
+                headerClass: 'header-grupo-amarillo',
+                children: [
+
+                    {
+                        field: 'PesoMinimo',
+                        headerName: 'Peso Mínimo',
+                        editable: false,
+                        width: 120,
+                        cellClass: 'celda-amarilla',
+                        valueFormatter: params => this.formatearNumero(params.value)
+                    },
+
+                    {
+                        field: 'TRFabricados',
+                        headerName: 'TR FABRICADOS',
+                        width: 120,
+                        ...this.getColumnaNumerica('celda-blanca')
+                    },
+
+                    {
+                        field: 'ProduccionNetaReal',
+                        headerName: 'PRODUCCIÓN NETA REAL',
+                        width: 150,
+                        ...this.getColumnaNumerica('celda-blanca')
+                    },
+
+                    {
+                        field: 'PesoEstandar',
+                        headerName: 'Peso Estándar',
+                        editable: false,
+                        width: 140,
+                        cellClass: 'celda-verde-formula',
+                        valueFormatter: params => this.formatearNumero(params.value)
+                    },
+
+                    {
+                        field: 'PorcentajeSobrepeso',
+                        headerName: '% SOBREPESO',
+                        editable: false,
+                        width: 120,
+                        cellClass: 'celda-verde-formula',
+                        valueFormatter: params => this.formatearPorcentaje(params.value)
+                    },
+
+                    {
+                        field: 'TotalScrapKg',
+                        headerName: 'Total Scrap (Kg)',
+                        width: 130,
+                        ...this.getColumnaNumerica('celda-blanca')
+                    },
+
+                    {
+                        field: 'PorcentajeScrap',
+                        headerName: '% Scrap',
+                        editable: false,
+                        width: 110,
+                        cellClass: 'celda-verde-formula',
+                        valueFormatter: params => this.formatearPorcentaje(params.value)
+                    }
+                ]
+            },
+
+            // =====================================================
+            // DISPONIBILIDAD
+            // =====================================================
             {
                 headerName: 'DISPONIBILIDAD',
                 headerClass: 'header-grupo-azul',
@@ -285,141 +402,173 @@ class GestionProduccionPVC {
                     {
                         field: 'HorasProgramadas',
                         headerName: 'HORAS PROGRAMADAS',
-                        width: 110,
+                        width: 120,
                         ...this.getColumnaNumerica('celda-gris')
                     }
                 ]
             },
+
+            // =====================================================
+            // TIEMPO NO DISPONIBLE
+            // =====================================================
             {
                 headerName: 'TIEMPO NO DISPONIBLE',
                 headerClass: 'header-grupo-rosa',
                 children: [
+
                     {
                         field: 'MantenimientoPreventivo',
                         headerName: 'MTTO. PREVENTIVO',
                         width: 100,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
                         field: 'ControlInventarios',
                         headerName: 'CONTROL INVENTARIOS',
                         width: 100,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
                         field: 'FaltaMateriaInsumos',
                         headerName: 'FALTA MATERIA PRIMA E INSUMOS',
-                        width: 100,
+                        width: 120,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
                         field: 'CambioMolde',
                         headerName: 'CAMBIO MOLDE (HR)',
-                        width: 100,
+                        width: 110,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
                         field: 'Calentamiento',
                         headerName: 'CALENTAMIENTO (HR)',
-                        width: 100,
+                        width: 110,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
                         field: 'ParoArranqueNoProgramado',
                         headerName: 'PARO Y ARRANQUE NO PROG.',
-                        width: 100,
+                        width: 130,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
                         field: 'ArranqueEstabilizacion',
-                        headerName: 'ARRANQUE Y ESTABILIZACION. (HR)',
-                        width: 100,
+                        headerName: 'ARRANQUE Y ESTABILIZACIÓN',
+                        width: 130,
                         ...this.getColumnaNumerica('celda-rosa')
                     }
                 ]
             },
+
+            // =====================================================
+            // TIEMPO NO PRODUCTIVO
+            // =====================================================
             {
                 headerName: 'TIEMPO NO PRODUCTIVO',
                 headerClass: 'header-grupo-verde-claro',
                 children: [
+
                     {
                         field: 'MttoCorrectivos',
                         headerName: 'MTTO. CORRECTIVOS',
-                        width: 100,
+                        width: 110,
                         ...this.getColumnaNumerica('celda-verde-claro')
                     },
+
                     {
                         field: 'FallaElectrica',
-                        headerName: 'FALLA ELECTRICA',
-                        width: 100,
+                        headerName: 'FALLA ELÉCTRICA',
+                        width: 110,
                         ...this.getColumnaNumerica('celda-verde-claro')
                     },
+
                     {
                         field: 'Servicios',
                         headerName: 'SERVICIOS',
                         width: 100,
                         ...this.getColumnaNumerica('celda-verde-claro')
                     },
+
                     {
                         field: 'CambioMoldeSetupExcesos',
-                        headerName: 'CAMBIO DE MOLDE (SETUP) EXCESOS',
-                        width: 100,
+                        headerName: 'CAMBIO MOLDE SETUP EXCESOS',
+                        width: 150,
                         ...this.getColumnaNumerica('celda-verde-claro')
                     },
+
                     {
                         field: 'Herramental',
                         headerName: 'HERRAMENTAL',
                         width: 100,
                         ...this.getColumnaNumerica('celda-verde-claro')
                     },
+
                     {
                         field: 'FallaOperacion',
                         headerName: 'FALLA OPERACIÓN',
-                        width: 100,
+                        width: 120,
                         ...this.getColumnaNumerica('celda-verde-claro')
                     },
+
                     {
                         field: 'LimpiezaTanque',
                         headerName: 'LIMPIEZA TANQUE',
-                        width: 100,
+                        width: 120,
                         ...this.getColumnaNumerica('celda-verde-claro')
                     },
+
                     {
                         field: 'FaltaMaterial',
                         headerName: 'FALTA MATERIAL',
-                        width: 100,
+                        width: 120,
                         ...this.getColumnaNumerica('celda-verde-claro')
                     },
+
                     {
                         field: 'FaltaPersonal',
                         headerName: 'FALTA PERSONAL',
-                        width: 100,
+                        width: 120,
                         ...this.getColumnaNumerica('celda-verde-claro')
                     },
+
                     {
                         field: 'FaltaRefacciones',
                         headerName: 'FALTA REFACCIONES',
-                        width: 100,
+                        width: 120,
                         ...this.getColumnaNumerica('celda-verde-claro')
                     }
                 ]
             },
+
+            // =====================================================
+            // KPIS
+            // =====================================================
             {
-                headerName: '',
+                headerName: 'KPIS',
+                headerClass: 'header-grupo-verde-fuerte',
                 children: [
+
                     {
                         field: 'TiempoDisponible',
                         headerName: 'TIEMPO DISPONIBLE',
                         editable: false,
-                        width: 110,
+                        width: 130,
                         cellClass: 'celda-azul-claro',
                         valueFormatter: params => this.formatearNumero(params.value)
                     },
+
                     {
                         field: 'TiempoProductivo',
                         headerName: 'TIEMPO PRODUCTIVO',
                         editable: false,
-                        width: 110,
+                        width: 130,
                         cellClass: 'celda-verde-fuerte',
                         valueFormatter: params => this.formatearNumero(params.value)
                     }
@@ -430,49 +579,81 @@ class GestionProduccionPVC {
         this.columnDefs = columnDefs;
 
         const gridOptions = {
+
             domLayout: 'autoHeight',
+
             columnDefs: columnDefs,
+
             context: {
                 datos_usuario: this.datos_usuario,
                 gestionArticulos: this.gestionArticulos,
                 URLBase: this.URLBase
             },
+
             rowData: this.datosOriginales,
+
             components: {
                 articuloAutocompleteEditor: ArticuloAutocompleteEditor
             },
+
             defaultColDef: {
+
                 sortable: true,
                 filter: true,
                 resizable: true,
+
                 editable: (params) => {
+
                     if (params.data && params.data.id === 'TOTALES') {
                         return false;
                     }
+
+                    const readonlyFields = [
+                        'PesoMinimo',
+                        'PesoEstandar',
+                        'PorcentajeSobrepeso',
+                        'PorcentajeScrap',
+                        'TiempoDisponible',
+                        'TiempoProductivo'
+                    ];
+
+                    if (readonlyFields.includes(params.colDef.field)) {
+                        return false;
+                    }
+
                     return true;
                 },
+
                 wrapHeaderText: true,
                 autoHeaderHeight: true
             },
+
             undoRedoCellEditing: true,
             undoRedoCellEditingLimit: 20,
+
             rowSelection: 'multiple',
+
             animateRows: true,
+
             suppressHorizontalScroll: false,
+
             groupHeaderHeight: 40,
             headerHeight: 80,
 
             onCellValueChanged: (event) => this.onCellChanged(event),
 
             onGridReady: (params) => {
+
                 this.gridApi = params.api;
                 this.gridColumnApi = params.columnApi;
+
                 this.agregarFilaTotales();
-                //this.ajustarAlturaGrid();
             },
 
             getRowStyle: params => {
+
                 if (params.data && params.data.id === 'TOTALES') {
+
                     return {
                         fontWeight: 'bold',
                         backgroundColor: '#e9ecef',
@@ -484,17 +665,36 @@ class GestionProduccionPVC {
         };
 
         new agGrid.Grid(gridDiv, gridOptions);
+
     }
 
     agregarFilaTotales() {
+
         const totales = {
+
             id: 'TOTALES',
+
+            // GENERALES
+            Mes: null,
             Fecha: null,
             Linea: null,
             Producto: null,
             Turno: null,
             TRIP: null,
+
+            // PRODUCCIÓN
+            PesoMinimo: null,
+            TRFabricados: 0,
+            ProduccionNetaReal: 0,
+            PesoEstandar: 0,
+            PorcentajeSobrepeso: null,
+            TotalScrapKg: 0,
+            PorcentajeScrap: null,
+
+            // DISPONIBILIDAD
             HorasProgramadas: 0,
+
+            // TIEMPO NO DISPONIBLE
             MantenimientoPreventivo: 0,
             ControlInventarios: 0,
             FaltaMateriaInsumos: 0,
@@ -502,6 +702,8 @@ class GestionProduccionPVC {
             Calentamiento: 0,
             ParoArranqueNoProgramado: 0,
             ArranqueEstabilizacion: 0,
+
+            // TIEMPO NO PRODUCTIVO
             MttoCorrectivos: 0,
             FallaElectrica: 0,
             Servicios: 0,
@@ -512,47 +714,128 @@ class GestionProduccionPVC {
             FaltaMaterial: 0,
             FaltaPersonal: 0,
             FaltaRefacciones: 0,
+
+            // KPIS
             TiempoDisponible: 0,
             TiempoProductivo: 0
         };
 
         this.gridApi.forEachNode((node) => {
+
             if (node.data && node.data.id !== 'TOTALES') {
+
+                // ========================================
+                // PRODUCCIÓN
+                // ========================================
+
+                totales.TRFabricados += parseFloat(node.data.TRFabricados || 0);
+
+                totales.ProduccionNetaReal += parseFloat(node.data.ProduccionNetaReal || 0);
+
+                totales.PesoEstandar += parseFloat(node.data.PesoEstandar || 0);
+
+                totales.TotalScrapKg += parseFloat(node.data.TotalScrapKg || 0);
+
+                // ========================================
+                // DISPONIBILIDAD
+                // ========================================
+
                 totales.HorasProgramadas += parseFloat(node.data.HorasProgramadas || 0);
+
+                // ========================================
+                // TIEMPO NO DISPONIBLE
+                // ========================================
+
                 totales.MantenimientoPreventivo += parseFloat(node.data.MantenimientoPreventivo || 0);
+
                 totales.ControlInventarios += parseFloat(node.data.ControlInventarios || 0);
+
                 totales.FaltaMateriaInsumos += parseFloat(node.data.FaltaMateriaInsumos || 0);
+
                 totales.CambioMolde += parseFloat(node.data.CambioMolde || 0);
+
                 totales.Calentamiento += parseFloat(node.data.Calentamiento || 0);
+
                 totales.ParoArranqueNoProgramado += parseFloat(node.data.ParoArranqueNoProgramado || 0);
+
                 totales.ArranqueEstabilizacion += parseFloat(node.data.ArranqueEstabilizacion || 0);
+
+                // ========================================
+                // TIEMPO NO PRODUCTIVO
+                // ========================================
+
                 totales.MttoCorrectivos += parseFloat(node.data.MttoCorrectivos || 0);
+
                 totales.FallaElectrica += parseFloat(node.data.FallaElectrica || 0);
+
                 totales.Servicios += parseFloat(node.data.Servicios || 0);
+
                 totales.CambioMoldeSetupExcesos += parseFloat(node.data.CambioMoldeSetupExcesos || 0);
+
                 totales.Herramental += parseFloat(node.data.Herramental || 0);
+
                 totales.FallaOperacion += parseFloat(node.data.FallaOperacion || 0);
+
                 totales.LimpiezaTanque += parseFloat(node.data.LimpiezaTanque || 0);
+
                 totales.FaltaMaterial += parseFloat(node.data.FaltaMaterial || 0);
+
                 totales.FaltaPersonal += parseFloat(node.data.FaltaPersonal || 0);
+
                 totales.FaltaRefacciones += parseFloat(node.data.FaltaRefacciones || 0);
+
+                // ========================================
+                // KPIS
+                // ========================================
+
                 totales.TiempoDisponible += parseFloat(node.data.TiempoDisponible || 0);
+
                 totales.TiempoProductivo += parseFloat(node.data.TiempoProductivo || 0);
             }
         });
 
+        // ========================================
+        // CALCULAR PORCENTAJES TOTALES
+        // ========================================
+
+        if (totales.PesoEstandar > 0) {
+
+            totales.PorcentajeSobrepeso =
+                ((totales.ProduccionNetaReal / totales.PesoEstandar) - 1) * 100;
+        }
+
+        const totalProduccionScrap =
+            totales.ProduccionNetaReal + totales.TotalScrapKg;
+
+        if (totalProduccionScrap > 0) {
+
+            totales.PorcentajeScrap =
+                (totales.TotalScrapKg / totalProduccionScrap) * 100;
+        }
+
         let filaTotalesExistente = null;
+
         this.gridApi.forEachNode((node) => {
+
             if (node.data && node.data.id === 'TOTALES') {
+
                 filaTotalesExistente = node.data;
             }
         });
 
         if (filaTotalesExistente) {
-            this.gridApi.applyTransaction({ update: [totales] });
+
+            this.gridApi.applyTransaction({
+                update: [totales]
+            });
+
         } else {
-            this.gridApi.applyTransaction({ add: [totales] });
+
+            this.gridApi.applyTransaction({
+                add: [totales]
+            });
         }
+
     }
 
     ajustarAlturaGrid() {
@@ -586,7 +869,43 @@ class GestionProduccionPVC {
 
         const row = event.data;
 
-        // CALCULAR
+        // ========================================
+        // MES AUTOMÁTICO
+        // ========================================
+
+        if (row.Fecha) {
+
+            const fecha = new Date(row.Fecha);
+
+            const meses = [
+                'ENERO',
+                'FEBRERO',
+                'MARZO',
+                'ABRIL',
+                'MAYO',
+                'JUNIO',
+                'JULIO',
+                'AGOSTO',
+                'SEPTIEMBRE',
+                'OCTUBRE',
+                'NOVIEMBRE',
+                'DICIEMBRE'
+            ];
+
+            row.Mes = meses[fecha.getMonth()];
+
+        }
+
+        // ========================================
+        // PRODUCCIÓN
+        // ========================================
+        row.PesoEstandar = this.calcularPesoEstandar(row);
+        row.PorcentajeSobrepeso = this.calcularSobrepeso(row);
+        row.PorcentajeScrap = this.calcularScrap(row);
+
+        // ========================================
+        // PRODUCTIVIDAD
+        // ========================================
         row.TiempoDisponible = this.calcularTiempoDisponible(row);
         row.TiempoProductivo = this.calcularTiempoProductivo(row);
 
@@ -598,62 +917,173 @@ class GestionProduccionPVC {
             valorNuevo: event.newValue
         };
 
+
+
         this.cambiosPendientes.push(cambio);
 
         this.gridApi.refreshCells({
-            rowNodes: [event.node],
             force: true
         });
+
+        this.gridApi.redrawRows();
+
 
         this.recalcularTotales();
     }
 
     recalcularTotales() {
+
         const filaTotales = {
+
             id: 'TOTALES',
-            Fecha: null, Linea: null, Producto: null, Turno: null, TRIP: null,
+
+            // GENERALES
+            Mes: null,
+            Fecha: null,
+            Linea: null,
+            Producto: null,
+            Turno: null,
+            TRIP: null,
+
+            // PRODUCCIÓN
+            PesoMinimo: null,
+            TRFabricados: 0,
+            ProduccionNetaReal: 0,
+            PesoEstandar: 0,
+            PorcentajeSobrepeso: null,
+            TotalScrapKg: 0,
+            PorcentajeScrap: null,
+
+            // DISPONIBILIDAD
             HorasProgramadas: 0,
-            MantenimientoPreventivo: 0, ControlInventarios: 0, FaltaMateriaInsumos: 0,
-            CambioMolde: 0, Calentamiento: 0, ParoArranqueNoProgramado: 0,
+
+            // TIEMPO NO DISPONIBLE
+            MantenimientoPreventivo: 0,
+            ControlInventarios: 0,
+            FaltaMateriaInsumos: 0,
+            CambioMolde: 0,
+            Calentamiento: 0,
+            ParoArranqueNoProgramado: 0,
             ArranqueEstabilizacion: 0,
-            MttoCorrectivos: 0, FallaElectrica: 0, Servicios: 0,
-            CambioMoldeSetupExcesos: 0, Herramental: 0, FallaOperacion: 0,
-            LimpiezaTanque: 0, FaltaMaterial: 0, FaltaPersonal: 0, FaltaRefacciones: 0,
-            TiempoDisponible: 0, TiempoProductivo: 0
+
+            // TIEMPO NO PRODUCTIVO
+            MttoCorrectivos: 0,
+            FallaElectrica: 0,
+            Servicios: 0,
+            CambioMoldeSetupExcesos: 0,
+            Herramental: 0,
+            FallaOperacion: 0,
+            LimpiezaTanque: 0,
+            FaltaMaterial: 0,
+            FaltaPersonal: 0,
+            FaltaRefacciones: 0,
+
+            // KPIS
+            TiempoDisponible: 0,
+            TiempoProductivo: 0
         };
 
         this.gridApi.forEachNode((node) => {
+
             if (node.data.id !== 'TOTALES') {
+
+                // ========================================
+                // PRODUCCIÓN
+                // ========================================
+
+                filaTotales.TRFabricados += parseFloat(node.data.TRFabricados || 0);
+
+                filaTotales.ProduccionNetaReal += parseFloat(node.data.ProduccionNetaReal || 0);
+
+                filaTotales.PesoEstandar += parseFloat(node.data.PesoEstandar || 0);
+
+                filaTotales.TotalScrapKg += parseFloat(node.data.TotalScrapKg || 0);
+
+                // ========================================
+                // DISPONIBILIDAD
+                // ========================================
+
                 filaTotales.HorasProgramadas += parseFloat(node.data.HorasProgramadas || 0);
+
+                // ========================================
+                // TIEMPO NO DISPONIBLE
+                // ========================================
+
                 filaTotales.MantenimientoPreventivo += parseFloat(node.data.MantenimientoPreventivo || 0);
+
                 filaTotales.ControlInventarios += parseFloat(node.data.ControlInventarios || 0);
+
                 filaTotales.FaltaMateriaInsumos += parseFloat(node.data.FaltaMateriaInsumos || 0);
+
                 filaTotales.CambioMolde += parseFloat(node.data.CambioMolde || 0);
+
                 filaTotales.Calentamiento += parseFloat(node.data.Calentamiento || 0);
+
                 filaTotales.ParoArranqueNoProgramado += parseFloat(node.data.ParoArranqueNoProgramado || 0);
+
                 filaTotales.ArranqueEstabilizacion += parseFloat(node.data.ArranqueEstabilizacion || 0);
+
+                // ========================================
+                // TIEMPO NO PRODUCTIVO
+                // ========================================
+
                 filaTotales.MttoCorrectivos += parseFloat(node.data.MttoCorrectivos || 0);
+
                 filaTotales.FallaElectrica += parseFloat(node.data.FallaElectrica || 0);
+
                 filaTotales.Servicios += parseFloat(node.data.Servicios || 0);
+
                 filaTotales.CambioMoldeSetupExcesos += parseFloat(node.data.CambioMoldeSetupExcesos || 0);
+
                 filaTotales.Herramental += parseFloat(node.data.Herramental || 0);
+
                 filaTotales.FallaOperacion += parseFloat(node.data.FallaOperacion || 0);
+
                 filaTotales.LimpiezaTanque += parseFloat(node.data.LimpiezaTanque || 0);
+
                 filaTotales.FaltaMaterial += parseFloat(node.data.FaltaMaterial || 0);
+
                 filaTotales.FaltaPersonal += parseFloat(node.data.FaltaPersonal || 0);
+
                 filaTotales.FaltaRefacciones += parseFloat(node.data.FaltaRefacciones || 0);
+
+                // ========================================
+                // KPIS
+                // ========================================
+
                 filaTotales.TiempoDisponible += parseFloat(node.data.TiempoDisponible || 0);
+
                 filaTotales.TiempoProductivo += parseFloat(node.data.TiempoProductivo || 0);
             }
         });
 
+        // ========================================
+        // CALCULAR %
+        // ========================================
+
+        if (filaTotales.PesoEstandar > 0) {
+
+            filaTotales.PorcentajeSobrepeso =
+                ((filaTotales.ProduccionNetaReal / filaTotales.PesoEstandar) - 1) * 100;
+        }
+
+        const totalProduccionScrap =
+            filaTotales.ProduccionNetaReal + filaTotales.TotalScrapKg;
+
+        if (totalProduccionScrap > 0) {
+
+            filaTotales.PorcentajeScrap =
+                (filaTotales.TotalScrapKg / totalProduccionScrap) * 100;
+        }
+
         this.gridApi.forEachNode((node) => {
+
             if (node.data.id === 'TOTALES') {
+
                 node.setData(filaTotales);
             }
         });
 
-        //this.ajustarAlturaGrid();
     }
 
     configurarEventos() {
@@ -748,58 +1178,6 @@ class GestionProduccionPVC {
 
         }
 
-        //const camposTiempoNoProductivo = [
-        //    "LOTE_CORRECTIVOS",
-        //    "FALLA_HERRAMIENTA",
-        //    "SERVICIOS",
-        //    "CAMBIO_EXCESOS_PRODUCCION",
-        //    "HERRAMIENTAS",
-        //    "FALLA_VOLTAJE_GENERACION",
-        //    "LIMPIEZA_LINEA",
-        //    "FALLA_PERSONAL",
-        //    "FALTA_MATERIAL",
-        //    "FALLA_PERSONAL_2",
-        //    "FACTORES_EXTERNOS"
-        //];
-
-        // Validar Tiempo No Productivo
-        //const existeTiempoNoProductivo = datos.some(fila =>
-        //    camposTiempoNoProductivo.some(campo => Number(fila[campo]) > 0)
-        //);
-
-        //if (!existeTiempoNoProductivo) {
-        //    AlertManager.mostrar(
-        //        "Debe capturar al menos un TIEMPO NO PRODUCTIVO",
-        //        "warning"
-        //    );
-        //    return;
-        //}
-
-        //const camposTiempoNoDisponible = [
-        //    "MANTENIMIENTO_PREVENTIVO",
-        //    "CONTROL_INVENTARIOS",
-        //    "FALTA_MATERIA_INSUMOS",
-        //    "CAMBIO_MOLDE_HR",
-        //    "CALENTAMIENTO_HR",
-        //    "PARO_ARRANQUE_NO_PROGRAMADO",
-        //    "ARRANQUE_ESTABILIZACION_HR"
-        //];
-
-        //// Validar Tiempo No Disponible
-        //const existeTiempoNoDisponible = datos.some(fila =>
-        //    camposTiempoNoDisponible.some(campo => Number(fila[campo]) > 0)
-        //);
-
-        //if (!existeTiempoNoDisponible) {
-        //    AlertManager.mostrar(
-        //        "Debe capturar al menos un TIEMPO NO DISPONIBLE",
-        //        "warning"
-        //    );
-        //    $("#btnGuardarCambios").prop("disabled", false);
-        //    $("#btnGuardarCambios").html('<i class="bi bi-save me-1"></i>Guardar');
-        //    return;
-        //}
-
         $.ajax({
 
             url: `/${this.URLBase}/GuardarTiemposMuertosPVC`,
@@ -886,6 +1264,14 @@ class GestionProduccionPVC {
                     CALENTAMIENTO_HR: node.data.Calentamiento || 0,
                     PARO_ARRANQUE_NO_PROGRAMADO: node.data.ParoArranqueNoProgramado || 0,
                     ARRANQUE_ESTABILIZACION_HR: node.data.ArranqueEstabilizacion || 0,
+                    MES: node.data.Mes,
+                    PESO_MINIMO: node.data.PesoMinimo || 0,
+                    TR_FABRICADOS: node.data.TRFabricados || 0,
+                    PRODUCCION_NETA_REAL: node.data.ProduccionNetaReal || 0,
+                    PESO_ESTANDAR: node.data.PesoEstandar || 0,
+                    PORCENTAJE_SOBREPESO: node.data.PorcentajeSobrepeso || 0,
+                    TOTAL_SCRAP_KG: node.data.TotalScrapKg || 0,
+                    PORCENTAJE_SCRAP: node.data.PorcentajeScrap || 0,
 
                     MTTO_CORRECTIVOS: node.data.MttoCorrectivos || 0,
                     FALLA_ELECTRICA: node.data.FallaElectrica || 0,
@@ -958,13 +1344,42 @@ class GestionProduccionPVC {
     agregarFila(params) {
 
         const nuevaFila = {
+
             id: Date.now(),
+
+            // ========================================
+            // GENERALES
+            // ========================================
+
+            Mes: null,
             Fecha: null,
             Linea: null,
             Producto: null,
             Turno: null,
             TRIP: null,
+
+            // ========================================
+            // PRODUCCIÓN
+            // ========================================
+
+            PesoMinimo: 3,
+            TRFabricados: null,
+            ProduccionNetaReal: null,
+            PesoEstandar: 0,
+            PorcentajeSobrepeso: 0,
+            TotalScrapKg: null,
+            PorcentajeScrap: 0,
+
+            // ========================================
+            // DISPONIBILIDAD
+            // ========================================
+
             HorasProgramadas: null,
+
+            // ========================================
+            // TIEMPO NO DISPONIBLE
+            // ========================================
+
             MantenimientoPreventivo: null,
             ControlInventarios: null,
             FaltaMateriaInsumos: null,
@@ -972,6 +1387,11 @@ class GestionProduccionPVC {
             Calentamiento: null,
             ParoArranqueNoProgramado: null,
             ArranqueEstabilizacion: null,
+
+            // ========================================
+            // TIEMPO NO PRODUCTIVO
+            // ========================================
+
             MttoCorrectivos: null,
             FallaElectrica: null,
             Servicios: null,
@@ -982,8 +1402,13 @@ class GestionProduccionPVC {
             FaltaMaterial: null,
             FaltaPersonal: null,
             FaltaRefacciones: null,
-            TiempoDisponible: null,
-            TiempoProductivo: null
+
+            // ========================================
+            // KPIS
+            // ========================================
+
+            TiempoDisponible: 0,
+            TiempoProductivo: 0
         };
 
         this.gridApi.applyTransaction({
@@ -992,16 +1417,90 @@ class GestionProduccionPVC {
         });
 
         this.recalcularTotales();
+
     }
 
     copiarFilaAnterior(params) {
 
         const filaActual = params.node.data;
 
-        const nuevaFila = JSON.parse(JSON.stringify(filaActual));
+        const nuevaFila = {
 
-        nuevaFila.id = Date.now();
-        nuevaFila.ID_REGISTRO = null;
+            id: Date.now(),
+            ID_REGISTRO: null,
+
+            // ========================================
+            // GENERALES
+            // ========================================
+
+            Mes: filaActual.Mes,
+            Fecha: filaActual.Fecha,
+            Linea: filaActual.Linea,
+            Producto: filaActual.Producto,
+            Turno: filaActual.Turno,
+            TRIP: filaActual.TRIP,
+
+            // ========================================
+            // PRODUCCIÓN
+            // ========================================
+
+            PesoMinimo: filaActual.PesoMinimo || 3,
+            TRFabricados: filaActual.TRFabricados,
+            ProduccionNetaReal: filaActual.ProduccionNetaReal,
+            TotalScrapKg: filaActual.TotalScrapKg,
+
+            // ========================================
+            // DISPONIBILIDAD
+            // ========================================
+
+            HorasProgramadas: filaActual.HorasProgramadas,
+
+            // ========================================
+            // TIEMPO NO DISPONIBLE
+            // ========================================
+
+            MantenimientoPreventivo: filaActual.MantenimientoPreventivo,
+            ControlInventarios: filaActual.ControlInventarios,
+            FaltaMateriaInsumos: filaActual.FaltaMateriaInsumos,
+            CambioMolde: filaActual.CambioMolde,
+            Calentamiento: filaActual.Calentamiento,
+            ParoArranqueNoProgramado: filaActual.ParoArranqueNoProgramado,
+            ArranqueEstabilizacion: filaActual.ArranqueEstabilizacion,
+
+            // ========================================
+            // TIEMPO NO PRODUCTIVO
+            // ========================================
+
+            MttoCorrectivos: filaActual.MttoCorrectivos,
+            FallaElectrica: filaActual.FallaElectrica,
+            Servicios: filaActual.Servicios,
+            CambioMoldeSetupExcesos: filaActual.CambioMoldeSetupExcesos,
+            Herramental: filaActual.Herramental,
+            FallaOperacion: filaActual.FallaOperacion,
+            LimpiezaTanque: filaActual.LimpiezaTanque,
+            FaltaMaterial: filaActual.FaltaMaterial,
+            FaltaPersonal: filaActual.FaltaPersonal,
+            FaltaRefacciones: filaActual.FaltaRefacciones
+        };
+
+        // ========================================
+        // RECALCULAR FORMULAS
+        // ========================================
+
+        nuevaFila.PesoEstandar =
+            this.calcularPesoEstandar(nuevaFila);
+
+        nuevaFila.PorcentajeSobrepeso =
+            this.calcularSobrepeso(nuevaFila);
+
+        nuevaFila.PorcentajeScrap =
+            this.calcularScrap(nuevaFila);
+
+        nuevaFila.TiempoDisponible =
+            this.calcularTiempoDisponible(nuevaFila);
+
+        nuevaFila.TiempoProductivo =
+            this.calcularTiempoProductivo(nuevaFila);
 
         this.gridApi.applyTransaction({
             add: [nuevaFila],
@@ -1009,6 +1508,7 @@ class GestionProduccionPVC {
         });
 
         this.recalcularTotales();
+
     }
 
     eliminarFila(params) {
@@ -1137,6 +1637,49 @@ class GestionProduccionPVC {
         const fin = DateUtils.formatearFechaTexto(fechaFin, true);
 
         return `Del ${inicio} al ${fin}`;
+    }
+
+    formatearPorcentaje(valor) {
+
+        if (valor === null || valor === undefined || valor === '') {
+            return '';
+        }
+
+        return `${parseFloat(valor).toFixed(2)}%`;
+    }
+
+    calcularPesoEstandar(row) {
+
+        const pesoMinimo = parseFloat(row.PesoMinimo) || 0;
+        const trFabricados = parseFloat(row.TRFabricados) || 0;
+
+        return pesoMinimo * trFabricados;
+    }
+
+    calcularSobrepeso(row) {
+
+        const produccionReal = parseFloat(row.ProduccionNetaReal) || 0;
+        const pesoEstandar = parseFloat(row.PesoEstandar) || 0;
+
+        if (pesoEstandar <= 0) {
+            return 0;
+        }
+
+        return ((produccionReal / pesoEstandar) - 1) * 100;
+    }
+
+    calcularScrap(row) {
+
+        const scrap = parseFloat(row.TotalScrapKg) || 0;
+        const produccion = parseFloat(row.ProduccionNetaReal) || 0;
+
+        const total = produccion + scrap;
+
+        if (total <= 0) {
+            return 0;
+        }
+
+        return (scrap / total) * 100;
     }
 }
 
@@ -1320,7 +1863,7 @@ class ExcelExporterPVC {
 
             console.log('✅ Excel PVC exportado correctamente');
             if (typeof AlertManager !== 'undefined') {
-                AlertManager.mostrar('✅ Excel exportado correctamente', 'success');
+                AlertManager.mostrar('Excel exportado correctamente', 'success');
             }
 
         } catch (error) {
@@ -1383,13 +1926,56 @@ class ExcelExporterPVC {
                 grupo.children.forEach(col => {
                     let valor = node.data[col.field];
 
+                    // ========================================
+                    // CALCULAR MES SI VIENE VACÍO
+                    // ========================================
+
+                    if (
+                        col.field === 'Mes' &&
+                        (!valor || valor === '')
+                    ) {
+
+                        if (node.data.Fecha) {
+
+                            valor = [
+                                'ENERO',
+                                'FEBRERO',
+                                'MARZO',
+                                'ABRIL',
+                                'MAYO',
+                                'JUNIO',
+                                'JULIO',
+                                'AGOSTO',
+                                'SEPTIEMBRE',
+                                'OCTUBRE',
+                                'NOVIEMBRE',
+                                'DICIEMBRE'
+                            ][new Date(node.data.Fecha).getMonth()];
+                        }
+
+                    }
+
                     if (valor !== null && valor !== undefined && valor !== '' &&
-                        !['Fecha', 'Producto', 'TRIP', 'Linea', 'Turno'].includes(col.field)) {
+                        ![
+                            'Mes',
+                            'Fecha',
+                            'Producto',
+                            'TRIP',
+                            'Linea',
+                            'Turno'
+                        ].includes(col.field)) {
                         valor = parseFloat(valor);
                     }
 
                     if (node.data.id === 'TOTALES' &&
-                        ['Fecha', 'Linea', 'Producto', 'Turno', 'TRIP'].includes(col.field)) {
+                        ![
+                            'Mes',
+                            'Fecha',
+                            'Producto',
+                            'TRIP',
+                            'Linea',
+                            'Turno'
+                        ].includes(col.field)) {
                         valor = '';
                     }
 
@@ -1413,11 +1999,70 @@ class ExcelExporterPVC {
                 let colorFondo = '0058A1';
                 let colorTexto = 'FFFFFF';
 
-                if (grupo.nombre === 'TIEMPO NO DISPONIBLE') {
+                // ========================================
+                // DATOS GENERALES
+                // ========================================
+
+                if (grupo.nombre === 'DATOS GENERALES') {
+
+                    colorFondo = 'B4A7D6';
+                    colorTexto = '000000';
+
+                }
+
+                // ========================================
+                // PRODUCCIÓN
+                // ========================================
+
+                else if (grupo.nombre === 'PRODUCCIÓN') {
+
+                    colorFondo = 'F1C232';
+                    colorTexto = '000000';
+
+                }
+
+                // ========================================
+                // DISPONIBILIDAD
+                // ========================================
+
+                else if (grupo.nombre === 'DISPONIBILIDAD') {
+
+                    colorFondo = '0058A1';
+                    colorTexto = 'FFFFFF';
+
+                }
+
+                // ========================================
+                // TIEMPO NO DISPONIBLE
+                // ========================================
+
+                else if (grupo.nombre === 'TIEMPO NO DISPONIBLE') {
+
                     colorFondo = 'FF69B4';
-                } else if (grupo.nombre === 'TIEMPO NO PRODUCTIVO') {
+                    colorTexto = 'FFFFFF';
+
+                }
+
+                // ========================================
+                // TIEMPO NO PRODUCTIVO
+                // ========================================
+
+                else if (grupo.nombre === 'TIEMPO NO PRODUCTIVO') {
+
                     colorFondo = '90EE90';
                     colorTexto = '333333';
+
+                }
+
+                // ========================================
+                // KPIS
+                // ========================================
+
+                else if (grupo.nombre === 'KPIS') {
+
+                    colorFondo = '6AA84F';
+                    colorTexto = 'FFFFFF';
+
                 }
 
                 celda.fill = {
@@ -1536,35 +2181,142 @@ class ExcelExporterPVC {
     }
 
     obtenerColorCelda(cellClass) {
+
         const colores = {
+
+            // ========================================
+            // GENERALES
+            // ========================================
+
             'celda-azul': 'FFCFE2FF',
-            'celda-amarilla': 'FFFFFF00',
-            'celda-gris': 'FFD3D3D3',
+
+            // ========================================
+            // PRODUCCIÓN
+            // ========================================
+
+            'celda-amarilla': 'FFFFF000',
+
+            'celda-blanca': 'FFFFFFFF',
+
+            'celda-verde-formula': 'FFD9EAD3',
+
+            // ========================================
+            // DISPONIBILIDAD
+            // ========================================
+
+            'celda-gris': 'FFD9D9D9',
+
+            // ========================================
+            // TIEMPO NO DISPONIBLE
+            // ========================================
+
             'celda-rosa': 'FFF8D7DA',
+
+            // ========================================
+            // TIEMPO NO PRODUCTIVO
+            // ========================================
+
             'celda-verde-claro': 'FFD4EDDA',
+
+            // ========================================
+            // KPIS
+            // ========================================
+
             'celda-azul-claro': 'FFE7F3FF',
+
             'celda-verde-fuerte': 'FFA8D5BA'
         };
+
         return colores[cellClass] || 'FFFFFFFF';
+
     }
 
     ajustarAnchos(worksheet) {
+
         let colIdx = 0;
 
         this.columnDefs.forEach(grupo => {
+
             if (grupo.children) {
+
                 grupo.children.forEach(col => {
+
                     colIdx++;
 
                     let ancho = 15;
-                    if (col.field === 'Fecha') ancho = 12;
-                    else if (col.field === 'Linea' || col.field === 'Turno' || col.field === 'TRIP') ancho = 8;
-                    else if (col.field === 'Producto') ancho = 14;
-                    else if (col.headerName && col.headerName.length > 20) ancho = 20;
+
+                    // ========================================
+                    // GENERALES
+                    // ========================================
+
+                    if (col.field === 'Mes') {
+                        ancho = 12;
+                    }
+
+                    else if (col.field === 'Fecha') {
+                        ancho = 14;
+                    }
+
+                    else if (
+                        col.field === 'Linea' ||
+                        col.field === 'Turno' ||
+                        col.field === 'TRIP'
+                    ) {
+                        ancho = 10;
+                    }
+
+                    else if (col.field === 'Producto') {
+                        ancho = 18;
+                    }
+
+                    // ========================================
+                    // PRODUCCIÓN
+                    // ========================================
+
+                    else if (
+                        col.field === 'PesoMinimo' ||
+                        col.field === 'TRFabricados' ||
+                        col.field === 'PesoEstandar' ||
+                        col.field === 'PorcentajeSobrepeso' ||
+                        col.field === 'TotalScrapKg' ||
+                        col.field === 'PorcentajeScrap'
+                    ) {
+                        ancho = 16;
+                    }
+
+                    else if (col.field === 'ProduccionNetaReal') {
+                        ancho = 20;
+                    }
+
+                    // ========================================
+                    // DISPONIBILIDAD
+                    // ========================================
+
+                    else if (col.field === 'HorasProgramadas') {
+                        ancho = 18;
+                    }
+
+                    // ========================================
+                    // TIEMPOS
+                    // ========================================
+
+                    else if (
+                        col.field === 'FaltaMateriaInsumos' ||
+                        col.field === 'ParoArranqueNoProgramado' ||
+                        col.field === 'CambioMoldeSetupExcesos' ||
+                        col.field === 'ArranqueEstabilizacion'
+                    ) {
+                        ancho = 24;
+                    }
+
+                    else if (col.headerName && col.headerName.length > 20) {
+                        ancho = 20;
+                    }
 
                     worksheet.getColumn(colIdx).width = ancho;
                 });
             }
         });
+
     }
 }
