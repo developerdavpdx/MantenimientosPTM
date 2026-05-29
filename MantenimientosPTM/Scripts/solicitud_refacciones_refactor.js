@@ -173,6 +173,7 @@ class SolicitudRefaccionesApp {
 
         $(document).on('click', '.btn-change-ref', (e) => {
             e.preventDefault();
+            this.solicitudManager.IdSolicitudR = $(e.currentTarget).data('idsolicitud');
             $("#solicitarRefAlmModal").modal("show");
         });
 
@@ -847,7 +848,6 @@ class SolicitudManager {
         this.datos_usuario = datos_usuario;
         this.IdSolicitudR = "";
         this.OrdenTrabajo = "";
-        this.OrdenTrabajo = "";
         this.otEquipos = {
             'OT-005': 'ENS-100',
             'OT-008': 'MEZ-850',
@@ -1024,6 +1024,8 @@ class SolicitudManager {
 
         e.preventDefault();
 
+        $("#btnCargarRefacciones").html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
+        $("#btnCargarRefacciones").prop("disabled", true);
 
         let articulos = this.gestionArticulosMP.obtenerArticulos();
 
@@ -1035,82 +1037,54 @@ class SolicitudManager {
 
         $('#badgeTotalArticulos').text(articulos.length);
 
-        const procesoDefault = 'PCPVC';
-        const gastosDefault = 'GIF';
+        // ✅ Recopilar los datos con múltiples artículos
+        const Refaccion = {
+            ID_SOLICITUD: this.IdSolicitudR,
+            REFACCION_SOLICITADA: articulos[0].CodigoArticulo
+        };
 
-        articulos.forEach((art, i) => {
-            let { CodigoArticulo, DescripcionArticulo, Cantidad
-            } = art;
+        let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
 
-            let NivelUrgencia = 'Normal', Estatus = 'Pendiente';
+        $.ajax({
+            url: `/${this.URLBase}/ActualizarRefaccionOT`,
+            type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Rol-Usuario': TipoUsuario  // 👈 esto
+            },
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(Refaccion),
+            dataType: 'json',
+            success: (response) => {
+                if (response.Status === 'SI') {
+                    $("#btnCargarRefacciones").html('<i class="bi bi-check-circle-fill text-white me-2"></i>Solicitud generada correctamente');
+                    $("#btnCargarRefacciones").prop("disabled", false);
 
-            const urgenciaClass = NivelUrgencia === 'Critico' || NivelUrgencia === 'Crítico' ? 'bg-danger' :
-                NivelUrgencia === 'Urgente' ? 'bg-warning text-dark' : 'bg-primary';
-            const urgenciaText = NivelUrgencia || 'N/A';
+                    // Limpiar formulario y tabla
+                    $("#formSolicitarRefaccion")[0].reset();
+                    $("#formSolicitarRefaccion").removeClass("was-validated");
 
-            const estatusClass = Estatus === 'Atendida' ? 'bg-success' :
-                Estatus === 'Pendiente' ? 'bg-warning text-dark' : 'bg-primary';
-            const estatusText = Estatus || 'N/A';
 
-            const nombreArticulo = DescripcionArticulo || 'N/A';
+                    // Recargar DataTable
+                    $('#tablaSolicitudesRefacciones').DataTable().ajax.reload(null, false);
 
-            let btnChangeRef = "";
+                    setTimeout(function () {
+                        $("#btnCargarRefacciones").html('<i class="bi bi-save me-1"></i>Guardar');
+                        $("#solicitarRefAlmModal").modal('hide');
+                    }, 3000);
 
-            tbody.append(`
-                <tr class="${Estatus === 'Atendida' ? 'table-success' : ''}">
-                    <td class="text-center">${i + 1}</td>
-                    <td class="text-center">
-                        <input type="checkbox" class="form-check-input chk-articuloSalida"
-                               data-idsolicitud="${-1}"
-                               data-addalm="true"
-                               data-codigo="${RefaccionSolicitada || ''}"
-                               data-nombre="${nombreArticulo}"
-                               data-cantidad="${Cantidad}"
-                               data-cantidadoriginal="${Cantidad}"
-                               ${Estatus === 'Atendida' ? 'disabled' : ''}>
-                    </td>
-                    <td><span class="badge bg-dark">${RefaccionSolicitada || 'N/A'}</span></td>
-                    <td>${nombreArticulo}</td>
-                    <td class="text-center">
-                        <input type="number" min="1" max="${Cantidad}" 
-                               class="form-control form-control-sm text-center fw-bold cantidadEditable"
-                               value="${Cantidad}"
-                               ${Estatus === 'Atendida' ? 'readonly' : ''}>
-                    </td>
-                    <td>${Stock}</td>
-                    <td class="text-center">
-                        <span class="badge ${urgenciaClass}">${urgenciaText}</span>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge ${estatusClass}">${estatusText}</span>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm departamento text-center" 
-                               value="${this.datosUsuarioSalida.dept || ''}" readonly>
-                    </td>
-                    <td>
-                        <select class="form-select form-select-sm proceso">
-                            ${this.buildOptions(this.ListProcesos, 'PrcCode', procesoDefault)}
-                        </select>
-                    </td>
-                    <td>
-                        <select class="form-select form-select-sm gastos">
-                            ${this.buildOptions(this.ListGastos, 'PrcCode', gastosDefault)}
-                        </select>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm cedis text-center" 
-                               value="${this.datosUsuarioSalida.cedis || ''}" readonly>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm nombre_empleado" 
-                               value="${this.datosUsuarioSalida.nombre || ''}">
-                    </td>
-                </tr>
-            `);
+                } else {
+                    $("#btnCargarRefacciones").html('<i class="bi bi-save me-1"></i>Guardar');
+                    $("#btnCargarRefacciones").prop("disabled", false);
+                    AlertManager.mostrar(response.Message || 'Error al realizar la solicitud de refacción', 'warning', "alertRefaccionContainer");
+                }
+            },
+            error: (xhr, status, error) => {
+                $("#btnCargarRefacciones").html('<i class="bi bi-save me-1"></i>Guardar');
+                $("#btnCargarRefacciones").prop("disabled", false);
+                AlertManager.mostrar('Error al conectar con el servidor', 'warning', "alertRefaccionContainer");
+            }
         });
-
-        this.actualizarContadorArticulos();
     }
 
     renderTablaArticulosSalida(articulos, salidas = []) {
@@ -1262,8 +1236,6 @@ class SolicitudManager {
             </tr>
         `);
         });
-
-        this.actualizarContadorArticulos();
     }
 
     buildOptions(list, key, selectedValue) {
@@ -1275,12 +1247,6 @@ class SolicitudManager {
         console.log("Centros Cosotos:");
         console.log(options);
         return options;
-    }
-
-    actualizarContadorArticulos() {
-        const count = $('#bodyArticulosSalida .chk-articuloSalida:checked').length;
-        $('#contadorSeleccionados').text(count);
-        return count;
     }
 
     llenarSolicitudesRefacciones() {

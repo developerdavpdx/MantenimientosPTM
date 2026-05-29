@@ -12,6 +12,7 @@ using System.Configuration;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Web;
@@ -654,6 +655,55 @@ namespace MantenimientosPTM.Controllers
             {
                 jsonResponse.Status = "ERROR";
                 jsonResponse.Message = "No fue posible procesar la solicitud: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult ActualizarRefaccionOT()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            CambioRefaccion RequestData;
+
+            try
+            {
+                // Leer el cuerpo de la solicitud JSON
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    // Deserializar JSON al modelo con múltiples artículos
+                    RequestData = JsonConvert.DeserializeObject<CambioRefaccion>(jsonData);
+                }
+
+                // Convertir modelo a parámetros HANA
+                var parameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
+
+                // Ejecutar stored procedure para insertar artículo
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaSolicitudRefaccion, parameters);
+
+                if (resultHana.JsonResult.Contains("ERROR"))
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "No es posible actualizar la refacción: " + resultHana.JsonResult;
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = "Refaccción actualizada con exito";
+                jsonResponse.Data = resultHana.JsonResult;
+
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible actualizar la refacción: " + ex.Message;
                 jsonResponse.Data = string.Empty;
                 return Json(jsonResponse);
             }

@@ -387,6 +387,14 @@ namespace MantenimientosPTM
             }
         }
 
+        public string GCActualizaSolicitudRefaccion
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOActualizarSolicitudRefaccion\"";
+            }
+        }
+
 
 
         #endregion
@@ -477,6 +485,7 @@ namespace MantenimientosPTM
             [JsonProperty("CantidadEncargar")]
             public int CantidadEncargar { get; set; }
         }
+
         // Modelo principal que recibe el JS
         public class PurchaseRequest
         {
@@ -489,6 +498,7 @@ namespace MantenimientosPTM
             [JsonProperty("UsuarioSolicita")]
             public string UsuarioSolicita { get; set; }
         }
+
         public class SolicitudCompraDetalle
         {
             [JsonProperty("ID_DETALLE")]
@@ -682,7 +692,6 @@ namespace MantenimientosPTM
             public string LineVendor { get; set; }     // 👈 Así llama SAP al proveedor por línea
         }
 
-
         //CLASES PARA DATOS DE SOLICITUD DE COMPRA
         public class RequisicionPayload
         {
@@ -838,6 +847,16 @@ namespace MantenimientosPTM
 
             [JsonProperty("StatusValidacion")]
             public string StatusValidacion { get; set; }
+        }
+
+        // Reporte de Stock Almacén
+        public class CambioRefaccion
+        {
+            [JsonProperty("ID_SOLICITUD")]
+            public string IdSolicitud { get; set; }
+
+            [JsonProperty("REFACCION_SOLICITADA")]
+            public string RefaccionSolicitada { get; set; }
         }
 
         #endregion

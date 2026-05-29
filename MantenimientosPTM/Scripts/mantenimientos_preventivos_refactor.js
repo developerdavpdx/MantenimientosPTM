@@ -1,4 +1,59 @@
 // ========================================
+// INICIALIZACIÓN
+// ========================================
+$(document).ready(function () {
+    const app = new MantenimientosPreventivoApp();
+    app.inicializar();
+
+    // 🔥 INICIALIZAR HEADER FIJO CON EL GESTOR GLOBAL
+    window.HeaderFijoGlobalManager.crear(
+        '.card-header.header-fijo-custom',      // ✅ Header
+        '.position-relative.header-custom',     // ✅ Contenedor
+        'headerMantenimientos',                 // ID único
+        {
+            topOffset: 45,
+            backgroundColor: 'white',
+            boxShadow: '0 4px 12px rgba(0, 88, 161, 0.3)',
+            animacion: true
+        }
+    );
+
+    console.log('✅ Header fijo inicializado correctamente');
+});
+
+// ========================================
+// GESTOR DE UI
+// ========================================
+class UIManager {
+    constructor(datos_usuario) {
+        this.datos_usuario = datos_usuario;
+    }
+    inicializarUI() {
+        // Seleccionar el padre "MantenimientosContainer" y expandir
+        $("#MantenimientosContainer").addClass("selected");
+        $("#MantenimientosContainer a").addClass("whiteText");
+        $("#mantenimientos-collapse").addClass("show");
+        // Configuración de navegación
+        $("#MPContainer").removeClass("collapsed").attr("aria-expanded", true);
+        $("#manntopreventivo-collapse").addClass("show");
+        $("#MPProgramadoURL").addClass("selected-item");
+
+
+
+        if (this.datos_usuario[0].TIPOUSUARIO != "AdminMtto" && this.datos_usuario[0].TIPOUSUARIO != "Administrador") {
+            $("#btnGenerarOrdenes").addClass("d-none");
+            $("#btnExportarExcel").addClass("d-none");
+        }
+
+        $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
+        $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
+        //const TopScrool = new TopScrollTable("tablaMantenimientosRango", "tablaMantenimientosRangoContainer", "TblMCScrool");
+        //TopScrool.createScroll();
+        //TopScrool.initScroll();
+    }
+}
+
+// ========================================
 // APLICACIÓN PRINCIPAL
 // ========================================
 class MantenimientosPreventivoApp {
@@ -516,61 +571,6 @@ class MantenimientosPreventivoApp {
             this.mantenimientoManager.llenarMantenimientosPorRango();
             this._isReloading = false;
         }
-    }
-}
-
-// ========================================
-// INICIALIZACIÓN
-// ========================================
-$(document).ready(function () {
-    const app = new MantenimientosPreventivoApp();
-    app.inicializar();
-
-    // 🔥 INICIALIZAR HEADER FIJO CON EL GESTOR GLOBAL
-    window.HeaderFijoGlobalManager.crear(
-        '.card-header.header-fijo-custom',      // ✅ Header
-        '.position-relative.header-custom',     // ✅ Contenedor
-        'headerMantenimientos',                 // ID único
-        {
-            topOffset: 45,
-            backgroundColor: 'white',
-            boxShadow: '0 4px 12px rgba(0, 88, 161, 0.3)',
-            animacion: true
-        }
-    );
-
-    console.log('✅ Header fijo inicializado correctamente');
-});
-
-// ========================================
-// GESTOR DE UI
-// ========================================
-class UIManager {
-    constructor(datos_usuario) {
-        this.datos_usuario = datos_usuario;
-    }
-    inicializarUI() {
-        // Seleccionar el padre "MantenimientosContainer" y expandir
-        $("#MantenimientosContainer").addClass("selected");
-        $("#MantenimientosContainer a").addClass("whiteText");
-        $("#mantenimientos-collapse").addClass("show");
-        // Configuración de navegación
-        $("#MPContainer").removeClass("collapsed").attr("aria-expanded", true);
-        $("#manntopreventivo-collapse").addClass("show");
-        $("#MPProgramadoURL").addClass("selected-item");
-
-
-
-        if (this.datos_usuario[0].TIPOUSUARIO != "AdminMtto" && this.datos_usuario[0].TIPOUSUARIO != "Administrador") {
-            $("#btnGenerarOrdenes").addClass("d-none");
-            $("#btnExportarExcel").addClass("d-none");
-        }
-
-        $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
-        $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
-        //const TopScrool = new TopScrollTable("tablaMantenimientosRango", "tablaMantenimientosRangoContainer", "TblMCScrool");
-        //TopScrool.createScroll();
-        //TopScrool.initScroll();
     }
 }
 
