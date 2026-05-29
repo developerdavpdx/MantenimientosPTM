@@ -2038,9 +2038,12 @@ class MantenimientoManager {
             showSuperviso: true,
             showMantenimiento: false,
             nombreSuperviso: this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase(),
-            bloquearRealizo: (FirmaTecnico != ""),
-            bloquearSuperviso: false,
-            bloquearMantenimiento: true
+            deshabilitarRealizo: (FirmaTecnico != ""),
+            bloquearRealizo: (FirmaTecnico === ""),
+            deshabilitarSuperviso: (FirmaSuperviso != ""),
+            bloquearSuperviso: (FirmaSuperviso == "" ? false : true),
+            deshabilitarMantenimiento: (FirmaMantenimiento != ""),
+            bloquearMantenimiento: (FirmaMantenimiento === ""),
         });
 
         // Para perfil Producción NO se muestra la firma de Mantenimiento pero se permite guardar OT
@@ -2109,8 +2112,7 @@ class MantenimientoManager {
 
         //IMPORTANTE SI YA FIRMO MANTENIMIENTO OCULTAR BOTON GUARDAR
         if (FirmaSuperviso != "") {
-            $("#btnGuardarOT").prop("disabled", true);
-            $("#btnGuardarOT").addClass("btn_disabled");
+            $("#btnGuardarOT").prop("disabled", true).addClass("d-none");
         }
 
     }
@@ -2272,7 +2274,7 @@ class MantenimientoManager {
     // ============================
     // Helper: configurar firmas (mostrar, bloquear y nombres)
     // ============================
-    _configureFirmas({ showRealizo = true, showSuperviso = true, showMantenimiento = true, nombreRealizo = null, nombreSuperviso = null, nombreMantenimiento = null, bloquearRealizo = false, bloquearSuperviso = false, bloquearMantenimiento = false } = {}) {
+    _configureFirmas({ showRealizo = true, showSuperviso = true, showMantenimiento = true, nombreRealizo = null, nombreSuperviso = null, nombreMantenimiento = null, deshabilitarRealizo = false, bloquearRealizo = false, deshabilitarSuperviso = false, bloquearSuperviso = false, deshabilitarMantenimiento = false,bloquearMantenimiento = false } = {}) {
         if (showRealizo) this.gestionFirmas.mostrarFirma('Realizo', true);
         else this.gestionFirmas.mostrarFirma('Realizo', false);
 
@@ -2287,13 +2289,15 @@ class MantenimientoManager {
         if (nombreMantenimiento) $("#nombreMantenimiento").val(nombreMantenimiento).attr('readonly', true);
 
         if (bloquearRealizo) this.gestionFirmas._bloquearFirma('Realizo');
-        else this.gestionFirmas.deshabilitarFirma('Realizo', true);
+        else if (deshabilitarRealizo)
+            this.gestionFirmas.deshabilitarFirma('Realizo', true);
 
         if (bloquearSuperviso) this.gestionFirmas._bloquearFirma('Superviso');
-        else this.gestionFirmas.deshabilitarFirma('Superviso', true);
+        else if (deshabilitarSuperviso)
+            this.gestionFirmas.deshabilitarFirma('Superviso', true);
 
         if (bloquearMantenimiento) this.gestionFirmas._bloquearFirma('Mantenimiento');
-        else this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
+        else if(deshabilitarMantenimiento) this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
     }
 
     calcularTiemposCierreOT(MaquinaDetenida, HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo) {
