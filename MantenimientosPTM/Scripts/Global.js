@@ -2767,10 +2767,15 @@ class GestionArticulos {
 // ✅ Clase para gestionar artículos con selección automática a tabla
 class GestionArticulosCustom {
     constructor(
-        inputBuscar, contenedorSugerencias, inputCodigo,
-        inputDescripcion, tbodyId = '#bodyArticulosRefaccionMP',
-        urlBase = 'Mantenimientos', ModalContainer,
-        GrupoArticulos = 0, includeArt = [],
+        inputBuscar,
+        contenedorSugerencias,
+        inputCodigo,
+        inputDescripcion,
+        tbodyId = '#bodyArticulosRefaccionMP',
+        urlBase = 'Mantenimientos',
+        ModalContainer,
+        GrupoArticulos = 0,
+        MultipleArticulo = true,
         datos_usuario
     ) {
         this.URLBase = urlBase;
@@ -2784,7 +2789,7 @@ class GestionArticulosCustom {
         this._ModalContainer = ModalContainer;
         this.articulosAgregados = [];
         this.GrupoArticulos = GrupoArticulos;
-        this.includeArt = includeArt;
+        this.MultipleArticulo = MultipleArticulo;
         this.datos_usuario = datos_usuario;
     }
 
@@ -2847,12 +2852,21 @@ class GestionArticulosCustom {
     }
 
     _seleccionarArticulo(articulo) {
+        //Si no se permiten multiples articulos
+        if (this.MultipleArticulo == false)
+        {
+            $(`#bodyArticulosRefaccionMP`).empty();
+        }
         this.agregarArticuloTabla(articulo);
         $(this._inputBuscar).val('');
         this.ocultarSugerencias();
     }
 
     agregarArticuloTabla(articulo) {
+        //Si no se permiten multiples articulos
+        if (this.MultipleArticulo == false) {
+            this.articulosAgregados = [];
+        }
         const yaExiste = this.articulosAgregados.some(a => a.CodigoArticulo === articulo.CodigoArticulo);
         if (yaExiste) {
             AlertManager.mostrar('El artículo ya está en la lista.', 'warning', this._ModalContainer);
@@ -2867,7 +2881,7 @@ class GestionArticulosCustom {
         tbody.empty();
         if (this.articulosAgregados.length === 0) {
             const emptyRowId = this._tbodyId.includes('MP') ? 'filaSinArticulosMP' : 'filaSinArticulosMC';
-            tbody.html(`<tr id="${emptyRowId}"><td colspan="5" class="text-center text-muted py-3"><i class="bi bi-info-circle me-1"></i>Busque y seleccione un artículo para agregarlo</td></tr>`);
+            tbody.html(`<tr id="${emptyRowId}"><td colspan="6" class="text-center text-muted py-3"><i class="bi bi-info-circle me-1"></i>Busque y seleccione un artículo para agregarlo</td></tr>`);
             return;
         }
         this.articulosAgregados.forEach((articulo, index) => {

@@ -846,6 +846,8 @@ class SolicitudManager {
         this.URLBase = URLBase;
         this.datos_usuario = datos_usuario;
         this.IdSolicitudR = "";
+        this.OrdenTrabajo = "";
+        this.OrdenTrabajo = "";
         this.otEquipos = {
             'OT-005': 'ENS-100',
             'OT-008': 'MEZ-850',
@@ -874,7 +876,6 @@ class SolicitudManager {
 
         this.ListProcesos = [];
         this.ListGastos = [];
-
         this.currentOC = {};
         this.currentDocLinesOC = {};
         this.datosUsuarioSalida = {};
@@ -895,8 +896,8 @@ class SolicitudManager {
             'Planeacion',
             'alertRefaccionContainer',
             104,
-            null,
-            this.datos_usuario// Grupos de articulos excluidos 110 -> Producto Terminado
+            false,
+            this.datos_usuario// Grupos de articulos excluidos 104 -> Producto Terminado
         );
 
         // AUTO COMPLETE NOMBRES CLIENTES
@@ -934,7 +935,6 @@ class SolicitudManager {
         console.log('✅ SolicitudManager inicializado correctamente');
     }
 
-
     configurarEventosGestionArticulos() {
         // ✅ Input de búsqueda - usando nuevos IDs
         $('#BuscarArticuloMP').on('input', (e) => {
@@ -953,7 +953,6 @@ class SolicitudManager {
             }
         });
     }
-
 
     async obtenerArticulosPorOT(ordenTrabajo) {
         try {
@@ -1182,13 +1181,13 @@ class SolicitudManager {
                         data-idsolicitud="${IdSolicitud}"
                         data-codigo="${RefaccionSolicitada || ''}"
                         data-nombre="${nombreArticulo}" data-bs-toggle="tooltip" data-bs-placement="top" title="❌ Eliminar refacción">
-                    <i class="bi bi-x-circle"></i>
+                    <i class="bi bi-x-circle fs-6"></i>
                 </button>
             <button class="btn btn-sm btn-ptm-edit btn-change-ref"
                         data-idsolicitud="${IdSolicitud}"
                         data-codigo="${RefaccionSolicitada || ''}"
                         data-nombre="${nombreArticulo}" data-bs-toggle="tooltip" data-bs-placement="top" title="🔄 Cambiar refacción">
-                    <i class="bi bi-arrow-repeat"></i>
+                    <i class="bi bi-arrow-repeat fs-6"></i>
                 </button>`;
 
             tbody.append(`
