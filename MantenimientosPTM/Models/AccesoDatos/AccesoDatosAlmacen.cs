@@ -855,8 +855,20 @@ namespace MantenimientosPTM
             [JsonProperty("ID_SOLICITUD")]
             public string IdSolicitud { get; set; }
 
-            [JsonProperty("REFACCION_SOLICITADA")]
+            [JsonProperty("ORDENTRABAJO")]
+            public string OrdenTrabajo { get; set; }
+
+            [JsonProperty("REFACCIONSOLICITADA")]
             public string RefaccionSolicitada { get; set; }
+
+            [JsonProperty("CANTIDAD")]
+            public string Cantidad { get; set; }
+
+            [JsonProperty("ESTATUS")]
+            public string Estatus { get; set; }
+
+            [JsonProperty("USUARIOATIENDE")]
+            public string UsuarioAtiende { get; set; }
         }
 
         #endregion

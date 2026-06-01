@@ -1194,6 +1194,8 @@ class MantenimientoManager {
                     $("#btnSolicitarRefaccion").html('<i class="bi bi-check-circle-fill me-2 text-white"></i>Solicitud generada correctamente');
                     $("#btnSolicitarRefaccion").prop("disabled", false);
 
+                    AlertManager.mostrar('Solicitud generada correctamente', 'info', "alertRefaccionContainer");
+
                     // Limpiar formulario y tabla
                     $("#formSolicitarRefaccion")[0].reset();
                     $("#formSolicitarRefaccion").removeClass("was-validated");
@@ -1210,6 +1212,7 @@ class MantenimientoManager {
                         $("#btnSolicitarRefaccion").html('<i class="bi bi-save me-1"></i>Guardar');
                         $("#solicitarRefaccionModal").modal('hide');
                     }, 3000);
+
 
                 } else {
                     $("#btnSolicitarRefaccion").html('<i class="bi bi-save me-1"></i>Guardar');
