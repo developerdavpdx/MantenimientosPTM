@@ -355,6 +355,8 @@ class SolicitudRefaccionesApp {
     }
 
     _guardarVale(e) {
+        e.preventDefault();
+
         const $btn = $(e.currentTarget);
         $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
 
@@ -368,29 +370,45 @@ class SolicitudRefaccionesApp {
         const entrega = $("#firmaAlmacen").val();
 
         if (!solicitante || !numEmpleado || !area || !entrega) {
-            AlertManager.mostrar('Por favor complete los campos requeridos.', 'warning');
+            AlertManager.mostrar('Por favor complete los campos requeridos (Número de empleado, Área)', 'warning');
             $btn.prop('disabled', false).html('<i class="bi bi-save me-1"></i>Guardar');
             return;
         }
 
         // Obtener artículos seleccionados
+        let articulosValidos = true;
         const articulosSeleccionados = [];
         $("#bodyArticulosSalida tr").each(function () {
             const $fila = $(this);
             const $chk = $fila.find('.chk-articuloSalida');
             if ($chk.is(':checked')) {
+
+                let Cantidad = $fila.find('.cantidadEditable').val()
+
+                if (!Cantidad || Cantidad == "0") {
+                    AlertManager.mostrar('Por favor especifique una cantidad valida para l@s artículos seleccionados.', 'warning');
+                    $btn.prop('disabled', false).html('<i class="bi bi-save me-1"></i>Guardar');
+                    articulosValidos = false;
+                    return;
+                }
+
                 articulosSeleccionados.push({
                     IdSolicitud: $chk.data('idsolicitud'),
                     ItemCode: $chk.data('codigo'),
-                    Cantidad: $fila.find('.cantidadEditable').val(),
+                    Cantidad: Cantidad,
                     Departamento: $fila.find('.departamento').val(),
                     Proceso: $fila.find('.proceso').val(),
                     Gastos: $fila.find('.gastos').val(),
                     Cedis: $fila.find('.cedis').val(),
                     AddAlm: $chk.data('addalm')
                 });
+
+                articulosValidos = true;
             }
         });
+
+        if (!articulosValidos)
+            return;
 
         if (articulosSeleccionados.length === 0) {
             AlertManager.mostrar('Seleccione al menos un artículo para continuar.', 'warning');
@@ -668,6 +686,32 @@ class SolicitudManager {
                 this.appPrincipal.gestionArticulosMP.ocultarSugerencias();
             }
         });
+        //Validacion de cantidades en salidas
+        $(document).on('input', '.cantidadEditable', function () {
+
+            const $input = $(this);
+
+            clearTimeout($input.data('timer'));
+
+            const timer = setTimeout(() => {
+
+                const cantidad = parseInt($input.val()) || 0;
+                const maximo = parseInt($input.attr('max')) || 0;
+
+                if (cantidad > maximo) {
+
+                    $input.val(maximo);
+
+                    AlertManager.mostrar(
+                        `La cantidad máxima permitida es ${maximo} de acuerdo al nivel de stock actual`,
+                        'warning'
+                    );
+                }
+
+            }, 1000);
+
+            $input.data('timer', timer);
+        });
     }
 
     // ========================================
@@ -906,8 +950,9 @@ class SolicitudManager {
 
         const refaccionData = {
             ID_SOLICITUD: this.IdSolicitudR,
-            REFACCION_SOLICITADA: articulos[0].CodigoArticulo,
+            REFACCIONSOLICITADA: articulos[0].CodigoArticulo,
             CANTIDAD: cantidad,
+            ORDENTRABAJO: this.OrdenTrabajo,
             USUARIOATIENDE: this.datos_usuario[0].EMAIL
         };
 
@@ -932,7 +977,7 @@ class SolicitudManager {
 
                 const refaccionData = {
                     ID_SOLICITUD: this.IdSolicitudR,
-                    REFACCION_SOLICITADA: null,
+                    REFACCIONSOLICITADA: null,
                     CANTIDAD: null,
                     ESTATUS: 'ELIMINADA',
                     ORDENTRABAJO: this.OrdenTrabajo,
@@ -1144,7 +1189,7 @@ class SolicitudManager {
                 </td>
                 <td class="align-middle">${nombreMostrar}</td>
                 <td class="text-center align-middle">
-                    <input type="number" min="1" max="${cantidadDisponible}"
+                    <input type="number" min="1" max="${art.STOCK}"
                            class="form-control form-control-sm text-center fw-bold cantidadEditable"
                            value="${cantidadDisponible}"
                            ${isAtendida ? 'readonly' : ''}>
