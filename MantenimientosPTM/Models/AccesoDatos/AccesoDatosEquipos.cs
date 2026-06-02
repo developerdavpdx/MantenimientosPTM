@@ -344,6 +344,11 @@ namespace MantenimientosPTM
             [DefaultValue("")]
             public string PeriodicidadMantenimiento { get; set; }
 
+            // Periodicidad de mantenimiento
+            [JsonProperty("ID_PERIODICIDAD_MANTENIMIENTO", DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string IdPeriodicidadMantenimiento { get; set; }
+
             // Día de inicio de mantenimiento
             [JsonProperty("DIA_INICIO_MANT", DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
