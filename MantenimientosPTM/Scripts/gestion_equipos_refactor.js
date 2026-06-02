@@ -877,6 +877,7 @@ class EquipoManager {
 
                     $(row).data('periodicidad', {
                         tipo: data.PeriodicidadMantenimiento,
+                        id: data.IdPeriodicidadMantenimiento,
                         inicio: data.DiaInicioMant,
                         fin: data.DiaFinMant,
                         fecha: data.FechaInicioMant
@@ -980,7 +981,7 @@ class EquipoManager {
     cargarPeriodicidad(periodicidadData) {
         if (!periodicidadData || !periodicidadData.tipo) return;
 
-        const periodicidadTipo = periodicidadData.tipo.toLowerCase();
+        const periodicidadTipo = periodicidadData.id.toLowerCase();
 
         // Seleccionar el tipo de periodicidad
         $('#PeriodicidadMantenimiento').val(periodicidadTipo).trigger('change');
