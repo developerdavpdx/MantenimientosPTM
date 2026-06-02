@@ -628,7 +628,7 @@ namespace MantenimientosPTM.Controllers
         public JsonResult GuardarTiemposMuertosCorrugado()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            List<AccesoDatosProduccion.TiemposMuertosProduccionCorrugado> RequestData;
+            List<TiemposMuertosProduccionCorrugado> RequestData;
 
             try
             {
@@ -641,7 +641,7 @@ namespace MantenimientosPTM.Controllers
                     if (string.IsNullOrEmpty(jsonData))
                         throw new Exception("No se recibió información.");
 
-                    RequestData = JsonConvert.DeserializeObject<List<AccesoDatosProduccion.TiemposMuertosProduccionCorrugado>>(jsonData);
+                    RequestData = JsonConvert.DeserializeObject<List<TiemposMuertosProduccionCorrugado>>(jsonData);
                 }
 
                 foreach (var registro in RequestData)

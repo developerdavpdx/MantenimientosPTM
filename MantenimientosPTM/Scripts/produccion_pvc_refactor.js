@@ -104,9 +104,7 @@ class GestionProduccionPVC {
         try {
 
             $("#tablaProduccion").addClass("d-none");
-            $("#cardsPlaneacionGrid")
-                .empty()
-                .append(Array(5).fill('<div class="skeleton-card"></div>').join(''));
+            GlobalUtil.mostrarLoader(true);
 
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetTiemposMuertosPVC`,
@@ -146,7 +144,7 @@ class GestionProduccionPVC {
         } finally {
 
             setTimeout(() => {
-                $('#cardsPlaneacionGrid').html('');
+                GlobalUtil.mostrarLoader(false);
                 $("#tablaProduccion").removeClass("d-none");
             }, 1000);
 
@@ -1193,11 +1191,15 @@ class GestionProduccionPVC {
 
                 if (response.Status === "SI") {
 
-                    $("#btnGuardarCambios").html('<i class="bi bi-check-circle-fill me-2 text-white"></i>Datos guardados correctamente');
-                    $("#btnGuardarCambios").prop("disabled", false);
+
+                    AlertManager.mostrar(
+                        "Datos guardados correctamente",
+                        "success"
+                    );
 
                     setTimeout(function () {
                         $("#btnGuardarCambios").html('<i class="bi bi-save me-1"></i>Guardar');
+                        $("#btnGuardarCambios").prop("disabled", false);
                     }, 3000);
 
                     this.cambiosPendientes = [];
@@ -1287,7 +1289,8 @@ class GestionProduccionPVC {
                     TIEMPO_DISPONIBLE: node.data.TiempoDisponible || 0,
                     TIEMPO_PRODUCTIVO: node.data.TiempoProductivo || 0,
 
-                    USUARIO: this.datos_usuario[0].EMAIL
+                    USUARIO: this.datos_usuario[0].EMAIL,
+                    PLANTA:this.datos_usuario[0].PLANTA
                 });
 
             }
@@ -1603,7 +1606,7 @@ class GestionProduccionPVC {
 
         try {
 
-            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA);
+            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA,null,1);
 
             this.listaLineas = lineas;
 
@@ -1744,7 +1747,7 @@ class ArticuloAutocompleteEditor {
                 const articulos = await this.gestionArticulos.obtenerArticulos(
                     query,
                     this.datos_usuario[0].EMAIL,
-                    0
+                    110
                 );
 
                 this.mostrarSugerencias(articulos);

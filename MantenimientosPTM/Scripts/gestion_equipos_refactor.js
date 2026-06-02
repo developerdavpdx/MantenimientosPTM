@@ -1031,9 +1031,10 @@ class EquipoManager {
     abrirModalAgregarEquipo(e) {
         e.preventDefault();
         $('#modalEquipoTitulo').text('Agregar Nuevo Equipo');
+        $("#btnGuardarEquipo").html(`<i class="bi bi-floppy-fill me-1"></i>Guardar`);
         $('#formEquipo')[0].reset();
         ValidationManager.limpiarValidacion('#formEquipo'); // AGREGAR ESTA LÍNEA
-        $('#equipoId').val('');
+        $('#IdEquipo').val('');
         $('#Planta').val(`${this.PLANTA}`);
         var fechaActual = new Date().toISOString().split('T')[0];
         $("#FechaInicioMant").attr("min", fechaActual);

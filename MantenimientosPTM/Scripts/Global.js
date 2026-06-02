@@ -1348,14 +1348,14 @@ class EquiposUtil {
         });
     }
 
-    static obtenerLineas(Planta) {
+    static obtenerLineas(Planta,Area,Produccion) {
 
         return new Promise((resolve, reject) => {
 
             $.ajax({
                 url: `/${GlobalUtil.URLBaseEquipos}/GetLineasPorPlanta`,
                 type: 'GET',
-                data: { "Planta": Planta },
+                data: { "Planta": Planta, "Area": Area, "Produccion": Produccion },
                 headers: {
                     'Content-Type': 'application/json'
                 },
