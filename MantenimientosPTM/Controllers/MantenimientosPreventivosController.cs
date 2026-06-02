@@ -567,8 +567,9 @@ namespace MantenimientosPTM.Controllers
                 var parametrosOT = new
                 {
                     P_ID_MANTENIMIENTO = RequestData.IdMantenimiento,
+                    ORDENTRABAJO = (string)null,
                     P_ESTATUS = RequestData.Estatus,
-                    P_USUARIO_ACTUALIZA = RequestData.UsuarioSolicita
+                    P_USUARIOACTUALIZA = RequestData.UsuarioSolicita
                 };
 
                 var allparametersOT = Logic.GlobalCommands.ConvertToHanaParameters(parametrosOT, false, null);

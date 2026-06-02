@@ -705,7 +705,7 @@ namespace MantenimientosPTM.Controllers
                     var OTparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, true, null);
                     var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(LogicMP.AD.GCActualizaMP, OTparameters);
 
-                    if (ActualizaOT.JsonResult.Contains("ERROR"))
+                    if (ActualizaOT.JsonResult.Contains("ERROR") || ActualizaOT.JsonResult.Contains("Error"))
                     {
                         jsonResponse.Status = "ERROR";
                         jsonResponse.Message = "No es posible actualizar la solicitud de refacción: " + ActualizaOT.JsonResult;
