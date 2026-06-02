@@ -1,11 +1,14 @@
 using log4net;
+using MantenimientosPTM.Hubs;
 using MantenimientosPTM.Service.Email.Implementations;
 using MantenimientosPTM.Service.Email.Models;
+using Microsoft.AspNet.SignalR;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Sap.Data.Hana;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -13,18 +16,17 @@ using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Web;
-using System.Web.Hosting;
 using System.Web.Mvc;
 using System.Web.UI.WebControls;
 using static MantenimientosPTM.AccesoDatosAlmacen;
-using static MantenimientosPTM.AccesoDatosPlaneacion;
 
 namespace MantenimientosPTM.Controllers
 {
     public class AlmacenController : Controller
     {
         readonly LogicaAlmacen Logic = new LogicaAlmacen();
-
+        readonly LogicaMantenimientosPreventivos LogicMP = new LogicaMantenimientosPreventivos();
+        readonly LogicaMantenimientosCorrectivos LogicMC = new LogicaMantenimientosCorrectivos();
         private static readonly ILog log = LogManager.GetLogger("AlmacenSolicitudCompra");
 
 
@@ -42,16 +44,13 @@ namespace MantenimientosPTM.Controllers
         {
             return View();
         }
-
         public ActionResult ReporteStock()
         {
             return View();
         }
-
         #endregion
 
         #region Endpoints
-
         [HttpGet]
         public JsonResult BuscarProveedor(string query, string Usuario)
         {
@@ -654,6 +653,82 @@ namespace MantenimientosPTM.Controllers
             {
                 jsonResponse.Status = "ERROR";
                 jsonResponse.Message = "No fue posible procesar la solicitud: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+        [HttpPost]
+        public JsonResult ActualizarRefaccionOT()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            CambioRefaccion RequestData;
+
+            try
+            {
+                // Leer el cuerpo de la solicitud JSON
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    // Deserializar JSON al modelo con múltiples artículos
+                    RequestData = JsonConvert.DeserializeObject<CambioRefaccion>(jsonData);
+                }
+
+                // Convertir modelo a parámetros HANA
+                var parameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
+
+                // Ejecutar stored procedure para insertar artículo
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaSolicitudRefaccion, parameters);
+
+                if (resultHana.JsonResult.Contains("ERROR"))
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "No es posible actualizar la solicitud de refacción: " + resultHana.JsonResult;
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+                //Solo si ya estan eliminadas todas las refacciones de la solicitud
+                JArray EstatusRefaccion = JArray.Parse(resultHana.JsonResult);
+
+                if (EstatusRefaccion[0]["ESTATUS_OT"].ToString() == "COMPLETADA")
+                {
+                    var parametrosFinOT = new
+                    {
+                        ID_MANTENIMIENTO = (int?)null,
+                        ORDENTRABAJO = RequestData.OrdenTrabajo,
+                        ESTATUS = 2,
+                        USUARIOACTUALIZA = RequestData.UsuarioAtiende
+                    };
+
+                    var OTparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, true, null);
+                    var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(LogicMP.AD.GCActualizaMP, OTparameters);
+
+                    if (ActualizaOT.JsonResult.Contains("ERROR") || ActualizaOT.JsonResult.Contains("Error"))
+                    {
+                        jsonResponse.Status = "ERROR";
+                        jsonResponse.Message = "No es posible actualizar la solicitud de refacción: " + ActualizaOT.JsonResult;
+                        return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                    }
+                }
+
+                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = "Refaccción actualizada con exito";
+                jsonResponse.Data = resultHana.JsonResult;
+
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible actualizar la refacción: " + ex.Message;
                 jsonResponse.Data = string.Empty;
                 return Json(jsonResponse);
             }
@@ -1306,7 +1381,7 @@ namespace MantenimientosPTM.Controllers
             try
             {
                 // ✅ Leer body JSON
-                string body = await new System.IO.StreamReader(Request.InputStream).ReadToEndAsync();
+                string body = await new StreamReader(Request.InputStream).ReadToEndAsync();
                 var payload = JsonConvert.DeserializeObject<AccesoDatosAlmacen.SalidasMercanciaRequest>(body);
 
                 if (payload == null)
@@ -1480,7 +1555,13 @@ namespace MantenimientosPTM.Controllers
                     }
                 }
 
-
+                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                if (payload.OrdenTrabajo.Contains("MP"))
+                    context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+                else
+                    context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
 
                 // ✅ Todo OK
                 jsonResponse.Status = "OK";
@@ -1511,21 +1592,48 @@ namespace MantenimientosPTM.Controllers
                 {
                     string baseUrl = Request.Url.GetLeftPart(UriPartial.Authority) + Url.Content("~");
 
-                    // ✅ 1. Obtener emails de destinatarios
-                    var paramsEmails = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                    // ✅ Preparar parámetros para el SP
+                    var parametersEmail = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
-                        { "P_MODULO", ("AuthSolCompra", ParameterDirection.Input, HanaDbType.NVarChar) }
+                        { "P_PLANTA", (paylaod.Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_TIPO", ("SM", ParameterDirection.Input, HanaDbType.NVarChar) }
                     };
-                    var resultEmails = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCGetEmailsEmpleadosXModulo, paramsEmails
+                    // Ejecutar stored procedure de actualización
+                    var resultHanaEmails = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCGetUsuariosXPlanta,
+                        parametersEmail
                     );
 
-                    List<string> emails = new List<string>();
-                    if (!resultEmails.JsonResult.ToString().Contains("ERROR") && resultEmails.JsonResult.ToString() != "[]")
+                    if (resultHanaEmails.JsonResult.Contains("ERROR") || resultHanaEmails.JsonResult.Contains("Error"))
                     {
-                        var emailsData = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultEmails.JsonResult.ToString());
-                        emails = emailsData.Select(e => e["EMAIL"].ToString()).ToList();
+                        jsonResponse.Status = "SI";
+                        jsonResponse.Message = $"La salida de mercancía fue generada correctamente, pero la notificación no pudo ser enviada.";
+                        jsonResponse.Data = string.Empty;
+                        return Json(jsonResponse);
                     }
+                    //Correos para notificaciones por cambio de plan
+                    JArray ListaEmails = JArray.Parse(resultHanaEmails.JsonResult);
+                    List<string> emails = new List<string>();
+
+                    foreach (var itemEmail in ListaEmails)
+                    {
+                        emails.Add(itemEmail["Email"].ToString());
+                    }
+
+                    //var paramsEmails = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                    //{
+                    //    { "P_MODULO", ("AuthSolCompra", ParameterDirection.Input, HanaDbType.NVarChar) }
+                    //};
+                    //var resultEmails = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    //    Logic.AD.GCGetEmailsEmpleadosXModulo, paramsEmails
+                    //);
+
+                    //List<string> emails = new List<string>();
+                    //if (!resultEmails.JsonResult.ToString().Contains("ERROR") && resultEmails.JsonResult.ToString() != "[]")
+                    //{
+                    //    var emailsData = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultEmails.JsonResult.ToString());
+                    //    emails = emailsData.Select(e => e["EMAIL"].ToString()).ToList();
+                    //}
 
                     if (emails.Count == 0)
                         throw new Exception("No se encontraron destinatarios para el correo.");
@@ -1768,6 +1876,14 @@ namespace MantenimientosPTM.Controllers
                     if (resultadoUpdateEst.Contains("ERROR") || resultadoUpdateEst.Contains("Error"))
                         log.Warn($"⚠️ Error al actualizar el estatus de la solicitud {articulo.IdSolicitud}: {resultadoUpdateEst}");
                 }
+
+                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                if (payload.OrdenTrabajo.Contains("MP"))
+                    context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+                else
+                    context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
 
                 // ✅ Todo OK
                 jsonResponse.Status = "OK";
@@ -2096,7 +2212,7 @@ namespace MantenimientosPTM.Controllers
                 }
 
 
-                string codPlanta = planta == 1 ? "COR40" : "P2040";
+                string codPlanta = planta == 1 ? ConfigurationManager.AppSettings["AlmacenP1"] : ConfigurationManager.AppSettings["AlmacenP2"];
 
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {

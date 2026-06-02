@@ -44,8 +44,8 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 // Convertir modelo a parámetros HANA
-                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null); // 🔹 true para que agregue P_
-                var excludedParams = new[] { "P_IDEQUIPO" }; // 🔹 Cambié a mayúsculas
+                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null); // true para que agregue P_
+                var excludedParams = new[] { "P_IDEQUIPO" }; // Cambié a mayúsculas
                 var parameters = allparameters
                     .Where(p => !excludedParams.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value);
@@ -610,6 +610,63 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        [HttpGet]
+        public JsonResult GetPeriodicidadesMP()
+        {
+            GlobalCommands.JsonResponseMtto jsonResponse;
+
+            try
+            {
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCConsultarPeriodicidadMP, null);
+
+                if (resultHana.JsonResult == "[]")
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+
+                        Status = "NO",
+                        Message = "No fue posible obtener el listado de periodicidades de mantenimientos, no se encontró información relacionada.",
+                        Data = string.Empty
+                    };
+                }
+                else if (resultHana.JsonResult.Contains("Error"))
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "ERROR",
+                        Message = "No fue posible obtener el listado de periodicidades de mantenimientos: " + resultHana.JsonResult,
+                        Data = string.Empty
+                    };
+                }
+                else
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+
+                        Status = "OK",
+                        Message = "Listado de periodicidades obtenida correctamente.",
+                        Data = resultHana.JsonResult
+                    };
+                }
+
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+
+            }
+            catch (Exception ex)
+            {
+                jsonResponse = new GlobalCommands.JsonResponseMtto()
+                {
+
+                    Status = "ERROR",
+                    Message = "No fue posible obtener el listado de periodicidades de mantenimientos: " + ex.ToString(),
+                    Data = string.Empty
+                };
+
+                return Json(jsonResponse);
+            }
+        }
+
         [HttpPost]
         public JsonResult GetEquipos()
         {
@@ -742,7 +799,7 @@ namespace MantenimientosPTM.Controllers
                 // 🔥 Parámetros para el SP (modo SELECT)
                 var parameters = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
             {
-                // 🔹 Parámetros originales (NULL)
+                // Parámetros originales (NULL)
                 { "P_ID_EQUIPO", (null, ParameterDirection.Input, HanaDbType.Integer) },
                 { "P_NOMBRE", (null, ParameterDirection.Input, HanaDbType.NVarChar) },
                 { "P_PLANTA", (string.IsNullOrEmpty(Planta) ? (object)null : Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
@@ -822,7 +879,7 @@ namespace MantenimientosPTM.Controllers
                 // ✅ Preparar parámetros para el SP
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    // 🔹 Parámetros originales (en NULL)
+                    // Parámetros originales (en NULL)
                     { "P_ID_EQUIPO", (null, ParameterDirection.Input, HanaDbType.Integer) },
                     { "P_NOMBRE", (null, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA", (string.IsNullOrEmpty(Planta) ? (object)null : Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
@@ -870,7 +927,7 @@ namespace MantenimientosPTM.Controllers
             }
         }
         [HttpGet]
-        public JsonResult GetLineasPorPlanta(string PLANTA, string AREA)
+        public JsonResult GetLineasPorPlanta(int? PLANTA, int? AREA,int? PRODUCCION)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
             AccesoDatosEquipos.PlantaSeleccionada RequestData;
@@ -878,9 +935,21 @@ namespace MantenimientosPTM.Controllers
             try
             {
 
+                if (!PLANTA.HasValue)
+                {
+                    return Json(new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "NO",
+                        Message = "Falta seleccionar la planta.",
+                        Data = string.Empty
+                    }, JsonRequestBehavior.AllowGet);
+                }
+
+
                 RequestData = new AccesoDatosEquipos.PlantaSeleccionada();
                 RequestData.Planta = PLANTA;
                 RequestData.Area = AREA;
+                RequestData.Produccion = PRODUCCION;
                 // Convertir modelo a parámetros HANA
                 var parameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
 
@@ -935,7 +1004,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetProcesosPorPlanta(string PLANTA)
+        public JsonResult GetProcesosPorPlanta(int? PLANTA)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
             AccesoDatosEquipos.PlantaSeleccionada RequestData;
@@ -948,7 +1017,7 @@ namespace MantenimientosPTM.Controllers
                 // Convertir modelo a parámetros HANA
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
 
-                var excludedParams = new[] { "P_AREA" }; // 🔹 Cambié a mayúsculas
+                var excludedParams = new[] { "P_AREA","P_PRODUCCION" }; // Cambié a mayúsculas
                 var parameters = allparameters
                     .Where(p => !excludedParams.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value);

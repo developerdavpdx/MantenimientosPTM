@@ -13,6 +13,7 @@ namespace MantenimientosPTM
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
             log4net.Config.XmlConfigurator.Configure(); // ⬅️ inicializa log4net
+            // AutoMapper no inicializado en esta rama
         }
     }
 }

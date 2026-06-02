@@ -107,6 +107,11 @@ namespace MantenimientosPTM
             [DefaultValue(0)]
             public int ID_CATEGORIA_PARO { get; set; }
 
+            // ARTICULO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public string ARTICULO { get; set; }
+
             // DURACION_HRS
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -155,6 +160,10 @@ namespace MantenimientosPTM
             public decimal? DURACION_HRS { get; set; }
             public string COLOR_EVENTO { get; set; }
 
+            // Nuevo: información de artículo
+            public string ARTICULO { get; set; }
+            public string ARTICULO_DESC { get; set; }
+
             // 🆕 Nuevos campos
             public string TIPO_PARO { get; set; }
             public string CATEGORIA { get; set; }
@@ -202,6 +211,39 @@ namespace MantenimientosPTM
             [DefaultValue("")]
             public string TRIP { get; set; }
 
+            // Producción
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string MES { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PESO_MINIMO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal TR_FABRICADOS { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PRODUCCION_NETA_REAL { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PESO_ESTANDAR { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_SOBREPESO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal TOTAL_SCRAP_KG { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_SCRAP { get; set; }
             // Disponibilidad
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]

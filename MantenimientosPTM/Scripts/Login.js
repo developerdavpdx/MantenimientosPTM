@@ -107,11 +107,8 @@ class ValidationManagerLogin {
                         AlertManager.mostrar("No fue posible iniciar sesión, valida tus credenciales.", 'warning');
                         ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
                     }
-                } else if (data.Status === 'NO') {
+                } else { 
                     AlertManager.mostrar(data.Message, 'warning');
-                    ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
-                } else if (data.Status === 'warning') {
-                    AlertManager.mostrar('Error: ' + data.Message, 'warning');
                     ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
                 }
             },

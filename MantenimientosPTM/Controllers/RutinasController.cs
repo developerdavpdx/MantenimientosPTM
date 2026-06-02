@@ -303,7 +303,7 @@ namespace MantenimientosPTM.Controllers
             {
                 string plantaSanitizada = SanitizarNombreDirectorio(planta);
 
-                // 🔹 HTML
+                // HTML
                 string rutaHtml = Server.MapPath($"~/Views/Rutinas/{plantaSanitizada}/Rutina_{idEquipo}.cshtml");
 
                 string html = "<div>No existe rutina</div>";
@@ -320,7 +320,7 @@ namespace MantenimientosPTM.Controllers
                     }
                 }
 
-                // 🔹 IMÁGENES
+                // IMÁGENES
                 string rutaCarpeta = Server.MapPath($"~/ImagenesRutinas/{plantaSanitizada}/Rutina_{idEquipo}");
                 var imagenes = new System.Collections.Generic.List<string>();
 

@@ -80,7 +80,20 @@
                                     <input type="month" class="filtro-input"
                                            id="FiltroMesAnio" name="FiltroMesAnio">
                                 </div>
-
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="form-label-custom" for="FiltroProceso">
+                                        <i class="bi bi-gear"></i> Proceso
+                                    </label>
+                                    <div class="select-wrapper">
+                                        <select class="filtro-input" id="FiltroProceso" name="FiltroProceso">
+                                            <option value="">Selecciona el proceso...</option>
+                                        </select>
+                                        <div class="modal-error-msg">⚠️ Seleccione el proceso.</div>
+                                        <div class="select-loader d-none" id="loader_FiltroProceso">
+                                            <span class="spinner-border spinner-border-sm"></span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <!-- Línea de Producción -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl-2">
                                     <label class="filtro-label" for="FiltroLinea">
@@ -88,7 +101,7 @@
                                     </label>
                                     <div class="select-wrapper">
                                         <select class="filtro-input"
-                                                id="FiltroLinea" name="FiltroLinea">
+                                                id="FiltroLinea" name="FiltroLinea" disabled>
                                             <option value="">Selecciona la línea de producción...</option>
                                         </select>
                                         <div class="select-loader d-none" id="loader_FiltroLinea">
@@ -181,20 +194,6 @@
                         </h6>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label-custom" for="PlanLinea">
-                                    <i class="bi bi-arrow-repeat"></i> Línea de Producción
-                                </label>
-                                <div class="select-wrapper">
-                                    <select class="filtro-input" id="PlanLinea" name="PlanLinea" required>
-                                        <option value="">Todas las líneas...</option>
-                                    </select>
-                                    <div class="modal-error-msg">⚠️ Seleccione la línea de producción.</div>
-                                    <div class="select-loader d-none" id="loader_PlanLinea">
-                                        <span class="spinner-border spinner-border-sm"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
                                 <label class="form-label-custom" for="PlanProceso">
                                     <i class="bi bi-gear"></i> Proceso
                                 </label>
@@ -204,6 +203,20 @@
                                     </select>
                                     <div class="modal-error-msg">⚠️ Seleccione el proceso.</div>
                                     <div class="select-loader d-none" id="loader_PlanProceso">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="PlanLinea">
+                                    <i class="bi bi-arrow-repeat"></i> Línea de Producción
+                                </label>
+                                <div class="select-wrapper">
+                                    <select class="filtro-input" id="PlanLinea" name="PlanLinea" required>
+                                        <option value="">Todas las líneas...</option>
+                                    </select>
+                                    <div class="modal-error-msg">⚠️ Seleccione la línea de producción.</div>
+                                    <div class="select-loader d-none" id="loader_PlanLinea">
                                         <span class="spinner-border spinner-border-sm"></span>
                                     </div>
                                 </div>
@@ -244,10 +257,16 @@
                                 <div class="modal-error-msg">⚠️ Por favor ingrese la descripción del artículo.</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label-custom" for="PlanCap">
-                                    <i class="bi bi-speedometer2"></i> Capacidad
+                                <label class="form-label-custom" for="PlanCapPiezas">
+                                    <i class="bi bi-speedometer2"></i> Capacidad Piezas X Dia
                                 </label>
-                                <input class="form-control-custom" type="text" id="PlanCap" name="PlanCap" readonly>
+                                <input class="form-control-custom" type="text" id="PlanCapPiezas" name="PlanCapPiezas" readonly data-bs-toggle="tooltip" data-bs-placement="top" title="🧩 Capacidad de piezas por día">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="PlanCapKilos">
+                                    <i class="bi bi-speedometer2"></i> Capacidad Kilos X Dia
+                                </label>
+                                <input class="form-control-custom" type="text" id="PlanCapKilos" name="PlanCapKilos" readonly data-bs-toggle="tooltip" data-bs-placement="top" title="⚖️ Capacidad de kilos por día">
                             </div>
                         </div>
                     </div>
@@ -295,10 +314,18 @@
                         </h6>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label-custom" for="ProduccionTeorica">
-                                    <i class="bi bi-calculator"></i> Producción Teórica
+                                <label class="form-label-custom" for="ProduccionTeoricaPzs">
+                                    <i class="bi bi-calculator"></i> Producción Teórica PZS
                                 </label>
-                                <input type="text" class="form-control-custom" id="ProduccionTeorica" name="ProduccionTeorica"
+                                <input type="text" class="form-control-custom" id="ProduccionTeoricaPzs" name="ProduccionTeoricaPzs"
+                                       placeholder="Ingrese producción teórica" required autocomplete="off" readonly>
+                                <div class="modal-error-msg">⚠️ Indique la producción teórica.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="ProduccionTeoricaKgs">
+                                    <i class="bi bi-calculator"></i> Producción Teórica KGS
+                                </label>
+                                <input type="text" class="form-control-custom" id="ProduccionTeoricaKgs" name="ProduccionTeoricaKgs"
                                        placeholder="Ingrese producción teórica" required autocomplete="off" readonly>
                                 <div class="modal-error-msg">⚠️ Indique la producción teórica.</div>
                             </div>
@@ -307,7 +334,7 @@
                                     <i class="bi bi-check2-circle"></i> Producción Real
                                 </label>
                                 <input type="text" class="form-control-custom" id="ProduccionReal" name="ProduccionReal"
-                                       placeholder="Ingrese producción real"  autocomplete="off">
+                                       placeholder="Ingrese producción real" autocomplete="off" readonly>
                                 <div class="modal-error-msg">⚠️ Indique la producción real.</div>
                             </div>
                             <div class="col-12">

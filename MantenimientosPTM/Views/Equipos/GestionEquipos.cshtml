@@ -11,7 +11,7 @@
                     <!-- Título -->
                     <div class="col-12 col-lg-4">
                         <h4 class="mb-0 text-color-logo">
-                            <i class="bi bi-gear-wide-connected me-2"></i>Equipos De Producción
+                            <i class="bi bi-gear-wide-connected me-2"></i>Equipos De Mantenimiento
                         </h4>
                     </div>
                     <!-- Botones -->
@@ -43,21 +43,6 @@
 
                     <div class="row g-2 align-items-end">
 
-                        <!-- Línea de Producción -->
-                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-                            <label class="filtro-label" for="FiltroLinea">
-                                <i class="bi bi-diagram-3-fill"></i> Línea de Producción
-                            </label>
-                            <div class="select-wrapper">
-                                <select class="filtro-input" id="FiltroLinea" name="FiltroLinea">
-                                    <option value="">Todas las líneas...</option>
-                                </select>
-                                <div class="select-loader d-none" id="loader_FiltroLinea">
-                                    <span class="spinner-border spinner-border-sm"></span>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Proceso -->
                         <div class="col-12 col-sm-6 col-md-4 col-xl-2">
                             <label class="filtro-label" for="FiltroProceso">
@@ -72,6 +57,22 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Línea de Producción -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroLinea">
+                                <i class="bi bi-diagram-3-fill"></i> Línea de Producción
+                            </label>
+                            <div class="select-wrapper">
+                                <select class="filtro-input" id="FiltroLinea" name="FiltroLinea" disabled>
+                                    <option value="">Todas las líneas...</option>
+                                </select>
+                                <div class="select-loader d-none" id="loader_FiltroLinea">
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                </div>
+                            </div>
+                        </div>
+
 
                         <!-- Orden de Trabajo -->
                         <div class="col-12 col-sm-6 col-md-4 col-xl-2">
@@ -252,10 +253,15 @@
                                 <label class="form-label-custom" for="LineaProduccion">
                                     <i class="bi bi-arrow-repeat"></i> Línea de Producción
                                 </label>
-                                <select class="form-select-custom" id="LineaProduccion" name="LineaProduccion" required autocomplete="off">
-                                    <option value="">Seleccionar línea...</option>
-                                </select>
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione una línea de producción.</div>
+                                <div class="select-wrapper">
+                                    <select class="filtro-input" id="LineaProduccion" name="LineaProduccion" required disabled autocomplete="off">
+                                        <option value="">Todas las líneas...</option>
+                                    </select>
+                                    <div class="select-loader d-none" id="loader_LineaProduccion">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </div>
+                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione una línea de producción.</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -301,12 +307,13 @@
                                 </label>
                                 <select class="form-select-custom" id="PeriodicidadMantenimiento" name="PeriodicidadMantenimiento" required autocomplete="off">
                                     <option value="">Seleccionar periodicidad...</option>
-                                    <option value="mensual">🔹 Mensual</option>
-                                    <option value="bimestral">🔹 Bimestral</option>
-                                    <option value="trimestral">🔹 Trimestral</option>
-                                    <option value="quinquemestre">🔹 Quinquemestre</option>
-                                    <option value="semestral">🔹 Semestral</option>
-                                    <option value="anual">🔹 Anual</option>
+                                    @*<option value="mensual">Mensual</option>
+                                        <option value="bimestral">Bimestral</option>
+                                        <option value="trimestral">Trimestral</option>
+                                        <option value="cuatrimestral">Cuatrimestral</option>
+                                        <option value="quinquemestre">Quinquemestre</option>
+                                        <option value="semestral">Semestral</option>
+                                        <option value="anual">Anual</option>*@
                                 </select>
                                 <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione la periodicidad.</div>
                             </div>
@@ -491,12 +498,6 @@
 
                     <!-- Información -->
                     <div class="mb-3">
-                        <h6 class="mb-3 pb-2 border-bottom"
-                            style="color: var(--modal-primary); font-weight:700;">
-                            <i class="bi bi-gear-fill me-2"></i>
-                            Información del Tipo
-                        </h6>
-
                         <!-- Tipo de Equipo -->
                         <div class="col-12 mb-3">
                             <label class="form-label-custom" for="NombreTipoEquipo">

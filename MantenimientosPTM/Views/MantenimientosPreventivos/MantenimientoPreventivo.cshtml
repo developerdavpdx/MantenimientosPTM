@@ -93,7 +93,7 @@
                                 <i class="bi bi-diagram-3-fill"></i> Línea de Producción
                             </label>
                             <div class="select-wrapper">
-                                <select class="filtro-input" id="FiltroLinea" name="FiltroLinea">
+                                <select class="filtro-input" id="FiltroLinea" name="FiltroLinea" disabled>
                                     <option value="">Todas las líneas...</option>
                                 </select>
                                 <div class="select-loader d-none" id="loader_FiltroLinea">
@@ -163,7 +163,7 @@
      MODAL SOLICITAR REFACCIÓN PARA ORDEN DE TRABAJO
 ═══════════════════════════════════════════════════ -->
 <div class="modal fade" id="solicitarRefaccionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
 
             <!-- ── Header ── -->
@@ -247,12 +247,13 @@
 
                                     <!-- Tabla de artículos agregados -->
                                     <div class="table-responsive" style="max-height: 250px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
-                                        <table class="table table-sm table-hover table-bordered mb-0 CustomTableResponsive" id="tablaArticulosRefaccionMP">
+                                        <table class="table table-sm table-hover mb-0 CustomTableResponsive" id="tablaArticulosRefaccionMP">
                                             <thead class="table-light text-center position-sticky top-0" style="z-index: 1;">
                                                 <tr>
                                                     <th style="width: 50px;">#</th>
                                                     <th>Código</th>
                                                     <th>Descripción</th>
+                                                    <th>Stock Disponible</th>
                                                     <th style="width: 120px;">Cantidad <span class="text-danger">*</span></th>
                                                     <th style="width: 60px;">Acción</th>
                                                 </tr>
@@ -321,7 +322,7 @@
      MODAL ORDEN DE MANTENIMIENTO
 ══════════════════════════════════════════════ -->
 <div class="modal fade" id="modalOrdenMantenimiento" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
 
             <!-- ── Header ── -->
@@ -596,7 +597,7 @@
                                         <i class="bi bi-hourglass-split"></i> Duración <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" class="form-control-custom" id="DuracionHrs" name="DuracionHrs"
-                                           placeholder="0.0" required autocomplete="off">
+                                           placeholder="0.0" required autocomplete="off" readonly>
                                     <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique la duración del trabajo.</div>
                                 </div>
                             </div>
@@ -619,8 +620,8 @@
                                 <!-- Firma 1: Realizó -->
                                 <div class="col-md-4" id="firmaRealizoContainer">
                                     <div class="card border-primary shadow-sm h-100">
-                                        <div class="card-header bg-primary text-white">
-                                            <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Técnico MTTO</h6>
+                                        <div class="card-header bg_universal_ptm text-white">
+                                            <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i><span id="tecnico_mtto_sign">Técnico MTTO</span></h6>
                                         </div>
                                         <div class="card-body">
                                             <div class="firma-wrapper border border-2 border-primary rounded position-relative mb-3" style="background:#f8f9fa;">
@@ -652,8 +653,8 @@
                                 <!-- Firma 2: Supervisó -->
                                 <div class="col-md-4" id="firmaSupervisoContainer">
                                     <div class="card border-success shadow-sm h-100">
-                                        <div class="card-header bg-success text-white">
-                                            <h6 class="mb-0"><i class="bi bi-eye-fill me-2"></i>Supervisor Producción</h6>
+                                        <div class="card-header bg_universal_ptm text-white">
+                                            <h6 class="mb-0"><i class="bi bi-eye-fill me-2"></i><span id="supervisor_producción_sign">Supervisor Producción</span></h6>
                                         </div>
                                         <div class="card-body">
                                             <div class="firma-wrapper border border-2 border-success rounded position-relative mb-3" style="background:#f8f9fa;">
@@ -685,8 +686,8 @@
                                 <!-- Firma 3: Mantenimiento -->
                                 <div class="col-md-4" id="firmaMantenimientoContainer">
                                     <div class="card border-info shadow-sm h-100">
-                                        <div class="card-header bg-info text-white">
-                                            <h6 class="mb-0"><i class="bi bi-gear-fill me-2"></i>Supervisor Mantenimiento</h6>
+                                        <div class="card-header bg_universal_ptm text-white">
+                                            <h6 class="mb-0"><i class="bi bi-gear-fill me-2"></i><span id="supervisor_mantenimiento_sign">Supervisor Mantenimiento</span></h6>
                                         </div>
                                         <div class="card-body">
                                             <div class="firma-wrapper border border-2 border-info rounded position-relative mb-3" style="background:#f8f9fa;">
@@ -758,6 +759,61 @@
                 </div>
 
             </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     MODAL ACTUALIZACIÓN DE DATOS — MANTENIMIENTOS PREVENTIVOS
+═══════════════════════════════════════════════════ -->
+<div class="modal fade actualizacionDatosModal" id="actualizacionDatosModal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false" >
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Actualización disponible</div>
+                        <div class="modal-subtitle-custom">Mantenimientos preventivos</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Body ── -->
+            <div class="modal-body-custom">
+                <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="alert"
+                     style="border-radius: 8px; font-size: 0.875rem;">
+                    <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
+                    <div>
+                        <strong>Se detectaron cambios</strong> en los datos de mantenimientos preventivos
+                        desde tu última carga.<br>
+                        ¿Deseas recargar la tabla ahora para ver la información actualizada?
+                    </div>
+                </div>
+
+                <p class="text-muted mb-0" style="font-size: 0.8125rem;">
+                    <i class="bi bi-clock me-1"></i>
+                    Los cambios se aplicarán sin perder tu rango de fechas seleccionado.
+                </p>
+            </div>
+
+            <!-- ── Footer ── -->
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal"
+                        id="btnCancelarActualizacion">
+                    <i class="bi bi-x-circle me-1"></i> Ahora no
+                </button>
+                <button type="button" class="btn-modal-guardar" id="btnConfirmarActualizacion">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Sí, recargar
+                </button>
+            </div>
+
         </div>
     </div>
 </div>

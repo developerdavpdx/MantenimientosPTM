@@ -158,9 +158,15 @@ class MantenimientoManager {
         $("#btnGuardarCorrectivo").html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
         $("#btnGuardarCorrectivo").prop("disabled", true);
 
+        let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+
         $.ajax({
             url: `/${this.URLBase}/InsertarSolicitudMC`,
             type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Rol-Usuario': TipoUsuario  // 👈 esto
+            },
             contentType: 'application/json; charset=utf-8',
             data: JSON.stringify(datos),
             dataType: 'json',
@@ -271,28 +277,38 @@ class MantenimientoManager {
 
         // ===== LLENAR EL MODAL CON LOS DATOS DEL CORRECTIVO =====
 
-        // 🔹 Datos de la Orden
+        // Datos de la Orden
         $('#AreaTecnica').val(areaTecnica || '');
         $('#NumeroOrden').val(numeroOrden || '');
-        $('#Solicitante').val(solicitante || '');
-        $('#NominaSolicitante').val(nominaSolicitante || '');
+        $('#SolicitanteReporte').val(solicitante || '');
+        $('#NominaSolicitanteReporte').val(nominaSolicitante || '');
 
-        // 🔹 Clase de Mantenimiento
+        // Clase de Mantenimiento
         $('#ClaseMantenimiento').val(claseMantenimiento || 'Z10');
 
-        // 🔹 Nombre del equipo
+        // Nombre del equipo
         $('#NombreEquipo').val(nombreEquipo || '');
 
-        // 🔹 Descripcion del equipo
+        // Descripcion del equipo
         $('#DescEquipo').val(descripcionEquipo || '');
 
-        // 🔹 Texto Corto (Descripción de la falla)
-        $('#TextoCorto').val(textoCorto || '');
+        // Texto Corto (Descripción de la falla)
+        $('#TextoCortoReporte').val(textoCorto || '');
 
-        // 🔹 Estatus de la Orden
+        // Estatus de la Orden
         $("#EstatusOrden").val(descEstatusOrden || '');
 
-        // 🔹 Fecha y Hora (usar horaApertura que trae ambos)
+        // Mostrar estado de MaquinaDetenida si viene en el data (1/0)
+        if (typeof btn.MaquinaDetenida !== 'undefined') {
+            const md = parseInt(btn.MaquinaDetenida, 10) === 1;
+            $('#MaquinaDetenidaToggle').prop('checked', md);
+            $('#MaquinaDetenidaHidden').val(md ? '1' : '0');
+        } else {
+            $('#MaquinaDetenidaToggle').prop('checked', false);
+            $('#MaquinaDetenidaHidden').val('0');
+        }
+
+        // Fecha y Hora (usar horaApertura que trae ambos)
         if (horaApertura) {
             // horaApertura = "15/12/2025 13:28:02"
             const [fechaParte, horaParte] = horaApertura.split(' ');
@@ -305,72 +321,31 @@ class MantenimientoManager {
             $("#HoraInicio").val(horaParte.substring(0, 5));
         }
 
-        // 🔹 Ubicación Técnica
+        // Ubicación Técnica
         $("#UbicacionTecnica").val(area ? `AREA ${area}` : '');
 
-        // 🔹 Centro de Costos
+        // Centro de Costos
         $("#CentroCostos").val(centrocostos || '');
 
-        // 🔹 Doc PM Calidad
+        // Doc PM Calidad
         $("#NumDocPmCalidad").val(numeroDocPmCalidad || '');
 
-        // 🔹 Línea
+        // Línea
         $("#Linea").val(lineaProduccion || '');
 
-        // 🔹 Tipo de Mantenimiento
+        // Tipo de Mantenimiento
         const tipoMtto = (this.datos_usuario[0].PLANTA == "2") ? "CORRECTIVO" : "Z10";
         $("#TipoMantenimiento").val(tipoMtto);
 
-        // 🔹 Fecha de impresión
+        // Fecha de impresión
         $("#fechaImpresion").text(DateUtils.obtenerFechaHora());
 
-        // 🔹 Guardar IDs para uso posterior
+        // Guardar IDs para uso posterior
         this.ID_SOLICITUD = idSolicitud;
         this.ID_EQUIPO = idEquipo;
         this.ID_MANTENIMIENTO = idMantenimiento;
 
-        // 🔹 Opciones para TECNICO DE MANTENIMIENTO
-        if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
-            $("#EvidenciaOrdenTrabajo").removeClass("d-none");
-            $("#CierreOrdenTrabajo").addClass("d-none");
-        }
-        //if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
-        //    $("#EvidenciaOrdenTrabajo").removeClass("d-none");
-        //    //$("#CierreOrdenTrabajo").removeClass("d-none");
-
-        //    // ✅ Hacer required solo los inputs EXCEPTO los que no se requieren
-        //    $('#EvidenciaOrdenTrabajo input:not(#fileInput)').prop('required', true);
-        //    $('#CierreOrdenTrabajo input:not(#BuscarTecnico)').prop('required', true);
-
-        //    // ✅ Asegurar que estos específicos NO sean required
-        //    $("#BuscarTecnico, #fileInput").prop('required', false);
-
-        //    $("#btnGuardarOT").removeClass("d-none");
-        //    $("#btnExportMantenimientoPDF").addClass("d-none");
-
-        //    // Limpiar preview de imágenes
-        //    $("#previewArea").empty();
-        //    $("#clearAll").hide();
-        //    $("#uploadArea").removeClass("upload-area-disabled");
-        //    $("#uploadInfo").show();
-
-        //    // ✅ HABILITAR UPLOAD LIMPIO
-        //    const uploader = $('#uploadArea').data('imageUploader');
-        //    if (uploader && uploader.enableUpload) {
-        //        uploader.enableUpload();
-        //    }
-        //}
-         
-        if (this.datos_usuario[0].TIPOUSUARIO == "AdminMtto" || this.datos_usuario[0].TIPOUSUARIO == "Administrador") {
-            $("#EvidenciaOrdenTrabajo").addClass("d-none");
-            $("#CierreOrdenTrabajo").addClass("d-none");
-            $('#EvidenciaOrdenTrabajo input').prop('required', false);
-            $('#CierreOrdenTrabajo input').prop('required', false);
-            $("#btnGuardarOT").addClass("d-none");
-            //$("#btnExportMantenimientoPDF").removeClass("d-none");
-        }
-
-        // 🔹 Mostrar modal
+        // Mostrar modal
         $('#modalOrdenMantenimiento').modal('show');
     }
 
@@ -746,8 +721,8 @@ class PrintManagerMantenimiento {
             FechaImpresion: $('#fechaImpresion').text() || new Date().toLocaleString('es-MX'),
             AreaTecnica: $('#AreaTecnica').val() || '',
             NumeroOrden: $('#NumeroOrden').val() || '',
-            Solicitante: $('#Solicitante').val() || '',
-            NominaSolicitante: $('#NominaSolicitante').val() || '',
+            Solicitante: $('#SolicitanteReporte').val() || '',
+            NominaSolicitante: $('#NominaSolicitanteReporte').val() || '',
             EstatusOrden: $('#EstatusOrden').val() || '',
             FechaInicioExtrema: $('#FechaInicioExtrema').val() || '',
             HoraInicio: $('#HoraInicio').val() || '',
@@ -755,7 +730,7 @@ class PrintManagerMantenimiento {
             HoraCierre: $('#HoraCierre').val() || '',
             UbicacionTecnica: $('#UbicacionTecnica').val() || '',
             TipoMantenimiento: $('#TipoMantenimiento').val() || '',
-            TextoCorto: $('#TextoCorto').val() || '',
+            TextoCorto: $('#TextoCortoReporte').val() || '',
             ClaseMantenimiento: $('#ClaseMantenimiento').val() || '',
             NombreEquipo: $('#NombreEquipo').val() || '',
             DescEquipo: $('#DescEquipo').val() || '',

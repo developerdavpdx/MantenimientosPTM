@@ -17,6 +17,864 @@ class ConfirmManager {
 }
 
 // ========================================
+// GESTION DE FIRMAS DIGITALES (centralizada)
+// ========================================
+class GestionFirmas {
+    constructor() {
+        this.signaturePads = {
+            Realizo: null,
+            Superviso: null,
+            Mantenimiento: null
+        };
+
+        this._firmasInicializadas = false;
+        this._inicializandoFirmas = false;
+        this._firmasPendientes = null;
+    }
+
+    inicializar() {
+        console.log('✅ GestionFirmas inicializado correctamente');
+
+        $('#modalOrdenMantenimiento').on('shown.bs.modal', async () => {
+            await this.inicializarFirmas();
+            await this._procesarFirmasPendientes();
+        });
+    }
+
+    async inicializarFirmas() {
+        if (this._firmasInicializadas) return;
+        if (this._inicializandoFirmas) return;
+
+        this._inicializandoFirmas = true;
+
+        const firmas = ['Realizo', 'Superviso', 'Mantenimiento'];
+
+        firmas.forEach(tipo => {
+            const canvas = document.getElementById(`canvas${tipo}`);
+            if (!canvas) {
+                console.warn(`Canvas no encontrado: canvas${tipo}`);
+                return;
+            }
+
+            this.ajustarCanvas(canvas);
+
+            const pad = new SignaturePad(canvas, {
+                backgroundColor: 'rgb(255,255,255)',
+                penColor: 'rgb(0,0,0)',
+                minWidth: 1,
+                maxWidth: 2.5,
+                throttle: 0,
+                minDistance: 0,
+                velocityFilterWeight: 0.7
+            });
+
+            pad.addEventListener('beginStroke', () => {
+                const placeholder = document.getElementById(`placeholder${tipo}`);
+                if (placeholder) placeholder.style.display = 'none';
+            });
+
+            pad.addEventListener('endStroke', () => {
+                this.guardarFirmaEnCampo(tipo);
+            });
+
+            this.signaturePads[tipo] = pad;
+        });
+
+        this._firmasInicializadas = true;
+        this._inicializandoFirmas = false;
+
+        console.log('✅ Firmas inicializadas correctamente');
+    }
+
+    async _ensurePad(tipo) {
+        const key = this._mapTipo(tipo);
+
+        if (!this._firmasInicializadas) {
+            await this.inicializarFirmas();
+        }
+
+        let pad = this.signaturePads[key];
+
+        if (!pad) {
+            console.warn(`Reintentando obtener pad: ${key}`);
+            await new Promise(r => setTimeout(r, 150));
+            pad = this.signaturePads[key];
+        }
+
+        if (!pad) {
+            console.error(`❌ No se pudo inicializar firma: ${key}`);
+            return null;
+        }
+
+        return pad;
+    }
+
+    ajustarCanvas(canvas) {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d").scale(ratio, ratio);
+    }
+
+    limpiarFirma(tipo) {
+        if (this.signaturePads[tipo]) {
+            this.signaturePads[tipo].clear();
+            const placeholder = document.getElementById(`placeholder${tipo}`);
+            if (placeholder) {
+                placeholder.style.display = 'block';
+            }
+            const inputData = document.getElementById(`firma${tipo}Data`);
+            if (inputData) {
+                inputData.value = '';
+            }
+        }
+    }
+
+    deshacerFirma(tipo) {
+        if (this.signaturePads[tipo]) {
+            const data = this.signaturePads[tipo].toData();
+            if (data && data.length > 0) {
+                data.pop();
+                this.signaturePads[tipo].fromData(data);
+
+                if (data.length === 0) {
+                    const placeholder = document.getElementById(`placeholder${tipo}`);
+                    if (placeholder) {
+                        placeholder.style.display = 'block';
+                    }
+                }
+
+                this.guardarFirmaEnCampo(tipo);
+            }
+        }
+    }
+
+    validarFirmas(Tipo) {
+        const errores = [];
+
+        switch (Tipo) {
+            case "Realizo":
+                if ($('#firmaRealizoContainer').is(':visible') &&
+                    !$('#firmaRealizoContainer').hasClass('firma-deshabilitada')) {
+                    if (this.signaturePads.Realizo && this.signaturePads.Realizo.isEmpty()) {
+                        errores.push('"Realizó"');
+                    }
+                    if (!$('#nombreRealizo').val().trim()) {
+                        errores.push('Falta el nombre en "Realizó"');
+                    }
+                }
+                break;
+            case "Superviso":
+                if ($('#firmaSupervisoContainer').is(':visible') &&
+                    !$('#firmaSupervisoContainer').hasClass('firma-deshabilitada')) {
+                    if (this.signaturePads.Superviso && this.signaturePads.Superviso.isEmpty()) {
+                        errores.push('"Supervisó"');
+                    }
+                    if (!$('#nombreSuperviso').val().trim()) {
+                        errores.push('Falta el nombre en "Supervisó"');
+                    }
+                }
+                break;
+            case "Mantenimiento":
+                if ($('#firmaMantenimientoContainer').is(':visible') &&
+                    !$('#firmaMantenimientoContainer').hasClass('firma-deshabilitada')) {
+                    if (this.signaturePads.Mantenimiento && this.signaturePads.Mantenimiento.isEmpty()) {
+                        errores.push('"Mantenimiento"');
+                    }
+                    if (!$('#nombreMantenimiento').val().trim()) {
+                        errores.push('Falta el nombre en "Mantenimiento"');
+                    }
+                }
+                break;
+        }
+
+        if (errores.length > 0) {
+            AlertManager.mostrar('Por favor complete las siguientes firmas:\n\n' + errores.join('\n'), 'warning', 'alertOrdenContainer');
+            return false;
+        }
+
+        return true;
+    }
+
+    guardarTodasLasFirmas() {
+        ['Realizo', 'Superviso', 'Mantenimiento'].forEach(tipo => {
+            this.guardarFirmaEnCampo(tipo);
+        });
+    }
+
+    guardarFirmaEnCampo(tipo) {
+        if (this.signaturePads[tipo] && !this.signaturePads[tipo].isEmpty()) {
+            const dataURL = this.signaturePads[tipo].toDataURL('image/png');
+            const inputData = document.getElementById(`firma${tipo}Data`);
+            if (inputData) {
+                inputData.value = dataURL;
+            } else {
+                console.error(`Input no encontrado: firma${tipo}Data`);
+            }
+        } else {
+            const inputData = document.getElementById(`firma${tipo}Data`);
+            if (inputData) {
+                inputData.value = '';
+            }
+        }
+    }
+
+    obtenerTodasLasFirmas() {
+        return {
+            realizo: {
+                firma: $('#firmaRealizoData').val(),
+                nombre: $('#nombreRealizo').val()
+            },
+            superviso: {
+                firma: $('#firmaSupervisoData').val(),
+                nombre: $('#nombreSuperviso').val()
+            },
+            mantenimiento: {
+                firma: $('#firmaMantenimientoData').val(),
+                nombre: $('#nombreMantenimiento').val()
+            }
+        };
+    }
+
+    mostrarFirma(tipo, mostrar = true) {
+        const container = $(`#firma${tipo}Container`);
+        if (container.length) {
+            container.toggle(mostrar);
+        }
+    }
+
+    limpiarTodasLasFirmas() {
+        ['Realizo', 'Superviso', 'Mantenimiento'].forEach(tipo => {
+            this.limpiarFirma(tipo);
+            $(`#nombre${tipo}`).val('');
+        });
+        this._desbloquearFirmas();
+    }
+
+    deshabilitarFirma(tipo, deshabilitar = true) {
+        const container = $(`#firma${tipo}Container`);
+        const canvas = document.getElementById(`canvas${tipo}`);
+        const nombreInput = $(`#nombre${tipo}`);
+
+        if (!container.length || !canvas) return;
+
+        if (deshabilitar) {
+            if (this.signaturePads[tipo]) {
+                this.signaturePads[tipo].off();
+            }
+            $(canvas).css({ 'cursor': 'not-allowed', 'opacity': '0.5', 'pointer-events': 'none' });
+            nombreInput.prop('disabled', true);
+            container.find('button').prop('disabled', true).css('opacity', '0.5');
+            container.addClass('firma-deshabilitada');
+            container.removeClass('firma-readonly');
+        } else {
+            if (this.signaturePads[tipo]) {
+                this.signaturePads[tipo].on();
+            }
+            $(canvas).css({ 'cursor': 'crosshair', 'opacity': '1', 'pointer-events': 'auto' });
+            nombreInput.prop('disabled', false);
+            container.find('button').prop('disabled', false).css('opacity', '1');
+            container.removeClass('firma-deshabilitada');
+            container.find('.badge-readonly').remove();
+        }
+    }
+
+    deshabilitarFirmas(tiposArray) {
+        tiposArray.forEach(tipo => this.deshabilitarFirma(tipo, true));
+    }
+
+    async _cargarFirmaFromDB(tipo, ruta, nombre) {
+        if (!ruta) return;
+
+        const key = this._mapTipo(tipo);
+        const pad = await this._ensurePad(key);
+        if (!pad) return;
+
+        const canvas = pad.canvas;
+        const ctx = canvas.getContext("2d");
+
+        pad.clear();
+
+        await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve();
+            };
+            img.onerror = () => { console.warn("Error cargando firma:", ruta); resolve(); };
+            img.src = ruta;
+        });
+
+        $(`#nombre${key}`).val(nombre || '');
+        $(`#placeholder${key}`).hide();
+        this._bloquearFirma(key);
+    }
+
+    _bloquearFirma(tipo) {
+        const key = this._mapTipo(tipo);
+        const pad = this.signaturePads[key];
+        if (pad && pad.off) pad.off();
+
+        const container = $(`#firma${key}Container`);
+        const canvas = document.getElementById(`canvas${key}`);
+        const nombreInput = $(`#nombre${key}`);
+
+        container.find('button').hide();
+        nombreInput.prop('readonly', true);
+        if (canvas) $(canvas).css({ 'pointer-events': 'none', 'cursor': 'default', 'opacity': '1' });
+        $(`#placeholder${key}`).hide();
+        container.addClass('firma-readonly');
+        container.removeClass('firma-deshabilitada');
+    }
+
+    _desbloquearFirmas() {
+        const tipos = ['Realizo', 'Superviso', 'Mantenimiento'];
+        tipos.forEach(tipo => {
+            const key = this._mapTipo(tipo);
+            const pad = this.signaturePads[key];
+            const container = $(`#firma${key}Container`);
+            const canvas = document.getElementById(`canvas${key}`);
+            const nombreInput = $(`#nombre${key}`);
+
+            container.find('button').show();
+            nombreInput.prop('readonly', false);
+            if (canvas) $(canvas).css({ 'pointer-events': 'auto', 'cursor': 'crosshair', 'opacity': '1' });
+            if (pad && pad.on) pad.on();
+            container.removeClass('firma-readonly');
+            if (pad && pad.isEmpty && pad.isEmpty()) $(`#placeholder${key}`).show();
+        });
+    }
+
+    async queueFirma(tipo, ruta, nombre) {
+        if (!tipo) return;
+        if (!ruta) return;
+        if (this._firmasInicializadas) {
+            await this._cargarFirmaFromDB(tipo, ruta, nombre);
+            return;
+        }
+        if (!this._firmasPendientes) this._firmasPendientes = [];
+        const existe = this._firmasPendientes.some(f => f.tipo === tipo);
+        if (existe) return;
+        this._firmasPendientes.push({ tipo, ruta, nombre });
+    }
+
+    async _procesarFirmasPendientes() {
+        if (!this._firmasPendientes || this._firmasPendientes.length === 0) return;
+        console.log('🖋️ Procesando firmas pendientes...');
+        for (const f of this._firmasPendientes) {
+            await this._cargarFirmaFromDB(f.tipo, f.ruta, f.nombre);
+        }
+        this._firmasPendientes = null;
+    }
+
+    _cap(txt) { return txt.charAt(0).toUpperCase() + txt.slice(1); }
+
+    _mapTipo(tipo) {
+        switch (tipo) {
+            case 'realizo': return 'Realizo';
+            case 'superviso': return 'Superviso';
+            case 'mantenimiento': return 'Mantenimiento';
+            default: return tipo;
+        }
+    }
+}
+
+// ========================================
+// GESTION TECNICOS (centralizada)
+// ========================================
+class GestionTecnicos {
+    constructor(URLBase) {
+        this.tecnicosAsignados = [];
+        this.tecnicosDisponibles = [];
+        this.URLBase = URLBase;
+        this.foundtecnicos = false;
+    }
+
+    inicializar() {
+        console.log('✅ GestionTecnicos inicializado correctamente');
+    }
+
+    async buscarTecnicos(query) {
+        try {
+            const response = await $.ajax({
+                url: `/${this.URLBase}/BuscarEmpleados`,
+                method: 'GET',
+                data: { query: query },
+                dataType: 'json'
+            });
+
+            this.mostrarSugerencias(response);
+        } catch (error) {
+            AlertManager.mostrar('No es posible mostrar la listá de técnicos: ' + error, 'warning');
+        }
+    }
+
+    mostrarSugerencias(tecnicos) {
+        const container = $('#sugerenciasTecnicos');
+        container.empty();
+
+        if (!tecnicos || tecnicos.length === 0) {
+            container.html(`
+            <div class="sugerencia-item text-muted">
+                <i class="bi bi-exclamation-circle"></i> No se encontraron técnicos
+            </div>
+        `);
+            this.foundtecnicos = false;
+        } else {
+            tecnicos.forEach(tecnico => {
+                const item = $(`
+                    <div class="sugerencia-item" data-nomina="${tecnico.NOMINA}">
+                        <div class="sugerencia-nomina">📛 #${tecnico.NOMINA}</div>
+                        <div class="sugerencia-nombre">👷 ${tecnico.NOMBRE_COMPLETO}</div>
+                        <div class="sugerencia-puesto">🏭 ${tecnico.DEPARTAMENTO || 'N/A'}</div>
+                    </div>
+                `);
+
+                item.on('click', () => {
+                    this.agregarTecnico({
+                        nomina: tecnico.NOMINA,
+                        nombre: tecnico.NOMBRE_COMPLETO,
+                        puesto: tecnico.DEPARTAMENTO || 'Sin departamento'
+                    });
+                    $('#BuscarTecnico').val('');
+                    this.ocultarSugerencias();
+                });
+
+                container.append(item);
+            });
+
+            this.foundtecnicos = true;
+        }
+
+        container.addClass('show');
+    }
+
+    ocultarSugerencias() {
+        $('#sugerenciasTecnicos').removeClass('show').empty();
+    }
+
+    agregarTecnicoDesdeInput() {
+        if (this.foundtecnicos) {
+            const nomina = $('#BuscarTecnico').val().trim();
+            if (!nomina) return;
+
+            const tecnicoEncontrado = {
+                nomina: nomina,
+                nombre: 'Técnico ' + nomina,
+                puesto: 'Técnico'
+            };
+
+            this.agregarTecnico(tecnicoEncontrado);
+            $('#BuscarTecnico').val('');
+            this.ocultarSugerencias();
+        } else {
+            AlertManager.mostrar('No hay ningun técnico valido para agregar', 'info');
+        }
+    }
+
+    agregarTecnico(tecnico) {
+        if (this.tecnicosAsignados.some(t => t.nomina === tecnico.nomina)) {
+            AlertManager.mostrar(`El técnico ${tecnico.nombre} ya está en la lista`, 'warning', 'alertTecnicosContainer');
+            return;
+        }
+        this.tecnicosAsignados.push(tecnico);
+        this.renderizarTecnicos();
+    }
+
+    removerTecnico(nomina) {
+        this.tecnicosAsignados = this.tecnicosAsignados.filter(t => t.nomina !== nomina);
+        this.renderizarTecnicos();
+    }
+
+    renderizarTecnicos() {
+        const container = $('#listaTecnicosAsignados');
+        container.empty();
+
+        if (this.tecnicosAsignados.length === 0) {
+            container.html(`
+                <div class="text-muted small">
+                    <i class="bi bi-info-circle"></i> No hay técnicos asignados
+                </div>
+            `);
+            return;
+        }
+
+        this.tecnicosAsignados.forEach(tecnico => {
+            const badge = $(`
+                <div class="tecnico-badge">
+                    <div class="tecnico-info">
+                        <span class="tecnico-nomina">#${tecnico.nomina}</span>
+                        <span class="tecnico-nombre">${tecnico.nombre}</span>
+                    </div>
+                    <button class="btn-remover-tecnico" data-nomina="${tecnico.nomina}">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            `);
+
+            badge.find('.btn-remover-tecnico').on('click', () => {
+                this.removerTecnico(tecnico.nomina);
+            });
+
+            container.append(badge);
+        });
+    }
+
+    obtenerTecnicosAsignados() {
+        return this.tecnicosAsignados;
+    }
+
+    obtenerNominasComoString() {
+        return this.tecnicosAsignados.map(t => t.nomina).join(',');
+    }
+
+    obtenerNominasComoArray() {
+        return this.tecnicosAsignados.map(t => t.nomina);
+    }
+
+    limpiar() {
+        this.tecnicosAsignados = [];
+        this.renderizarTecnicos();
+        $('#BuscarTecnico').val('');
+        this.ocultarSugerencias();
+    }
+
+    obtenerDuracion(element) {
+        const valor = $(`#${element}`).val().replace(' Hrs', '').trim();
+        return parseFloat(valor) || 0;
+    }
+
+    cargarTecnicosDesdeDB(lista) {
+        $('#BuscarTecnico').val('');
+        this.ocultarSugerencias();
+
+        if (!lista || lista.length === 0) {
+            this.tecnicosAsignados = [];
+            this.renderizarTecnicos();
+            return;
+        }
+
+        this.tecnicosAsignados = lista.map(t => ({
+            nomina: t.Nomina,
+            nombre: t.NombreTecnico,
+            puesto: ''
+        }));
+
+        this.renderizarTecnicos();
+    }
+}
+
+
+// ========================================
+// PRINT MANAGER GENERICO
+// ========================================
+class PrintManagerGeneric {
+    constructor({
+        logoUrl = `${window.location.origin}/Content/Images/LogoPTMWhite.png`,
+        getDatosDelBoton,
+        getDatosExtra, // async(datos, btn, win) => extraData or mutate datos
+        generarContenidoHTML,
+        obtenerEstilos,
+        tituloTemplate = (datos) => 'Documento'
+    } = {}) {
+
+        this.logoUrl = logoUrl;
+        this.getDatosDelBoton = getDatosDelBoton;
+        this.getDatosExtra = getDatosExtra;
+        this.generarContenidoHTML = generarContenidoHTML;
+        this.obtenerEstilos = obtenerEstilos;
+        this.tituloTemplate = tituloTemplate;
+
+        this.printEngine = new PrintEngine();
+    }
+
+    inicializar() {
+        console.log('✅ PrintManagerGeneric inicializado');
+    }
+
+    async prepararImpresionDirecta(btn, win) {
+        const iconoOriginal = btn.html ? btn.html() : null;
+        try {
+            if (iconoOriginal !== null) {
+                btn.html('<span class="spinner-border spinner-border-sm"></span>');
+                btn.prop && btn.prop('disabled', true);
+            }
+
+            // Abrir ventana para impresión y pasarla a callbacks
+            const ventanaImpresion = win || window.open('', '_blank', 'width=900,height=700');
+
+            if (!ventanaImpresion) {
+                if (iconoOriginal !== null) {
+                    btn.html(iconoOriginal);
+                    btn.prop && btn.prop('disabled', false);
+                }
+                alert('El navegador bloqueó la ventana de impresión. Habilita popups.');
+                return;
+            }
+
+            // UX provisional
+            // UX loading chula
+            try {
+                ventanaImpresion.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5}
+        .wrap{text-align:center;padding:2rem}
+        .doc{position:relative;width:72px;height:88px;margin:0 auto 1.5rem}
+        .doc-body{position:absolute;inset:0;background:#fff;border:1.5px solid #ddd;border-radius:4px;padding:10px 8px;overflow:hidden}
+        .doc-corner{position:absolute;top:0;right:0;width:18px;height:18px;background:#f5f5f5;border-left:1.5px solid #ddd;border-bottom:1.5px solid #ddd;border-radius:0 4px 0 4px}
+        .line{height:6px;border-radius:3px;background:#e0e0e0;margin-bottom:7px;opacity:0;animation:appear .4s ease forwards}
+        .scan{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#7F77DD,transparent);animation:scan 1.6s ease-in-out infinite}
+        .label{font-size:15px;font-weight:600;color:#333;margin-bottom:6px}
+        .sub{font-size:13px;color:#888;margin-bottom:1.5rem}
+        .dots{display:flex;gap:6px;justify-content:center}
+        .dot{width:7px;height:7px;border-radius:50%;background:#7F77DD;animation:bounce 1.2s ease-in-out infinite}
+        @keyframes appear{to{opacity:1}}
+        @keyframes scan{0%{top:8px;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:76px;opacity:0}}
+        @keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-5px);opacity:1}}
+    </style></head><body>
+    <div class="wrap">
+        <div class="doc">
+            <div class="doc-body">
+                <div class="line" style="width:100%;animation-delay:.00s"></div>
+                <div class="line" style="width:70%; animation-delay:.15s"></div>
+                <div class="line" style="width:85%; animation-delay:.30s"></div>
+                <div class="line" style="width:55%; animation-delay:.45s"></div>
+                <div class="line" style="width:90%; animation-delay:.60s"></div>
+                <div class="line" style="width:65%; animation-delay:.75s"></div>
+            </div>
+            <div class="doc-corner"></div>
+            <div class="scan"></div>
+        </div>
+        <p class="label">Generando documento</p>
+        <p class="sub">Un momento por favor...</p>
+        <div class="dots">
+            <div class="dot" style="animation-delay:0s"></div>
+            <div class="dot" style="animation-delay:.2s"></div>
+            <div class="dot" style="animation-delay:.4s"></div>
+        </div>
+    </div>
+    </body></html>`);
+            } catch (e) { }
+
+
+            // Pequeño delay para que el loading sea apreciable
+            await new Promise(resolve => setTimeout(resolve, 1200));
+            // Datos base
+            let datos = this.getDatosDelBoton ? this.getDatosDelBoton(btn) : {};
+
+            // Datos extra específicos (ej. rutina o tecnicos)
+            if (this.getDatosExtra) {
+                const extra = await this.getDatosExtra(datos, btn, ventanaImpresion);
+                if (extra && typeof extra === 'object') {
+                    datos = { ...datos, ...extra };
+                }
+            }
+
+            // Generar QR si no existe
+            if (!datos.QR && datos.NumeroOrden) {
+                try {
+                    datos.QR = await GlobalUtil.generarQRCode(datos.NumeroOrden);
+                } catch (e) {
+                    console.warn('No se pudo generar QR:', e);
+                }
+            }
+
+            // Generar HTML y estilos
+            const html = this.generarContenidoHTML ? this.generarContenidoHTML(datos) : '';
+            const estilos = this.obtenerEstilos ? this.obtenerEstilos(datos) : '';
+
+            // Título
+            const titulo = typeof this.tituloTemplate === 'function' ? this.tituloTemplate(datos) : this.tituloTemplate;
+
+            // Llamar motor de impresión
+            this.printEngine.imprimir({ html, estilos, titulo, autoClose: true, win: ventanaImpresion });
+
+        } catch (error) {
+            console.error('Error en preparación de impresión genérica:', error);
+            AlertManager.mostrar('Error al preparar la impresión. Revise la consola.', 'warning');
+        } finally {
+            if (iconoOriginal !== null) {
+                btn.html(iconoOriginal);
+                btn.prop && btn.prop('disabled', false);
+            }
+        }
+    }
+}
+
+// ========================================
+// UTILIDADES PARA EXPORTAR/IMPRIMIR PDFs
+// ========================================
+const PDFUtils = {
+    async exportarOrdenMantenimiento({ btnSelector = '#btnExportMantenimientoPDF', obtenerDatosDocumento, generarContenidoHTML, printEngine, tituloTemplate }) {
+        const $btn = $(btnSelector);
+
+        try {
+            $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Generando...');
+            $btn.prop('disabled', true);
+
+            // Abrir ventana de impresión temprano para evitar popup blocker
+            const ventanaImpresion = window.open('', '_blank', 'width=900,height=700');
+            if (!ventanaImpresion) {
+                $btn.html('<i class="bi bi-x-circle-fill me-2"></i>Error');
+                if (window.AlertManager) {
+                    AlertManager.mostrar('El navegador bloqueó la ventana de impresión. Habilita popups.', 'warning');
+                }
+                return;
+            }
+
+            // Mostrar loading provisional en la ventana
+            try {
+                ventanaImpresion.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5}
+        .wrap{text-align:center;padding:2rem}
+        .doc{position:relative;width:72px;height:88px;margin:0 auto 1.5rem}
+        .doc-body{position:absolute;inset:0;background:#fff;border:1.5px solid #ddd;border-radius:4px;padding:10px 8px;overflow:hidden}
+        .doc-corner{position:absolute;top:0;right:0;width:18px;height:18px;background:#f5f5f5;border-left:1.5px solid #ddd;border-bottom:1.5px solid #ddd;border-radius:0 4px 0 4px}
+        .line{height:6px;border-radius:3px;background:#e0e0e0;margin-bottom:7px;opacity:0;animation:appear .4s ease forwards}
+        .scan{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#7F77DD,transparent);animation:scan 1.6s ease-in-out infinite}
+        .label{font-size:15px;font-weight:600;color:#333;margin-bottom:6px}
+        .sub{font-size:13px;color:#888;margin-bottom:1.5rem}
+        .dots{display:flex;gap:6px;justify-content:center}
+        .dot{width:7px;height:7px;border-radius:50%;background:#7F77DD;animation:bounce 1.2s ease-in-out infinite}
+        @keyframes appear{to{opacity:1}}@keyframes scan{0%{top:8px;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:76px;opacity:0}}@keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-5px);opacity:1}}
+    </style></head><body>
+    <div class="wrap">
+        <div class="doc">
+            <div class="doc-body">
+                <div class="line" style="width:100%;animation-delay:.00s"></div>
+                <div class="line" style="width:70%; animation-delay:.15s"></div>
+                <div class="line" style="width:85%; animation-delay:.30s"></div>
+                <div class="line" style="width:55%; animation-delay:.45s"></div>
+                <div class="line" style="width:90%; animation-delay:.60s"></div>
+                <div class="line" style="width:65%; animation-delay:.75s"></div>
+            </div>
+            <div class="doc-corner"></div>
+            <div class="scan"></div>
+        </div>
+        <p class="label">Generando documento</p>
+        <p class="sub">Un momento por favor...</p>
+        <div class="dots">
+            <div class="dot" style="animation-delay:0s"></div>
+            <div class="dot" style="animation-delay:.2s"></div>
+            <div class="dot" style="animation-delay:.4s"></div>
+        </div>
+    </div>
+    </body></html>`);
+            } catch (e) { }
+
+            // Pequeño delay para que el loading sea apreciable
+            await new Promise(resolve => setTimeout(resolve, 700));
+
+            const datos = obtenerDatosDocumento();
+            const qrBase64 = await GlobalUtil.generarQRCode(datos.NumeroOrden);
+            datos.QR = qrBase64;
+
+            const html = generarContenidoHTML(datos);
+
+            const engine = printEngine || new PrintEngine();
+            engine.imprimir({
+                html,
+                estilos: '',
+                titulo: typeof tituloTemplate === 'function' ? tituloTemplate(datos) : (tituloTemplate || `Orden - ${datos.NumeroOrden}`),
+                autoClose: true,
+                win: ventanaImpresion
+            });
+
+            $btn.html('<i class="bi bi-check-circle-fill me-2 text-white"></i>PDF Generado Correctamente');
+
+        } catch (error) {
+            console.error('❌ Error al imprimir:', error);
+            $btn.html('<i class="bi bi-x-circle-fill me-2"></i>Error');
+            if (window.AlertManager) {
+                AlertManager.mostrar('Error al generar el documento.', 'warning');
+            }
+
+        } finally {
+            setTimeout(() => {
+                $btn.html('<i class="bi bi-file-pdf"></i> Exportar PDF');
+                $btn.prop('disabled', false);
+            }, 2000);
+        }
+    }
+};
+
+
+// ========================================
+// PRINT ENGINE GLOBAL
+// ========================================
+class PrintEngine {
+
+    imprimir({ html, estilos = '', titulo = 'Documento', autoClose = true, win }) {
+
+        // 🔥 usar ventana existente o fallback
+        const printWindow = win || window.open('', '_blank', 'width=900,height=700');
+
+        if (!printWindow) {
+            alert('Popup bloqueado');
+            return;
+        }
+
+        printWindow.document.open();
+        printWindow.document.write(`
+        <html>
+        <head>
+            <title>${titulo}</title>
+            <style>
+                ${this.obtenerBaseStyles()}
+                ${estilos}
+            </style>
+        </head>
+        <body>
+            <div id="printRoot">
+                ${html}
+            </div>
+
+            <script>
+                window.onload = function() {
+                    setTimeout(() => {
+                        window.focus();
+                        window.print();
+                    }, 300);
+                };
+
+                window.onafterprint = function() {
+                    const root = document.getElementById('printRoot');
+                    if (root) root.classList.add('fade-out');
+                    ${autoClose ? `setTimeout(() => window.close(), 2000);` : ''}
+                };
+            </script>
+        </body>
+        </html>
+    `);
+        printWindow.document.close();
+    }
+
+    obtenerBaseStyles() {
+        return `
+            * { box-sizing: border-box; font-family: Arial; }
+
+            body { padding: 10px; }
+
+            @media print {
+                @page { size: A4; margin: 8mm; }
+            }
+
+            #printRoot {
+                transition: opacity 2s ease;
+            }
+
+            .fade-out {
+                opacity: 0;
+            }
+        `;
+    }
+}
+
+// ========================================
 // GLOBAL
 // ========================================
 class GlobalUtil {
@@ -218,6 +1076,140 @@ class GlobalUtil {
         });
     }
 
+    // Exportar planes a Excel — función reutilizable para planeación
+    static async exportPlanesAExcel(data, options = {}) {
+        if (!Array.isArray(data) || data.length === 0) {
+            throw new Error('No hay datos para exportar');
+        }
+
+        const workbook = new ExcelJS.Workbook();
+
+        const worksheet = workbook.addWorksheet('PlanProduccion', {
+            pageSetup: {
+                paperSize: 9,
+                orientation: 'landscape',
+                fitToPage: true,
+                fitToWidth: 1,
+                fitToHeight: 0
+            }
+        });
+
+        worksheet.mergeCells('A1:I1');
+        const headerCell = worksheet.getCell('A1');
+        headerCell.value = '📊 PROGRAMACIÓN PLAN PRODUCCIÓN';
+        headerCell.font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+        headerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0058A1' } };
+        headerCell.alignment = { vertical: 'middle', horizontal: 'center' };
+        worksheet.getRow(1).height = 40;
+
+        worksheet.mergeCells('A2:D2');
+        const infoCell1 = worksheet.getCell('A2');
+        const fechaActual = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+        infoCell1.value = `📅 Fecha de Generación: ${fechaActual}`;
+        infoCell1.font = { name: 'Segoe UI', size: 11, bold: true };
+        infoCell1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3F2FD' } };
+        infoCell1.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+        worksheet.getRow(2).height = 25;
+
+        worksheet.mergeCells('E2:I2');
+        const infoCell2 = worksheet.getCell('E2');
+        infoCell2.value = `📈 Total de Registros: ${data.length}`;
+        infoCell2.font = { name: 'Segoe UI', size: 11, bold: true };
+        infoCell2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+        infoCell2.alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+        worksheet.getRow(3).height = 10;
+
+        const headerRow = worksheet.getRow(4);
+        const headers = [
+            { text: '🏭 Línea de Producción', width: 30 },
+            { text: '📦 Artículo', width: 70 },
+            { text: '⚙️ Capacidades', width: 30 },
+            { text: '🔧 Proceso', width: 30 },
+            { text: '📆 Mes/Año', width: 22 },
+            { text: '📅 Rango Días', width: 26 },
+            { text: '📋 Producción Teórica', width: 24 },
+            { text: '📊 Producción Real', width: 24 },
+            { text: '💬 Comentarios', width: 44 }
+        ];
+
+        headers.forEach((header, index) => {
+            const col = String.fromCharCode(65 + index);
+            worksheet.getColumn(col).width = header.width;
+            const cell = headerRow.getCell(index + 1);
+            cell.value = header.text;
+            cell.font = { name: 'Segoe UI', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'gradient', gradient: 'angle', degree: 90, stops: [{ position: 0, color: { argb: 'FF1976D2' } }, { position: 1, color: { argb: 'FF0058A1' } }] };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+            cell.border = { top: { style: 'medium', color: { argb: 'FF0058A1' } }, left: { style: 'thin', color: { argb: 'FFCCCCCC' } }, bottom: { style: 'medium', color: { argb: 'FF0058A1' } }, right: { style: 'thin', color: { argb: 'FFCCCCCC' } } };
+        });
+        headerRow.height = 35;
+
+        const fmtNum = (n) => (parseFloat(n) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+
+        let currentRow = 5;
+
+        data.forEach((row, index) => {
+            const excelRow = worksheet.getRow(currentRow);
+            const bgColor = index % 2 === 0 ? 'FFFFFFFF' : 'FFF7F9FC';
+            const capacidades = [row.PZSXDIA ? `${fmtNum(row.PZSXDIA)} PZ/día` : null, row.KGSXDIA ? `${fmtNum(row.KGSXDIA)} KG/día` : null].filter(Boolean).join(' | ');
+            const rowData = [row.LINEA_PRODUCCION_DESC || '', `${row.ARTICULO || ''} - ${row.ARTICULO_DESC || ''}`, capacidades, row.PROCESO || '', `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`, `Del ${row.DIA_INICIO_MANT_STR} - Al ${row.DIA_FIN_MANT_STR}`, [row.PRODUCCION_TEORICA_PZS ? `${fmtNum(row.PRODUCCION_TEORICA_PZS)} PZ` : null, row.PRODUCCION_TEORICA_KGS ? `${fmtNum(row.PRODUCCION_TEORICA_KGS)} KG` : null].filter(Boolean).join(' | '), fmtNum(row.PRODUCCION_REAL), row.COMENTARIOS || ''];
+
+            rowData.forEach((value, colIndex) => {
+                const cell = excelRow.getCell(colIndex + 1);
+                cell.value = value;
+                cell.font = { name: 'Segoe UI', size: 10 };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                cell.alignment = { vertical: 'middle', horizontal: colIndex <= 1 ? 'left' : 'center', indent: colIndex <= 1 ? 1 : 0, wrapText: true };
+                cell.border = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+            });
+
+            excelRow.height = 38;
+            currentRow++;
+
+            const updates = (row.BITACORA || []).filter(b => b.BIT_ACCION === 'UPDATE');
+            updates.forEach((bit) => {
+                const histRow = worksheet.getRow(currentRow);
+                const capacidadesHist = [bit.PZSXDIA ? `${fmtNum(bit.PZSXDIA)} PZ/día` : null, bit.KGSXDIA ? `${fmtNum(bit.KGSXDIA)} KG/día` : null].filter(Boolean).join(' | ');
+                const histData = [`↳ HISTORIAL ${row.LINEA_PRODUCCION_DESC || ''}`, bit.NVO_ARTICULO ? `${bit.NVO_ARTICULO} - ${bit.NVO_ARTICULO_DESC || ''}` : '', capacidadesHist, bit.NVO_PROCESO || '', `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`, (bit.NVO_DIA_INICIO_MANT_STR && bit.NVO_DIA_FIN_MANT_STR) ? `Del ${bit.NVO_DIA_INICIO_MANT_STR} - Al ${bit.NVO_DIA_FIN_MANT_STR}` : '', [bit.PRODUCCION_TEORICA_PZS ? `${fmtNum(bit.PRODUCCION_TEORICA_PZS)} PZ` : null, bit.PRODUCCION_TEORICA_KGS ? `${fmtNum(bit.PRODUCCION_TEORICA_KGS)} KG` : null].filter(Boolean).join(' | '), fmtNum(bit.NVO_PRODUCCION_REAL), bit.NVO_COMENTARIOS || ''];
+
+                histData.forEach((value, colIndex) => {
+                    const cell = histRow.getCell(colIndex + 1);
+                    cell.value = value;
+                    cell.font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF546E7A' } };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3F2FD' } };
+                    cell.alignment = { vertical: 'middle', horizontal: colIndex <= 1 ? 'left' : 'center', indent: colIndex <= 1 ? 2 : 0, wrapText: true };
+                    cell.border = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+                });
+
+                histRow.height = 34;
+                currentRow++;
+            });
+        });
+
+        const footerRow = worksheet.getRow(currentRow);
+        worksheet.mergeCells(`A${currentRow}:I${currentRow}`);
+        const summaryCell = worksheet.getCell(`A${currentRow}`);
+        summaryCell.value = `✅ Fin del reporte - ${data.length} planes exportados`;
+        summaryCell.font = { name: 'Segoe UI', size: 11, bold: true, italic: true, color: { argb: 'FF666666' } };
+        summaryCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
+        summaryCell.alignment = { vertical: 'middle', horizontal: 'center' };
+        summaryCell.border = { top: { style: 'medium', color: { argb: 'FF0058A1' } }, bottom: { style: 'medium', color: { argb: 'FF0058A1' } } };
+        footerRow.height = 30;
+
+        worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 4 }];
+        worksheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: 9 } };
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const fecha = new Date().toISOString().split('T')[0];
+        const nombreArchivo = options.fileName || `PlanProduccion_PTM_${fecha}.xlsx`;
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = nombreArchivo;
+        link.click();
+        return true;
+    }
+
 }
 
 // ========================================
@@ -264,7 +1256,7 @@ class ValidationManager {
 // ========================================
 class EquiposUtil {
 
-    static llenarLineas(Planta, Fieldoptiongroup, Fieldfilter) {
+    static llenarLineas(Planta, Area, Produccion, Fieldoptiongroup, Fieldfilter, callback = null) {
 
         const selectElement = $(`#${Fieldoptiongroup}`);
         const FiltroLinea = $(`#${Fieldfilter}`);
@@ -276,7 +1268,7 @@ class EquiposUtil {
         $.ajax({
             url: `/${GlobalUtil.URLBaseEquipos}/GetLineasPorPlanta`,
             type: 'GET',
-            data: { "Planta": Planta },
+            data: { "PLANTA": Planta, "AREA": Area, "PRODUCCION": Produccion },
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -300,7 +1292,8 @@ class EquiposUtil {
                     selectElement.empty();
                     FiltroLinea.empty();
 
-                    selectElement.append('<option value="">Selecciona la linea de producción</option>');
+                    selectElement.append('<option value="">Todas las líneas</option>');
+                    selectElement.prop("disabled", false);
                     FiltroLinea.append('<option value="">Todas las líneas</option>');
 
                     // 🔥 Agrupar por planta
@@ -320,13 +1313,18 @@ class EquiposUtil {
                         const optgroup2 = $(`<optgroup label="Planta ${planta}"></optgroup>`);
 
                         grouped[planta].forEach(linea => {
-                            optgroup1.append(`<option value="${linea.ID_LINEA}">🔹 ${linea.LINEA}</option>`);
-                            optgroup2.append(`<option value="${linea.ID_LINEA}">🔹 ${linea.LINEA}</option>`);
+                            optgroup1.append(`<option value="${linea.ID_LINEA}">${linea.LINEA}</option>`);
+                            optgroup2.append(`<option value="${linea.ID_LINEA}">${linea.LINEA}</option>`);
                         });
 
                         selectElement.append(optgroup1);
                         FiltroLinea.append(optgroup2);
                     });
+
+
+                    if (callback) {
+                        callback();
+                    }
 
                 } else if (data.Status === 'NO') {
 
@@ -401,12 +1399,12 @@ class EquiposUtil {
 
     }
 
-    static llenarLineasCheckbox(Planta, Area, FieldContainer) {
+    static llenarLineasCheckbox(Planta, Area, Produccion, FieldContainer) {
 
         $.ajax({
             url: `/${GlobalUtil.URLBaseEquipos}/GetLineasPorPlanta`,
             type: 'GET',
-            data: { "PLANTA": Planta, "AREA": Area },
+            data: { "PLANTA": Planta, "AREA": Area, "PRODUCCION": Produccion },
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -441,7 +1439,7 @@ class EquiposUtil {
                                         id="linea_${linea.ID_LINEA}">
                     
                                     <label class="form-check-label" for="linea_${linea.ID_LINEA}">
-                                        🔹 ${linea.LINEA}
+                                         ${linea.LINEA}
                                     </label>
                                 </div>
                             </div>
@@ -513,8 +1511,8 @@ class EquiposUtil {
                     FiltroProceso.append('<option value="">Todos los procesos</option>');
 
                     AreasData.forEach(area => {
-                        selectElement.append(`<option value="${area.ID_AREA}">🔹 ${area.AREA}</option>`);
-                        FiltroProceso.append(`<option value="${area.ID_AREA}">🔹 ${area.AREA}</option>`);
+                        selectElement.append(`<option value="${area.ID_AREA}">${area.AREA}</option>`);
+                        FiltroProceso.append(`<option value="${area.ID_AREA}">${area.AREA}</option>`);
                     });
 
                 } else if (data.Status === 'NO') {
@@ -588,8 +1586,8 @@ class EquiposUtil {
 
                     // 🔥 Llenado
                     equiposData.forEach(eq => {
-                        selectElement.append(`<option value="${eq.ID_EQUIPO}">🔹 ${eq.NOMBRE_EQUIPO}</option>`);
-                        filtroEquipo.append(`<option value="${eq.ID_EQUIPO}">🔹 ${eq.NOMBRE_EQUIPO}</option>`);
+                        selectElement.append(`<option value="${eq.ID_EQUIPO}">${eq.NOMBRE_EQUIPO}</option>`);
+                        filtroEquipo.append(`<option value="${eq.ID_EQUIPO}">${eq.NOMBRE_EQUIPO}</option>`);
                     });
 
                 } else if (data.Status === 'NO') {
@@ -665,7 +1663,7 @@ class EquiposUtil {
 
                     // Recorrer los datos y agregar las opciones
                     equiposData.forEach(equipo => {
-                        selectElement.append(`<option value="${equipo.ID_TIPO_EQUIPO}">🔹 ${equipo.DESCRIPCION}</option>`);
+                        selectElement.append(`<option value="${equipo.ID_TIPO_EQUIPO}">${equipo.DESCRIPCION}</option>`);
                     });
                 } else if (data.Status === 'NO') {
                     AlertManager.mostrar(data.Message, 'warning');
@@ -712,7 +1710,7 @@ class EquiposUtil {
                     categoriasData.forEach(categoria => {
                         selectElement.append(`
                         <option value="${categoria.ID_CATEGORIA_PARO}">
-                            🔹 ${categoria.NOMBRE}
+                            ${categoria.NOMBRE}
                         </option>
                     `);
                     });
@@ -793,8 +1791,17 @@ class DateUtils {
     }
 
     static formatearPeriodicidad(periodicidad, diaInicio, diaFin, fechaEspecifica) {
-        periodicidad = this.capitalizarPrimeraLetra(periodicidad);
-        return `${periodicidad} (días ${diaInicio}–${diaFin})`;
+        try {
+            if (!periodicidad || !diaInicio || !diaFin) {
+                return 'N/A';
+            }
+
+            periodicidad = this.capitalizarPrimeraLetra(periodicidad);
+
+            return `${periodicidad} (días ${diaInicio}–${diaFin})`;
+        } catch (error) {
+            return 'N/A';
+        }
     }
 
     static formatearPeriodicidadSimple(diaInicio, diaFin) {
@@ -1331,7 +2338,7 @@ class GestionProveedores {
                 });
                 this._mostrarSugerencias(response);
             } catch (error) {
-                AlertManager.mostrar('🔴 No es posible mostrar la lista de proveedores: ' + error, 'warning');
+                AlertManager.mostrar('No es posible mostrar la lista de proveedores: ' + error, 'warning');
             }
         }, this._debounceDelay);
     }
@@ -1482,7 +2489,7 @@ class GestionCentrosCosto {
                 });
 
                 if (response.Status !== 'OK') {
-                    AlertManager.mostrar('🔴 Error al obtener centros de costo.', 'warning');
+                    AlertManager.mostrar('Error al obtener centros de costo.', 'warning');
                     return;
                 }
 
@@ -1490,7 +2497,7 @@ class GestionCentrosCosto {
                 this._filtrarYMostrar(query);
 
             } catch (error) {
-                AlertManager.mostrar('🔴 No es posible mostrar centros de costo: ' + error, 'warning');
+                AlertManager.mostrar('No es posible mostrar centros de costo: ' + error, 'warning');
             }
         }, this._debounceDelay);
     }
@@ -1611,14 +2618,16 @@ class GestionCentrosCosto {
 
 // ✅ Clase para gestionar artículos con selección automática a tabla
 class GestionArticulos {
-    constructor(includeArt = [], debounceDelay = 300) {
+    constructor(datos_usuario, grupo_articulos) {
         this.articuloSeleccionado = null;
         this.URLBase = "Planeacion";
         this._debounceTimer = null;
-        this._debounceDelay = debounceDelay;
+        this._debounceDelay = 300;
         this._inputBuscar = '#BuscarArticulo';
         this._contenedorSugerencias = '#sugerenciasArticulos'; // ⬅️ faltaba
-        this.includeArt = includeArt;
+        this.includeArt = [];
+        this.grupo_articulos = grupo_articulos;
+        this.datos_usuario = datos_usuario;
     }
 
     inicializar() {
@@ -1626,32 +2635,35 @@ class GestionArticulos {
     }
 
     // ─── Búsqueda con debounce integrado ──────────────────────────────────────
-    buscarArticulos(query, Usuario) {
+    buscarArticulos(query, Usuario, Linea, ValidarCap) {
+        let Planta = this.datos_usuario[0].PLANTA;
+        let GrupoArticulos = this.grupo_articulos;
         clearTimeout(this._debounceTimer);
         this._debounceTimer = setTimeout(async () => {
             try {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario },
+                    data: { query, Usuario, Planta, Linea, GrupoArticulos, ValidarCap },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);
             } catch (error) {
-                AlertManager.mostrar('🔴 No es posible mostrar la lista de artículos: ' + error, 'warning');
+                AlertManager.mostrar('No es posible mostrar la lista de artículos: ' + error, 'warning');
             }
         }, this._debounceDelay);
     }
 
     // ─── Metodo para AcGrid ───────────────────────────────────────────────────────────
-    async obtenerArticulos(query, Usuario) {
-
+    async obtenerArticulos(query, Usuario, ValidarCap) {
+        let Planta = this.datos_usuario[0].PLANTA;
+        let GrupoArticulos = this.grupo_articulos;
+        let Linea = null;
         try {
-
             const response = await $.ajax({
                 url: `/${this.URLBase}/BuscarArticulo`,
                 method: 'GET',
-                data: { query, Usuario },
+                data: { query, Usuario, Planta, Linea, GrupoArticulos, ValidarCap },
                 dataType: 'json'
             });
 
@@ -1673,7 +2685,7 @@ class GestionArticulos {
 
         if (articulos.length === 0) {
             container.html(`
-                <div class="sugerencia-item text-muted">
+                <div class="sugerencia-item-empty text-muted">
                     <i class="bi bi-exclamation-circle"></i> No se encontraron artículos.
                 </div>
             `);
@@ -1713,7 +2725,8 @@ class GestionArticulos {
         this.articuloSeleccionado = articulo;
         $('#CodigoArticulo').val(articulo.CodigoArticulo || '');
         $('#DescripcionArticulo').val(articulo.DescripcionArticulo || '');
-        $('#PlanCap').val(articulo.PzsDia || 0);
+        $('#PlanCapPiezas').val(articulo.PzsDia || 0);
+        $('#PlanCapKilos').val(articulo.KgsDia || 0);
 
         $('#BuscarArticulo').removeClass('is-invalid').addClass('is-valid');
         $('#CodigoArticulo, #DescripcionArticulo').each(function () {
@@ -1754,10 +2767,16 @@ class GestionArticulos {
 // ✅ Clase para gestionar artículos con selección automática a tabla
 class GestionArticulosCustom {
     constructor(
-        inputBuscar, contenedorSugerencias, inputCodigo,
-        inputDescripcion, tbodyId = '#bodyArticulosRefaccionMP',
-        urlBase = 'Mantenimientos', ModalContainer,
-        excludeArt = [], includeArt = []
+        inputBuscar,
+        contenedorSugerencias,
+        inputCodigo,
+        inputDescripcion,
+        tbodyId = '#bodyArticulosRefaccionMP',
+        urlBase = 'Mantenimientos',
+        ModalContainer,
+        GrupoArticulos = 0,
+        MultipleArticulo = true,
+        datos_usuario
     ) {
         this.URLBase = urlBase;
         this._inputBuscar = inputBuscar;
@@ -1769,19 +2788,22 @@ class GestionArticulosCustom {
         this._debounceDelay = 300;
         this._ModalContainer = ModalContainer;
         this.articulosAgregados = [];
-        this.excludeArt = excludeArt;
-        this.includeArt = includeArt;
+        this.GrupoArticulos = GrupoArticulos;
+        this.MultipleArticulo = MultipleArticulo;
+        this.datos_usuario = datos_usuario;
     }
 
-    buscarArticulos(query, Usuario) {
+    buscarArticulos(query, Usuario, ValidarCap) {
         clearTimeout(this._debounceTimer);
+        let Planta = this.datos_usuario[0].PLANTA;
+        let GrupoArticulos = this.GrupoArticulos; //cualquiera diferente de 110
         this._debounceTimer = setTimeout(async () => {
             try {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     // url: `/ProgramaMantenimientos/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario },
+                    data: { query, Usuario, Planta, GrupoArticulos, ValidarCap },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);
@@ -1798,45 +2820,59 @@ class GestionArticulosCustom {
             container.html(`<div class="sugerencia-item text-muted"><i class="bi bi-exclamation-circle"></i> No se encontraron artículos.</div>`);
         } else {
             articulos.forEach(articulo => {
-                if (!this.excludeArt.includes(articulo.GrupoArt)) {
-
-                    //Solo los incluidos en el arreglo en caso de exisitir
-                    container.append(this._renderItem(articulo))
-                    //if (this.includeArt.length > 0) {
-                    //    if (this.includeArt.includes(articulo.GrupoArt)) {
-                    //        container.append(this._renderItem(articulo))
-                    //    }
-                    //}
-                    //else {
-                    //    container.append(this._renderItem(articulo))
-                    //}
-                }
+                //Solo los incluidos en el arreglo en caso de exisitir
+                container.append(this._renderItem(articulo))
             });
         }
         container.addClass('show');
     }
 
     _renderItem(articulo) {
-        const item = $(`<div class="sugerencia-item"><div class="sugerencia-nomina">🏷️ ${articulo.CodigoArticulo}</div><div class="sugerencia-nombre">📦 ${articulo.DescripcionArticulo}</div></div>`);
+        const sinStock = articulo.StockDisponible <= 0;
+
+        const badgeStock = sinStock
+            ? `<span class="badge-stock sin-stock-badge"><span class="circulo-badge"></span> Sin stock</span>`
+            : `<span class="badge-stock con-stock-badge"><span class="circulo-badge"></span> Disponible</span>`;
+
+        const item = $(`
+        <div class="sugerencia-item ${sinStock ? 'sin-stock' : ''}">
+            <div class="sugerencia-info">
+                <div class="sugerencia-nomina">🏷️ ${articulo.CodigoArticulo}</div>
+                <div class="sugerencia-nombre">📦 ${articulo.DescripcionArticulo}</div>
+            </div>
+            ${badgeStock}
+        </div>
+    `);
+
         item.on('click', () => {
             this._seleccionarArticulo(articulo);
         });
+
         return item;
     }
 
     _seleccionarArticulo(articulo) {
+        //Si no se permiten multiples articulos
+        if (this.MultipleArticulo == false)
+        {
+            $(`#bodyArticulosRefaccionMP`).empty();
+        }
         this.agregarArticuloTabla(articulo);
         $(this._inputBuscar).val('');
         this.ocultarSugerencias();
     }
 
     agregarArticuloTabla(articulo) {
+        //Si no se permiten multiples articulos
+        if (this.MultipleArticulo == false) {
+            this.articulosAgregados = [];
+        }
         const yaExiste = this.articulosAgregados.some(a => a.CodigoArticulo === articulo.CodigoArticulo);
         if (yaExiste) {
             AlertManager.mostrar('El artículo ya está en la lista.', 'warning', this._ModalContainer);
             return;
         }
-        this.articulosAgregados.push({ CodigoArticulo: articulo.CodigoArticulo, DescripcionArticulo: articulo.DescripcionArticulo, Cantidad: 1 });
+        this.articulosAgregados.push({ CodigoArticulo: articulo.CodigoArticulo, StockDisponible: articulo.StockDisponible, DescripcionArticulo: articulo.DescripcionArticulo, Cantidad: 1 });
         this.renderizarTabla();
     }
 
@@ -1845,11 +2881,11 @@ class GestionArticulosCustom {
         tbody.empty();
         if (this.articulosAgregados.length === 0) {
             const emptyRowId = this._tbodyId.includes('MP') ? 'filaSinArticulosMP' : 'filaSinArticulosMC';
-            tbody.html(`<tr id="${emptyRowId}"><td colspan="5" class="text-center text-muted py-3"><i class="bi bi-info-circle me-1"></i>Busque y seleccione un artículo para agregarlo</td></tr>`);
+            tbody.html(`<tr id="${emptyRowId}"><td colspan="6" class="text-center text-muted py-3"><i class="bi bi-info-circle me-1"></i>Busque y seleccione un artículo para agregarlo</td></tr>`);
             return;
         }
         this.articulosAgregados.forEach((articulo, index) => {
-            const row = $(`<tr><td class="text-center">${index + 1}</td><td class="text-center">${articulo.CodigoArticulo}</td><td>${articulo.DescripcionArticulo}</td><td class="text-center"><input type="number" class="form-control form-control-sm text-center cantidad-articulo" value="${articulo.Cantidad}" min="1" data-index="${index}"></td><td class="text-center"><button class="btn btn-sm btn-danger btn-eliminar-articulo" data-index="${index}"><i class="bi bi-x-lg"></i></button></td></tr>`);
+            const row = $(`<tr><td class="text-center">${index + 1}</td><td class="text-center">${articulo.CodigoArticulo}</td><td>${articulo.DescripcionArticulo}</td><td class="text-center">${articulo.StockDisponible}</td><td class="text-center"><input type="number" class="form-control form-control-sm text-center cantidad-articulo" value="${articulo.Cantidad}" min="1" data-index="${index}"></td><td class="text-center"><button class="btn btn-sm btn-danger btn-eliminar-articulo" data-index="${index}"><i class="bi bi-x-lg"></i></button></td></tr>`);
             tbody.append(row);
         });
         $('.cantidad-articulo').on('change', (e) => { const index = $(e.target).data('index'); this.articulosAgregados[index].Cantidad = parseInt($(e.target).val()) || 1; });
@@ -1866,77 +2902,6 @@ class GestionArticulosCustom {
     limpiar() { this.articulosAgregados = []; this.renderizarTabla(); }
 
     ocultarSugerencias() { clearTimeout(this._debounceTimer); $(this._contenedorSugerencias).removeClass('show').empty(); }
-}
-
-// ========================================
-// PRINT ENGINE GLOBAL
-// ========================================
-class PrintEngine {
-
-    imprimir({ html, estilos = '', titulo = 'Documento', autoClose = true, win }) {
-
-        // 🔥 usar ventana existente o fallback
-        const printWindow = win || window.open('', '_blank', 'width=900,height=700');
-
-        if (!printWindow) {
-            alert('Popup bloqueado');
-            return;
-        }
-
-        printWindow.document.open();
-        printWindow.document.write(`
-        <html>
-        <head>
-            <title>${titulo}</title>
-            <style>
-                ${this.obtenerBaseStyles()}
-                ${estilos}
-            </style>
-        </head>
-        <body>
-            <div id="printRoot">
-                ${html}
-            </div>
-
-            <script>
-                window.onload = function() {
-                    setTimeout(() => {
-                        window.focus();
-                        window.print();
-                    }, 300);
-                };
-
-                window.onafterprint = function() {
-                    const root = document.getElementById('printRoot');
-                    if (root) root.classList.add('fade-out');
-                    ${autoClose ? `setTimeout(() => window.close(), 2000);` : ''}
-                };
-            </script>
-        </body>
-        </html>
-    `);
-        printWindow.document.close();
-    }
-
-    obtenerBaseStyles() {
-        return `
-            * { box-sizing: border-box; font-family: Arial; }
-
-            body { padding: 10px; }
-
-            @media print {
-                @page { size: A4; margin: 8mm; }
-            }
-
-            #printRoot {
-                transition: opacity 2s ease;
-            }
-
-            .fade-out {
-                opacity: 0;
-            }
-        `;
-    }
 }
 
 // ========================================

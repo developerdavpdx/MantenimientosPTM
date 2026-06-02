@@ -2,21 +2,37 @@
 // GESTION DE EVENTOS
 // ========================================
 class GestionEventosApp {
-    constructor() {
+    constructor(datos_usuario) {
+
+        this.datos_usuario = GlobalUtil.getDatosUsuario();
+
         this.URLBase = "Produccion";
-        this.ProduccionManager = new ProduccionManager(this.URLBase);
+
+        this.ProduccionManager =
+            new ProduccionManager(this.URLBase);
+
+        // 🔥 AGREGAR ESTO
+        this.autocompleteParoArticulo =
+            new AutocompleteParoArticulo(
+                this.datos_usuario
+            );
     }
 
     inicializar() {
-        // Inicializar UI
+
         UIManager.inicializarUI();
 
-        // Inicializar el calendario
         this.ProduccionManager.inicializar();
+
+        // 🔥 AGREGAR ESTO
+        this.autocompleteParoArticulo.inicializar();
 
         this.configurarEventosProduccionManager();
 
-        console.log('✅ Sistema Completo de Gestión de Produccion inicializado correctamente');
+        console.log(
+            '✅ Sistema Completo de Gestión de Produccion inicializado correctamente'
+        );
+
     }
 
     configurarEventosProduccionManager() {
@@ -54,7 +70,7 @@ class GestionEventosApp {
             e.preventDefault();
             const datosUsuario = GlobalUtil.getDatosUsuario();
             const planta = datosUsuario[0].PLANTA || '';
-            
+
             $('#lblPlantaTipoParo').text('Planta ' + planta);
             $('#inputNombreTipoParo').val('');
             $('#alertTipoParoContainer').html('');
@@ -66,7 +82,7 @@ class GestionEventosApp {
             const nombre = $('#inputNombreTipoParo').val().trim();
             const datosUsuario = GlobalUtil.getDatosUsuario();
             const planta = datosUsuario[0].PLANTA || '';
-            
+
             if (!nombre) {
                 $('#alertTipoParoContainer').html(
                     '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
@@ -75,7 +91,7 @@ class GestionEventosApp {
                 );
                 return;
             }
-            
+
             if (nombre.length > 50) {
                 $('#alertTipoParoContainer').html(
                     '<div class="alert alert-warning alert-dismissible fade show" role="alert">' +
@@ -84,16 +100,16 @@ class GestionEventosApp {
                 );
                 return;
             }
-            
+
             $.ajax({
                 url: `/${this.URLBase}/AgregarTipoParoProduccion`,
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ 
-                    Planta: planta, 
-                    Nombre: nombre 
+                data: JSON.stringify({
+                    Planta: planta,
+                    Nombre: nombre
                 }),
-                success: function(response) {
+                success: function (response) {
                     if (response.Status === 'OK') {
                         $('#alertTipoParoContainer').html(
                             '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
@@ -104,7 +120,7 @@ class GestionEventosApp {
                         //Cargar nuevamente la categorias
                         EquiposUtil.llenarCategoriasParo("ParoCategoria");
 
-                        setTimeout(function() {
+                        setTimeout(function () {
                             $('#modalAgregarTipoParo').modal('hide');
                         }, 1500);
                     } else {
@@ -115,7 +131,7 @@ class GestionEventosApp {
                         );
                     }
                 },
-                error: function(xhr) {
+                error: function (xhr) {
                     $('#alertTipoParoContainer').html(
                         '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
                         '<i class="bi bi-exclamation-triangle-fill me-1"></i> Error al guardar: ' + (xhr.responseText || 'Error desconocido') +
@@ -126,7 +142,7 @@ class GestionEventosApp {
         });
 
         // ── LIMPIAR ALERTA AL CERRAR MODAL ──
-        $('#modalAgregarTipoParo').on('hidden.bs.modal', function() {
+        $('#modalAgregarTipoParo').on('hidden.bs.modal', function () {
             $('#alertTipoParoContainer').html('');
         });
 
@@ -135,7 +151,16 @@ class GestionEventosApp {
 
         //Eliminar fila de registro de paros
         $(document).on('click', '.btnEliminarFila', function () {
-            $(this).closest('tr').remove();
+
+            $(this)
+                .closest('tr')
+                .find('.autocomplete-dropdown')
+                .remove();
+
+            $(this)
+                .closest('tr')
+                .remove();
+
         });
 
         // ===============================
@@ -158,7 +183,7 @@ class GestionEventosApp {
         $('#btnAplicarFiltrosParo').on('click', () => {
             const Planta = $("#FiltroPlantaParo").val();
             const Proceso = $("#FiltroProcesoParo").val() || null;
-            EquiposUtil.llenarLineasCheckbox(Planta, Proceso, "contenedorLineasParo");
+            EquiposUtil.llenarLineasCheckbox(Planta, Proceso, 1, "contenedorLineasParo");
             $("#LineasProduccionContainer").removeClass("d-none");
         });
 
@@ -186,6 +211,21 @@ class GestionEventosApp {
             $('#modalReanudarParo').modal('show');
 
         });
+
+        $("#FiltroProceso")
+            .off('change')
+            .on('change', (e) => {
+
+                let Proceso = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Proceso,
+                    1,
+                    "FiltroLinea",
+                    null
+                );
+            });
     }
 }
 
@@ -243,8 +283,8 @@ class ProduccionManager {
 
     // ✅ Función para inicializar el calendario
     inicializar() {
-        EquiposUtil.llenarLineas(null, "ParoLinea", "FiltroLinea");
         this.llenarTablaParos();
+        EquiposUtil.llenarProcesos(this.PLANTA, null, "FiltroProceso");
         EquiposUtil.llenarCategoriasParo("ParoCategoria");
         console.log('✅ Calendar Manager inicializado correctamente');
     }
@@ -392,6 +432,16 @@ class ProduccionManager {
                             return `<i class="bi bi-diagram-3-fill me-1"></i>${data || 'N/A'}`;
                         }
                     },
+                    // Columna: Artículo (nuevo)
+                    {
+                        data: "ARTICULO",
+                        render: (data, type, row) => {
+                            const codigo = row.ARTICULO || '';
+                            const desc = row.ARTICULO_DESC || '';
+                            const texto = codigo ? (desc ? `${codigo} — ${desc}` : codigo) : (desc || 'N/A');
+                            return `<i class="bi bi-box-seam-fill me-1"></i>${texto}`;
+                        }
+                    },
                     // Columna: Categoría
                     {
                         data: "CATEGORIA",
@@ -473,20 +523,23 @@ class ProduccionManager {
                 ],
 
                 columnDefs: [
-                    { orderable: false, targets: [0, 6, 7] },
-                    { visible: false, targets: [6,9] },
-                    { className: "text-center", targets: [0, 1, 4, 5, 6, 8] },
+                    // Ajustes tras agregar la columna ARTICULO (desplaza índices a la derecha a partir de la posición 3)
+                    { orderable: false, targets: [0, 7, 8] },
+                    { visible: false, targets: [7, 10] },
+                    { className: "text-center", targets: [0, 1, 5, 6, 7, 9] },
 
+                    // Prioridades responsive (ahora 11 columnas: 0..10)
                     { responsivePriority: 1, targets: 0 },
                     { responsivePriority: 2, targets: 1 }, // Planta
                     { responsivePriority: 3, targets: 2 }, // Línea
-                    { responsivePriority: 4, targets: 3 }, // Categoria
-                    { responsivePriority: 5, targets: 4 }, // Usuario
-                    { responsivePriority: 6, targets: 5 }, // Fecha Inicio
-                    { responsivePriority: 7, targets: 6 }, // Fecha Fin
-                    { responsivePriority: 8, targets: 7 }, // Duracion
-                    { responsivePriority: 9, targets: 8 },  // Comentarios
-                    { responsivePriority: 10, targets: 9 }  // Estado
+                    { responsivePriority: 4, targets: 3 }, // Artículo (nuevo)
+                    { responsivePriority: 5, targets: 4 }, // Categoria
+                    { responsivePriority: 6, targets: 5 }, // Usuario
+                    { responsivePriority: 7, targets: 6 }, // Fecha Inicio
+                    { responsivePriority: 8, targets: 7 }, // Fecha Fin
+                    { responsivePriority: 9, targets: 8 }, // Duracion
+                    { responsivePriority: 10, targets: 9 },  // Comentarios
+                    { responsivePriority: 11, targets: 10 }  // Estado
                 ],
 
                 ordering: false,
@@ -644,36 +697,117 @@ class ProduccionManager {
     guardarParo(e) {
         e.preventDefault();
 
+        $("#btnGuardarParo")
+            .html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...')
+            .prop("disabled", true);
+
         let paros = [];
         let errorDuracion = false;
+        let errorArticulo = false;
         const self = this;
         const Planta = $("#FiltroPlantaParo").val();
         $('#modalRegistrarParo #tablaParos tbody tr').each(function () {
 
             const linea = $(this).find('td:eq(0)').attr('data-value');
-            const categoria = $(this).find('.paro-categoria').val(); // 🔥 CAMBIO AQUÍ
-            const duracion = $(this).find('.paro-duracion').val();
-            const comentarios = $(this).find('.paro-comentarios').val();
+
+            const categoria = $(this)
+                .find('.paro-categoria')
+                .val();
+
+
+            const duracion = $(this)
+                .find('.paro-duracion')
+                .val();
+
+            const comentarios = $(this)
+                .find('.paro-comentarios')
+                .val();
+
+            const articulo = $(this)
+                .find('.paro-articulo')
+                .val()
+                .trim();
+
+            // 🔥 VALIDAR AUTOCOMPLETE REAL
+            const articuloData = $(this).data('articulo');
+
+            if (!articuloData || articulo !== articuloData.CodigoArticulo) {
+
+                errorArticulo = true;
+
+                $(this)
+                    .find('.paro-articulo')
+                    .addClass('is-invalid');
+
+                AlertManager.mostrar(
+                    'Debe seleccionar un artículo válido de la lista.',
+                    'warning',
+                    'alertParoContainer'
+                );
+
+                $("#btnGuardarParo")
+                    .html('<i class="bi bi-save me-1"></i>Guardar')
+                    .prop("disabled", false);
+
+                return;
+
+            }
+
+            else {
+
+                $(this)
+                    .find('.paro-articulo')
+                    .removeClass('is-invalid');
+
+            }
 
             // Validar duración obligatoria
             if (!duracion || parseFloat(duracion) <= 0) {
+
                 errorDuracion = true;
-                $(this).find('.paro-duracion').addClass('is-invalid');
+
+                $(this)
+                    .find('.paro-duracion')
+                    .addClass('is-invalid');
+
                 return;
+
             } else {
-                $(this).find('.paro-duracion').removeClass('is-invalid');
+
+                $(this)
+                    .find('.paro-duracion')
+                    .removeClass('is-invalid');
+
             }
 
             paros.push({
+
                 LINEA_PRODUCCION: linea,
+
                 ID_CATEGORIA_PARO: categoria,
+
+                ARTICULO: articulo,
+
                 DURACION_HRS: duracion,
+
                 COMENTARIOS: comentarios,
+
                 USUARIO: self.datos_usuario[0].EMAIL,
+
                 PLANTA: Planta
+
             });
 
         });
+
+        if (errorArticulo) {
+
+            $("#btnGuardarParo")
+                .html('<i class="bi bi-save me-1"></i>Guardar')
+                .prop("disabled", false);
+
+            return;
+        }
 
         if (errorDuracion) {
             AlertManager.mostrar(
@@ -693,9 +827,6 @@ class ProduccionManager {
             return;
         }
 
-        $("#btnGuardarParo")
-            .html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...')
-            .prop("disabled", true);
 
         $.ajax({
             url: `/${this.URLBase}/InsertarParoProduccion`,
@@ -732,7 +863,7 @@ class ProduccionManager {
                         .prop("disabled", false);
 
                     AlertManager.mostrar(
-                        `⚠️ ${response.Message || 'Error al insertar los paros.'}`,
+                        `${response.Message || 'Error al insertar los paros.'}`,
                         'warning',
                         "alertParoContainer"
                     );
@@ -746,7 +877,7 @@ class ProduccionManager {
                     .prop("disabled", false);
 
                 AlertManager.mostrar(
-                    '🔴 Error al conectar con el servidor',
+                    'Error al conectar con el servidor',
                     'warning',
                     "alertParoContainer"
                 );
@@ -833,6 +964,11 @@ class ProduccionManager {
                 <select class="form-select form-select-sm paro-categoria" data-value="${categoria}">
                     ${this.generarOpcionesCategorias(categoria)}
                 </select>
+            </td>
+
+            <td>
+                <input type="text" step="0.1"
+                       class="form-control form-control-sm paro-articulo" />
             </td>
 
             <td>
@@ -1075,4 +1211,136 @@ class ProduccionManager {
                 .prop('disabled', false);
         }
     }
+}
+
+class AutocompleteParoArticulo {
+
+    constructor(datos_usuario) {
+
+        this.datos_usuario = datos_usuario;
+
+        this.gestionArticulos = new GestionArticulos(
+            datos_usuario,
+            110
+        );
+
+    }
+
+    inicializar() {
+
+        $(document).on(
+            'input',
+            '.paro-articulo',
+            async (e) => {
+
+                const input = $(e.currentTarget);
+
+                input
+                    .closest('tr')
+                    .removeData('articulo');
+
+                const query = input.val().trim();
+
+                this.removerDropdown(input);
+
+                if (query.length < 2) return;
+
+                try {
+
+                    const articulos =
+                        await this.gestionArticulos.obtenerArticulos(
+                            query,
+                            this.datos_usuario[0].EMAIL,
+                            0
+                        );
+
+                    this.mostrarSugerencias(
+                        input,
+                        articulos
+                    );
+
+                } catch (error) {
+
+                    console.error(error);
+
+                }
+
+            }
+        );
+
+        // 🔥 cerrar dropdown al click afuera
+        $(document).on('click', (e) => {
+
+            if (!$(e.target).closest('.autocomplete-wrapper').length) {
+
+                $('.autocomplete-dropdown').remove();
+
+            }
+
+        });
+
+    }
+
+    mostrarSugerencias(input, articulos) {
+
+        this.removerDropdown(input);
+
+        if (!articulos || articulos.length === 0) return;
+
+        if (!input.parent().hasClass('autocomplete-wrapper')) {
+
+            input.wrap(
+                $('<div class="autocomplete-wrapper position-relative"></div>')
+            );
+
+        }
+
+        const dropdown = $(`
+            <div class="autocomplete-dropdown">
+            </div>
+        `);
+
+        articulos.forEach(articulo => {
+
+            const item = $(`
+                <div class="autocomplete-item">
+                    <strong>${articulo.CodigoArticulo}</strong><br>
+                    <small>${articulo.DescripcionArticulo}</small>
+                </div>
+            `);
+
+            item.on('click', () => {
+
+                input.val(
+                    articulo.CodigoArticulo
+                );
+
+                // 🔥 guardar metadata en el TR
+                const row = input.closest('tr');
+
+                row.data(
+                    'articulo',
+                    articulo
+                );
+
+                dropdown.remove();
+
+            });
+
+            dropdown.append(item);
+
+        });
+
+        input.after(dropdown);
+
+    }
+
+    removerDropdown(input) {
+
+        input
+            .siblings('.autocomplete-dropdown')
+            .remove();
+
+    }
+
 }

@@ -234,11 +234,14 @@ namespace MantenimientosPTM
             if (!string.IsNullOrEmpty(model.CAPACIDAD))
                 changes.Add("📊 Capacidad", model.CAPACIDAD);
 
-            if (!string.IsNullOrEmpty(model.PRODUCCION_TEORICA))
-                changes.Add("📈 Producción Teórica", model.PRODUCCION_TEORICA);
+            if (model.PRODUCCION_TEORICA_PZS > 0)
+                changes.Add("☑️ Producción Teórica PZS:" ,model.PRODUCCION_TEORICA_PZS.ToString());
 
-            if (!string.IsNullOrEmpty(model.PRODUCCION_REAL))
-                changes.Add("📉 Producción Real", model.PRODUCCION_REAL);
+            if (model.PRODUCCION_TEORICA_KGS > 0)
+                changes.Add("☑️ Producción Teórica PZS:", model.PRODUCCION_TEORICA_KGS.ToString());
+
+            if (model.PRODUCCION_REAL.HasValue && model.PRODUCCION_REAL.Value > 0)
+                changes.Add("📉 Producción Real", model.PRODUCCION_REAL.Value.ToString());
 
             if (!string.IsNullOrEmpty(model.COMENTARIOS))
                 changes.Add("💬 Comentarios", model.COMENTARIOS);

@@ -45,8 +45,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="log4net, Version=3.3.0.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
-      <HintPath>..\packages\log4net.3.3.0\lib\net462\log4net.dll</HintPath>
+    <Reference Include="log4net, Version=3.3.1.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.3.3.1\lib\net462\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.AspNet.SignalR.Core, Version=2.4.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.SignalR.Core.2.4.3\lib\net45\Microsoft.AspNet.SignalR.Core.dll</HintPath>
@@ -161,6 +161,7 @@
     <Compile Include="Models\AccesoDatos\AccesoDatosMantenimientosPreventivos.cs" />
     <Compile Include="Models\AccesoDatos\AccesoDatosEquipos.cs" />
     <Compile Include="Models\AccesoDatos\LoginServiceLayer.cs" />
+    <Compile Include="Models\Dto\PlanProduccionDto.cs" />
     <Compile Include="Models\GlobalCommands.cs" />
     <Compile Include="Models\LogicaNegocio\EmailNotificationService.cs" />
     <Compile Include="Models\LogicaNegocio\LogicaAlmacen.cs" />
@@ -2844,6 +2845,7 @@
     <Folder Include="EvidenciaRutinas\" />
     <Folder Include="FirmasOTCorrectivo\" />
     <Folder Include="FirmasOTPreventivo\" />
+    <Folder Include="Models\Mapping\" />
     <Folder Include="SolicitudesBaja\" />
   </ItemGroup>
   <ItemGroup>

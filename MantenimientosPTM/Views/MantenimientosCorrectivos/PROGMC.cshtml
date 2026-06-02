@@ -80,18 +80,18 @@
                                     <input type="text" class="form-control-custom" id="NumeroOrden" name="NumeroOrden" readonly autocomplete="off">
                                 </div>
                                 <div class="col-12 col-md-4">
-                                    <label class="form-label-custom" for="Solicitante">
+                                    <label class="form-label-custom" for="SolicitanteReporte">
                                         <i class="bi bi-person-check-fill"></i> Solicitante <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" class="form-control-custom" id="Solicitante" name="Solicitante"
+                                    <input type="text" class="form-control-custom" id="SolicitanteReporte" name="SolicitanteReporte"
                                            placeholder="Nombre del operador" readonly autocomplete="off">
                                     <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el nombre del solicitante.</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label-custom" for="NominaSolicitante">
+                                    <label class="form-label-custom" for="NominaSolicitanteReporte">
                                         <i class="bi bi-123"></i> Número Nómina <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" class="form-control-custom" id="NominaSolicitante" name="NominaSolicitante"
+                                    <input type="text" class="form-control-custom" id="NominaSolicitanteReporte" name="NominaSolicitanteReporte"
                                            placeholder="# de nómina" readonly autocomplete="off">
                                     <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el número de nómina.</div>
                                 </div>
@@ -138,10 +138,10 @@
                                     <input type="text" class="form-control-custom" id="TipoMantenimiento" name="TipoMantenimiento" readonly autocomplete="off">
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label-custom" for="TextoCorto">
+                                    <label class="form-label-custom" for="TextoCortoReporte">
                                         <i class="bi bi-chat-left-text-fill"></i> Texto Corto <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" class="form-control-custom" id="TextoCorto" name="TextoCorto"
+                                    <input type="text" class="form-control-custom" id="TextoCortoReporte" name="TextoCortoReporte"
                                            placeholder="Descripción corta de la falla" readonly autocomplete="off">
                                     <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el texto corto descriptivo.</div>
                                 </div>
@@ -206,77 +206,6 @@
                         </div>
 
                         <hr class="divider-custom">
-
-                        <!-- Sección 3: Registro de Trabajo -->
-                        <div id="CierreOrdenTrabajo" class="mb-4">
-                            <h6 class="mb-3 pb-2 border-bottom" style="color:var(--modal-primary); font-weight:700;">
-                                <i class="bi bi-wrench-adjustable-circle-fill me-2"></i>Registro de Trabajo
-                            </h6>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label-custom" for="HoraInicioTrabajo">
-                                        <i class="bi bi-clock-fill"></i> Hora Inicio <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="time" class="form-control-custom" id="HoraInicioTrabajo" name="HoraInicioTrabajo" required autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de inicio.</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label-custom" for="HoraFin">
-                                        <i class="bi bi-clock-history"></i> Hora Fin <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="time" class="form-control-custom" id="HoraFin" name="HoraFin" required autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de fin.</div>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label-custom" for="TextoSecuencia">
-                                        <i class="bi bi-list-ol"></i> Texto de Secuencia / Actividad Realizada <span class="text-danger">*</span>
-                                    </label>
-                                    <textarea class="form-control-custom" id="TextoSecuencia" name="TextoSecuencia"
-                                              rows="3" required placeholder="Describa detalladamente la actividad realizada..." autocomplete="on"></textarea>
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa la actividad realizada.</div>
-                                </div>
-
-                                <!-- Búsqueda de técnicos -->
-                                <div class="col-12">
-                                    <label class="form-label-custom" for="BuscarTecnico">
-                                        <i class="bi bi-person-badge-fill"></i> Asignar Técnicos
-                                    </label>
-                                    <input type="text" class="form-control-custom" id="BuscarTecnico" name="BuscarTecnico"
-                                           placeholder="Escriba número de nómina o nombre del técnico..." autocomplete="off">
-                                    <div id="sugerenciasTecnicos" class="autocomplete-sugerencias"></div>
-                                </div>
-
-                                <!-- Lista técnicos asignados -->
-                                <div class="col-12">
-                                    <label class="form-label-custom">
-                                        <i class="bi bi-people-fill"></i> Técnicos Asignados
-                                    </label>
-                                    <div id="listaTecnicosAsignados" class="tecnicos-container p-3 rounded"
-                                         style="border: 1.5px solid var(--modal-border); background: var(--modal-bg-input);">
-                                        <div style="font-size:0.85rem; color:var(--modal-text-muted);">
-                                            <i class="bi bi-info-circle me-2"></i>No hay técnicos asignados
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label class="form-label-custom" for="DuracionHrs">
-                                        <i class="bi bi-hourglass-split"></i> Duración <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="d-flex gap-2 align-items-center">
-                                        <input type="text" class="form-control-custom" id="DuracionHrs" name="DuracionHrs"
-                                               placeholder="0.0" required autocomplete="off">
-                                        <span class="fw-semibold" style="color:var(--modal-text-muted); white-space:nowrap;">Hrs</span>
-                                    </div>
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique la duración del trabajo.</div>
-                                </div>
-                            </div>
-                            <div class="row pt-3">
-                                <div class="col-12">
-                                    <div id="alertOrdenContainer"></div>
-                                </div>
-                            </div>
-                        </div>
 
                         <!-- Footer del documento -->
                         <div class="text-center pt-3 mt-2" style="border-top: 1px solid var(--modal-border); color:var(--modal-text-muted);">

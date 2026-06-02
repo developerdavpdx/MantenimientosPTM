@@ -12,10 +12,25 @@
             <div class="card-header header-fijo-custom text-dark">
                 <div class="row g-3 align-items-center">
                     <!-- Título -->
-                    <div class="col-12">
+                    <div class="col-12 col-sm-6 col-md-4 col-xl-4 text-center text-sm-start">
                         <h4 class="mb-0 text-color-logo">
-                            <i class="bi bi-calendar-event me-2"></i>Calendario Planeación
+                            <i class="bi bi-calendar-event me-2"></i>
+                            Calendario Planeación
                         </h4>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="col-12 col-sm-6 col-md-8 col-xl-8">
+                        <div class="d-flex flex-column flex-sm-row justify-content-center justify-content-sm-end gap-2">
+                            <button id="btnExportarExcel"
+                                    class="btn-filtro-limpiar"
+                                    data-bs-toggle="tooltip"
+                                    title="Exportar a Excel">
+                                <i class="bi bi-file-earmark-excel-fill me-1"></i>
+                                Exportar
+                            </button>
+
+                        </div>
                     </div>
                 </div>
             </div>
@@ -65,6 +80,26 @@
                                    name="FiltroMesAnio">
                         </div>
 
+                        <!-- Proceso de Producción -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroProceso">
+                                <i class="bi bi-gear-fill"></i> Proceso
+                            </label>
+                            <div class="select-wrapper">
+                                <select class="filtro-input"
+                                        id="FiltroProceso"
+                                        name="FiltroProceso">
+                                    <option value="">Selecciona el proceso...</option>
+                                    <!-- Se carga dinámicamente -->
+                                </select>
+                                <div class="modal-error-msg">⚠️ Seleccione la línea de producción.</div>
+                                <div class="select-loader d-none" id="loader_FiltroProceso">
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                </div>
+                            </div>
+
+                        </div>
+
                         <!-- Línea de Producción -->
                         <div class="col-12 col-sm-6 col-md-4 col-xl-2">
                             <label class="filtro-label" for="FiltroLinea">
@@ -85,26 +120,6 @@
 
                         </div>
 
-
-                        <!-- Proceso de Producción -->
-                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-                            <label class="filtro-label" for="FiltroProceso">
-                                <i class="bi bi-gear-fill"></i> Proceso
-                            </label>
-                            <div class="select-wrapper">
-                                <select class="filtro-input"
-                                        id="FiltroProceso"
-                                        name="FiltroProceso">
-                                    <option value="">Selecciona el proceso...</option>
-                                    <!-- Se carga dinámicamente -->
-                                </select>
-                                <div class="modal-error-msg">⚠️ Seleccione la línea de producción.</div>
-                                <div class="select-loader d-none" id="loader_FiltroProceso">
-                                    <span class="spinner-border spinner-border-sm"></span>
-                                </div>
-                            </div>
-
-                        </div>
 
 
                         <!-- Separador visual (solo desktop) -->
@@ -193,30 +208,65 @@
                     <span class="info-badge-value" id="eptArticulo">—</span>
                 </div>
 
-                <!-- Cap. diaria -->
-                <div class="info-badge-row">
-                    <span class="info-badge-label">
-                        <i class="bi bi-speedometer2"></i> Cap. diaria
-                    </span>
-                    <span class="info-badge-value highlight" id="eptCapacidad">— <small>PZ/día</small></span>
+                <!-- Stats capacidades -->
+                <div class="capacity-grid">
+
+                    <div class="capacity-card piezas">
+                        <div class="capacity-top">
+                            <i class="bi bi-box-seam-fill"></i>
+                            <span>Piezas</span>
+                        </div>
+
+                        <div class="capacity-number" id="eptCapacidadPZ">
+                            —
+                        </div>
+
+                        <div class="capacity-unit">
+                            PZ / día
+                        </div>
+                    </div>
+
+                    <div class="capacity-card kilos">
+                        <div class="capacity-top">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Kilos</span>
+                        </div>
+
+                        <div class="capacity-number" id="eptCapacidadKGS">
+                            —
+                        </div>
+
+                        <div class="capacity-unit">
+                            KG / día
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Stats producción -->
                 <div class="stats-row">
                     <div class="stat-box teorica">
                         <div class="stat-label">
-                            <i class="bi bi-calculator-fill teorica-icon"></i> Prod. Teórica
+                            <i class="bi bi-calculator-fill teorica-icon"></i> Producción Teórica PZ
                         </div>
-                        <div class="stat-value" id="eptProdTeorica">—</div>
-                        <div class="stat-sublabel">Meta del período</div>
+                        <div class="stat-value" id="eptProdTeoricaPZ">—</div>
+                        <div class="stat-sublabel">Piezas esperadas</div>
                     </div>
-                    <div class="stat-box real">
+                    <div class="stat-box teorica">
                         <div class="stat-label">
-                            <i class="bi bi-graph-up-arrow real-icon"></i> Prod. Real
+                            <i class="bi bi-calculator-fill teorica-icon"></i> Producción Teórica KG
                         </div>
-                        <div class="stat-value real" id="eptProdReal">—</div>
-                        <div class="stat-sublabel">Piezas producidas</div>
+                        <div class="stat-value" id="eptProdTeoricaKGS">—</div>
+                        <div class="stat-sublabel">Kilos esperados</div>
                     </div>
+                </div>
+
+                <div class="stat-box real">
+                    <div class="stat-label">
+                        <i class="bi bi-graph-up-arrow real-icon"></i> Producción Real
+                    </div>
+                    <div class="stat-value real" id="eptProdReal">—</div>
+                    <div class="stat-sublabel">Producción registrada</div>
                 </div>
 
                 <!-- Barra de cumplimiento -->

@@ -4,19 +4,19 @@ namespace MantenimientosPTM.Hubs
 {
     public class MantenimientoHub : Hub
     {
-        public void NotificarNuevaRefaccion()
+        public void NotificarNuevaRefaccion(string rolQueCambio)
         {
-            Clients.All.actualizarTablaSolicitudRefacciones();
+            Clients.Others.actualizarTablaSolicitudRefacciones(rolQueCambio);
         }
 
-        public void NotificarAjustesOrdenTrabajoPreventivo()
+        public void NotificarAjustesOrdenTrabajoPreventivo(string rolQueCambio)
         {
-            Clients.All.actualizarTablaMantenimientosPreventivos();
+            Clients.Others.actualizarTablaMantenimientosPreventivos(rolQueCambio);
         }
 
-        public void NotificarAjustesOrdenTrabajoCorrectivo()
+        public void NotificarAjustesOrdenTrabajoCorrectivo(string rolQueCambio)
         {
-            Clients.All.actualizarTablaMantenimientosCorrectivos();
+            Clients.Others.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
         }
     }
 }

@@ -106,6 +106,61 @@ class GestionEquiposApp {
 
         // ✅ CORRECTO - Debes pasar "e" como parámetro
         $('#formAgregarTipoEquipo').on('submit', (e) => this.equipoManager.InsertarTipoEquipo(e));
+
+        // Botón aplicar filtros
+        $('#btnAplicarFiltros').off('click').on('click', function () {
+            $('#tablaEquipos').DataTable().ajax.reload();
+        });
+
+        // Botón limpiar filtros
+        $('#btnLimpiarFiltros').off('click').on('click', function () {
+            $('#FiltroLinea').val('');
+            $('#FiltroProceso').val('');
+            $('#FiltroOrdenTrabajo').val('');
+            $('#FiltroFechaInicioMantenimiento').val('');
+            $('#tablaEquipos').DataTable().ajax.reload();
+        });
+
+        // Opcional: Filtrar automáticamente al cambiar los selects
+        $('#FiltroLinea, #FiltroProceso,#FiltroFechaInicioMantenimiento,#FiltroEstatus').off('change').on('change', function () {
+            $('#tablaEquipos').DataTable().ajax.reload();
+        });
+
+        $("#Area")
+            .off('change')
+            .on('change', (e) => {
+
+                let Area = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Area,
+                    null,
+                    "LineaProduccion",
+                    null
+                );
+            });
+
+        $("#FiltroProceso")
+            .off('change')
+            .on('change', (e) => {
+
+                let Proceso = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Proceso,
+                    null,
+                    "FiltroLinea",
+                    null
+                );
+            });
+
+        $('#FiltroOrdenTrabajo').on('keypress', function (e) {
+            if (e.key === 'Enter') {
+                $('#tablaEquipos').DataTable().ajax.reload();
+            }
+        });
     }
 
     configurarEventosPDF() {
@@ -318,10 +373,10 @@ class EquipoManager {
         this.Email = datos_usuario[0].EMAIL;
         this.llenarEquipos();
         EquiposUtil.llenarTipoEquipos();
-        EquiposUtil.llenarLineas(this.PLANTA, "LineaProduccion", "FiltroLinea");
         EquiposUtil.llenarProcesos(this.PLANTA, "Area", "FiltroProceso");
         EquiposUtil.llenarRangoDias();
         this.inicializarCorreos(); // 🔥 AGREGAR AQUÍ
+        this.llenarPeriodicidad("PeriodicidadMantenimiento");
         console.log('✅ EquipoManager inicializada correctamente');
     }
 
@@ -409,7 +464,6 @@ class EquipoManager {
         $("#errorCorreo").hide();
         this.renderCorreos();
     }
-
 
     llenarEquipos() {
         try {
@@ -779,7 +833,7 @@ class EquipoManager {
                 ordering: false,
                 info: true,
                 bPaginate: true,
-                pageLength: 200,
+                pageLength: 1000,
                 lengthMenu: [[10, 25, 50, 100, 200, 500, 1000], [10, 25, 50, 100, 200, 500, 1000]],
                 language: {
                     lengthMenu: "Mostrar _MENU_ registros",
@@ -823,6 +877,7 @@ class EquipoManager {
 
                     $(row).data('periodicidad', {
                         tipo: data.PeriodicidadMantenimiento,
+                        id: data.IdPeriodicidadMantenimiento,
                         inicio: data.DiaInicioMant,
                         fin: data.DiaFinMant,
                         fecha: data.FechaInicioMant
@@ -870,8 +925,6 @@ class EquipoManager {
                 }
             });
 
-            this.configurarEventosFiltros();
-
             return table;
 
         } catch (error) {
@@ -879,11 +932,56 @@ class EquipoManager {
         }
     }
 
+    llenarPeriodicidad(Fieldoptiongroup) {
+        const selectElement = $(`#${Fieldoptiongroup}`);
+
+        $.ajax({
+            url: `/${GlobalUtil.URLBaseEquipos}/GetPeriodicidadesMP`,
+            type: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            success: (data) => {
+                if (data.Status === 'OK') {
+                    let periodicidadData = data.Data;
+
+                    if (typeof periodicidadData === 'string') {
+                        try {
+                            periodicidadData = JSON.parse(periodicidadData);
+                        } catch (e) {
+                            console.warn('No se pudo parsear Data:', e);
+                        }
+                    }
+
+                    selectElement.empty();
+                    selectElement.append('<option value="">Seleccionar periodicidad...</option>');
+
+                    periodicidadData.forEach(p => {
+                        selectElement.append(
+                            `<option value="${p.ID_PERIODICIDAD}">${p.DESCRIPCION}</option>`
+                        );
+                    });
+
+                } else if (data.Status === 'NO') {
+                    AlertManager.mostrar(data.Message, 'warning');
+                } else if (data.Status === 'warning') {
+                    AlertManager.mostrar('Error: ' + data.Message, 'warning');
+                }
+            },
+            error: () => {
+                AlertManager.mostrar(
+                    'Error de conexión. No fue posible obtener el listado de periodicidades.',
+                    'warning'
+                );
+            }
+        });
+    }
+
     // Método auxiliar para cargar datos de periodicidad
     cargarPeriodicidad(periodicidadData) {
         if (!periodicidadData || !periodicidadData.tipo) return;
 
-        const periodicidadTipo = periodicidadData.tipo.toLowerCase();
+        const periodicidadTipo = periodicidadData.id.toLowerCase();
 
         // Seleccionar el tipo de periodicidad
         $('#PeriodicidadMantenimiento').val(periodicidadTipo).trigger('change');
@@ -892,38 +990,6 @@ class EquipoManager {
         $('#DiaFinMant').val(periodicidadData.fin);
     }
 
-    // ========================================
-    // EVENTOS
-    // ========================================
-    // Agregar al final de tu clase o después de inicializar la tabla
-    configurarEventosFiltros() {
-        const self = this;
-
-        // Botón aplicar filtros
-        $('#btnAplicarFiltros').off('click').on('click', function () {
-            $('#tablaEquipos').DataTable().ajax.reload();
-        });
-
-        // Botón limpiar filtros
-        $('#btnLimpiarFiltros').off('click').on('click', function () {
-            $('#FiltroLinea').val('');
-            $('#FiltroProceso').val('');
-            $('#FiltroOrdenTrabajo').val('');
-            $('#FiltroFechaInicioMantenimiento').val('');
-            $('#tablaEquipos').DataTable().ajax.reload();
-        });
-
-        // Opcional: Filtrar automáticamente al cambiar los selects
-        $('#FiltroLinea, #FiltroProceso,#FiltroFechaInicioMantenimiento,#FiltroEstatus').off('change').on('change', function () {
-            $('#tablaEquipos').DataTable().ajax.reload();
-        });
-
-        $('#FiltroOrdenTrabajo').on('keypress', function (e) {
-            if (e.key === 'Enter') {
-                $('#tablaEquipos').DataTable().ajax.reload();
-            }
-        });
-    }
     // Método auxiliar para convertir fecha de DD/MM/YYYY a YYYY-MM-DD
     convertirFechaParaInput(fecha) {
         if (!fecha || fecha === '--' || fecha === '') return '';
@@ -966,11 +1032,11 @@ class EquipoManager {
         e.preventDefault();
         $('#modalEquipoTitulo').text('Agregar Nuevo Equipo');
         $('#formEquipo')[0].reset();
+        ValidationManager.limpiarValidacion('#formEquipo'); // AGREGAR ESTA LÍNEA
         $('#equipoId').val('');
-        $('#Planta').val(this.PLANTA);
+        $('#Planta').val(`${this.PLANTA}`);
         var fechaActual = new Date().toISOString().split('T')[0];
         $("#FechaInicioMant").attr("min", fechaActual);
-        ValidationManager.limpiarValidacion('#formEquipo'); // AGREGAR ESTA LÍNEA
         $("#TipoEquipo").prop("disabled", false);
         $("#PeriodicidadMantenimiento").prop("disabled", false);
         $("#DiaInicioMant").prop("disabled", false);
@@ -1018,7 +1084,19 @@ class EquipoManager {
             $('#Estatus').val(equipoData.estatus);
             $('#Comentarios').val(equipoData.comentarios);
             $('#Area').val(equipoData.idarea);
-            $('#LineaProduccion').val(equipoData.idlineaproduccion);
+            //Seleccionar la linea
+            EquiposUtil.llenarLineas(
+                this.datos_usuario[0].PLANTA,
+                equipoData.idarea,
+                1,
+                "LineaProduccion",
+                null,
+                () => {
+
+                    $('#LineaProduccion')
+                        .val(equipoData.idlineaproduccion);
+                }
+            );
 
             // Cargar datos de periodicidad
             this.cargarPeriodicidad(periodicidadData);
@@ -1255,8 +1333,8 @@ class EquipoManager {
     abrirModalAgregarLinea(e) {
         e.preventDefault();
         $('#formLinea')[0].reset();
-        $('#PlantaLine').val(this.PLANTA);
         ValidationManager.limpiarValidacion('#formLinea'); // AGREGAR ESTA LÍNEA
+        $('#PlantaLine').val(`${this.PLANTA}`);
         $('#lineaModal').modal('show');
     }
 

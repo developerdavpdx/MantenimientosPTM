@@ -399,20 +399,21 @@ textarea.form-control-document {
 /* Estilos para autocompletado de técnicos */
 .autocomplete-sugerencias {
     position: absolute;
-    background: white;
     border: 1px solid #ddd;
     border-radius: 4px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     max-height: 250px;
     overflow-y: auto;
     z-index: 1000;
-    width: calc(100% - 30px);
+    width: 93%;
+    margin-right: 28px;
     margin-top: 2px;
     display: none;
 }
 
     .autocomplete-sugerencias.show {
-        display: block;
+        display: flex;
+        flex-direction:column;
     }
 
 .sugerencia-item {
@@ -601,3 +602,199 @@ textarea.form-control-document {
         opacity: 0;
     }
 }
+
+.radio-transition {
+    transition: all 0.35s ease;
+}
+
+    .radio-transition .form-check {
+        animation: fadeRadioIn 0.4s ease;
+    }
+
+@keyframes fadeRadioIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Indicador Máquina Detenida — estilo mejorado y switch más grande */
+#maquinaDetenidaBanner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.6rem;
+    background: linear-gradient(90deg,#fffef8,#fffaf1);
+    border: 1px solid #f6d48a;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+    color: #4b4b4b;
+    transition: all 180ms ease;
+}
+
+#maquinaDetenidaBanner .bi-exclamation-octagon-fill {
+    color: #b45309;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+    #maquinaDetenidaBanner .bi-check-circle-fill {
+        color: #1291ce;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+#maquinaDetenidaBanner .small {
+    margin: 0;
+    color: #6c6c6c;
+    font-size: 0.85rem;
+}
+
+/* Aumentar visualmente el toggle */
+#maquinaDetenidaBanner .form-check-input {
+    transform: scale(1.25);
+    transform-origin: center;
+    width: 2.25rem;
+    height: 1.25rem;
+    margin-left: 0.5rem;
+    cursor: pointer;
+    transition: box-shadow 120ms ease, transform 120ms ease;
+}
+
+#maquinaDetenidaBanner .form-check-input:checked {
+    box-shadow: 0 0 0 4px rgba(220,38,38,0.06);
+}
+
+/* Estado detenido */
+#maquinaDetenidaBanner.banner-stopped {
+    background: linear-gradient(90deg,#fff5f0,#fff1f0);
+    border: 1px solid rgba(220, 38, 38, 0.15);
+    box-shadow: 0 1px 8px rgba(220,38,38,0.03);
+}
+
+/* Responsivo */
+@media (max-width: 576px) {
+    #maquinaDetenidaBanner {
+        flex-direction: row;
+        gap: 0.5rem;
+        padding: 0.6rem 0.75rem;
+    }
+
+    #maquinaDetenidaBanner .form-check-input {
+        transform: scale(1.15);
+    }
+}
+
+/* Banner para indicar máquina detenida */
+.maquina-detenida-banner {
+    background-color: #1291ce;
+    color: #ffffff;
+    border-radius: 6px;
+}
+
+.maquina-detenida-banner--default {
+    background-color: transparent;
+    color: inherit;
+}
+
+/* Cuando el banner indica máquina detenida, impedir interacción con el switch vía CSS */
+/* Bloquear toda interacción con el switch y su contenedor cuando el banner está activo */
+.maquina-detenida-banner .form-check,
+.maquina-detenida-banner .form-check *,
+.maquina-detenida-banner .form-check-input,
+.maquina-detenida-banner .form-check-input + label {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+}
+
+/* Visualmente más evidente cuando está bloqueado */
+.maquina-detenida-banner .form-check-input {
+    opacity: 0.95;
+}
+
+/* Estado detenido */
+.maquina-detenida-banner-stopped {
+    background: linear-gradient(90deg,#fff5f0,#fff1f0);
+    border: 1px solid rgba(220, 38, 38, 0.15);
+    box-shadow: 0 1px 8px rgba(220,38,38,0.03);
+    color: #b45309;
+}
+
+/* Icono de stop */
+.maquina-detenida-banner-stopped .bi-stop-fill {
+    color: red;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+/* Indicador Máquina Detenida — estilo mejorado y switch más grande */
+.maquina-detenida-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.6rem;
+    background: linear-gradient(90deg,#fffef8,#fffaf1);
+    border: 1px solid #f6d48a;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+    color: #4b4b4b;
+    transition: all 180ms ease;
+    /* Resto de los estilos */
+}
+
+/* Aumentar visualmente el toggle */
+.maquina-detenida-banner .form-check-input {
+    transform: scale(1.25);
+    transform-origin: center;
+    width: 2.25rem;
+    height: 1.25rem;
+    margin-left: 0.5rem;
+    cursor: pointer;
+    transition: box-shadow 120ms ease, transform 120ms ease;
+}
+
+/* Estado detenido */
+.maquina-detenida-banner.banner-stopped {
+    background: linear-gradient(90deg,#fff5f0,#fff1f0);
+    border: 1px solid rgba(220, 38, 38, 0.15);
+    box-shadow: 0 1px 8px rgba(220,38,38,0.03);
+}
+
+/* Responsivo */
+@media (max-width: 576px) {
+    .maquina-detenida-banner {
+        flex-direction: row;
+        gap: 0.5rem;
+        padding: 0.6rem 0.75rem;
+    }
+
+    .maquina-detenida-banner .form-check-input {
+        transform: scale(1.15);
+    }
+}
+
+/* Banner para indicar máquina detenida */
+.maquina-detenida-banner {
+    background-color: #1291ce;
+    color: #ffffff;
+    border-radius: 6px;
+}
+
+.maquina-detenida-banner--default {
+    background-color: transparent;
+    color: inherit;
+}
+
+/* Icono de stop en rojo */
+.maquina-detenida-banner-stopped .bi-stop-fill {
+    color: red;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+/* Cuando el banner indica máquina detenida, impedir interacción con el switch vía CSS

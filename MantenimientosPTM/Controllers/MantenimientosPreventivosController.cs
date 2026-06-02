@@ -113,8 +113,8 @@ namespace MantenimientosPTM.Controllers
                 // ✅ TODOS LOS FILTROS SE ENVÍAN A HANA
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FECHA_INICIO", (AditionalFilter ? (object)null : dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_FECHA_FIN", (AditionalFilter ? (object)null : dtFechaFin, ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN", (dtFechaFin, ParameterDirection.Input, HanaDbType.Date) },
                     { "P_FILTRO_AREA", (string.IsNullOrEmpty(FiltroArea) ? (object)null : FiltroArea, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_ORDEN", (string.IsNullOrEmpty(FiltroOrdenTrabajo) ? (object)null : FiltroOrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },
@@ -254,6 +254,11 @@ namespace MantenimientosPTM.Controllers
                     : $"{ordenesGeneradas} órdenes generadas. Algunas no pudieron ser procesadas:\n{OTsinGenerar.ToString()}, intente de nuevo más tarde.";
                 jsonResponse.Data = OT; // o el dato que necesites retornar
 
+                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+
                 return Json(jsonResponse);
             }
             catch (Exception ex)
@@ -370,8 +375,9 @@ namespace MantenimientosPTM.Controllers
 
 
                 //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
                 var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
-                context.Clients.All.actualizarTablaMantenimientosPreventivos();
+                context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
 
                 // Validar si ya se completó la CARÁTULA Y LA RUTINA ONLINE
                 //var parametrosMantenimiento = new
@@ -561,16 +567,13 @@ namespace MantenimientosPTM.Controllers
                 var parametrosOT = new
                 {
                     P_ID_MANTENIMIENTO = RequestData.IdMantenimiento,
+                    ORDENTRABAJO = (string)null,
                     P_ESTATUS = RequestData.Estatus,
-                    P_USUARIO_ACTUALIZA = RequestData.UsuarioSolicita
+                    P_USUARIOACTUALIZA = RequestData.UsuarioSolicita
                 };
 
                 var allparametersOT = Logic.GlobalCommands.ConvertToHanaParameters(parametrosOT, false, null);
                 var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparametersOT);
-
-                // Notificar a los clientes
-                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
-                context.Clients.All.actualizarTablaSolicitudRefacciones();
 
                 // Construir respuesta
                 if (errores.Count > 0 && insertados == 0)
@@ -590,6 +593,12 @@ namespace MantenimientosPTM.Controllers
                     jsonResponse.Status = "SI";
                     jsonResponse.Message = $"Solicitud(es) de refacción insertada(s) correctamente. ({insertados} artículo(s))";
                     jsonResponse.Data = "";
+
+                    //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                    context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+                    context.Clients.All.actualizarTablaSolicitudRefacciones(rolQueCambio);
                 }
 
                 return Json(jsonResponse);

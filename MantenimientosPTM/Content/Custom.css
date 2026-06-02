@@ -51,7 +51,7 @@
         right: -40px;
         width: 160px;
         height: 160px;
-        background: rgba(14, 165, 216, 0.12);
+        /*background: rgba(14, 165, 216, 0.12);*/
         border-radius: 50%;
         pointer-events: none;
     }
@@ -294,7 +294,7 @@ input[type="month"].filtro-input::-webkit-calendar-picker-indicator {
 
 .dividerblue {
     height: 27px;
-    background-color: #0d6efd;
+    background: linear-gradient(135deg, var(--modal-primary) 0%, var(--modal-primary-mid) 60%, var(--modal-primary-light) 100%);
 }
 
 .dividerbluefooter {
@@ -606,12 +606,11 @@ footer {
 
 .autocomplete-sugerencias {
     position: absolute;
-    background: white;
     border: 1px solid #dee2e6;
     border-top: none;
     max-height: 250px;
     overflow-y: auto;
-    width: calc(100% - 100px);
+    width: calc(100% - 30px);
     z-index: 1000;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     display: none;
@@ -660,7 +659,8 @@ footer {
     right: 0;
     left: auto;
     min-width: 350px;
-    background: linear-gradient(135deg, #ffffff 0%, #f7fafd 60%, var(--modal-primary-light) 100%);
+    /*background: linear-gradient(135deg, #ffffff 0%, #f7fafd 60%, var(--modal-primary-light) 100%);*/
+    background: white;
 }
 
 .autocomplete-centrocostos {
@@ -907,3 +907,98 @@ footer {
     outline: none !important;
 }
 /* 🔵 CAMPOS CON VALOR */
+
+/* 🔵 ARTICULOS SIN STOCK */
+.sugerencia-stock-alerta {
+    font-size: 0.75rem;
+    color: #dc3545;
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+/* Opcional: fondo ligeramente rojizo para resaltar los sin stock */
+.sugerencia-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+}
+.sugerencia-item-empty {
+    position: relative;
+    display: block;
+    gap: 8px;
+    padding: 8px 12px;
+}
+
+.sugerencia-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sugerencia-nombre,
+.sugerencia-nomina {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.badge-stock {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.70rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Círculo genérico */
+.circulo-badge {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* Con stock - verde */
+.con-stock-badge {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+    .con-stock-badge .circulo-badge {
+        background-color: #28a745;
+    }
+
+/* Sin stock - AZUL */
+.sin-stock-badge {
+    background-color: #cce5ff;
+    color: #004085;
+    border: 1px solid #b8daff;
+}
+
+    .sin-stock-badge .circulo-badge {
+        background-color: #007bff;
+    }
+
+/* Borde izquierdo azul para el item sin stock */
+.sugerencia-item.sin-stock {
+    background-color: #f0f7ff;
+    border-left: 3px solid #007bff;
+}
+/* 🔵 ARTICULOS SIN STOCK */
+
+.actualizacionDatosModal {
+    background-color: #ffffffba;
+}
+
+.bg_universal_ptm {
+    background: linear-gradient(135deg, var(--modal-primary) 0%, var(--modal-primary-mid) 60%, var(--modal-primary-light) 100%);
+}

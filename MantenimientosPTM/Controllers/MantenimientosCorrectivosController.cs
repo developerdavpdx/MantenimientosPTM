@@ -71,6 +71,14 @@ namespace MantenimientosPTM.Controllers
                 jsonResponse.Message = nuevoId.Contains("ERROR") ? "No fue posible insertar la solicitud de mantenimiento correctivo." : "Solicitud de mantenimiento correctivo insertada correctamente.";
                 jsonResponse.Data = nuevoId;
 
+                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                if (jsonResponse.Status == "SI")
+                {
+                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                    context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
+                }
+
                 return Json(jsonResponse);
             }
             catch (Exception ex)
@@ -380,16 +388,11 @@ namespace MantenimientosPTM.Controllers
                 //Solo guardar la bandera
                 datos.FirmaSuperviso = rutaFirmaSuperviso && datos.FirmaSuperviso.Length > 0 ? "SI" : "";
 
-                bool rutaFirmaMantenimiento = GuardarFirmaDigital(
-                    datos.FirmaMantenimiento,
-                    datos.NumeroOrden,
-                    "Mantenimiento"
-                );
+                // Nota: Por petición temporal, la firma de "Mantenimiento" ya no es requerida
+                // y no se guarda ni se envía al stored procedure. Se deja el helper disponible
+                // por si en el futuro se necesita reactivar.
 
-                //Solo guardar la bandera
-                datos.FirmaMantenimiento = rutaFirmaMantenimiento && datos.FirmaMantenimiento.Length > 0 ? "SI" : "";
-
-                if (!rutaFirmaRealizo || !rutaFirmaSuperviso || !rutaFirmaMantenimiento)
+                if (!rutaFirmaRealizo || !rutaFirmaSuperviso)
                 {
                     // Construir respuesta JSON
                     jsonResponse.Status = "NO";
@@ -402,23 +405,14 @@ namespace MantenimientosPTM.Controllers
                 string[] excludedParams = null;
                 // ✅ Convertir a parámetros HANA
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(datos, true, null);
-                if (datos.TipoOperacion == "I") //INSERT
-                    excludedParams = new[]
-                    {
-                        "P_IDMANTENIMIENTO",
-                        "P_SOLICITANTE",
-                        "P_USUARIO",
-                        "P_TIPOOPERACION"
-                    };
 
-
-                if (datos.TipoOperacion == "U") // UPDATE
-                    excludedParams = new[]
+                excludedParams = new[]
                     {
                     "P_IDMANTENIMIENTO",
                     "P_SOLICITANTE",
                     "P_USUARIO",
                     "P_TIPOOPERACION"
+                    // Excluir temporalmente la firma de Mantenimiento del SP porque ya no es requerida
                     };
 
 
@@ -440,6 +434,13 @@ namespace MantenimientosPTM.Controllers
 
                     return Json(jsonResponse, JsonRequestBehavior.AllowGet);
                 }
+                else
+                {
+                    //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                    context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
+                }
                 //ACTUALIZAR STATUS A FINALIZADO DE TODAS FORMAS Y LA LOGICA ADICIONAL SE MANEJA EN EL FRONT
                 var parametrosFinOT = new
                 {
@@ -453,9 +454,8 @@ namespace MantenimientosPTM.Controllers
                 //Actualizar estatus de OT
                 var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMC, allparameters);
 
-                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
-                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
-                context.Clients.All.actualizarTablaMantenimientosCorrectivos();
+
+
 
                 //Validar si ya se completo la CARATULA Y LA RUTINA ONLINE (SE CAMBIO LA LOGICA DE ACTUALIZACION)
                 //var parametrosMantenimeinto = new
@@ -631,6 +631,12 @@ namespace MantenimientosPTM.Controllers
                     jsonResponse.Status = "SI";
                     jsonResponse.Message = $"Solicitud(es) de refacción insertada(s) correctamente. ({insertados} artículo(s))";
                     jsonResponse.Data = "";
+
+                    //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                    context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
+                    context.Clients.All.actualizarTablaSolicitudRefacciones(rolQueCambio);
                 }
 
                 return Json(jsonResponse);
