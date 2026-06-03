@@ -1558,6 +1558,10 @@ class GestionProduccionCorrugado {
 
                 this.cargarDatosGrid(datos);
 
+                setTimeout(() => {
+                    GlobalUtil.mostrarLoader(false);
+                }, 1000);
+
             } else {
 
                 AlertManager.mostrar(

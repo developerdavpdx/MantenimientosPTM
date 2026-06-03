@@ -133,6 +133,10 @@ class GestionProduccionPVC {
                 );
 
                 this.cargarDatosGrid(null);
+
+                setTimeout(() => {
+                    GlobalUtil.mostrarLoader(false);
+                }, 1000);
             }
 
         } catch (error) {
