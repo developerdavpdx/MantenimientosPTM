@@ -179,89 +179,6 @@ class GestionProduccionCorrugado {
         console.log('✅ Sistema Corrugado inicializado');
     }
 
-    cargarDatosIniciales() {
-
-        this.datosOriginales = [
-            {
-                id: 1,
-
-                // ========================================
-                // DATOS GENERALES
-                // ========================================
-
-                Mes: null,
-                Fecha: null,
-                Linea: null,
-                Corrugador: null,
-                Producto: null,
-                Turno: null,
-                Grupo: null,
-
-                // ========================================
-                // PRODUCCIÓN
-                // ========================================
-
-                PesoMinimo: 3,
-
-                TRLiberados: null,
-                ProduccionNeta: null,
-
-                PesoEstandar: 0,
-                PorcentajeSobrepeso: 0,
-
-                ScrapSinCorteSierra: null,
-                ScrapCorteSierra: null,
-
-                ScrapTotal: 0,
-
-                PorcentajeScrapSinCorte: 0,
-                PorcentajeScrapCorte: 0,
-
-                KgReproceso: null,
-                Carbonato: null,
-
-                // ========================================
-                // DISPONIBILIDAD
-                // ========================================
-
-                HorasProgramadas: null,
-
-                // ========================================
-                // TIEMPO NO DISPONIBLE
-                // ========================================
-
-                MantenimientoPreventivo: null,
-                ControlInventarios: null,
-                FaltaEnergia: null,
-                FaltaMateriaPrima: null,
-                PreparacionCambio: null,
-                ArranqueEstabilizacion: null,
-
-                TiempoMttoCorrectivosArranque: null,
-
-                // ========================================
-                // TIEMPO NO PRODUCTIVO
-                // ========================================
-
-                TiempoMuertoCorrectivos: null,
-
-                CambioMoldeSetupExcesos: null,
-
-                TiempoMuertoArrancar: null,
-                TiempoMuertoProceso: null,
-
-                // ========================================
-                // KPIs
-                // ========================================
-
-                TiempoDisponible: 0,
-                TiempoProductivo: 0
-            }
-        ];
-
-        this.inicializarGrid();
-    }
-
     inicializarGrid() {
         const gridDiv = document.querySelector('#tablaProduccion');
 
@@ -1531,19 +1448,99 @@ class GestionProduccionCorrugado {
         tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
     }
 
+    cargarDatosIniciales() {
+
+        this.datosOriginales = [
+            {
+                id: 1,
+
+                // ========================================
+                // DATOS GENERALES
+                // ========================================
+
+                Mes: null,
+                Fecha: null,
+                Linea: null,
+                Corrugador: null,
+                Producto: null,
+                Turno: null,
+                Grupo: null,
+
+                // ========================================
+                // PRODUCCIÓN
+                // ========================================
+
+                PesoMinimo: 3,
+
+                TRLiberados: null,
+                ProduccionNeta: null,
+
+                PesoEstandar: 0,
+                PorcentajeSobrepeso: 0,
+
+                ScrapSinCorteSierra: null,
+                ScrapCorteSierra: null,
+
+                ScrapTotal: 0,
+
+                PorcentajeScrapSinCorte: 0,
+                PorcentajeScrapCorte: 0,
+
+                KgReproceso: null,
+                Carbonato: null,
+
+                // ========================================
+                // DISPONIBILIDAD
+                // ========================================
+
+                HorasProgramadas: null,
+
+                // ========================================
+                // TIEMPO NO DISPONIBLE
+                // ========================================
+
+                MantenimientoPreventivo: null,
+                ControlInventarios: null,
+                FaltaEnergia: null,
+                FaltaMateriaPrima: null,
+                PreparacionCambio: null,
+                ArranqueEstabilizacion: null,
+
+                TiempoMttoCorrectivosArranque: null,
+
+                // ========================================
+                // TIEMPO NO PRODUCTIVO
+                // ========================================
+
+                TiempoMuertoCorrectivos: null,
+
+                CambioMoldeSetupExcesos: null,
+
+                TiempoMuertoArrancar: null,
+                TiempoMuertoProceso: null,
+
+                // ========================================
+                // KPIs
+                // ========================================
+
+                TiempoDisponible: 0,
+                TiempoProductivo: 0
+            }
+        ];
+
+        this.inicializarGrid();
+
+        setTimeout(() => {
+            $("#tablaProduccion").removeClass("d-none");
+        }, 1000);
+    }
+
     async consultarDatos(fechaInicio, fechaFin, linea) {
 
         try {
 
             $("#tablaProduccion").addClass("d-none");
-
-            $("#cardsPlaneacionGrid")
-                .empty()
-                .append(
-                    Array(5)
-                        .fill('<div class="skeleton-card"></div>')
-                        .join('')
-                );
+            GlobalUtil.mostrarLoader(true);
 
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetTiemposMuertosCorrugado`,
@@ -1569,6 +1566,10 @@ class GestionProduccionCorrugado {
                 );
 
                 this.cargarDatosGrid(null);
+
+                setTimeout(() => {
+                    GlobalUtil.mostrarLoader(false);
+                }, 1000);
             }
 
         } catch (error) {
@@ -1583,12 +1584,8 @@ class GestionProduccionCorrugado {
         } finally {
 
             setTimeout(() => {
-
-                $('#cardsPlaneacionGrid').html('');
-
-                $("#tablaProduccion")
-                    .removeClass("d-none");
-
+                GlobalUtil.mostrarLoader(false);
+                $("#tablaProduccion").removeClass("d-none");
             }, 1000);
 
         }
@@ -1743,7 +1740,7 @@ class GestionProduccionCorrugado {
 
             const lineas =
                 await EquiposUtil.obtenerLineas(
-                    this.datos_usuario[0].PLANTA,null,1
+                    this.datos_usuario[0].PLANTA, null, 1
                 );
 
             this.listaLineas = lineas;
@@ -2331,13 +2328,29 @@ class ExcelExporterCorrugado {
                     let valor = node.data[col.field];
 
                     if (valor !== null && valor !== undefined && valor !== '' &&
-                        !['Fecha', 'Linea', 'Corrugador', 'Producto', 'Turno', 'Grupo'].includes(col.field)) {
+                        ![
+                            'Mes',
+                            'Fecha',
+                            'Linea',
+                            'Corrugador',
+                            'Producto',
+                            'Turno',
+                            'Grupo'
+                        ].includes(col.field)) {
 
                         valor = parseFloat(valor);
                     }
 
                     if (node.data.id === 'TOTALES' &&
-                        ['Fecha', 'Linea', 'Corrugador', 'Producto', 'Turno', 'Grupo'].includes(col.field)) {
+                        [
+                            'Mes',
+                            'Fecha',
+                            'Linea',
+                            'Corrugador',
+                            'Producto',
+                            'Turno',
+                            'Grupo'
+                        ].includes(col.field)) {
                         valor = '';
                     }
 
@@ -2361,11 +2374,52 @@ class ExcelExporterCorrugado {
                 let colorFondo = '0058A1';
                 let colorTexto = 'FFFFFF';
 
-                if (grupo.nombre === 'TIEMPO NO DISPONIBLE') {
+                // DATOS GENERALES
+                if (grupo.nombre === 'DATOS GENERALES') {
+
+                    colorFondo = 'B4A7D6';
+                    colorTexto = '000000';
+
+                }
+
+                // PRODUCCIÓN
+                else if (grupo.nombre === 'PRODUCCIÓN') {
+
+                    colorFondo = 'F1C232';
+                    colorTexto = '000000';
+
+                }
+
+                // DISPONIBILIDAD
+                else if (grupo.nombre === 'DISPONIBILIDAD') {
+
+                    colorFondo = '9FC5E8';
+                    colorTexto = '000000';
+
+                }
+
+                // TIEMPO NO DISPONIBLE
+                else if (grupo.nombre === 'TIEMPO NO DISPONIBLE') {
+
                     colorFondo = 'FF69B4';
-                } else if (grupo.nombre === 'TIEMPO NO PRODUCTIVO') {
+                    colorTexto = 'FFFFFF';
+
+                }
+
+                // TIEMPO NO PRODUCTIVO
+                else if (grupo.nombre === 'TIEMPO NO PRODUCTIVO') {
+
                     colorFondo = '90EE90';
                     colorTexto = '333333';
+
+                }
+
+                // KPIs
+                else if (grupo.nombre === 'KPIs') {
+
+                    colorFondo = '6AA84F';
+                    colorTexto = 'FFFFFF';
+
                 }
 
                 celda.fill = {
@@ -2466,7 +2520,15 @@ class ExcelExporterCorrugado {
                             right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
                         };
 
-                        if (!['Fecha', 'Linea', 'Corrugador', 'Producto', 'Turno', 'Grupo'].includes(col.field)) {
+                        if (![
+                            'Mes',
+                            'Fecha',
+                            'Linea',
+                            'Corrugador',
+                            'Producto',
+                            'Turno',
+                            'Grupo'
+                        ].includes(col.field)) {
                             celda.numFmt = '0.00';
                         }
                     }
@@ -2478,6 +2540,9 @@ class ExcelExporterCorrugado {
                 });
             });
         }
+
+        worksheet.getRow(1).height = 30;
+        worksheet.getRow(2).height = 60;
     }
 
     obtenerColorCelda(cellClass) {
@@ -2487,7 +2552,8 @@ class ExcelExporterCorrugado {
             'celda-rosa': 'FFF8D7DA',
             'celda-verde-claro': 'FFD4EDDA',
             'celda-azul-claro': 'FFE7F3FF',
-            'celda-verde-fuerte': 'FFA8D5BA'
+            'celda-verde-fuerte': 'FFA8D5BA',
+            'celda-gris': 'FFD3D3D3'
         };
         return colores[cellClass] || 'FFFFFFFF';
     }
@@ -2502,9 +2568,12 @@ class ExcelExporterCorrugado {
 
                     let ancho = 15;
                     if (col.field === 'Fecha') ancho = 12;
+                    else if (col.field === 'Mes') ancho = 12;
+                    else if (col.field === 'HorasProgramadas') ancho = 22;
+                    else if (col.field === 'Planta') ancho = 10;
                     else if (col.field === 'Linea' || col.field === 'Turno' || col.field === 'Grupo') ancho = 8;
-                    else if (col.field === 'Corrugador') ancho = 12;
-                    else if (col.field === 'Producto') ancho = 14;
+                    else if (col.field === 'Corrugador') ancho = 14;
+                    else if (col.field === 'Producto') ancho = 18;
                     else if (col.headerName && col.headerName.length > 20) ancho = 20;
 
                     worksheet.getColumn(colIdx).width = ancho;

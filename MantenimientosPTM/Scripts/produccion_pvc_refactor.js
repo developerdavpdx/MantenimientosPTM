@@ -93,7 +93,6 @@ class GestionProduccionPVC {
         this.inicializarGrid();
 
         setTimeout(() => {
-            $('#cardsPlaneacionGrid').html('');
             $("#tablaProduccion").removeClass("d-none");
         }, 1000);
 
@@ -103,8 +102,8 @@ class GestionProduccionPVC {
 
         try {
 
-            $("#tablaProduccion").addClass("d-none");
             GlobalUtil.mostrarLoader(true);
+            $("#tablaProduccion").addClass("d-none");
 
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetTiemposMuertosPVC`,
@@ -121,6 +120,10 @@ class GestionProduccionPVC {
                 const datos = JSON.parse(response.Data);
 
                 this.cargarDatosGrid(datos);
+
+                setTimeout(() => {
+                    GlobalUtil.mostrarLoader(false);
+                }, 1000);
 
             } else {
 
@@ -142,9 +145,7 @@ class GestionProduccionPVC {
             );
 
         } finally {
-
             setTimeout(() => {
-                GlobalUtil.mostrarLoader(false);
                 $("#tablaProduccion").removeClass("d-none");
             }, 1000);
 
