@@ -464,7 +464,7 @@ namespace MantenimientosPTM.Controllers
         public JsonResult GetTiemposMuertosPVC(
         string FiltroFechaInicio,
         string FiltroFechaFin,
-        string FiltroLinea)
+        string FiltroLinea, string FiltroPlanta)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -492,7 +492,8 @@ namespace MantenimientosPTM.Controllers
                 {
                     { "P_FECHA_INICIO", (string.IsNullOrEmpty(dtFechaInicio.ToString("yyyy-MM-dd")) ? (object)null : dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
                     { "P_FECHA_FIN", (string.IsNullOrEmpty(dtFechaFin.ToString("yyyy-MM-dd")) ? (object)null : dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -547,7 +548,8 @@ namespace MantenimientosPTM.Controllers
         public JsonResult GetTiemposMuertosCorrugado(
         string FiltroFechaInicio,
         string FiltroFechaFin,
-        string FiltroLinea)
+        string FiltroLinea,
+        string FiltroPlanta)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -573,7 +575,8 @@ namespace MantenimientosPTM.Controllers
                 {
                     { "P_FECHA_INICIO", (string.IsNullOrEmpty(dtFechaInicio.ToString("yyyy-MM-dd")) ? (object)null : dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
                     { "P_FECHA_FIN", (string.IsNullOrEmpty(dtFechaFin.ToString("yyyy-MM-dd")) ? (object)null : dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -628,7 +631,7 @@ namespace MantenimientosPTM.Controllers
         public JsonResult GuardarTiemposMuertosCorrugado()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            List<AccesoDatosProduccion.TiemposMuertosProduccionCorrugado> RequestData;
+            List<TiemposMuertosProduccionCorrugado> RequestData;
 
             try
             {
@@ -641,7 +644,7 @@ namespace MantenimientosPTM.Controllers
                     if (string.IsNullOrEmpty(jsonData))
                         throw new Exception("No se recibió información.");
 
-                    RequestData = JsonConvert.DeserializeObject<List<AccesoDatosProduccion.TiemposMuertosProduccionCorrugado>>(jsonData);
+                    RequestData = JsonConvert.DeserializeObject<List<TiemposMuertosProduccionCorrugado>>(jsonData);
                 }
 
                 foreach (var registro in RequestData)
@@ -685,7 +688,8 @@ namespace MantenimientosPTM.Controllers
         public JsonResult GetTiemposMuertosPeadLiso(
         string FiltroFechaInicio,
         string FiltroFechaFin,
-        string FiltroLinea)
+        string FiltroLinea,
+        string FiltroPlanta)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -708,11 +712,15 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-        {
-            { "P_FECHA_INICIO", (string.IsNullOrEmpty(dtFechaInicio.ToString("yyyy-MM-dd")) ? (object)null : dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-            { "P_FECHA_FIN", (string.IsNullOrEmpty(dtFechaFin.ToString("yyyy-MM-dd")) ? (object)null : dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-            { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) }
-        };
+                {
+                    { "P_FECHA_INICIO", (string.IsNullOrEmpty(dtFechaInicio.ToString("yyyy-MM-dd")) ? (object)null : dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+
+                    { "P_FECHA_FIN", (string.IsNullOrEmpty(dtFechaFin.ToString("yyyy-MM-dd")) ? (object)null : dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+
+                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
+
+                    { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                     Logic.AD.GCConsultarTiemposMuertosPeadLiso,
@@ -766,7 +774,7 @@ namespace MantenimientosPTM.Controllers
         public JsonResult GuardarTiemposMuertosPeadLiso()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            List<AccesoDatosProduccion.TiemposMuertosProduccionPeadLiso> RequestData;
+            List<TiemposMuertosProduccionPeadLiso> RequestData;
 
             try
             {
@@ -779,7 +787,7 @@ namespace MantenimientosPTM.Controllers
                     if (string.IsNullOrEmpty(jsonData))
                         throw new Exception("No se recibió información.");
 
-                    RequestData = JsonConvert.DeserializeObject<List<AccesoDatosProduccion.TiemposMuertosProduccionPeadLiso>>(jsonData);
+                    RequestData = JsonConvert.DeserializeObject<List<TiemposMuertosProduccionPeadLiso>>(jsonData);
                 }
 
                 foreach (var registro in RequestData)

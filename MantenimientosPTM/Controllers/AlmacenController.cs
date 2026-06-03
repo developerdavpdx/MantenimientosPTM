@@ -702,21 +702,44 @@ namespace MantenimientosPTM.Controllers
                         USUARIOACTUALIZA = RequestData.UsuarioAtiende
                     };
 
-                    var OTparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, true, null);
-                    var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(LogicMP.AD.GCActualizaMP, OTparameters);
-
-                    if (ActualizaOT.JsonResult.Contains("ERROR") || ActualizaOT.JsonResult.Contains("Error"))
+                    switch (RequestData.OrdenTrabajo)
                     {
-                        jsonResponse.Status = "ERROR";
-                        jsonResponse.Message = "No es posible actualizar la solicitud de refacción: " + ActualizaOT.JsonResult;
-                        return Json(jsonResponse, JsonRequestBehavior.AllowGet);
-                    }
-                }
+                        case string ot when ot.Contains("MP"):
+                            var OTMPparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, true, null);
+                            var ActualizaOTMP = Logic.GlobalCommands.ExecuteProcedureHanaAuto(LogicMP.AD.GCActualizaMP, OTMPparameters);
 
-                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
-                string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
-                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
-                context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+                            if (ActualizaOTMP.JsonResult.Contains("ERROR") || ActualizaOTMP.JsonResult.Contains("Error"))
+                            {
+                                jsonResponse.Status = "ERROR";
+                                jsonResponse.Message = "No es posible actualizar la solicitud de refacción: " + ActualizaOTMP.JsonResult;
+                                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                            }
+
+                            //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                            string rolQueCambioMP = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                            var contextMP = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                            contextMP.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambioMP);
+                            break;
+
+                        case string ot when ot.Contains("MC"):
+                            var OTMCparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, true, null);
+                            var ActualizaOTMC = Logic.GlobalCommands.ExecuteProcedureHanaAuto(LogicMC.AD.GCActualizaMC, OTMCparameters);
+
+                            if (ActualizaOTMC.JsonResult.Contains("ERROR") || ActualizaOTMC.JsonResult.Contains("Error"))
+                            {
+                                jsonResponse.Status = "ERROR";
+                                jsonResponse.Message = "No es posible actualizar la solicitud de refacción: " + ActualizaOTMC.JsonResult;
+                                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                            }
+
+                            //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                            string rolQueCambioMC = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                            var contextMC = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                            contextMC.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambioMC);
+                            break;
+                    }
+
+                }
 
                 jsonResponse.Status = "SI";
                 jsonResponse.Message = "Refaccción actualizada con exito";

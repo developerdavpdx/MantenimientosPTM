@@ -30,6 +30,7 @@
     z-index: 999999;
     font-size: 13px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    top:202.188px !important;
 }
 
 .autocomplete-item {
@@ -62,5 +63,25 @@
 
 .header-grupo-morado {
     background: #b4a7d6 !important;
+    color: #000 !important;
+}
+
+.header-grupo-azul {
+    background: #9fc5e8 !important;
+    color: #000 !important;
+}
+
+.header-grupo-rosa {
+    background: #f4cccc !important;
+    color: #000 !important;
+}
+
+.header-grupo-verde-claro {
+    background: #d9ead3 !important;
+    color: #000 !important;
+}
+
+.header-grupo-verde {
+    background: #93c47d !important;
     color: #000 !important;
 }

@@ -76,6 +76,22 @@
             justify-content: center;
         }
 
+
+    /* Header grupo DISPONIBILIDAD (Azul) */
+    .ag-theme-alpine .ag-header-group-cell.header-grupo-azul {
+        background: #9fc5e8 !important;
+        color: #000 !important;
+        font-weight: bold;
+        font-size: 12px;
+        text-align: center;
+        border-right: 2px solid white;
+    }
+
+        .ag-theme-alpine .ag-header-group-cell.header-grupo-azul .ag-header-group-cell-label {
+            color: #000 !important;
+            justify-content: center;
+        }
+
     /* Todos los headers de grupo */
     .ag-theme-alpine .ag-header-group-cell {
         padding: 8px 6px;
