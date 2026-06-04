@@ -30,7 +30,21 @@
     z-index: 999999;
     font-size: 13px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    top:202.188px !important;
+    top: 202.188px !important;
+}
+/* ============================================================
+   AUTOCOMPLETE GRID
+   ============================================================ */
+.autocomplete-dropdownv2 {
+    position: fixed;
+    background: linear-gradient(135deg, #ffffff 0%, #f7fafd 60%, var(--modal-primary-light) 100%);
+    border: 1px solid #ccc;
+    width: 600px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 999999;
+    font-size: 13px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
 }
 
 .autocomplete-item {
@@ -58,30 +72,105 @@
 
 .header-grupo-amarillo {
     background: #f1c232 !important;
-    color: #000 !important;
+    color: #fff !important;
 }
 
 .header-grupo-morado {
     background: #b4a7d6 !important;
-    color: #000 !important;
+    color: #fff !important;
 }
 
 .header-grupo-azul {
     background: #9fc5e8 !important;
-    color: #000 !important;
+    color: #fff !important;
 }
 
 .header-grupo-rosa {
     background: #f4cccc !important;
-    color: #000 !important;
+    color: #fff !important;
 }
 
 .header-grupo-verde-claro {
     background: #d9ead3 !important;
-    color: #000 !important;
+    color: #fff !important;
 }
 
 .header-grupo-verde {
     background: #93c47d !important;
-    color: #000 !important;
+    color: #fff !important;
+}
+
+/* ========================================
+   HEADERS DE GRUPOS
+   ======================================== */
+
+/* Header grupo TIEMPO NO DISPONIBLE (Rosa) */
+.ag-theme-alpine .ag-header-group-cell.header-grupo-rosa {
+    background: #ff69b4 !important;
+    color: white !important;
+    font-weight: bold;
+    font-size: 12px;
+    text-align: center;
+    border-right: 2px solid white;
+}
+
+    .ag-theme-alpine .ag-header-group-cell.header-grupo-rosa .ag-header-group-cell-label {
+        color: white !important;
+        justify-content: center;
+    }
+
+/* Header grupo TIEMPO NO PRODUCTIVO (Verde claro) */
+.ag-theme-alpine .ag-header-group-cell.header-grupo-verde-claro {
+    background: #90ee90 !important;
+    color: #333 !important;
+    font-weight: bold;
+    font-size: 12px;
+    text-align: center;
+    border-right: 2px solid white;
+}
+
+    .ag-theme-alpine .ag-header-group-cell.header-grupo-verde-claro .ag-header-group-cell-label {
+        color: #fff !important;
+        justify-content: center;
+    }
+
+
+/* Header grupo DISPONIBILIDAD (Azul) */
+.ag-theme-alpine .ag-header-group-cell.header-grupo-azul {
+    background: #9fc5e8 !important;
+    color: #fff !important;
+    font-weight: bold;
+    font-size: 12px;
+    text-align: center;
+    border-right: 2px solid white;
+}
+
+    .ag-theme-alpine .ag-header-group-cell.header-grupo-azul .ag-header-group-cell-label {
+        color: #fff !important;
+        justify-content: center;
+    }
+
+/* Todos los headers de grupo */
+.ag-theme-alpine .ag-header-group-cell {
+    padding: 8px 6px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.ag-theme-alpine-dark .ag-layout-auto-height .ag-center-cols-container, .ag-theme-alpine-dark .ag-layout-auto-height .ag-center-cols-viewport, .ag-theme-alpine-dark .ag-layout-print .ag-center-cols-container, .ag-theme-alpine-dark .ag-layout-print .ag-center-cols-viewport, .ag-theme-alpine .ag-layout-auto-height .ag-center-cols-container, .ag-theme-alpine .ag-layout-auto-height .ag-center-cols-viewport, .ag-theme-alpine .ag-layout-print .ag-center-cols-container, .ag-theme-alpine .ag-layout-print .ag-center-cols-viewport {
+    min-height: 100px !important;
+}
+
+.ag-header-row {
+    color: #fff !important;
+}
+
+.ag-tooltip {
+    background: #fff;
+    color: #212529;
+    border: 1px solid rgba(0,0,0,.175);
+    border-radius: .375rem;
+    padding: .5rem .75rem;
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+    font-size: .875rem;
+    max-width: 300px;
 }

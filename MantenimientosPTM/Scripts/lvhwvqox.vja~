@@ -1432,9 +1432,24 @@ class EquiposUtil {
 
     static llenarLineasCheckbox(Planta, Area, Produccion, FieldContainer) {
 
-        $('#cardsPlaneacionGrid')
-            .removeClass('d-none')
-            .show();
+        document.getElementById('cardsPlaneacionGrid').innerHTML =
+            Array(3).fill('<div class="skeleton-card col-md-4"></div>').join('');
+
+        $(`#cardsPlaneacionGrid`).html(`
+                <div class="ai-loader">
+
+                    <div class="ai-core">
+                        <div class="ai-ring"></div>
+                        <div class="ai-ring delay"></div>
+                        <div class="ai-ring delay2"></div>
+                    </div>
+
+                    <div class="ai-wave"></div>
+
+                    <p class="ai-text">CARGANDO LÍNEAS...</p>
+
+                </div>
+            `);
 
         $.ajax({
             url: `/${GlobalUtil.URLBaseEquipos}/GetLineasPorPlanta`,
@@ -1503,15 +1518,16 @@ class EquiposUtil {
                 );
             },
             complete: function () {
+
                 setTimeout(function () {
-                    $(`#cardsPlaneacionGrid`).fadeOut(500, () => {
-                        $(`#cardsPlaneacionGrid`).addClass('d-none');
-                        $("#LineasProduccionContainer")
-                            .removeClass("d-none")
-                            .hide()
-                            .fadeIn(2000);
-                    });
+                    $(`#cardsPlaneacionGrid`).html(``);
+                    $("#LineasProduccionContainer")
+                        .removeClass("d-none")
+                        .hide()
+                        .fadeIn(2000);
                 }, 1000);
+                
+               
             }
         });
     }

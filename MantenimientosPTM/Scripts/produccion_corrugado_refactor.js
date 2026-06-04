@@ -40,143 +40,57 @@ $(document).ready(function () {
     app.inicializar();
 });
 
-class ArticuloAutocompleteEditor {
-
-    init(params) {
-
-        this.params = params;
-
-        this.eContainer = document.createElement('div');
-        this.eContainer.style.position = 'relative';
-
-        this.eInput = document.createElement('input');
-        this.eInput.className = 'form-control';
-        this.eInput.value = params.value || '';
-
-        this.eDropdown = document.createElement('div');
-        this.eDropdown.className = 'autocomplete-dropdown';
-
-        this.eContainer.appendChild(this.eInput);
-        this.eContainer.appendChild(this.eDropdown);
-
-        this.gestionArticulos = params.context.gestionArticulos;
-        this.datos_usuario = params.context.datos_usuario;
-        this.URLBase = params.context.URLBase;
-
-        $(this.eInput).on('input', async (e) => {
-
-            const query = e.target.value;
-
-            if (query.length >= 2) {
-
-                const articulos = await this.gestionArticulos.obtenerArticulos(
-                    query,
-                    this.datos_usuario[0].EMAIL,
-                    0
-                );
-
-                this.mostrarSugerencias(articulos);
-
-            } else {
-
-                this.eDropdown.innerHTML = '';
-
-            }
-
-        });
-
-    }
-
-    mostrarSugerencias(articulos) {
-
-        this.eDropdown.innerHTML = '';
-
-        const rect = this.eInput.getBoundingClientRect();
-
-        this.eDropdown.style.top = rect.bottom + 'px';
-        this.eDropdown.style.left = rect.left + 'px';
-        this.eDropdown.style.width = Math.max(rect.width, 450) + 'px';
-
-        articulos.forEach(articulo => {
-
-            const item = document.createElement('div');
-            item.className = 'autocomplete-item';
-
-            item.innerHTML = `
-            <strong>${articulo.CodigoArticulo}</strong><br>
-            <small>${articulo.DescripcionArticulo}</small>
-        `;
-
-            item.addEventListener('click', () => {
-
-                this.eInput.value = articulo.CodigoArticulo;
-
-                this.eDropdown.innerHTML = '';
-
-                this.params.stopEditing(); // 🔥 cerrar editor automáticamente
-
-            });
-
-            this.eDropdown.appendChild(item);
-
-        });
-
-    }
-
-    getGui() {
-        return this.eContainer;
-    }
-
-    afterGuiAttached() {
-        this.eInput.focus();
-        this.eInput.select();
-        this.eInput.value = ''; // 🔥 limpiar input
-    }
-
-    getValue() {
-        return this.eInput.value;
-    }
-
-    destroy() { }
-
-    isPopup() {
-        return true;
-    }
-}
-
 // ========================================
 // APLICACIÓN PRINCIPAL - GESTIÓN PRODUCCIÓN CORRUGADO
 // ========================================
-class GestionProduccionCorrugado {
+class GestionProduccionCorrugado extends GestionProduccionBase {
     constructor(datos_usuario, URLBase) {
-        this.URLBase = URLBase;
-        this.datos_usuario = datos_usuario;
-        this.gridApi = null;
-        this.gridColumnApi = null;
-        this.datosOriginales = [];
-        this.cambiosPendientes = [];
-        this.columnDefs = null;
-        this.listaLineas = [];
-
-        this.gestionArticulos = new GestionArticulos(this.datos_usuario, 110);
+        super(datos_usuario, URLBase, 110);
     }
 
     async inicializar() {
-
-        await this.cargarLineas();
-
-        this.configurarEventos();
-
-        this.cargarDatosIniciales();
-
-        this.inicializarTooltips();
-
-        this.configurarMenuContextual();
-
+        await this.inicializarCommon();
         // 🔥 CONSULTAR DATOS
         this.consultarDatos(null, null, null);
-
         console.log('✅ Sistema Corrugado inicializado');
+    }
+
+    crearTotalesTemplate() {
+        return {
+            Mes: null,
+            Fecha: null,
+            Linea: null,
+            Corrugador: null,
+            Producto: null,
+            Turno: null,
+            Grupo: null,
+            PesoMinimo: 0,
+            TRLiberados: 0,
+            ProduccionNeta: 0,
+            PesoEstandar: 0,
+            PorcentajeSobrepeso: 0,
+            ScrapSinCorteSierra: 0,
+            ScrapCorteSierra: 0,
+            ScrapTotal: 0,
+            PorcentajeScrapSinCorte: 0,
+            PorcentajeScrapCorte: 0,
+            KgReproceso: 0,
+            Carbonato: 0,
+            HorasProgramadas: 0,
+            MantenimientoPreventivo: 0,
+            ControlInventarios: 0,
+            FaltaEnergia: 0,
+            FaltaMateriaPrima: 0,
+            PreparacionCambio: 0,
+            ArranqueEstabilizacion: 0,
+            TiempoMttoCorrectivosArranque: 0,
+            TiempoMuertoCorrectivos: 0,
+            CambioMoldeSetupExcesos: 0,
+            TiempoMuertoArrancar: 0,
+            TiempoMuertoProceso: 0,
+            TiempoDisponible: 0,
+            TiempoProductivo: 0
+        };
     }
 
     inicializarGrid() {
@@ -2225,58 +2139,127 @@ class GestionProduccionCorrugado {
     }
 }
 
+class ArticuloAutocompleteEditor {
+
+    init(params) {
+
+        this.params = params;
+
+        this.eContainer = document.createElement('div');
+        this.eContainer.style.position = 'relative';
+
+        this.eInput = document.createElement('input');
+        this.eInput.className = 'form-control';
+        this.eInput.value = params.value || '';
+
+        this.eDropdown = document.createElement('div');
+        this.eDropdown.className = 'autocomplete-dropdown';
+
+        this.eContainer.appendChild(this.eInput);
+        this.eContainer.appendChild(this.eDropdown);
+
+        this.gestionArticulos = params.context.gestionArticulos;
+        this.datos_usuario = params.context.datos_usuario;
+        this.URLBase = params.context.URLBase;
+
+        $(this.eInput).on('input', async (e) => {
+
+            const query = e.target.value;
+
+            if (query.length >= 2) {
+
+                const articulos = await this.gestionArticulos.obtenerArticulos(
+                    query,
+                    this.datos_usuario[0].EMAIL,
+                    0
+                );
+
+                this.mostrarSugerencias(articulos);
+
+            } else {
+
+                this.eDropdown.innerHTML = '';
+
+            }
+
+        });
+
+    }
+
+    mostrarSugerencias(articulos) {
+
+        this.eDropdown.innerHTML = '';
+
+        const rect = this.eInput.getBoundingClientRect();
+
+        this.eDropdown.style.top = rect.bottom + 'px';
+        this.eDropdown.style.left = rect.left + 'px';
+        this.eDropdown.style.width = Math.max(rect.width, 450) + 'px';
+
+        articulos.forEach(articulo => {
+
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+
+            item.innerHTML = `
+            <strong>${articulo.CodigoArticulo}</strong><br>
+            <small>${articulo.DescripcionArticulo}</small>
+        `;
+
+            item.addEventListener('click', () => {
+
+                this.eInput.value = articulo.CodigoArticulo;
+
+                this.eDropdown.innerHTML = '';
+
+                this.params.stopEditing(); // 🔥 cerrar editor automáticamente
+
+            });
+
+            this.eDropdown.appendChild(item);
+
+        });
+
+    }
+
+    getGui() {
+        return this.eContainer;
+    }
+
+    afterGuiAttached() {
+        this.eInput.focus();
+        this.eInput.select();
+        this.eInput.value = ''; // 🔥 limpiar input
+    }
+
+    getValue() {
+        return this.eInput.value;
+    }
+
+    destroy() { }
+
+    isPopup() {
+        return true;
+    }
+}
+
+
 // ========================================
 // EXPORTADOR EXCEL PARA CORRUGADO
 // ========================================
-class ExcelExporterCorrugado {
+class ExcelExporterCorrugado extends ExcelExporterBase {
     constructor(gridApi, columnDefs) {
-        this.gridApi = gridApi;
-        this.columnDefs = columnDefs;
+        super(gridApi, columnDefs);
     }
 
+    getSheetName() { return 'Causas Tiempos Muertos Corrugado'; }
+    getFileNamePrefix() { return 'Produccion_Corrugado'; }
+    getTextFields() { return ['Mes','Fecha','Linea','Corrugador','Producto','Turno','Grupo']; }
+
+    getTotalsFontColor() { return 'FF0058A1'; }
+    getTotalsBorderColor() { return 'FF0058A1'; }
     async exportarConFormato() {
-        if (typeof ExcelJS === 'undefined') {
-            console.error('❌ ExcelJS no cargado');
-            alert('Error: Librería de Excel no disponible');
-            return;
-        }
-
-        try {
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet('Causas Tiempos Muertos Corrugado');
-
-            const estructura = this.analizarEstructuraColumnas();
-
-            this.agregarFilaGrupos(worksheet, estructura);
-            this.agregarFilaHeaders(worksheet, estructura);
-            this.agregarFilasDatos(worksheet, estructura);
-            this.aplicarEstilos(worksheet, estructura);
-            this.ajustarAnchos(worksheet);
-
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            });
-
-            const fecha = new Date().toISOString().split('T')[0];
-            const nombreArchivo = `Produccion_Corrugado_${fecha}.xlsx`;
-
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = nombreArchivo;
-            link.click();
-
-            URL.revokeObjectURL(link.href);
-
-            console.log('✅Excel Corrugado exportado correctamente');
-            if (typeof AlertManager !== 'undefined') {
-                AlertManager.mostrar('Excel exportado correctamente', 'success');
-            }
-
-        } catch (error) {
-            console.error('Error al exportar:', error);
-            alert('Error al exportar Excel: ' + error.message);
-        }
+        return super.exportarConFormato();
     }
 
     analizarEstructuraColumnas() {

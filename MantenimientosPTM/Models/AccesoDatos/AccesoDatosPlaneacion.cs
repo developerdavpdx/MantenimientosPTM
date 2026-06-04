@@ -126,6 +126,12 @@ namespace MantenimientosPTM
             [JsonProperty("GrupoArt")]
             public string GrupoArt { get; set; }
 
+            [JsonProperty("PesoMinimo")]
+            public decimal? PesoMinimo { get; set; }
+
+            [JsonProperty("PesoMaximo")]
+            public decimal? PesoMaximo { get; set; }
+
             [JsonProperty("StockTotal")]
             public decimal? StockTotal { get; set; }
 

@@ -44,139 +44,53 @@ $(document).ready(function () {
     app.inicializar();
 });
 
-class ArticuloAutocompleteEditor {
-
-    init(params) {
-
-        this.params = params;
-
-        this.eContainer = document.createElement('div');
-        this.eContainer.style.position = 'relative';
-
-        this.eInput = document.createElement('input');
-        this.eInput.className = 'form-control';
-        this.eInput.value = params.value || '';
-
-        this.eDropdown = document.createElement('div');
-        this.eDropdown.className = 'autocomplete-dropdown';
-
-        this.eContainer.appendChild(this.eInput);
-        this.eContainer.appendChild(this.eDropdown);
-
-        this.gestionArticulos = params.context.gestionArticulos;
-        this.datos_usuario = params.context.datos_usuario;
-        this.URLBase = params.context.URLBase;
-
-        $(this.eInput).on('input', async (e) => {
-
-            const query = e.target.value;
-
-            if (query.length >= 2) {
-
-                const articulos = await this.gestionArticulos.obtenerArticulos(
-                    query,
-                    this.datos_usuario[0].EMAIL,
-                    0
-                );
-
-                this.mostrarSugerencias(articulos);
-
-            } else {
-
-                this.eDropdown.innerHTML = '';
-
-            }
-
-        });
-
-    }
-
-    mostrarSugerencias(articulos) {
-
-        this.eDropdown.innerHTML = '';
-
-        articulos.forEach(articulo => {
-
-            const item = document.createElement('div');
-            item.className = 'autocomplete-item';
-
-            item.innerHTML = `
-                <strong>${articulo.CodigoArticulo}</strong><br>
-                <small>${articulo.DescripcionArticulo}</small>
-            `;
-
-            item.addEventListener('click', () => {
-
-                this.eInput.value = articulo.CodigoArticulo;
-                this.eDropdown.innerHTML = '';
-                this.params.stopEditing();
-
-            });
-
-            this.eDropdown.appendChild(item);
-
-        });
-
-    }
-
-    getGui() {
-        return this.eContainer;
-    }
-
-    afterGuiAttached() {
-        this.eInput.focus();
-        this.eInput.select();
-        this.eInput.value = '';
-    }
-
-    getValue() {
-        return this.eInput.value;
-    }
-
-    destroy() { }
-
-    isPopup() {
-        return true;
-    }
-}
-
 // ========================================
 // APLICACIÓN PRINCIPAL - GESTIÓN PEAD LISO
 // ========================================
-class GestionProduccionPeadLiso {
+class GestionProduccionPeadLiso extends GestionProduccionBase {
     constructor(datos_usuario, URLBase) {
-
-        this.URLBase = URLBase;
-        this.datos_usuario = datos_usuario;
-
-        this.gridApi = null;
-        this.gridColumnApi = null;
-
-        this.datosOriginales = [];
-        this.cambiosPendientes = [];
-        this.columnDefs = null;
-
-        this.listaLineas = [];
-        this.gestionArticulos = new GestionArticulos(this.datos_usuario, 0);
+        super(datos_usuario, URLBase, 0);
     }
 
     async inicializar() {
-
-        await this.cargarLineas();
-
-        this.configurarEventos();
-
-        this.cargarDatosIniciales();
-
-        this.inicializarTooltips();
-
-        this.configurarMenuContextual();
-
+        await this.inicializarCommon();
         // 🔥 CONSULTAR DATOS
         this.consultarDatos(null, null, null);
-
         console.log('✅ Sistema PEAD LISO inicializado');
+    }
 
+    crearTotalesTemplate() {
+        return {
+            Mes: null,
+            Fecha: null,
+            Linea: null,
+            Producto: null,
+            Turno: null,
+            Grupo: null,
+            PesoMinimo: 0,
+            TRLiberados: 0,
+            ProduccionNeta: 0,
+            PesoEstandar: 0,
+            PorcentajeSobrepeso: 0,
+            TotalScrap: 0,
+            PorcentajeTotalScrap: 0,
+            HorasProgramadas: 0,
+            Preventivo: 0,
+            ControlInventarios: 0,
+            FaltaEnergiaElectrica: 0,
+            FaltaMateriaPrimaInsumos: 0,
+            TiempoCalentamientoCI: 0,
+            PreparacionLineaCambioHerramental: 0,
+            TiempoCalentamientoHerramental: 0,
+            ArranqueEstabilizacionLinea: 0,
+            TiempoMuertoCorrectivos: 0,
+            TiempoMuertoHerramentales: 0,
+            CambioMoldeSetupExcesos: 0,
+            FaltaPersonal: 0,
+            TiempoMuertoProceso: 0,
+            TiempoDisponible: 0,
+            TiempoProductivo: 0
+        };
     }
 
     cargarDatosIniciales() {
@@ -204,7 +118,7 @@ class GestionProduccionPeadLiso {
                 // PRODUCCIÓN
                 // =====================================
 
-                PesoMinimo: 3,
+                PesoMinimo: 0,
 
                 TRLiberados: null,
                 ProduccionNeta: null,
@@ -282,12 +196,8 @@ class GestionProduccionPeadLiso {
     async consultarDatos(fechaInicio, fechaFin, linea) {
 
         try {
-
+            GlobalUtil.mostrarLoader(true);
             $("#tablaProduccion").addClass("d-none");
-
-            $("#cardsPlaneacionGrid")
-                .empty()
-                .append(Array(5).fill('<div class="skeleton-card"></div>').join(''));
 
             const response = await $.ajax({
 
@@ -330,10 +240,12 @@ class GestionProduccionPeadLiso {
         } finally {
 
             setTimeout(() => {
-
-                $('#cardsPlaneacionGrid').html('');
                 $("#tablaProduccion").removeClass("d-none");
 
+            }, 1000);
+
+            setTimeout(() => {
+                GlobalUtil.mostrarLoader(false);
             }, 1000);
 
         }
@@ -748,7 +660,8 @@ class GestionProduccionPeadLiso {
             context: {
                 datos_usuario: this.datos_usuario,
                 gestionArticulos: this.gestionArticulos,
-                URLBase: this.URLBase
+                URLBase: this.URLBase,
+                appProduccion: this
             },
 
             rowData: this.datosOriginales,
@@ -900,30 +813,10 @@ class GestionProduccionPeadLiso {
         }
 
         // ========================================
-        // PRODUCCIÓN
+        // RECALCULAR FILA
         // ========================================
 
-        row.PesoEstandar =
-            this.calcularPesoEstandar(row);
-
-        row.PorcentajeSobrepeso =
-            this.calcularPorcentajeSobrepeso(row);
-
-        row.TotalScrap =
-            this.calcularTotalScrap(row);
-
-        row.PorcentajeTotalScrap =
-            this.calcularPorcentajeTotalScrap(row);
-
-        // ========================================
-        // KPI
-        // ========================================
-
-        row.TiempoDisponible =
-            this.calcularTiempoDisponible(row);
-
-        row.TiempoProductivo =
-            this.calcularTiempoProductivo(row);
+        this.recalcularFila(row);
 
         // ========================================
         // AUDITORÍA
@@ -958,6 +851,33 @@ class GestionProduccionPeadLiso {
         // ========================================
 
         this.recalcularTotales();
+
+    }
+
+    recalcularFila(row) {
+
+        // ========================================
+        // PRODUCCIÓN
+        // ========================================
+
+        row.PesoEstandar =
+            this.calcularPesoEstandar(row);
+
+        row.PorcentajeSobrepeso =
+            this.calcularPorcentajeSobrepeso(row);
+
+        row.PorcentajeTotalScrap =
+            this.calcularPorcentajeTotalScrap(row);
+
+        // ========================================
+        // KPI
+        // ========================================
+
+        row.TiempoDisponible =
+            this.calcularTiempoDisponible(row);
+
+        row.TiempoProductivo =
+            this.calcularTiempoProductivo(row);
 
     }
 
@@ -1029,10 +949,6 @@ class GestionProduccionPeadLiso {
         return (
             (produccion / pesoEstandar) - 1
         ) * 100;
-    }
-
-    calcularTotalScrap(row) {
-        return parseFloat(row.TotalScrap) || 0;
     }
 
     calcularPorcentajeTotalScrap(row) {
@@ -1386,6 +1302,7 @@ class GestionProduccionPeadLiso {
             .html('<span class="spinner-border spinner-border-sm"></span> Guardando...');
 
         try {
+            GlobalUtil.mostrarLoader(true);
 
             const response = await $.ajax({
 
@@ -1582,7 +1499,7 @@ class GestionProduccionPeadLiso {
             // PRODUCCIÓN
             // =====================================
 
-            PesoMinimo: 3,
+            PesoMinimo: 0,
 
             TRLiberados: null,
             ProduccionNeta: null,
@@ -1682,7 +1599,7 @@ class GestionProduccionPeadLiso {
 
         nuevaFila.ID_REGISTRO = null;
 
-        nuevaFila.PesoMinimo = 3;
+        nuevaFila.PesoMinimo = 0;
 
         // ========================================
         // RECALCULAR MES
@@ -1715,23 +1632,7 @@ class GestionProduccionPeadLiso {
         // RECALCULAR KPIs
         // ========================================
 
-        nuevaFila.PesoEstandar =
-            this.calcularPesoEstandar(nuevaFila);
-
-        nuevaFila.PorcentajeSobrepeso =
-            this.calcularPorcentajeSobrepeso(nuevaFila);
-
-        nuevaFila.TotalScrap =
-            this.calcularTotalScrap(nuevaFila);
-
-        nuevaFila.PorcentajeTotalScrap =
-            this.calcularPorcentajeTotalScrap(nuevaFila);
-
-        nuevaFila.TiempoDisponible =
-            this.calcularTiempoDisponible(nuevaFila);
-
-        nuevaFila.TiempoProductivo =
-            this.calcularTiempoProductivo(nuevaFila);
+        this.recalcularFila(nuevaFila);
 
         this.gridApi.applyTransaction({
 
@@ -1782,58 +1683,142 @@ class GestionProduccionPeadLiso {
     }
 }
 
+class ArticuloAutocompleteEditor {
+
+    init(params) {
+
+        this.params = params;
+
+        this.eContainer = document.createElement('div');
+        this.eContainer.style.position = 'relative';
+
+        this.eInput = document.createElement('input');
+        this.eInput.className = 'form-control';
+        this.eInput.value = params.value || '';
+
+        this.eDropdown = document.createElement('div');
+        this.eDropdown.className = 'autocomplete-dropdown';
+
+        this.eContainer.appendChild(this.eInput);
+        this.eContainer.appendChild(this.eDropdown);
+
+        this.gestionArticulos = params.context.gestionArticulos;
+        this.datos_usuario = params.context.datos_usuario;
+        this.URLBase = params.context.URLBase;
+
+        $(this.eInput).on('input', async (e) => {
+
+            const query = e.target.value;
+
+            if (query.length >= 2) {
+
+                const articulos = await this.gestionArticulos.obtenerArticulos(
+                    query,
+                    this.datos_usuario[0].EMAIL,
+                    0
+                );
+
+                this.mostrarSugerencias(articulos);
+
+            } else {
+
+                this.eDropdown.innerHTML = '';
+
+            }
+
+        });
+
+    }
+
+    mostrarSugerencias(articulos) {
+
+        this.eDropdown.innerHTML = '';
+
+        articulos.forEach(articulo => {
+
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+
+            item.innerHTML = `
+                <strong>${articulo.CodigoArticulo}</strong><br>
+                <small>${articulo.DescripcionArticulo}</small>
+            `;
+
+            item.addEventListener('click', () => {
+
+                this.eInput.value = articulo.CodigoArticulo;
+
+                this.articuloSeleccionado = articulo;
+
+                const row = this.params.node.data;
+
+                row.Producto = articulo.CodigoArticulo;
+
+                row.PesoMinimo =
+                    parseFloat(articulo.PesoMinimo) || 0;
+
+                // 🔥 Recalcular KPIs de la fila
+                const app = this.params.context.appProduccion;
+
+                app.recalcularFila(row);
+
+                // 🔥 Actualizar totales
+                app.recalcularTotales();
+
+                this.eDropdown.innerHTML = '';
+
+                this.params.api.refreshCells({
+                    rowNodes: [this.params.node],
+                    force: true
+                });
+
+                this.params.stopEditing();
+
+            });
+
+            this.eDropdown.appendChild(item);
+
+        });
+
+    }
+
+    getGui() {
+        return this.eContainer;
+    }
+
+    afterGuiAttached() {
+        this.eInput.focus();
+        this.eInput.select();
+        this.eInput.value = '';
+    }
+
+    getValue() {
+        return this.eInput.value;
+    }
+
+    destroy() { }
+
+    isPopup() {
+        return true;
+    }
+}
+
 // ========================================
 // ⭐ EXPORTADOR EXCEL PARA PEAD LISO
 // ========================================
-class ExcelExporterPeadLiso {
+class ExcelExporterPeadLiso extends ExcelExporterBase {
     constructor(gridApi, columnDefs) {
-        this.gridApi = gridApi;
-        this.columnDefs = columnDefs;
+        super(gridApi, columnDefs);
     }
 
+    getSheetName() { return 'Causas Tiempos Muertos Pead Liso'; }
+    getFileNamePrefix() { return 'Produccion_PeadLiso'; }
+    getTextFields() { return ['Mes','Fecha','Linea','Producto','Turno','Grupo']; }
+
+    getTotalsFontColor() { return 'FF0058A1'; }
+    getTotalsBorderColor() { return 'FF0058A1'; }
     async exportarConFormato() {
-        if (typeof ExcelJS === 'undefined') {
-            console.error('❌ ExcelJS no cargado');
-            alert('Error: Librería de Excel no disponible');
-            return;
-        }
-
-        try {
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet('Causas Tiempos Muertos Pead Liso');
-
-            const estructura = this.analizarEstructuraColumnas();
-
-            this.agregarFilaGrupos(worksheet, estructura);
-            this.agregarFilaHeaders(worksheet, estructura);
-            this.agregarFilasDatos(worksheet, estructura);
-            this.aplicarEstilos(worksheet, estructura);
-            this.ajustarAnchos(worksheet);
-
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            });
-
-            const fecha = new Date().toISOString().split('T')[0];
-            const nombreArchivo = `Produccion_PeadLiso_${fecha}.xlsx`;
-
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = nombreArchivo;
-            link.click();
-
-            URL.revokeObjectURL(link.href);
-
-            console.log('✅ Excel Pead Liso exportado correctamente');
-            if (typeof AlertManager !== 'undefined') {
-                AlertManager.mostrar('Excel exportado correctamente', 'success');
-            }
-
-        } catch (error) {
-            console.error('Error al exportar:', error);
-            alert('Error al exportar Excel: ' + error.message);
-        }
+        return super.exportarConFormato();
     }
 
     analizarEstructuraColumnas() {
