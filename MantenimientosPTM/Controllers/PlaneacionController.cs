@@ -27,6 +27,10 @@ namespace MantenimientosPTM.Controllers
         {
             return View();
         }
+        public ActionResult CalendarioProduccion()
+        {
+            return View();
+        }
         #endregion
 
         #region Endpoints

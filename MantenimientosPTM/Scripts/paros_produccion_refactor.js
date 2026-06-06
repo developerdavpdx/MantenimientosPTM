@@ -1204,7 +1204,7 @@ class ProduccionManager {
             link.download = `Paros_Produccion_${fecha}.xlsx`;
             link.click();
 
-            AlertManager.mostrar('¡Excel exportado con éxito! 🎉', 'success');
+            AlertManager.mostrar('¡Excel exportado con éxito!', 'success');
 
         } catch (error) {
             console.error('Error al exportar:', error);
@@ -1315,21 +1315,41 @@ class AutocompleteParoArticulo {
             `);
 
             item.on('click', () => {
-
                 input.val(articulo.CodigoArticulo);
 
-                input.attr(
-                    'title',
-                    `📦 ${articulo.DescripcionArticulo}`
-                );
+                const tituloTooltip = `📦 ${articulo.DescripcionArticulo}`;
+                input.attr('title', tituloTooltip);
 
-                const tooltip = bootstrap.Tooltip.getInstance(input[0]);
+                // Usar API pública de Bootstrap para reutilizar o crear tooltip sin disponer la instancia
+                if (input && input[0] && typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    try {
+                        const tt = bootstrap.Tooltip.getOrCreateInstance(input[0]);
 
-                if (tooltip) {
-                    tooltip.dispose();
+                        if (typeof tt.setContent === 'function') {
+                            // Actualizar contenido de forma segura
+                            tt.setContent({ '.tooltip-inner': tituloTooltip });
+                            // Mantener atributo original por compatibilidad
+                            try {
+                                input.attr('data-bs-original-title', tituloTooltip);
+                            } catch (_) {}
+                            if (typeof tt.update === 'function') tt.update();
+                        } else {
+                            // Fallback: recrear sin usar dispose() para evitar estados intermedios inconsistentes
+                            try {
+                                tt.dispose && tt.dispose();
+                            } catch (e) {
+                                console.warn('Error al disponer tooltip (fallback):', e);
+                            }
+                            try {
+                                new bootstrap.Tooltip(input[0]);
+                            } catch (e) {
+                                console.warn('No se pudo inicializar tooltip (fallback):', e);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Error gestionando tooltip:', e);
+                    }
                 }
-
-                new bootstrap.Tooltip(input[0]);
 
                 const row = input.closest('tr');
 
@@ -1350,7 +1370,7 @@ class AutocompleteParoArticulo {
     removerDropdown(input) {
 
         input
-            .siblings('.autocomplete-dropdown')
+            .siblings('.autocomplete-dropdownv2')
             .remove();
 
     }

@@ -260,7 +260,7 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="modal-error-msg" id="errorArticulosMC" style="display: none;">
+                                <div class="modal-error-msg invalid-feedback" id="errorArticulosMC" style="display: none;">
                                     ⚠️ Agregue al menos un artículo a la solicitud.
                                 </div>
                             </div>
@@ -282,7 +282,7 @@
                                 <textarea class="form-control-custom" id="RdescripcionNecesidad" rows="3"
                                           placeholder="Describa por qué necesita esta refacción..."
                                           required autocomplete="on"></textarea>
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa por qué necesita la refacción.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa por qué necesita la refacción.</div>
                             </div>
                         </div>
                     </div>
@@ -376,7 +376,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="Solicitante" name="Solicitante"
                                            placeholder="Nombre del operador" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el nombre del solicitante.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el nombre del solicitante.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="NominaSolicitante">
@@ -384,7 +384,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="NominaSolicitante" name="NominaSolicitante"
                                            placeholder="# de nómina" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el número de nómina.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el número de nómina.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="EstatusOrden">
@@ -422,7 +422,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="TextoCorto" name="TextoCorto"
                                            placeholder="Descripción corta de la falla" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el texto corto descriptivo.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el texto corto descriptivo.</div>
                                 </div>
                             </div>
                         </div>
@@ -440,7 +440,7 @@
                                         <i class="bi bi-tag-fill"></i> Clase de Mantenimiento <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" class="form-control-custom" id="ClaseMantenimiento" name="ClaseMantenimiento" value="Z10" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la clase de mantenimiento.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la clase de mantenimiento.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="NombreEquipo">
@@ -448,7 +448,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="NombreEquipo" name="NombreEquipo"
                                            placeholder="Nombre del equipo" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el nombre del equipo.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el nombre del equipo.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="DescEquipo">
@@ -456,7 +456,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="DescEquipo" name="DescEquipo"
                                            placeholder="Descripción del equipo" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la descripción del equipo.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la descripción del equipo.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="CentroCostos">
@@ -464,7 +464,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="CentroCostos" name="CentroCostos"
                                            placeholder="Centro de costos" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el centro de costos.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el centro de costos.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="NumDocPmCalidad">
@@ -472,14 +472,14 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="NumDocPmCalidad" name="NumDocPmCalidad"
                                            placeholder="# Doc pm.calidad" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el número de documento PM Calidad.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese el número de documento PM Calidad.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="Linea">
                                         <i class="bi bi-arrow-repeat"></i> Línea <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" class="form-control-custom" id="Linea" name="Linea" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la línea.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la línea.</div>
                                 </div>
                             </div>
                         </div>
@@ -497,14 +497,14 @@
                                         <i class="bi bi-clock-fill"></i> Hora Inicio <span class="text-danger">*</span>
                                     </label>
                                     <input type="time" class="form-control-custom" id="HoraInicioTrabajo" name="HoraInicioTrabajo" required autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de inicio.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de inicio.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="HoraFin">
                                         <i class="bi bi-clock-history"></i> Hora Fin <span class="text-danger">*</span>
                                     </label>
                                     <input type="time" class="form-control-custom" id="HoraFin" name="HoraFin" required autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de fin.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de fin.</div>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label-custom" for="TextoSecuencia">
@@ -512,7 +512,7 @@
                                     </label>
                                     <textarea class="form-control-custom" id="TextoSecuencia" name="TextoSecuencia"
                                               rows="3" required placeholder="Describa detalladamente la actividad realizada..." autocomplete="on"></textarea>
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa la actividad realizada.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa la actividad realizada.</div>
                                 </div>
 
                                 <!-- Búsqueda de técnicos -->
@@ -564,7 +564,7 @@
                                         <i class="bi bi-recycle"></i> Scrap Teórico
                                     </label>
                                     <input funcion_destino="darFormatoNum" type="text" class="validacion form-control-custom" id="ScrapEstimado" name="Scrap" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la cantidad de scrap teórico.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la cantidad de scrap teórico.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="DuracionHrs">
@@ -572,42 +572,42 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="DuracionHrs" name="DuracionHrs"
                                            placeholder="0.0" required readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique la duración en horas.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique la duración en horas.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="Scrap">
                                         <i class="bi bi-recycle"></i> Scrap Real
                                     </label>
                                     <input funcion_destino="darFormatoNum" type="text" class="validacion form-control-custom" id="Scrap" name="Scrap" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la cantidad de scrap.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la cantidad de scrap.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="HoraCierreMan">
                                         <i class="bi bi-clock-history"></i> Hora Cierre
                                     </label>
                                     <input type="time" class="form-control-custom" id="HoraCierreMan" name="HoraCierreMan" readonly autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de cierre.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de cierre.</div>
                                 </div>
                                 <div id="TiempoEsperaContainer" class="col-md-6 d-none">
                                     <label class="form-label-custom" for="TiempoEspera">
                                         <i class="bi bi-recycle"></i> Tiempo Espera
                                     </label>
                                     <input funcion_destino="darFormatoNum" type="text" class="validacion form-control-custom" id="TiempoEspera" name="TiempoEspera" readonly autocomplete="off" data-bs-toggle="tooltip" data-bs-placement="top" title="⏳ Tiempo de espera: tiempo transcurrido desde la apertura de la solicitud hasta el inicio del técnico">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">Indique el tiempo de espera manual.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">Indique el tiempo de espera manual.</div>
                                 </div>
                                 <div id="TiempoReparacionContainer" class="col-md-6 d-none">
                                     <label class="form-label-custom" for="TiempoReparacion">
                                         <i class="bi bi-clock-history"></i> Tiempo Reparación
                                     </label>
                                     <input funcion_destino="darFormatoNum" type="text" class="validacion form-control-custom" id="TiempoReparacion" name="TiempoReparacion" readonly autocomplete="off" data-bs-toggle="tooltip" data-bs-placement="top" title="Tiempo de reparación: tiempo transcurrido desde la apertura de la solicitud hasta la finalización del técnico">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique el tiempo de reparación manual.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique el tiempo de reparación manual.</div>
                                 </div>
                                 <div id="TiempoMuertoContainer" class="col-md-6 d-none">
                                     <label class="form-label-custom" for="TiempoMuerto">
                                         <i class="bi bi-clock-history"></i> Tiempo Muerto
                                     </label>
                                     <input funcion_destino="darFormatoNum" type="text" class="validacion form-control-custom" id="TiempoMuerto" name="TiempoMuerto" readonly autocomplete="off" data-bs-toggle="tooltip" data-bs-placement="top" title="💤 Tiempo muerto: tiempo transcurrido desde la apertura de la solicitud hasta el cierre técnico de la orden de trabajo">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique el tiempo de reparación manual.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique el tiempo de reparación manual.</div>
                                 </div>
                             </div>
                         </div>
@@ -649,7 +649,7 @@
                                             <input type="text" class="form-control-custom" id="nombreRealizo" name="nombreRealizo"
                                                    placeholder="Nombre completo" autocomplete="name">
                                             <input type="hidden" id="firmaRealizoData" name="firmaRealizoData">
-                                            <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
+                                            <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -682,7 +682,7 @@
                                             <input type="text" class="form-control-custom" id="nombreSuperviso" name="nombreSuperviso"
                                                    placeholder="Nombre completo" autocomplete="name">
                                             <input type="hidden" id="firmaSupervisoData" name="firmaSupervisoData">
-                                            <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
+                                            <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -715,7 +715,7 @@
                                             <input type="text" class="form-control-custom" id="nombreMantenimiento" name="nombreMantenimiento"
                                                    placeholder="Nombre completo" autocomplete="name">
                                             <input type="hidden" id="firmaMantenimientoData" name="firmaMantenimientoData">
-                                            <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
+                                            <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
                                         </div>
                                     </div>
                                 </div>

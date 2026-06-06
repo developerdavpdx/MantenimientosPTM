@@ -773,33 +773,33 @@ class PlaneacionManager {
                         {
                             icon: 'bi-box-seam-fill',
                             label: 'Cap. Piezas',
-                            val: b.PZSXDIA
-                                ? `${this._fmtNum(b.PZSXDIA)} PZ/día`
-                                : `0 PZ/día`
+                            val: (b.NVO_PZSXDIA !== undefined ? b.NVO_PZSXDIA : b.PZSXDIA) != null
+                                ? `${this._fmtNum((b.NVO_PZSXDIA !== undefined ? b.NVO_PZSXDIA : b.PZSXDIA))} PZ/día`
+                                : null
                         },
 
                         {
                             icon: 'bi-speedometer2',
                             label: 'Cap. Kilos',
-                            val: b.KGSXDIA
-                                ? `${this._fmtNum(b.KGSXDIA)} KG/día`
-                                : `0 KG/día`
+                            val: (b.NVO_KGSXDIA !== undefined ? b.NVO_KGSXDIA : b.KGSXDIA) != null
+                                ? `${this._fmtNum((b.NVO_KGSXDIA !== undefined ? b.NVO_KGSXDIA : b.KGSXDIA))} KG/día`
+                                : null
                         },
 
                         {
                             icon: 'bi-box-fill',
                             label: 'Prod. Teórica PZ',
-                            val: b.PRODUCCION_TEORICA_PZS
-                                ? `${this._fmtNum(b.PRODUCCION_TEORICA_PZS)} PZ`
-                                : `0 PZ`
+                            val: (b.NVO_PRODUCCION_TEORICA_PZS !== undefined ? b.NVO_PRODUCCION_TEORICA_PZS : b.PRODUCCION_TEORICA_PZS) != null
+                                ? `${this._fmtNum((b.NVO_PRODUCCION_TEORICA_PZS !== undefined ? b.NVO_PRODUCCION_TEORICA_PZS : b.PRODUCCION_TEORICA_PZS))} PZ`
+                                : null
                         },
 
                         {
                             icon: 'bi-speedometer2',
                             label: 'Prod. Teórica KG',
-                            val: b.PRODUCCION_TEORICA_KGS
-                                ? `${this._fmtNum(b.PRODUCCION_TEORICA_KGS)} KG`
-                                : `0 KG`
+                            val: (b.NVO_PRODUCCION_TEORICA_KGS !== undefined ? b.NVO_PRODUCCION_TEORICA_KGS : b.PRODUCCION_TEORICA_KGS) != null
+                                ? `${this._fmtNum((b.NVO_PRODUCCION_TEORICA_KGS !== undefined ? b.NVO_PRODUCCION_TEORICA_KGS : b.PRODUCCION_TEORICA_KGS))} KG`
+                                : null
                         }
 
                     ]
@@ -1231,8 +1231,8 @@ class PlaneacionManager {
                     ARTICULO: val(ultimaEdic.NVO_ARTICULO, plan.ARTICULO),
                     ARTICULO_DESC: ultimaEdic.NVO_ARTICULO_DESC, // no está en bitácora, se queda del plan
                     CAPACIDAD: val(ultimaEdic.NVO_CAPACIDAD, plan.CAPACIDAD),
-                    PZSXDIA: val(ultimaEdic.PZSXDIA),
-                    KGSXDIA: val(ultimaEdic.KGSXDIA),
+                    PZSXDIA: val(ultimaEdic.NVO_PZSXDIA),
+                    KGSXDIA: val(ultimaEdic.NVO_KGSXDIA),
                     DIA_INICIO_MANT: val(ultimaEdic.NVO_DIA_INICIO_MANT_STR, plan.DIA_INICIO_MANT_STR),
                     DIA_FIN_MANT: val(ultimaEdic.NVO_DIA_FIN_MANT_STR, plan.DIA_FIN_MANT_STR),
                     PRODUCCION_TEORICA_PZS: val(
@@ -1474,7 +1474,7 @@ class PlaneacionManager {
             // Delegar la construcción y descarga del workbook a la utilidad global
             await GlobalUtil.exportPlanesAExcel(data, { fileName: null });
 
-            AlertManager.mostrar('📊 ¡Excel exportado con éxito! 🎉', 'success');
+            AlertManager.mostrar('¡Excel exportado con éxito!', 'success');
 
         } catch (error) {
             console.error('Error al exportar:', error);
