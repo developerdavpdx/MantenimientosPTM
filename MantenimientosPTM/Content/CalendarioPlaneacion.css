@@ -245,6 +245,105 @@
 
     }
 
+/* ============================================================
+   Compatibilidad con renderizado personalizado (cal-pill)
+   ============================================================ */
+
+/* Contenedor de píldoras en cada celda */
+.cal-pills-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 2px;
+}
+
+.cal-pills-stack.max-2 { max-height: 84px; overflow: hidden; }
+.cal-pills-stack.max-1 { max-height: 44px; overflow: hidden; }
+
+.cal-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 12px;
+    color: #fff;
+    min-height: 34px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    font-size: 0.82rem;
+}
+
+.cal-pill-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.cal-pill-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: normal;
+}
+
+.cal-pill-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cal-pill-theo {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.88);
+}
+
+/* Variantes de borde según posición del span */
+.cal-pill-solo { border-radius: 16px; }
+.cal-pill-start { border-top-left-radius: 16px; border-bottom-left-radius: 16px; }
+.cal-pill-end { border-top-right-radius: 16px; border-bottom-right-radius: 16px; }
+.cal-pill-mid { border-radius: 4px; }
+
+/* Ajustes específicos para vista mes — permiten mayor altura y mejor lectura */
+#calTabla.vista-mes .cal-pills-stack.max-1 { max-height: 64px; }
+#calTabla.vista-mes .cal-pills-stack.max-2 { max-height: 128px; }
+#calTabla.vista-mes .cal-pill { padding: 8px 10px; min-height: 40px; }
+
+/* Mostrar pills completos: evitar compresión horizontal y permitir scroll */
+td.cal-td-dia {
+    vertical-align: top;
+    padding: 6px;
+}
+
+td.cal-td-dia .cal-pills-stack {
+    display: flex;
+    flex-direction: column;
+}
+
+.cal-pill {
+    width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+}
+
+/* En vista mes permitir que la celda crezca con scroll interno si hay muchas píldoras */
+#calTabla.vista-mes td.cal-td-dia {
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+/* En vista semana limitar altura pero permitir scroll */
+#calTabla.vista-week td.cal-td-dia {
+    max-height: 140px;
+    overflow-y: auto;
+}
+
     /* ── Colores por línea ── */
     .cal-event-chip.color-0 {
         background: linear-gradient(135deg, #0ea5d8 0%, #1a6fbd 100%);

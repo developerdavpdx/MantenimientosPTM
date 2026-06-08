@@ -364,27 +364,27 @@ class PlaneacionManager {
     // ─────────────────────────────────────────────
     _renderCard(d, idx) {
 
-                const p = this._calcPct(
-                    d.PRODUCCION_TEORICA_PZS,
-                    d.PRODUCCION_REAL
-                );
+        const p = this._calcPct(
+            d.PRODUCCION_TEORICA_PZS,
+            d.PRODUCCION_REAL
+        );
 
-                const bw = Math.min(p, 100);
+        const bw = Math.min(p, 100);
 
-                const estatusC = `estatus-${d.ESTATUS || 'P'}`;
+        const estatusC = `estatus-${d.ESTATUS || 'P'}`;
 
-                const chipC = `chip-${d.ESTATUS || 'P'}`;
+        const chipC = `chip-${d.ESTATUS || 'P'}`;
 
-                const comentario = (d.COMENTARIOS && d.COMENTARIOS.trim())
-                    ? d.COMENTARIOS
-                    : '<em>Sin comentarios</em>';
+        const comentario = (d.COMENTARIOS && d.COMENTARIOS.trim())
+            ? d.COMENTARIOS
+            : '<em>Sin comentarios</em>';
 
-                // ── Paro activo ──────────────────────────
-                const tieneParoActivo =
-                    d.TIENE_PARO_ACTIVO === 1 ||
-                    d.TIENE_PARO_ACTIVO === '1';
+        // ── Paro activo ──────────────────────────
+        const tieneParoActivo =
+            d.TIENE_PARO_ACTIVO === 1 ||
+            d.TIENE_PARO_ACTIVO === '1';
 
-                const paroBanner = tieneParoActivo ? `
+        const paroBanner = tieneParoActivo ? `
             <div class="paro-banner">
                 <i class="bi bi-exclamation-octagon-fill"></i>
                 <span>
@@ -392,16 +392,16 @@ class PlaneacionManager {
                 </span>
             </div>` : '';
 
-                // ── Artículo truncado ────────────────────
-                const articulo = d.ARTICULO
-                    ? (
-                        d.ARTICULO.length > 45
-                            ? d.ARTICULO.substring(0, 45) + '…'
-                            : d.ARTICULO
-                    )
-                    : null;
+        // ── Artículo truncado ────────────────────
+        const articulo = d.ARTICULO
+            ? (
+                d.ARTICULO.length > 45
+                    ? d.ARTICULO.substring(0, 45) + '…'
+                    : d.ARTICULO
+            )
+            : null;
 
-                return `
+        return `
 
         <div class="prod-card ${estatusC} ${tieneParoActivo ? 'tiene-paro' : ''}"
              data-id="${d.ID_PLAN}"
@@ -733,104 +733,104 @@ class PlaneacionManager {
 
     _renderBitacora(bitacora = []) {
 
-                // Si no hay registros, no renderiza nada
-                if (!bitacora.length) return '';
+        // Si no hay registros, no renderiza nada
+        if (!bitacora.length) return '';
 
-                // Configuración visual según tipo de acción
-                const cfg = {
-                    CREATE: { icon: 'bi-plus-circle-fill', cls: 'bit-create', label: 'Plan creado' },
-                    UPDATE: { icon: 'bi-pencil-fill', cls: 'bit-update', label: 'Ajuste' },
-                    DELETE: { icon: 'bi-trash3-fill', cls: 'bit-delete', label: 'Eliminado' },
-                };
+        // Configuración visual según tipo de acción
+        const cfg = {
+            CREATE: { icon: 'bi-plus-circle-fill', cls: 'bit-create', label: 'Plan creado' },
+            UPDATE: { icon: 'bi-pencil-fill', cls: 'bit-update', label: 'Ajuste' },
+            DELETE: { icon: 'bi-trash3-fill', cls: 'bit-delete', label: 'Eliminado' },
+        };
 
-                // Recorrer bitácora (ya viene orden cronológico)
-                const items = bitacora.map((b, i) => {
+        // Recorrer bitácora (ya viene orden cronológico)
+        const items = bitacora.map((b, i) => {
 
-                    // Configuración visual del registro
-                    const c = cfg[b.BIT_ACCION] || cfg.UPDATE;
+            // Configuración visual del registro
+            const c = cfg[b.BIT_ACCION] || cfg.UPDATE;
 
-                    // Determinar si es el último (más reciente)
-                    const esUltimo = i === bitacora.length - 1;
+            // Determinar si es el último (más reciente)
+            const esUltimo = i === bitacora.length - 1;
 
-                    // Dibujar línea vertical solo si no es el último
-                    const esLinea = !esUltimo;
+            // Dibujar línea vertical solo si no es el último
+            const esLinea = !esUltimo;
 
-                    // Campos normales (grid compacto)
-                    const campos = [
+            // Campos normales (grid compacto)
+            const campos = [
 
-                        {
-                            icon: 'bi-gear-fill',
-                            label: 'Proceso',
-                            val: b.NVO_PROCESO
-                        },
+                {
+                    icon: 'bi-gear-fill',
+                    label: 'Proceso',
+                    val: b.NVO_PROCESO
+                },
 
-                        {
-                            icon: 'bi-box-seam-fill',
-                            label: 'Artículo',
-                            val: b.NVO_ARTICULO
-                        },
+                {
+                    icon: 'bi-box-seam-fill',
+                    label: 'Artículo',
+                    val: b.NVO_ARTICULO
+                },
 
-                        {
-                            icon: 'bi-box-seam-fill',
-                            label: 'Cap. Piezas',
-                            val: (b.NVO_PZSXDIA !== undefined ? b.NVO_PZSXDIA : b.PZSXDIA) != null
-                                ? `${this._fmtNum((b.NVO_PZSXDIA !== undefined ? b.NVO_PZSXDIA : b.PZSXDIA))} PZ/día`
-                                : null
-                        },
+                {
+                    icon: 'bi-box-seam-fill',
+                    label: 'Cap. Piezas',
+                    val: (b.NVO_PZSXDIA !== undefined ? b.NVO_PZSXDIA : b.PZSXDIA) != null
+                        ? `${this._fmtNum((b.NVO_PZSXDIA !== undefined ? b.NVO_PZSXDIA : b.PZSXDIA))} PZ/día`
+                        : null
+                },
 
-                        {
-                            icon: 'bi-speedometer2',
-                            label: 'Cap. Kilos',
-                            val: (b.NVO_KGSXDIA !== undefined ? b.NVO_KGSXDIA : b.KGSXDIA) != null
-                                ? `${this._fmtNum((b.NVO_KGSXDIA !== undefined ? b.NVO_KGSXDIA : b.KGSXDIA))} KG/día`
-                                : null
-                        },
+                {
+                    icon: 'bi-speedometer2',
+                    label: 'Cap. Kilos',
+                    val: (b.NVO_KGSXDIA !== undefined ? b.NVO_KGSXDIA : b.KGSXDIA) != null
+                        ? `${this._fmtNum((b.NVO_KGSXDIA !== undefined ? b.NVO_KGSXDIA : b.KGSXDIA))} KG/día`
+                        : null
+                },
 
-                        {
-                            icon: 'bi-box-fill',
-                            label: 'Prod. Teórica PZ',
-                            val: (b.NVO_PRODUCCION_TEORICA_PZS !== undefined ? b.NVO_PRODUCCION_TEORICA_PZS : b.PRODUCCION_TEORICA_PZS) != null
-                                ? `${this._fmtNum((b.NVO_PRODUCCION_TEORICA_PZS !== undefined ? b.NVO_PRODUCCION_TEORICA_PZS : b.PRODUCCION_TEORICA_PZS))} PZ`
-                                : null
-                        },
+                {
+                    icon: 'bi-box-fill',
+                    label: 'Prod. Teórica PZ',
+                    val: (b.NVO_PRODUCCION_TEORICA_PZS !== undefined ? b.NVO_PRODUCCION_TEORICA_PZS : b.PRODUCCION_TEORICA_PZS) != null
+                        ? `${this._fmtNum((b.NVO_PRODUCCION_TEORICA_PZS !== undefined ? b.NVO_PRODUCCION_TEORICA_PZS : b.PRODUCCION_TEORICA_PZS))} PZ`
+                        : null
+                },
 
-                        {
-                            icon: 'bi-speedometer2',
-                            label: 'Prod. Teórica KG',
-                            val: (b.NVO_PRODUCCION_TEORICA_KGS !== undefined ? b.NVO_PRODUCCION_TEORICA_KGS : b.PRODUCCION_TEORICA_KGS) != null
-                                ? `${this._fmtNum((b.NVO_PRODUCCION_TEORICA_KGS !== undefined ? b.NVO_PRODUCCION_TEORICA_KGS : b.PRODUCCION_TEORICA_KGS))} KG`
-                                : null
-                        }
+                {
+                    icon: 'bi-speedometer2',
+                    label: 'Prod. Teórica KG',
+                    val: (b.NVO_PRODUCCION_TEORICA_KGS !== undefined ? b.NVO_PRODUCCION_TEORICA_KGS : b.PRODUCCION_TEORICA_KGS) != null
+                        ? `${this._fmtNum((b.NVO_PRODUCCION_TEORICA_KGS !== undefined ? b.NVO_PRODUCCION_TEORICA_KGS : b.PRODUCCION_TEORICA_KGS))} KG`
+                        : null
+                }
 
-                    ]
-                        .filter(f => f.val && String(f.val).trim() !== '');
+            ]
+                .filter(f => f.val && String(f.val).trim() !== '');
 
 
-                    // Campos ancho completo (al final)
-                    const camposFull = [
-                        {
-                            icon: 'bi-graph-up-arrow',
-                            label: 'Prod. Real',
-                            val: b.NVO_PRODUCCION_REAL
-                                ? `${this._fmtNum(b.NVO_PRODUCCION_REAL)} PZ`
-                                : `0 PZ`
-                        },
-                        { icon: 'bi-card-text', label: 'Descripción', val: b.NVO_ARTICULO_DESC },
+            // Campos ancho completo (al final)
+            const camposFull = [
+                {
+                    icon: 'bi-graph-up-arrow',
+                    label: 'Prod. Real',
+                    val: b.NVO_PRODUCCION_REAL
+                        ? `${this._fmtNum(b.NVO_PRODUCCION_REAL)} PZ`
+                        : `0 PZ`
+                },
+                { icon: 'bi-card-text', label: 'Descripción', val: b.NVO_ARTICULO_DESC },
 
-                        {
-                            icon: 'bi-calendar-range',
-                            label: 'Período',
-                            val: (b.NVO_DIA_INICIO_MANT_STR && b.NVO_DIA_FIN_MANT_STR)
-                                ? `${b.NVO_DIA_INICIO_MANT_STR} — ${b.NVO_DIA_FIN_MANT_STR}`
-                                : null
-                        },
+                {
+                    icon: 'bi-calendar-range',
+                    label: 'Período',
+                    val: (b.NVO_DIA_INICIO_MANT_STR && b.NVO_DIA_FIN_MANT_STR)
+                        ? `${b.NVO_DIA_INICIO_MANT_STR} — ${b.NVO_DIA_FIN_MANT_STR}`
+                        : null
+                },
 
-                        { icon: 'bi-chat-left-text', label: 'Comentarios', val: b.NVO_COMENTARIOS },
+                { icon: 'bi-chat-left-text', label: 'Comentarios', val: b.NVO_COMENTARIOS },
 
-                    ].filter(f => f.val && String(f.val).trim() !== '');
+            ].filter(f => f.val && String(f.val).trim() !== '');
 
-                    // Renderizar campos dinámicamente
-                    const detalle = (campos.length || camposFull.length) ? `
+            // Renderizar campos dinámicamente
+            const detalle = (campos.length || camposFull.length) ? `
                     <div class="bit-fields">
                         ${campos.map(f => `
                         <div class="bit-field">
@@ -856,8 +856,8 @@ class PlaneacionManager {
 
                     </div>` : '';
 
-                    // Retornar estructura del timeline
-                    return `
+            // Retornar estructura del timeline
+            return `
             <div class="bit-item ${c.cls}">
 
                 <!-- Línea lateral -->
@@ -896,10 +896,10 @@ class PlaneacionManager {
 
                 </div>
             </div>`;
-                });
+        });
 
-                // Contenedor general
-                return `
+        // Contenedor general
+        return `
         <div class="bitacora-wrap" data-open="false">
 
             <!-- Botón toggle -->
@@ -1101,7 +1101,7 @@ class PlaneacionManager {
             dataType: 'json',
             success: (response) => {
                 if (response.Status === 'SI') {
-                    let message = idPlan != '' ? 'Plan actualizado correctamente' : 'Plan generado correctamente';
+                    let message = idPlan != '' ? ' Plan actualizado correctamente' : ' Plan generado correctamente';
                     $("#btnGuardarEvento").html(`<i class="bi bi-check-circle-fill me-2 text-white">${message}</i>`).prop("disabled", false);
 
                     // ✅ CAMBIO: refresca cards en vez de DataTable.ajax.reload()
@@ -1272,9 +1272,13 @@ class PlaneacionManager {
                     "PlanLinea",
                     null,
                     () => {
+                        $('#PlanLinea').val(datos.LINEA_PRODUCCION);
 
-                        $('#PlanLinea')
-                            .val(datos.LINEA_PRODUCCION);
+                        setTimeout(() => {
+                            $('#PlanLinea')
+                                .val(datos.LINEA_PRODUCCION)
+                                .prop('disabled', true);
+                        }, 500);
                     }
                 );
 

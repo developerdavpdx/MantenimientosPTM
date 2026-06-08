@@ -1895,7 +1895,7 @@ class EquiposUtil {
                     FiltroLinea.empty();
 
                     selectElement.append('<option value="">Todas las líneas</option>');
-                    selectElement.prop("disabled", false);
+                    // selectElement.prop("disabled", false);
                     FiltroLinea.append('<option value="">Todas las líneas</option>');
 
                     // 🔥 Agrupar por planta

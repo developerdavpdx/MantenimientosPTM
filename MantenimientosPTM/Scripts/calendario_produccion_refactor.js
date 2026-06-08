@@ -60,11 +60,14 @@ class GestionCalendarioProduccion extends GestionProduccionBase {
         this.planesData = [];             // datos crudos del servidor
         this.coloresLinea = {};             // mapa lineaId → color hex
 
-        // Paleta de colores (sincronizada con la que usas en exportarPlanesAExcel)
+        // Paleta alineada al logo PTM (tonos azules corporativos)
         this._paleta = [
-            '#00b4d8', '#e63946', '#f4a261', '#2a9d8f',
-            '#6a4c93', '#e9c46a', '#264653', '#e76f51',
-            '#43aa8b', '#577590', '#d62828', '#023e8a'
+            '#0b64a4', // azul oscuro principal
+            '#0f7cc0', // azul intermedio
+            '#29a9e6', // azul claro
+            '#1b6fa6', // variante
+            '#0b4e84', // azul profundo
+            '#083e6a'  // azul más oscuro
         ];
 
         this._paletaIdx = 0;
@@ -89,20 +92,25 @@ class GestionCalendarioProduccion extends GestionProduccionBase {
     // Carga procesos y líneas usando las utilidades de Global.js
     async _cargarSelects() {
         const planta = this.datos_usuario?.[0]?.PLANTA || 1;
-        EquiposUtil.llenarProcesos(planta, 'CalFiltroProceso', 'CalFiltroProceso');
+        EquiposUtil.llenarProcesos(planta, 'CalFiltroProceso', null);
 
         // Al cambiar proceso → cargar líneas
-        $('#CalFiltroProceso').on('change', () => {
-            const idProceso = $('#CalFiltroProceso').val();
-            if (idProceso) {
-                EquiposUtil.llenarLineas(planta, idProceso, 1, 'CalFiltroLinea', 'CalFiltroLinea');
-                $('#CalFiltroLinea').prop('disabled', false);
-            } else {
-                $('#CalFiltroLinea').empty()
-                    .append('<option value="">Todas las líneas...</option>')
-                    .prop('disabled', true);
-            }
-        });
+
+
+        $("#CalFiltroProceso")
+            .off('change')
+            .on('change', (e) => {
+
+                let Proceso = $(e.currentTarget).val();
+
+                EquiposUtil.llenarLineas(
+                    this.datos_usuario[0].PLANTA,
+                    Proceso,
+                    1,
+                    "CalFiltroLinea",
+                    null
+                );
+            });
     }
 
     // ── Eventos UI ───────────────────────────────────────────
@@ -202,54 +210,99 @@ class GestionCalendarioProduccion extends GestionProduccionBase {
         this.planesData = [];
         this.coloresLinea = {};
         this._paletaIdx = 0;
+        this._usedColors = new Set(); // evitar reutilizar colores entre líneas
 
         data.forEach(plan => {
             const bitacora = plan.BITACORA || [];
             const linea = plan.LINEA_PRODUCCION;
             const linea_desc = plan.LINEA_PRODUCCION_DESC;
 
-            // Color base de la línea
+            // Color base de la línea — elegir uno no usado aún
             if (!this.coloresLinea[linea]) {
-                this.coloresLinea[linea] = plan.COLOR_EVENTO ||
-                    this._paleta[this._paletaIdx % this._paleta.length];
-                this._paletaIdx++;
+                let chosen = null;
+
+                // Si el plan trae COLOR_EVENTO y no ha sido usado, preferirlo
+                if (plan.COLOR_EVENTO && !this._usedColors.has(plan.COLOR_EVENTO)) {
+                    chosen = plan.COLOR_EVENTO;
+                }
+
+                // Si no hay color elegido, buscar en la paleta el siguiente no usado
+                if (!chosen) {
+                    let foundIdx = null;
+                    for (let i = 0; i < this._paleta.length; i++) {
+                        const idx = (this._paletaIdx + i) % this._paleta.length;
+                        const c = this._paleta[idx];
+                        if (!this._usedColors.has(c)) { foundIdx = idx; break; }
+                    }
+                    if (foundIdx !== null) {
+                        chosen = this._paleta[foundIdx];
+                        this._paletaIdx = (foundIdx + 1) % this._paleta.length;
+                    } else {
+                        // Todos los colores ya usados: reutilizar avanzando índice
+                        chosen = this._paleta[this._paletaIdx % this._paleta.length];
+                        this._paletaIdx = (this._paletaIdx + 1) % this._paleta.length;
+                    }
+                }
+
+                this.coloresLinea[linea] = chosen;
+                this._usedColors.add(chosen);
             }
 
-            // ── Pintar CADA entrada de bitácora como píldora independiente ──
-            bitacora
-                .sort((a, b) => (a.ID_BITACORA || 0) - (b.ID_BITACORA || 0))
-                .forEach((bit, idx) => {
-                    const inicioStr = bit.NVO_DIA_INICIO_MANT_STR || plan.DIA_INICIO_MANT_STR;
-                    const finStr = bit.NVO_DIA_FIN_MANT_STR || plan.DIA_FIN_MANT_STR;
-                    const inicio = this._parseDMY(inicioStr);
-                    const fin = this._parseDMY(finStr);
+            // ── Aplicar reglas de negocio sobre la bitácora antes de pintar ──
+            //  Regla: Si hay múltiples entradas para el mismo artículo y sus
+            //  periodos se solapan, mostrar solamente la entrada más reciente
+            //  (basada en ID_BITACORA). Si los periodos son disjuntos, mostrar
+            //  como eventos independientes. Diferente artículo => evento independiente.
+            const procesados = [];
+            const sorted = (bitacora || []).slice().sort((a, b) => (a.ID_BITACORA || 0) - (b.ID_BITACORA || 0));
+            const rangesOverlap = (aStart, aEnd, bStart, bEnd) => !(aEnd < bStart || bEnd < aStart);
 
-                    if (!inicio || !fin) return;
+            sorted.forEach(bit => {
+                const inicioStr = bit.NVO_DIA_INICIO_MANT_STR || plan.DIA_INICIO_MANT_STR;
+                const finStr = bit.NVO_DIA_FIN_MANT_STR || plan.DIA_FIN_MANT_STR;
+                const inicio = this._parseDMY(inicioStr);
+                const fin = this._parseDMY(finStr);
+                if (!inicio || !fin) return;
 
-                    // Variar color por entrada para distinguirlas visualmente
-                    const color = idx === 0
-                        ? this.coloresLinea[linea]
-                        : this._paleta[(this._paletaIdx + idx) % this._paleta.length];
+                const articulo = (bit.NVO_ARTICULO || plan.ARTICULO || '').toString();
 
-                    this.planesData.push({
-                        id_plan: plan.ID_PLAN,
-                        id_bitacora: bit.ID_BITACORA,
-                        linea,
-                        linea_desc: `${linea_desc}`,
-                        articulo: bit.NVO_ARTICULO || plan.ARTICULO,
-                        articulo_desc: bit.NVO_ARTICULO_DESC || plan.ARTICULO_DESC,
-                        proceso: bit.NVO_PROCESO || plan.PROCESO,
-                        inicio,
-                        fin,
-                        pzsxdia: parseFloat(bit.NVO_PZSXDIA ?? plan.PZSXDIA ?? 0),
-                        kgsxdia: parseFloat(bit.NVO_KGSXDIA ?? plan.KGSXDIA ?? 0),
-                        prod_teo_pzs: parseFloat(bit.NVO_PRODUCCION_TEORICA_PZS ?? plan.PRODUCCION_TEORICA_PZS ?? 0),
-                        prod_teo_kgs: parseFloat(bit.NVO_PRODUCCION_TEORICA_KGS ?? plan.PRODUCCION_TEORICA_KGS ?? 0),
-                        color,
-                        estatus: plan.ESTATUS,
-                        accion: bit.BIT_ACCION
-                    });
+                // Buscar si existe ya un registro procesado para el mismo artículo
+                // que se solape en fechas. Si existe, lo reemplazamos por el más
+                // reciente (el actual, porque estamos ordenados por ID_BITACORA asc.).
+                const idx = procesados.findIndex(p => p.articulo === articulo && rangesOverlap(p.inicio, p.fin, inicio, fin));
+                const nuevo = Object.assign({}, bit, { inicio, fin, articulo });
+                if (idx >= 0) {
+                    // Reemplazar con la entrada más reciente
+                    procesados[idx] = nuevo;
+                } else {
+                    procesados.push(nuevo);
+                }
+            });
+
+            // Ahora crear los eventos a partir de los procesados
+            procesados.forEach((bit, idx) => {
+                // Usar un único color por línea para todos los eventos
+                const color = this.coloresLinea[linea];
+
+                this.planesData.push({
+                    id_plan: plan.ID_PLAN,
+                    id_bitacora: bit.ID_BITACORA,
+                    linea,
+                    linea_desc: `${linea_desc}`,
+                    articulo: bit.NVO_ARTICULO || plan.ARTICULO || bit.articulo,
+                    articulo_desc: bit.NVO_ARTICULO_DESC || plan.ARTICULO_DESC,
+                    proceso: bit.NVO_PROCESO || plan.PROCESO,
+                    inicio: bit.inicio,
+                    fin: bit.fin,
+                    pzsxdia: parseFloat(bit.NVO_PZSXDIA ?? plan.PZSXDIA ?? 0),
+                    kgsxdia: parseFloat(bit.NVO_KGSXDIA ?? plan.KGSXDIA ?? 0) || 0,
+                    prod_teo_pzs: parseFloat(bit.NVO_PRODUCCION_TEORICA_PZS ?? plan.PRODUCCION_TEORICA_PZS ?? 0) || 0,
+                    prod_teo_kgs: parseFloat(bit.NVO_PRODUCCION_TEORICA_KGS ?? plan.PRODUCCION_TEORICA_KGS ?? 0) || 0,
+                    color,
+                    estatus: plan.ESTATUS,
+                    accion: bit.BIT_ACCION
                 });
+            });
         });
 
         this._renderCalendario();
@@ -339,8 +392,17 @@ class GestionCalendarioProduccion extends GestionProduccionBase {
                 );
 
                 if (eventos.length > 0) {
-                    tbody += `<div class="cal-pills-stack">`;   // ← wrapper stack
-                    eventos.forEach(ev => {
+                    // Determinar máximo visible según la vista
+                    // Semana: limitar a 2 para evitar solapamiento visual.
+                    // Mes: mostrar todos los eventos (se permite scroll en CSS).
+                    const maxVisible = this.vistaActual === 'week' ? 2 : eventos.length;
+                    const stackClass = `cal-pills-stack max-${maxVisible}`;
+                    // Contenedor de píldoras (el comportamiento responsive lo controla CSS)
+                    tbody += `<div class="${stackClass}">`;   // ← wrapper stack
+                    // Mostrar un máximo de píldoras por celda, luego '+N'
+                    const visible = eventos.slice(0, maxVisible);
+                    const extra = eventos.length - visible.length;
+                    visible.forEach(ev => {
                         const isStart = this._fmtISO(ev.inicio) === iso;
                         const isEnd = this._fmtISO(ev.fin) === iso;
                         const isSolo = isStart && isEnd;
@@ -349,8 +411,9 @@ class GestionCalendarioProduccion extends GestionProduccionBase {
                                 : isEnd ? 'cal-pill-end'
                                     : 'cal-pill-mid';
 
-                        const mostrarContenido = isStart || isSolo;
-                        const iniciales = (ev.proceso || 'P').slice(0, 2).toUpperCase();
+                        // Mostrar contenido completo en todas las píldoras
+                        const mostrarCompleto = true;
+                        const iniciales = ((ev.proceso || ev.articulo || 'P').toString().slice(0, 2)).toUpperCase();
                         const dataTT = this._encodeTT(ev);
 
                         tbody += `<div class="cal-pill ${spanCls}"
@@ -359,21 +422,29 @@ class GestionCalendarioProduccion extends GestionProduccionBase {
                            data-id="${ev.id_plan}"
                            data-accion="${ev.accion}">`;
 
-                        if (mostrarContenido) {
+                        const nombreArticulo = (ev.articulo || ev.articulo_desc || 'Artículo').toString();
+                        const pzs = Number(ev.pzsxdia) || 0;
+                        const kgs = Number(ev.kgsxdia) || 0;
+                        const prodPzs = Number(ev.prod_teo_pzs) || 0;
+                        const prodKgs = Number(ev.prod_teo_kgs) || 0;
+                        if (mostrarCompleto) {
+                            // Contenido completo (mostrar siempre)
                             tbody += `
                     <div class="cal-pill-icon">${iniciales}</div>
-                    <div class="cal-pill-content">
-                        <div class="cal-pill-name">${ev.articulo}</div>
-                        ${ev.pzsxdia > 0
-                                    ? `<div class="cal-pill-stats">
-                                 ${ev.pzsxdia.toLocaleString('es-MX')} pzs
-                                 · ${ev.kgsxdia.toLocaleString('es-MX')} kg
-                               </div>`
-                                    : ''}
+                    <div class="cal-pill-content" style="white-space:normal;font-size:0.85rem;line-height:1.1;">
+                        <div class="cal-pill-name">${nombreArticulo}</div>
+                        <div class="cal-pill-theo">
+                            <small>Prod. Teórica: ${prodPzs.toLocaleString('es-MX')} pzs · ${prodKgs.toLocaleString('es-MX')} kg</small>
+                        </div>
                     </div>`;
+                        } else {
+                            // Versión compacta para píldoras intermedias: solo icono (detalles en tooltip)
+                            tbody += `
+                    <div class="cal-pill-icon">${iniciales}</div>`;
                         }
                         tbody += `</div>`;
                     });
+                    // No mostrar contador "+N": eliminamos .cal-more por requerimiento
                     tbody += `</div>`;                          // ← cierra stack
                 }
 
@@ -417,17 +488,12 @@ class GestionCalendarioProduccion extends GestionProduccionBase {
                               → ${DateUtils.formatearFechaTexto(ev.fin_iso, true)}</span>
                     </div>
                     <div class="cal-tt-row">
-                        <span class="cal-tt-label">Piezas / día</span>
-                        <span>${Number(ev.pzsxdia).toLocaleString('es-MX')}</span>
-                    </div>
-                    <div class="cal-tt-row">
-                        <span class="cal-tt-label">Kg / día</span>
-                        <span>${Number(ev.kgsxdia).toLocaleString('es-MX')}</span>
+                        <span class="cal-tt-label">Capacidad</span>
+                        <span>${Number(ev.pzsxdia).toLocaleString('es-MX')} pzs / ${Number(ev.kgsxdia).toLocaleString('es-MX')} kg</span>
                     </div>
                     <div class="cal-tt-row">
                         <span class="cal-tt-label">Prod. Teórica</span>
-                        <span>${Number(ev.prod_teo_pzs).toLocaleString('es-MX')} pzs
-                              / ${Number(ev.prod_teo_kgs).toLocaleString('es-MX')} kg</span>
+                        <span>${Number(ev.prod_teo_pzs).toLocaleString('es-MX')} pzs / ${Number(ev.prod_teo_kgs).toLocaleString('es-MX')} kg</span>
                     </div>
                     <div class="cal-tt-row">
                         <span class="cal-tt-label">Acción</span>
@@ -448,6 +514,8 @@ class GestionCalendarioProduccion extends GestionProduccionBase {
             })
             .off('mouseleave.caltt', '.cal-pill')
             .on('mouseleave.caltt', '.cal-pill', () => this._ocultarTooltip());
+
+        // Eliminado manejador para .cal-more ya que no se genera dicho elemento
     }
 
     _ocultarTooltip() {
@@ -562,17 +630,17 @@ class GestionCalendarioProduccion extends GestionProduccionBase {
     // Codifica los datos del evento para el atributo data-tt
     _encodeTT(ev) {
         const obj = {
-            color: ev.color,
-            proceso: ev.proceso,
-            articulo: ev.articulo,
-            articulo_desc: ev.articulo_desc,
+            color: ev.color || '#999',
+            proceso: ev.proceso || 'N/A',
+            articulo: ev.articulo || ev.articulo_desc || 'N/A',
+            articulo_desc: ev.articulo_desc || '',
             inicio_iso: this._fmtISO(ev.inicio),
             fin_iso: this._fmtISO(ev.fin),
-            pzsxdia: ev.pzsxdia,
-            kgsxdia: ev.kgsxdia,
-            prod_teo_pzs: ev.prod_teo_pzs,
-            prod_teo_kgs: ev.prod_teo_kgs,
-            accion: ev.accion
+            pzsxdia: Number(ev.pzsxdia) || 0,
+            kgsxdia: Number(ev.kgsxdia) || 0,
+            prod_teo_pzs: Number(ev.prod_teo_pzs) || 0,
+            prod_teo_kgs: Number(ev.prod_teo_kgs) || 0,
+            accion: ev.accion || ''
         };
         return encodeURIComponent(JSON.stringify(obj));
     }
