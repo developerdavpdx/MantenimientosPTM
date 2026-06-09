@@ -159,6 +159,12 @@ namespace MantenimientosPTM.Controllers
                     ? "No fue posible insertar el tipo de equipo."
                     : "Tipo de equipo insertado correctamente.";
 
+                // Respuesta
+                jsonResponse.Status = resultHana.JsonResult.Contains("DUPLICADO") ? "NO" : "SI";
+                jsonResponse.Message = resultHana.JsonResult.Contains("ERROR")
+                    ? "No fue posible insertar el tipo de equipo."
+                    : "Tipo de equipo insertado correctamente.";
+
                 jsonResponse.Data = resultHana.JsonResult;
 
                 return Json(jsonResponse);

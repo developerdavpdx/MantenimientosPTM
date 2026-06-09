@@ -42,6 +42,7 @@ class UIManagerCalendario {
         $("#PlaneacionContainer a").addClass("whiteText");
         $("#planeacion-collapse").addClass("show");
         $("#CalendarioProduccionURL").addClass("selected-item");
+        $("#main").removeClass("main-container");
         console.log('✅ UI Calendario inicializada');
     }
 }
@@ -502,15 +503,29 @@ class GestionCalendarioProduccion extends GestionProduccionBase {
                 `);
 
                 const rect = e.currentTarget.getBoundingClientRect();
-                let top = rect.bottom + window.scrollY + 6;
-                let left = rect.left + window.scrollX;
-                $tt.removeClass('d-none').css({ top, left });
 
-                // Ajustar si se sale de pantalla
+                // Mostrar temporalmente el tooltip (invisible) para medir su tamaño
+                $tt.removeClass('d-none').css({ top: 0, left: 0, visibility: 'hidden' });
                 const ttW = $tt.outerWidth();
-                if (left + ttW > window.innerWidth - 16) {
-                    $tt.css('left', window.innerWidth - ttW - 16);
-                }
+                const ttH = $tt.outerHeight();
+
+                // Posicionar centrado horizontalmente respecto a la píldora y
+                // siempre por encima (con un pequeño margen). Evitar que se salga
+                // de los límites de la ventana.
+                let left = rect.left + window.scrollX + (rect.width - ttW) / 2;
+                let top = rect.top + window.scrollY - ttH - 6;
+
+                // Asegurar separación mínima del borde izquierdo/derecho
+                const minGap = 16;
+                if (left < minGap) left = minGap;
+                if (left + ttW > window.innerWidth - minGap) left = window.innerWidth - ttW - minGap;
+
+                // No permitir que quede fuera por arriba; en ese caso lo limitamos
+                // al mínimo (seguirá estando lo más arriba posible sin salirse).
+                if (top < minGap) top = minGap;
+
+                // Finalmente mostrar el tooltip en la posición calculada
+                $tt.css({ top, left, visibility: 'visible' });
             })
             .off('mouseleave.caltt', '.cal-pill')
             .on('mouseleave.caltt', '.cal-pill', () => this._ocultarTooltip());
