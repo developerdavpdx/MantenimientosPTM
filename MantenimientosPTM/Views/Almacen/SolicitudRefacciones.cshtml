@@ -340,8 +340,11 @@
                                         <input type="checkbox" id="chkSelectAllSC" title="Seleccionar todos">
                                     </th>
                                     <th>Orden de Trabajo</th>
-                                    <th>Código</th>
+                                    <th>Código Refacción</th>
                                     <th>Artículo</th>
+                                    <th class="text-end">Stock</th>
+                                    <th class="text-end">Min</th>
+                                    <th class="text-end">Max</th>
                                     <th>Cant. Requerida</th>
                                     <th>Cant. a Encargar <span class="text-danger">*</span></th>
                                 </tr>
@@ -654,6 +657,8 @@
                                         <th>Artículo</th>
                                         <th style="width:70px;">Cantidad</th>
                                         <th style="width:70px;">Stock</th>
+                                        <th style="width:70px;">Min</th>
+                                        <th style="width:70px;">Max</th>
                                         <th style="width:90px;">Urgencia</th>
                                         <th style="width:90px;">Estatus</th>
                                         <th style="width:90px;">Departamento</th>
@@ -665,7 +670,7 @@
                                 </thead>
                                 <tbody id="bodyArticulosSalida">
                                     <tr>
-                                        <td colspan="14" class="text-center text-muted py-4">
+                                        <td colspan="16" class="text-center text-muted py-4">
                                             <i class="bi bi-info-circle me-1"></i>
                                             Seleccione una solicitud para ver los artículos
                                         </td>

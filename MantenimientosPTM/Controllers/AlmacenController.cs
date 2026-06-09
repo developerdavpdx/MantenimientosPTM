@@ -628,7 +628,17 @@ namespace MantenimientosPTM.Controllers
                     var paramsEstatus = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
                         { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_ESTATUS", ("Espera Autorizacion", ParameterDirection.Input, HanaDbType.NVarChar) }
+
+                        { "P_CENTRO_COSTO_1", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CENTRO_COSTO_2", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CENTRO_COSTO_3", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CENTRO_COSTO_4", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+
+                        { "P_ESTATUS", ("Espera Autorizacion", ParameterDirection.Input, HanaDbType.NVarChar) },
+
+                        { "P_DOC_NUM", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_DOC_ENTRY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_RESPONSE_SAP", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) }
                     };
 
                     var resultEstatus = Logic.GlobalCommands.ExecuteProcedureHanaAuto(

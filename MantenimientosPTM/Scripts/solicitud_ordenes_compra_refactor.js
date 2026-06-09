@@ -266,7 +266,7 @@ class SolicitudCompraApp {
                 fila.find('.sol-buscar-proveedor').removeClass('is-invalid');
 
                 const nombreArticulo = fila.find('td:eq(2)').text().trim();
-                
+
                 articulos.push({
                     IdsDetalle: JSON.parse(fila.attr('data-idsdetalle')), // ✅ array de IDs
                     CodigoArticulo: fila.data('codigoarticulo'),
@@ -346,12 +346,12 @@ class SolicitudCompraApp {
 
             // ✅ Paso 2: Enviar correo de autorización
             btn.html('<i class="bi bi-envelope-paper me-1"></i> Enviando autorización...');
-            
+
             const responseEnviar = await $.ajax({
                 url: `/${this.URLBase}/EnviarSolicitudCompraAutorizacion`,
                 type: 'POST',
                 contentType: 'application/json; charset=utf-8',
-data: JSON.stringify({ 
+                data: JSON.stringify({
                     idSolicitudCompra: parseInt(idSolicitudCompra),
                     Articulos: payload.Articulos
                 }),
@@ -387,11 +387,11 @@ data: JSON.stringify({
             console.error('Error en createSolCompra:', error);
             btn.prop('disabled', false)
                 .html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
-            AlertManager.mostrar('Error al procesar la solicitud: ' + error.message || error, 'warning','alertSolicitudCompraContainer');
+            AlertManager.mostrar('Error al procesar la solicitud: ' + error.message || error, 'warning', 'alertSolicitudCompraContainer');
         }
     }
 
-       
+
     _recargarTabla() {
         if ($.fn.DataTable.isDataTable('#tablaSolicitudesCompra')) {
             $('#tablaSolicitudesCompra').DataTable().ajax.reload();
@@ -435,19 +435,89 @@ class CompraManager {
 
     llenarSolicitudesCompra() {
         try {
+            // ✅ Limpiar evento resize anterior
+            $(window).off('resize.solicitudesCompra');
+
+            // ✅ Destruir instancia anterior
             if ($.fn.DataTable.isDataTable('#tablaSolicitudesCompra')) {
                 $('#tablaSolicitudesCompra').DataTable().destroy();
             }
 
-            function calcularHeaderOffset() {
+            // ✅ Función para offset responsivo
+            const calcularHeaderOffset = () => {
                 if (window.innerWidth < 541) return 200;
                 if (window.innerWidth < 640) return 156;
                 if (window.innerWidth < 992) return 158;
                 if (window.innerWidth < 1155) return 125;
-                else if (window.innerWidth < 1400) return 118;
-                else return 113;
-            }
+                if (window.innerWidth < 1400) return 118;
+                return 113;
+            };
 
+            // ✅ Renderer customizado para detalles responsivos
+            const renderDetallesResponsive = (columns) => {
+                const hiddenColumns = columns.filter(col => col.hidden);
+                if (hiddenColumns.length === 0) return false;
+
+                const normalizar = (texto) => {
+                    return texto.toUpperCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .trim();
+                };
+
+                const obtenerIcono = (titulo) => {
+                    const tituloNorm = normalizar(titulo);
+                    const iconos = {
+                        'FOLIO': 'bi bi-cash-stack',
+                        'FECHA SOLICITUD': 'bi bi-calendar-event',
+                        'ESTADO': 'bi bi-info-circle-fill',
+                        'USUARIO SOLICITA': 'bi bi-person-fill',
+                        'COMENTARIOS': 'bi bi-chat-left-text',
+                        'DOC. SAP': 'bi bi-file-earmark-check',
+                        'DOC. ENTRY': 'bi bi-file-earmark-number',
+                        'RESPUESTA SAP': 'bi bi-reply-fill'
+                    };
+                    return iconos[tituloNorm] || 'bi bi-circle-fill';
+                };
+
+                let detallesHtml = '';
+                $.each(hiddenColumns, function (i, col) {
+                    const title = col.title;
+                    const valueContent = col.data || '<em class="text-muted">Sin información</em>';
+                    const iconClass = obtenerIcono(title);
+
+                    detallesHtml += `
+                    <div class="row mb-3 py-2 border-bottom align-items-center">
+                        <div class="col-5">
+                            <i class="${iconClass} me-2" style="font-size: 1.3rem; color: #0D6EFD;"></i>
+                            <strong>${title}</strong>
+                        </div>
+                        <div class="col-7">
+                            <span class="badge px-3 py-2" style="background-color: #F2F2F2; color: #333;">
+                                ${valueContent}
+                            </span>
+                        </div>
+                    </div>`;
+                });
+
+                return `
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="bi bi-cash-stack me-2" style="color: #0D6EFD;"></i>
+                            Información adicional de la solicitud de compra
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        ${detallesHtml}
+                    </div>
+                    <div class="card-footer bg-light text-muted">
+                        <small>Última actualización: ${new Date().toLocaleDateString()}</small>
+                    </div>
+                </div>`;
+            };
+
+            // ✅ Instancia DataTable
             const table = $('#tablaSolicitudesCompra').DataTable({
                 processing: false,
                 serverSide: true,
@@ -463,60 +533,7 @@ class CompraManager {
                     details: {
                         type: 'column',
                         target: 0,
-                        renderer: function (api, rowIdx, columns) {
-                            var hiddenColumns = columns.filter(col => col.hidden);
-                            if (hiddenColumns.length === 0) return false;
-
-                            function normalizar(texto) {
-                                return texto.toUpperCase()
-                                    .normalize("NFD")
-                                    .replace(/[\u0300-\u036f]/g, "")
-                                    .trim();
-                            }
-
-                            function obtenerIcono(titulo) {
-                                var tituloNorm = normalizar(titulo);
-                                var iconos = {
-                                    'FOLIO': 'bi bi-cash-stack',
-                                    'FECHA SOLICITUD': 'bi bi-calendar-event',
-                                    'ESTADO': 'bi bi-info-circle-fill',
-                                    'USUARIO SOLICITA': 'bi bi-person-fill',
-                                    'COMENTARIOS': 'bi bi-chat-left-text'
-                                };
-                                return iconos[tituloNorm] || 'bi bi-circle-fill';
-                            }
-
-                            var detallesHtml = '';
-                            $.each(hiddenColumns, function (i, col) {
-                                var title = col.title;
-                                var valueContent = col.data || '<em class="text-muted">Sin información</em>';
-                                var iconClass = obtenerIcono(title);
-
-                                detallesHtml +=
-                                    '<div class="row mb-3 py-2 border-bottom align-items-center">' +
-                                    '  <div class="col-5">' +
-                                    '    <i class="' + iconClass + ' me-2" style="font-size: 1.3rem; color: #0D6EFD;"></i>' +
-                                    '    <strong>' + title + '</strong>' +
-                                    '  </div>' +
-                                    '  <div class="col-7">' +
-                                    '    <span class="badge px-3 py-2" style="background-color: #F2F2F2; color: #333;">' + valueContent + '</span>' +
-                                    '  </div>' +
-                                    '</div>';
-                            });
-
-                            return '<div class="card shadow-sm mt-3">' +
-                                '  <div class="card-header bg-light">' +
-                                '    <h5 class="mb-0">' +
-                                '      <i class="bi bi-cash-stack me-2" style="color: #0D6EFD;"></i>' +
-                                '      Información adicional de la solicitud de compra' +
-                                '    </h5>' +
-                                '  </div>' +
-                                '  <div class="card-body">' + detallesHtml + '  </div>' +
-                                '  <div class="card-footer bg-light text-muted">' +
-                                '    <small>Última actualización: ' + new Date().toLocaleDateString() + '</small>' +
-                                '  </div>' +
-                                '</div>';
-                        }
+                        renderer: (api, rowIdx, columns) => renderDetallesResponsive(columns)
                     }
                 },
                 ajax: {
@@ -534,8 +551,9 @@ class CompraManager {
                     },
                     dataSrc: (json) => json.data
                 },
+                // ✅ COLUMNAS INLINE
                 columns: [
-                    // 🎯 Columna 0: Control Responsive (+/-)
+                    // Columna 0: Control Responsive
                     {
                         className: 'dtr-control text-center',
                         orderable: false,
@@ -543,77 +561,102 @@ class CompraManager {
                         defaultContent: '',
                         width: '30px'
                     },
-                    // ✅ Columna 1: Acciones
+                    // Columna 1: Acciones
                     {
                         data: null,
                         orderable: false,
                         className: 'all text-center',
-                        width: '80px',
+                        width: '100px',
                         render: function (data, type, row) {
-                            return `<button class="btn btn-sm btn-primary btn-ver-detalle"
-                                    data-id="${row.IdSolicitudCompra}"
-                                    data-folio="${row.FolioCompra}"
-                                    title="Ver detalle de solicitud">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-success btn-aprobar"
-                                    data-id="${row.IdSolicitudCompra}"
-                                    data-folio="${row.FolioCompra}"
-                                    title="Generar Requisición">
-                                    <i class="bi bi-cart-plus"></i>
-                                </button>`;
+                            return `<button class="btn btn-sm btn-ptm-edit btn-ver-detalle"
+                            data-id="${row.IdSolicitudCompra}"
+                            data-folio="${row.FolioCompra}"
+                            title="Ver detalle">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-ptm-rutina btn-aprobar"
+                            data-id="${row.IdSolicitudCompra}"
+                            data-folio="${row.FolioCompra}"
+                            title="Generar Requisición">
+                            <i class="bi bi-cart-check"></i>
+                        </button>`;
                         }
                     },
-                    // ✅ Columna 2: Folio
+                    // Columna 2: Folio
                     {
                         data: "FolioCompra",
                         title: "Folio",
                         className: "text-center",
                         render: (data) => data
-                            ? `<span class="badge bg-primary badge-custom"><i class="bi bi-cash-stack me-1"></i>${data}</span>`
+                            ? `<span class="badge btn-ptm-mid badge-custom"><i class="bi bi-cash-stack me-1"></i>${data}</span>`
                             : '<em class="text-muted">Sin folio</em>'
                     },
-                    // ✅ Columna 3: Fecha Solicitud
+                    // Columna 3: OT
+                    {
+                        data: null,
+                        title: "OT(s)",
+                        className: "text-center",
+                        render: function (data, type, row) {
+
+                            if (!row.OrdenTrabajo)
+                                return '<em class="text-muted">Sin OT</em>';
+
+                            const textoCorto =
+                                row.OrdenTrabajo.length > 40
+                                    ? row.OrdenTrabajo.substring(0, 40) + '...'
+                                    : row.OrdenTrabajo;
+
+                            return `
+                            <div>
+                                <div
+                                    class="small mt-1"
+                                    title="${row.OrdenTrabajo}">
+                                    ${textoCorto}
+                                </div>
+                            </div>`;
+                        }
+                    },
+                    // Columna 3: Fecha Solicitud
                     {
                         data: "FechaSolicitud",
                         title: "Fecha Solicitud",
                         className: "text-center",
                         render: (data) => data || ''
                     },
-                    // ✅ Columna 4: Estado
+                    // Columna 4: Estado
                     {
                         data: "Estatus",
                         title: "Estado",
-                        className: "all text-center",
+                        className: "text-center",
                         render: (data) => {
-                            if (!data) return '';
-                            const map = {
-                                'Pendiente': { color: 'bg-warning text-dark', icon: 'clock' },
-                                'Aprobado': { color: 'bg-blue-ptm', icon: 'check2-circle' },
-                                'Rechazado': { color: 'bg-danger', icon: 'x-circle' },
-                                'Cancelado': { color: 'bg-secondary', icon: 'slash-circle' }
+                            if (!data) return '<em class="text-muted">—</em>';
+
+                            const cfg = {
+                                color: 'badge btn-ptm-mid badge-custom',
+                                icon: 'check2-circle'
                             };
-                            const cfg = map[data] || { color: 'bg-secondary', icon: 'circle' };
+
                             return `<span class="badge ${cfg.color} badge-custom">
-                                    <i class="bi bi-${cfg.icon} me-1"></i>${data}
-                                </span>`;
+                                                <i class="bi bi-${cfg.icon} me-1"></i>
+                                                ${data}
+                                            </span>`;
                         }
                     },
-                    // ✅ Columna 5: Usuario Solicita
+                    // Columna 5: Usuario Solicita
                     {
                         data: "UsuarioSolicita",
                         title: "Usuario Solicita",
                         render: (data) => data
-                            ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>`
+                            ? `<span class="badge btn-ptm-mid badge-custom">${data}</span>`
                             : 'N/A'
                     },
-                    // ✅ Columna 6: Comentarios
+                    // Columna 6: Comentarios
                     {
                         data: "Comentarios",
                         title: "Comentarios",
                         render: (data) => data || '<em class="text-muted">Sin comentarios</em>'
                     },
-                    // ✅ Columna 7: DocNum
+                    // Columna 7: DocNum
                     {
                         data: "DocNum",
                         title: "Doc. SAP",
@@ -622,42 +665,55 @@ class CompraManager {
                             ? `<span class="badge bg-blue-ptm badge-custom"><i class="bi bi-file-earmark-check me-1"></i>${data}</span>`
                             : '<em class="text-muted">—</em>'
                     },
-                    // ✅ Columna 8: DocEntry
+                    // Columna 8: DocEntry
                     {
                         data: "DocEntry",
                         title: "Doc. Entry",
                         className: "text-center",
                         render: (data) => data || '<em class="text-muted">—</em>'
                     },
-                    // ✅ Columna 9: ResponseSap
+                    // Columna 9: ResponseSap
                     {
                         data: "ResponseSap",
-                        title: "Respuesta SAP",
-                        render: (data) => {
-                            if (!data) return '<em class="text-muted">—</em>';
-                            const isError = data.toLowerCase().includes('warning');
-                            return `<span class="badge ${isError ? 'bg-danger' : 'bg-success'} badge-custom">
-                    <i class="bi bi-${isError ? 'x-circle' : 'check-circle'} me-1"></i>
-                    ${data.length > 40 ? data.substring(0, 40) + '...' : data}
-                </span>`;
+                        title: "SAP",
+                        className: "text-center",
+                        render: function (data) {
+
+                            if (!data)
+                                return '<em class="text-muted">—</em>';
+
+                            const texto = data.length > 40
+                                ? data.substring(0, 40) + '...'
+                                : data;
+
+                            const isError =
+                                data.toLowerCase().includes('error') ||
+                                data.toLowerCase().includes('warning');
+
+                            return `
+                            <span
+                                class="badge ${isError ? 'bg-danger' : 'bg-success'} badge-custom"
+                                title="${data}">
+                                <i class="bi bi-${isError ? 'x-circle' : 'check-circle'} me-1"></i>
+                                ${texto}
+                            </span>`;
                         }
-                    }
+                    },
                 ],
+                // ✅ COLUMNDEFS INLINE
                 columnDefs: [
                     { className: "text-center", targets: '_all' },
                     { orderable: false, targets: [0, 1] },
-
-                    // Prioridades responsive
-                    { responsivePriority: 1, targets: 0 },  // Control +/-
-                    { responsivePriority: 2, targets: 1 },  // Acciones
-                    { responsivePriority: 3, targets: 2 },  // Folio
-                    { responsivePriority: 4, targets: 4 },  // Estado
-                    { responsivePriority: 5, targets: 3 },  // Fecha Solicitud
-                    { responsivePriority: 6, targets: 5 },  // Usuario Solicita
-                    { responsivePriority: 7, targets: 6 },  // Comentarios
-                    { responsivePriority: 8, targets: 7 },  // DocNum
-                    { responsivePriority: 9, targets: 8 },  // DocEntry
-                    { responsivePriority: 10, targets: 9 }  // ResponseSap
+                    { responsivePriority: 1, targets: 0 },
+                    { responsivePriority: 2, targets: 1 },
+                    { responsivePriority: 3, targets: 2 },
+                    { responsivePriority: 4, targets: 4 },
+                    { responsivePriority: 5, targets: 3 },
+                    { responsivePriority: 6, targets: 5 },
+                    { responsivePriority: 7, targets: 6 },
+                    { responsivePriority: 8, targets: 7 },
+                    { responsivePriority: 9, targets: 8 },
+                    { responsivePriority: 10, targets: 9 }
                 ],
                 ordering: false,
                 info: true,
@@ -670,16 +726,16 @@ class CompraManager {
                     info: "Registros del _START_ al _END_ de un total de _TOTAL_ registros",
                     infoEmpty: "Registros del 0 al 0 de un total de 0 registros",
                     infoFiltered: "(filtrado de un total de _MAX_ registros)",
-                    sSearch: "Buscar:",
                     oPaginate: {
                         sFirst: "Primero",
                         sLast: "Último",
                         sNext: "Siguiente",
                         sPrevious: "Anterior"
                     },
+                    sProcessing: "Cargando datos, por favor espere...",
                     emptyTable: "No hay solicitudes de compra disponibles"
                 },
-                createdRow: function (row, data) {
+                createdRow: (row, data) => {
                     $(row).attr('data-id-solicitud-compra', data.IdSolicitudCompra);
                     $(row).attr('data-folio', data.FolioCompra || '');
                     $(row).attr('data-estatus', data.Estatus || '');
@@ -692,17 +748,18 @@ class CompraManager {
                         estatus: data.Estatus,
                         usuarioSolicita: data.UsuarioSolicita,
                         comentarios: data.Comentarios,
-                        docNum: data.DocNum,      // ⬅️ nuevo
-                        docEntry: data.DocEntry,    // ⬅️ nuevo
-                        responseSap: data.ResponseSap  // ⬅️ nuevo
+                        docNum: data.DocNum,
+                        docEntry: data.DocEntry,
+                        responseSap: data.ResponseSap
                     });
                 },
-                drawCallback: function () {
+                drawCallback: () => {
                     table.columns.adjust();
                 }
             });
 
-            $(window).on('resize', function () {
+            // ✅ Manejo de resize con namespace
+            $(window).off('resize.solicitudesCompra').on('resize.solicitudesCompra', () => {
                 if ($.fn.DataTable.isDataTable('#tablaSolicitudesCompra')) {
                     const nuevoOffset = calcularHeaderOffset();
                     $('#tablaSolicitudesCompra').DataTable().fixedHeader.headerOffset(nuevoOffset);

@@ -52,8 +52,9 @@ class ReporteStockApp {
 
     llenarTablaReporteStock() {
         try {
+
             if ($.fn.DataTable.isDataTable('#tablaReporteStock')) {
-                $('#tablaReporteStock').DataTable().destroy();
+                $('#tablaReporteStock').DataTable().clear().destroy();
             }
 
             function calcularHeaderOffset() {
@@ -61,64 +62,145 @@ class ReporteStockApp {
                 if (window.innerWidth < 640) return 156;
                 if (window.innerWidth < 992) return 158;
                 if (window.innerWidth < 1155) return 125;
-                else if (window.innerWidth < 1400) return 118;
-                else return 113;
+                if (window.innerWidth < 1400) return 118;
+                return 113;
             }
 
             const table = $('#tablaReporteStock').DataTable({
                 processing: false,
                 serverSide: true,
-                bDestroy: true,
+                destroy: true,
                 searching: false,
                 autoWidth: false,
                 colReorder: true,
+
                 fixedHeader: {
                     header: true,
                     headerOffset: calcularHeaderOffset()
                 },
+
                 ajax: {
                     url: `/${this.URLBase}/GetReporteStock`,
                     type: "POST",
                     dataType: "json",
+
                     beforeSend: () => GlobalUtil.mostrarLoader(true),
                     complete: () => GlobalUtil.mostrarLoader(false),
+
                     data: (d) => {
                         return $.extend({}, d, {
-                            "FiltroPlanta": this.PLANTA,
-                            "FiltroCodigoArticulo": $("#FiltroCodigoArticulo").val() || null,
-                            "FiltroNombreArticulo": $("#FiltroNombreArticulo").val() || null
+                            FiltroPlanta: this.PLANTA,
+                            FiltroCodigoArticulo: $("#FiltroCodigoArticulo").val() || null,
+                            FiltroNombreArticulo: $("#FiltroNombreArticulo").val() || null
                         });
                     },
-                    dataSrc: (json) => json.data
+
+                    dataSrc: (json) => {
+                        console.log("Respuesta DataTable:", json);
+                        return json.data || [];
+                    }
                 },
+
                 columns: [
+
+                    // CHECKBOX
+                    {
+                        data: null,
+                        title: '',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center',
+                        width: '40px',
+                        render: function (data, type, row) {
+                            return `
+                            <input type="checkbox"
+                                   class="chkArticulo"
+                                   data-codigo="${row.CodigoArticulo}">
+                        `;
+                        }
+                    },
+
                     { data: "Activo", title: "Activo", className: "text-center" },
                     { data: "CodigoArticulo", title: "Código Artículo", className: "text-center" },
                     { data: "NombreArticulo", title: "Nombre Artículo", className: "text-start" },
                     { data: "UMI", title: "UMI", className: "text-center" },
                     { data: "NivelesDeStock", title: "Niveles Stock", className: "text-center" },
-                    { data: "Stock", title: "Stock", className: "text-end", render: (data) => this.formatearNumero(data) },
-                    { data: "Min", title: "Min", className: "text-end", render: (data) => this.formatearNumero(data) },
-                    { data: "Max", title: "Max", className: "text-end", render: (data) => this.formatearNumero(data) },
-                    { data: "Requis", title: "Requis", className: "text-end", render: (data) => this.formatearNumero(data) },
-                    { data: "Pedidos", title: "Pedidos", className: "text-end", render: (data) => this.formatearNumero(data) },
-                    { data: "CantSalidaPromMensual", title: "Salida Prom. Mensual", className: "text-end", render: (data) => this.formatearNumero(data) },
-                    { data: "CantMaxSalidaMensual", title: "Salida Máx. Mensual", className: "text-end", render: (data) => this.formatearNumero(data) },
-                    { data: "Solicitar", title: "Solicitar", className: "text-end", render: (data) => this.formatearNumero(data) },
+
+                    {
+                        data: "Stock",
+                        title: "Stock",
+                        className: "text-end",
+                        render: (data) => this.formatearNumero(data)
+                    },
+
+                    {
+                        data: "Min",
+                        title: "Min",
+                        className: "text-end",
+                        render: (data) => this.formatearNumero(data)
+                    },
+
+                    {
+                        data: "Max",
+                        title: "Max",
+                        className: "text-end",
+                        render: (data) => this.formatearNumero(data)
+                    },
+
+                    {
+                        data: "Requis",
+                        title: "Requis",
+                        className: "text-end",
+                        render: (data) => this.formatearNumero(data)
+                    },
+
+                    {
+                        data: "Pedidos",
+                        title: "Pedidos",
+                        className: "text-end",
+                        render: (data) => this.formatearNumero(data)
+                    },
+
+                    {
+                        data: "CantSalidaPromMensual",
+                        title: "Salida Prom. Mensual",
+                        className: "text-end",
+                        render: (data) => this.formatearNumero(data)
+                    },
+
+                    {
+                        data: "CantMaxSalidaMensual",
+                        title: "Salida Máx. Mensual",
+                        className: "text-end",
+                        render: (data) => this.formatearNumero(data)
+                    },
+
+                    {
+                        data: "Solicitar",
+                        title: "Solicitar",
+                        className: "text-end",
+                        render: (data) => this.formatearNumero(data)
+                    },
+
                     {
                         data: "StatusValidacion",
                         title: "Status",
                         className: "text-center",
                         render: (data) => {
+
                             if (data === "Go!") {
                                 return '<span class="badge bg-success">Go!</span>';
-                            } else if (data === "Stop!") {
+                            }
+
+                            if (data === "Stop!") {
                                 return '<span class="badge bg-danger">Stop!</span>';
                             }
-                            return data || '';
+
+                            return data ?? '';
                         }
                     }
                 ],
+
                 language: {
                     lengthMenu: "Mostrar _MENU_ registros por página",
                     zeroRecords: "No se encontraron registros",
@@ -133,22 +215,40 @@ class ReporteStockApp {
                         previous: "Anterior"
                     }
                 },
+
                 pageLength: 10,
-                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                lengthMenu: [
+                    [10, 25, 50, 100],
+                    [10, 25, 50, 100]
+                ],
+
                 dom: 'Blfrtip',
                 buttons: []
             });
 
-            $(window).resize(() => {
-                if ($.fn.DataTable.isDataTable('#tablaReporteStock')) {
-                    $('#tablaReporteStock').DataTable().fixedHeader.headerOffset(calcularHeaderOffset());
-                    $('#tablaReporteStock').DataTable().fixedHeader.adjust();
-                }
-            });
+            $(window)
+                .off('resize.reporteStock')
+                .on('resize.reporteStock', () => {
 
-        } catch (error) {
+                    if ($.fn.DataTable.isDataTable('#tablaReporteStock')) {
+
+                        const dt = $('#tablaReporteStock').DataTable();
+
+                        dt.fixedHeader.headerOffset(
+                            calcularHeaderOffset()
+                        );
+
+                        dt.fixedHeader.adjust();
+                    }
+                });
+
+        }
+        catch (error) {
             console.error('Error al inicializar DataTable:', error);
-            AlertManager.mostrar('Error al cargar el reporte de stock', 'warning');
+            AlertManager.mostrar(
+                'Error al cargar el reporte de stock',
+                'warning'
+            );
         }
     }
 

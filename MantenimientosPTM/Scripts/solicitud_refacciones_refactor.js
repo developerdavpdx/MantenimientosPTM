@@ -109,6 +109,9 @@ class SolicitudRefaccionesApp {
         // Guardar refacción (cambiar artículo)
         $('#formIntercambiarRefaccionOT').on('submit', (e) => self.solicitudManager.cambiarRefaccionOT(e));
 
+        // Solicitud de compra
+        $('#formSolicitudCompra').on('submit', (e) => self.solicitudManager.enviarSolicitudCompra(e));
+
         // ✅ Botón de cambiar refacción (CORREGIDO - sin window.window)
         $(document).on('click', '.btn-change-ref', (e) => {
             e.preventDefault();
@@ -242,13 +245,17 @@ class SolicitudRefaccionesApp {
                 return;
             }
 
+            // Normalizar nombres de propiedades recibidas desde el servidor
             const solicitudesTransformadas = todosArticulos.map(art => ({
-                idSolicitud: art.ID_SOLICITUD,
-                ordenTrabajo: art.ORDEN_TRABAJO,
-                codigoRefaccion: art.REFACCION_SOLICITADA,
-                refaccion: art.NOMBRE_ARTICULO,
-                cantidad: art.CANTIDAD,
-                estatus: art.ESTATUS
+                idSolicitud: art.ID_SOLICITUD ?? art.IdSolicitud ?? art.idSolicitud ?? 0,
+                ordenTrabajo: art.ORDEN_TRABAJO ?? art.OrdenTrabajo ?? art.ordenTrabajo ?? '',
+                codigoRefaccion: art.REFACCION_SOLICITADA ?? art.RefaccionSolicitada ?? art.codigoRefaccion ?? '',
+                refaccion: art.NOMBRE_ARTICULO ?? art.NombreArticulo ?? art.refaccion ?? '',
+                cantidad: art.CANTIDAD ?? art.Cantidad ?? art.cantidad ?? 0,
+                stock: art.STOCK ?? art.Stock ?? 0,
+                minStock: art.MIN_STOCK ?? art.MinStock ?? art.minStock ?? 0,
+                maxStock: art.MAX_STOCK ?? art.MaxStock ?? art.maxStock ?? 0,
+                estatus: art.ESTATUS ?? art.estatus ?? ''
             }));
 
             this.solicitudManager.abrirModalSolicitudCompra(solicitudesTransformadas);
@@ -1132,8 +1139,10 @@ class SolicitudManager {
         articulos.forEach((art, index) => {
             // ✅ Acceso directo a las propiedades
             const refaccionSolicitada = art.REFACCION_SOLICITADA || '';
-            const cantidadOriginal = art.CANTIDAD || 0;
-            const nombreMostrar = art.NOMBRE_ARTICULO || refaccionSolicitada || 'N/A';
+            const cantidadOriginal = art.CANTIDAD || art.Cantidad || 0;
+            const nombreMostrar = art.NOMBRE_ARTICULO || art.NombreArticulo || refaccionSolicitada || 'N/A';
+            const minStock = art.MIN_STOCK ?? art.MinStock ?? art.minStock ?? 0;
+            const maxStock = art.MAX_STOCK ?? art.MaxStock ?? art.maxStock ?? 0;
 
             // ✅ Calcular cantidad disponible restando salidas ya realizadas
             const salidaExistente = salidas.find(s => s.ItemCode === refaccionSolicitada);
@@ -1188,13 +1197,18 @@ class SolicitudManager {
                     <span class="badge bg-dark">${refaccionSolicitada || 'N/A'}</span>
                 </td>
                 <td class="align-middle">${nombreMostrar}</td>
-                <td class="text-center align-middle">
-                    <input type="number" min="1" max="${art.STOCK}"
+                    <td class="text-center align-middle">
+                    <input type="number" min="1" max="${art.STOCK || maxStock}"
                            class="form-control form-control-sm text-center fw-bold cantidadEditable"
                            value="${cantidadDisponible}"
+                           data-stock="${art.STOCK || 0}"
+                           data-min="${minStock}"
+                           data-max="${maxStock}"
                            ${isAtendida ? 'readonly' : ''}>
                 </td>
                 <td class="text-center align-middle">${art.STOCK || 0}</td>
+                <td class="text-center align-middle">${minStock}</td>
+                <td class="text-center align-middle">${maxStock}</td>
                 <td class="text-center align-middle">
                     <span class="badge ${urgenciaClass}">${urgenciaText}</span>
                 </td>
@@ -1616,30 +1630,43 @@ class SolicitudManager {
         }
 
         solicitudes.forEach((solicitud, index) => {
+            // Mapear propiedades al modelo ArticuloSolicitudRefaccion
+            const idSolicitud = solicitud.IdSolicitud ?? solicitud.idSolicitud ?? 0;
+            const ordenTrabajo = solicitud.OrdenTrabajo ?? solicitud.ordenTrabajo ?? '';
+            const codigoRefaccion = solicitud.RefaccionSolicitada ?? solicitud.codigoRefaccion ?? '';
+            const nombreArticulo = solicitud.NombreArticulo ?? solicitud.refaccion ?? '';
+            const cantidadReq = solicitud.Cantidad ?? solicitud.cantidad ?? 0;
+            const stock = (solicitud.Stock ?? solicitud.stock ?? 0);
+            const minStock = (solicitud.MinStock ?? solicitud.minStock ?? 0);
+            const maxStock = (solicitud.MaxStock ?? solicitud.maxStock ?? 0);
+
             tbody.append(`
                 <tr>
                     <td class="text-center">
                         <input type="checkbox" class="form-check-input chk-solicitud-sc" checked>
                     </td>
                     <td class="text-center">
-                        <span class="badge bg-blue-ptm badge-custom">${solicitud.ordenTrabajo || 'N/A'}</span>
+                        <span class="badge bg-blue-ptm badge-custom">${ordenTrabajo || 'N/A'}</span>
                     </td>
                     <td class="text-center">
-                        <small class="text-muted fw-semibold">${solicitud.codigoRefaccion || 'N/A'}</small>
+                        <small class="text-muted fw-semibold">${codigoRefaccion || 'N/A'}</small>
                     </td>
-                    <td>${solicitud.refaccion || 'N/A'}</td>
-                    <td class="text-center fw-semibold">${solicitud.cantidad || 0}</td>
+                    <td>${nombreArticulo || 'N/A'}</td>
+                    <td class="text-end fw-semibold">${stock.toLocaleString('es-MX')}</td>
+                    <td class="text-end fw-semibold">${minStock.toLocaleString('es-MX')}</td>
+                    <td class="text-end fw-semibold">${maxStock.toLocaleString('es-MX')}</td>
+                    <td class="text-center fw-semibold">${cantidadReq}</td>
                     <td class="text-center">
                         <input type="number"
                             class="form-control form-control-sm cant-encargar text-center"
                             min="1"
-                            max="${solicitud.cantidad}"
-                            value="${solicitud.cantidad}"
-                            data-idsolicitud="${solicitud.idSolicitud}"
-                            data-ordentrabajo="${solicitud.ordenTrabajo || ''}"
-                            data-codigorefaccion="${solicitud.codigoRefaccion || ''}"
-                            data-refaccion="${solicitud.refaccion || ''}"
-                            data-cantidad="${solicitud.cantidad}"
+                            max="${cantidadReq}"
+                            value="${cantidadReq}"
+                            data-idsolicitud="${idSolicitud}"
+                            data-ordentrabajo="${ordenTrabajo}"
+                            data-codigorefaccion="${codigoRefaccion}"
+                            data-refaccion="${nombreArticulo}"
+                            data-cantidad="${cantidadReq}"
                             data-index="${index}"
                             required>
                     </td>
