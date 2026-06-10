@@ -663,6 +663,20 @@ footer {
     background: white;
 }
 
+.autocomplete-sugerencias-proveedores {
+    position: absolute;
+    z-index: 9999;
+    right: 0;
+    left: auto;
+    min-width: max-content;
+    max-height: 250px;
+    overflow: auto;
+    background: white;
+    border: none !important;
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px rgba(13, 110, 253, 0.10), 0 8px 24px rgba(13, 110, 253, 0.18);
+}
+
 .autocomplete-centrocostos {
     position: fixed; /* ⬅️ relativo al viewport, ignora overflow de ancestros */
     z-index: 99999;

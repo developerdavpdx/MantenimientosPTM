@@ -2249,8 +2249,7 @@ namespace MantenimientosPTM.Controllers
 
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FILTRO_ORDEN", (ordenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_ALMACEN", (codPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FILTRO_ORDEN", (ordenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(

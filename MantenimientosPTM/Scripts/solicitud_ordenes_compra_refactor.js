@@ -204,7 +204,7 @@ class SolicitudCompraApp {
                         <div class="sol-buscar-proveedor-wrap">
                             <input type="text" class="form-control-custom sol-buscar-proveedor"
                                    id="BuscarProveedor_${i}" placeholder="Buscar proveedor..." autocomplete="off">
-                            <div id="sugerenciasProveedor_${i}" class="autocomplete-sugerencias"></div>
+                            <div id="sugerenciasProveedor_${i}" class="autocomplete-sugerencias-proveedores"></div>
                             <input type="hidden" id="CodigoProveedor_${i}" class="sol-codigo-proveedor">
                             <input type="hidden" id="NombreProveedor_${i}" class="sol-nombre-proveedor">
                         </div>
@@ -823,6 +823,11 @@ class CompraManager {
                                     'ARTICULO': 'bi bi-box-seam',
                                     'CANT. REQUERIDA': 'bi bi-123',
                                     'CANT. A ENCARGAR': 'bi bi-cart-plus',
+
+                                    'STOCK': 'bi bi-box-seam',
+                                    'MIN': 'bi bi-arrow-down-circle',
+                                    'MAX': 'bi bi-arrow-up-circle',
+
                                     'NIVEL URGENCIA': 'bi bi-exclamation-triangle-fill',
                                     'DESCRIPCION': 'bi bi-card-text',
                                     'FECHA SOLICITUD': 'bi bi-calendar-event',
@@ -874,7 +879,6 @@ class CompraManager {
                     dataSrc: (json) => json.data
                 },
                 columns: [
-                    // 🎯 Columna 0: Control Responsive (+/-)
                     {
                         className: 'dtr-control',
                         orderable: false,
@@ -882,113 +886,180 @@ class CompraManager {
                         defaultContent: '',
                         width: '30px'
                     },
-                    // ✅ Columna 1: Orden Trabajo
+
+                    // OT
                     {
                         data: "OrdenTrabajo",
                         className: "text-center",
                         render: (data) =>
-                            data ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>` : ''
+                            data
+                                ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>`
+                                : ''
                     },
-                    // ✅ Columna 2: Código Artículo
+
+                    // Código
                     {
                         data: "CodigoArticulo",
                         className: "text-center",
                         render: (data) =>
-                            data ? `<small class="text-muted fw-semibold">${data}</small>` : 'N/A'
+                            data
+                                ? `<small class="text-muted fw-semibold">${data}</small>`
+                                : 'N/A'
                     },
-                    // ✅ Columna 3: Nombre Artículo
+
+                    // Artículo
                     {
                         data: "NombreArticulo",
                         render: (data) => data || 'N/A'
                     },
-                    // ✅ Columna 4: Cantidad Requerida
+
+                    // Cantidad requerida
                     {
                         data: "CantidadRequerida",
                         className: "text-center fw-semibold",
                         render: (data) => data || 0
                     },
-                    // ✅ Columna 5: Cantidad a Encargar
+
+                    // Cantidad a encargar
                     {
                         data: "CantidadEncargar",
                         className: "text-center",
                         render: (data) =>
-                            `<span class="badge bg-primary badge-custom">${data || 0}</span>`
+                            `<span class="badge bg-primary badge-custom">
+                ${data || 0}
+            </span>`
                     },
-                    // ✅ Columna 6: Nivel Urgencia
+
+                    // Stock actual
+                    {
+                        data: "StockActual",
+                        className: "text-center fw-semibold",
+                        render: (data) =>
+                            `<i class="bi bi-box-seam text-info me-1"></i>
+             ${(data ?? 0).toLocaleString()}`
+                    },
+
+                    // Stock mínimo
+                    {
+                        data: "MinStock",
+                        className: "text-center fw-semibold",
+                        render: (data) =>
+                            `<i class="bi bi-arrow-down-circle text-warning me-1"></i>
+             ${(data ?? 0).toLocaleString()}`
+                    },
+
+                    // Stock máximo
+                    {
+                        data: "MaxStock",
+                        className: "text-center fw-semibold",
+                        render: (data) =>
+                            `<i class="bi bi-arrow-up-circle text-success me-1"></i>
+             ${(data ?? 0).toLocaleString()}`
+                    },
+
+                    // Nivel urgencia
                     {
                         data: "NivelUrgencia",
-                        className: "text-center",
+                        className: "text-center fw-semibold",
                         render: (data) => {
+
                             if (!data) return '';
+
                             switch (data) {
+
                                 case 'Normal':
-                                    return `<span class="badge bg-secondary badge-custom">
-                                    <i class="bi bi-circle-fill me-1"></i>Normal</span>`;
-                                case 'Urgente':
-                                    return `<span class="badge bg-warning text-dark badge-custom">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Urgente</span>`;
-                                case 'Crítico':
+                                    return `
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        Normal`;
+
+                                case 'Bajo':
+                                    return `
+                        <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                        Bajo`;
+
                                 case 'Critico':
-                                    return `<span class="badge bg-danger badge-custom">
-                                    <i class="bi bi-exclamation-octagon-fill me-1"></i>Crítico</span>`;
+                                case 'Crítico':
+                                    return `
+                        <i class="bi bi-exclamation-octagon-fill text-danger me-1"></i>
+                        Crítico`;
+
                                 default:
-                                    return `<span class="badge bg-secondary badge-custom">${data}</span>`;
+                                    return data;
                             }
                         }
                     },
-                    // ✅ Columna 7: Descripción Necesidad
+
+                    // Descripción
                     {
                         data: "DescripcionNecesidad",
                         render: (data) => data || 'N/A'
                     },
-                    // ✅ Columna 8: Fecha Solicitud
+
+                    // Fecha
                     {
                         data: "FechaSolicitud",
                         className: "text-center",
                         render: (data) => data || ''
                     },
-                    // ✅ Columna 9: Estatus
+
+                    // Estatus
                     {
                         data: "Estatus",
                         className: "all text-center",
                         render: (data) => {
+
                             if (!data) return '';
+
                             const map = {
                                 'Pendiente': { color: 'bg-warning text-dark', icon: 'clock' },
                                 'En Compra': { color: 'bg-primary', icon: 'cart-check' },
                                 'Atendido': { color: 'bg-success', icon: 'check-circle' },
                                 'Cancelado': { color: 'bg-danger', icon: 'x-circle' }
                             };
-                            const cfg = map[data] || { color: 'bg-secondary', icon: 'circle' };
-                            return `<span class="badge ${cfg.color} badge-custom">
-                                    <i class="bi bi-${cfg.icon}"></i> ${data}
-                                </span>`;
+
+                            const cfg = map[data] || {
+                                color: 'bg-secondary',
+                                icon: 'circle'
+                            };
+
+                            return `
+                <span class="badge ${cfg.color} badge-custom">
+                    <i class="bi bi-${cfg.icon}"></i> ${data}
+                </span>`;
                         }
                     },
-                    // ✅ Columna 10: Usuario Solicita
+
+                    // Usuario
                     {
                         data: "UsuarioSolicita",
                         render: (data) =>
-                            data ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>` : 'N/A'
+                            data
+                                ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>`
+                                : 'N/A'
                     }
                 ],
                 columnDefs: [
                     { orderable: false, targets: [0] },
-                    { visible: false, targets: [2, 7, 9] },  // Código y Descripción ocultos por default
+
+                    // ocultar código y descripción
+                    { visible: false, targets: [2, 10] },
+
                     { className: "text-center", targets: '_all' },
 
-                    // 🎯 Prioridades Responsive
-                    { responsivePriority: 1, targets: 0 },  // Control +/-
-                    { responsivePriority: 2, targets: 9 },  // Estatus
-                    { responsivePriority: 3, targets: 1 },  // Orden Trabajo
-                    { responsivePriority: 4, targets: 3 },  // Artículo
-                    { responsivePriority: 5, targets: 5 },  // Cant. Encargar
-                    { responsivePriority: 6, targets: 4 },  // Cant. Requerida
-                    { responsivePriority: 7, targets: 6 },  // Nivel Urgencia
-                    { responsivePriority: 8, targets: 8 },  // Fecha Solicitud
-                    { responsivePriority: 9, targets: 10 },  // Usuario Solicita
-                    { responsivePriority: 10, targets: 7 },  // Descripción
-                    { responsivePriority: 11, targets: 2 },  // Código
+                    { responsivePriority: 1, targets: 0 },   // +
+                    { responsivePriority: 2, targets: 12 },  // Estatus
+                    { responsivePriority: 3, targets: 1 },   // OT
+                    { responsivePriority: 4, targets: 3 },   // Artículo
+                    { responsivePriority: 5, targets: 9 },   // Urgencia
+                    { responsivePriority: 6, targets: 6 },   // Stock
+                    { responsivePriority: 7, targets: 7 },   // Min
+                    { responsivePriority: 8, targets: 8 },   // Max
+                    { responsivePriority: 9, targets: 5 },   // Encargar
+                    { responsivePriority: 10, targets: 4 },  // Requerida
+                    { responsivePriority: 11, targets: 11 }, // Fecha
+                    { responsivePriority: 12, targets: 13 }, // Usuario
+                    { responsivePriority: 13, targets: 10 }, // Descripción
+                    { responsivePriority: 14, targets: 2 }   // Código
                 ],
                 ordering: false,
                 info: true,
@@ -1011,10 +1082,21 @@ class CompraManager {
                     emptyTable: "No hay registros disponibles"
                 },
                 createdRow: function (row, data) {
+
                     $(row).attr('data-id-detalle', data.IdDetalle);
                     $(row).attr('data-id-solicitud-compra', data.IdSolicitudCompra);
                     $(row).attr('data-orden-trabajo', data.OrdenTrabajo);
                     $(row).attr('data-estatus', data.Estatus);
+
+                    if (data.NivelUrgencia === "Critico" ||
+                        data.NivelUrgencia === "Crítico") {
+
+                        $(row).addClass("table-danger");
+                    }
+                    else if (data.NivelUrgencia === "Bajo") {
+
+                        $(row).addClass("table-warning");
+                    }
                 },
                 drawCallback: function () {
                     table.columns.adjust();

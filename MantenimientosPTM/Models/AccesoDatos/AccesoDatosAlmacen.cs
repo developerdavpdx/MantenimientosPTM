@@ -548,6 +548,15 @@ namespace MantenimientosPTM
             [JsonProperty("CANTIDAD_REQUERIDA")]
             public int CantidadRequerida { get; set; }
 
+            [JsonProperty("STOCK_ACTUAL")]
+            public decimal StockActual { get; set; }
+
+            [JsonProperty("MIN_STOCK")]
+            public decimal MinStock { get; set; }
+
+            [JsonProperty("MAX_STOCK")]
+            public decimal MaxStock { get; set; }
+
             [JsonProperty("NIVEL_URGENCIA")]
             public string NivelUrgencia { get; set; }
 
@@ -563,6 +572,7 @@ namespace MantenimientosPTM
             [JsonProperty("USUARIO_SOLICITA")]
             public string UsuarioSolicita { get; set; }
         }
+
         //Resumen de solicitudes de compra.
         public class SolicitudCompraResume
         {
