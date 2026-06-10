@@ -1153,11 +1153,11 @@ class SolicitudManager {
             // ✅ Estados y clases
             const isAtendida = art.ESTATUS === 'Atendida';
             const urgenciaClass = this._getUrgenciaClass(art.NIVEL_URGENCIA);
-            const estatusClass = isAtendida ? 'bg-success' : 'bg-warning text-dark';
+            const estatusClass = isAtendida ? 'badge btn-ptm-primary badge-custom' : 'bg-warning text-dark';
             const urgenciaText = art.NIVEL_URGENCIA || 'N/A';
             const estatusText = art.ESTATUS || 'N/A';
 
-            const botonesAccion = `
+            let botonesAccion =`
             <button class="btn btn-sm btn-ptm-edit btn-del-ref"
                     data-idsolicitud="${art.ID_SOLICITUD}"
                     data-codigo="${refaccionSolicitada}"
@@ -1175,11 +1175,20 @@ class SolicitudManager {
                     data-bs-toggle="tooltip"
                     title="🔄 Cambiar refacción">
                 <i class="bi bi-arrow-repeat fs-6"></i>
+            </button>`;
+
+            if (isAtendida) {
+                botonesAccion = `
+            <button class="btn btn-sm btn-ptm-edit btn-del-ref disabled">
+                <i class="bi bi-x-circle fs-6"></i>
             </button>
-        `;
+            <button class="btn btn-sm btn-ptm-edit btn-change-ref disabled">
+                <i class="bi bi-arrow-repeat fs-6"></i>
+            </button>`;
+            }
 
             tbody.append(`
-            <tr class="${isAtendida ? 'table-success' : ''}">
+            <tr class="${isAtendida ? 'table-success' : ''}" ${isAtendida ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Atendida"` : ''}>
                 <td class="text-center align-middle">${index + 1}</td>
                 <td class="text-center align-middle">
                     <input type="checkbox" class="form-check-input chk-articuloSalida"
@@ -1194,6 +1203,7 @@ class SolicitudManager {
                 </td>
                 <td class="text-center align-middle">${botonesAccion}</td>
                 <td class="text-center align-middle">
+                    ${!isAtendida ? `<span class="punto-pulso-absolute"></span>` : ''}
                     <span class="badge bg-dark">${refaccionSolicitada || 'N/A'}</span>
                 </td>
                 <td class="align-middle">${nombreMostrar}</td>

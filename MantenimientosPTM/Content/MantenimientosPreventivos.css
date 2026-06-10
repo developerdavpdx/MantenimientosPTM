@@ -582,26 +582,6 @@ textarea.form-control-document {
         display: none;
     }
 
-.punto-pulso {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    background: #1291ce;
-    border-radius: 50%;
-    margin-right: 6px;
-    vertical-align: middle;
-    animation: pulso 1.5s infinite;
-}
-
-@keyframes pulso {
-    0%, 100% {
-        opacity: 1;
-    }
-
-    25%, 75% {
-        opacity: 0;
-    }
-}
 
 .radio-transition {
     transition: all 0.35s ease;
