@@ -1439,25 +1439,13 @@ namespace MantenimientosPTM.Controllers
                     return Json(jsonResponse, JsonRequestBehavior.AllowGet);
                 }
 
-
                 var data = new
                 {
-                    DocNum = sapResult.DocNum,
-                    DocEntry = sapResult.DocEntry
+                    sapResult.DocNum,
+                    sapResult.DocEntry
                 };
 
-                //VALIDAR SI LA CANTIDAD ESTA COMPLETA
-                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_ORDEN_TRABAJO", (payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
-                    };
-
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCGetBalanceOT,
-                    parameters
-                );
-
-                JArray balance = JArray.Parse(resultHana.JsonResult);
+                JArray balance = new JArray();
 
                 foreach (var articulo in payload.Contabilizacion)
                 {
@@ -1490,8 +1478,6 @@ namespace MantenimientosPTM.Controllers
 
 
 
-                    var error = "";
-                    var IdGenerado = -1;
 
                     var parametros = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
@@ -1507,8 +1493,7 @@ namespace MantenimientosPTM.Controllers
                         { "P_PROCESO",     (articulo.Proceso, ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_GASTOS",     (articulo.Gastos, ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_CEDIS",     (articulo.Cedis, ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_ID_GENERADO",     (IdGenerado, ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_ERROR",     (error, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CANTIDAD_REAL",     (articulo.Cantidad, ParameterDirection.Input, HanaDbType.Decimal) }
 
                     };
 
@@ -1518,73 +1503,121 @@ namespace MantenimientosPTM.Controllers
                     );
 
 
-                    string resultadoEnc = resultInsert.JsonResult.ToString();
-                    if (resultadoEnc.Contains("ERROR"))
-                        throw new Exception("Error al insertar el movimiento en el sistema: " + resultadoEnc);
-
-
-
-
-                    // Buscar con validación
-                    var objetoEncontrado = balance
-                        .Where(obj => obj is JObject)
-                        .Cast<JObject>()
-                        .FirstOrDefault(obj => obj.ContainsKey("ItemCode") &&
-                                              obj["ItemCode"]?.ToString() == articulo.ItemCode);
-
-                    string Estatus = "Pendiente";
-
-                    if (objetoEncontrado != null)
+                    if (resultInsert.JsonResult.Contains("ERROR") || resultInsert.JsonResult.Contains("Error"))
                     {
-                        if (objetoEncontrado["Diferencia"]?.ToObject<int>() == 0)
+                        log.Info($"🚀 ═══════════════════════════════════════════════════");
+                        log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                        log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                        log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} , pero no fue posible registrar el movimiento en la bitácora con la siguiente estructura: " + parametros.ToString() + resultInsert.JsonResult);
+                    }
+                    else
+                    {
+                        //VALIDAR SI LA CANTIDAD ESTA COMPLETA
+                        //var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                        //{
+                        //    { "P_ORDEN_TRABAJO", (payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
+                        //};
+
+                        //    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        //        Logic.AD.GCGetBalanceOT,
+                        //        parameters
+                        //    );
+
+                        //    balance = JArray.Parse(resultHana.JsonResult);
+
+                        //    // Buscar con validación
+                        //    var objetoEncontrado = balance
+                        //        .Where(obj => obj is JObject)
+                        //        .Cast<JObject>()
+                        //        .FirstOrDefault(obj => obj.ContainsKey("ItemCode") &&
+                        //                              obj["ItemCode"]?.ToString() == articulo.ItemCode);
+
+
+                        //if (objetoEncontrado != null)
+                        //{
+                        //    if (objetoEncontrado["ESTATUS_SURTIDO"]?.ToObject<string>() == "COMPLETA")
+                        //    {
+                        //        Estatus = "Atendida";
+                        //    }
+                        //}
+
+                        var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                         {
-                            Estatus = "Atendida";
+                            { "P_ID_SOLICITUD",     ( articulo.IdSolicitud, ParameterDirection.Input, HanaDbType.Integer) },
+                            { "P_ESTATUS", ("Atendida", ParameterDirection.Input, HanaDbType.NVarChar) },
+                        };
+
+                        var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                            Logic.AD.GCUpdateEstatusSolicitud, paramUpdate
+                        );
+
+                        if (resultUpdate.JsonResult.Contains("ERROR") || resultUpdate.JsonResult.Contains("Error"))
+                        {
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
+                            log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                            log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar el estatus de la refacción: " + resultUpdate.JsonResult);
                         }
                     }
-
-                    //FALTA COMPARAR CANTIDADES PARA SABER SI EN VERDAD YA QUEDO ATENDIDA
-                    var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_ID_SOLICITUD",     ( articulo.IdSolicitud, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_ESTATUS", (Estatus, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    };
-
-                    var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCUpdateEstatusSolicitud, paramUpdate
-                    );
-
-
-                    string resultadoUpdateEst = resultUpdate.JsonResult.ToString();
-                    if (resultadoUpdateEst.Contains("ERROR") || resultadoUpdateEst.Contains("Error"))
-                        throw new Exception("Error al actualizar el estatus de la solicitud: " + resultadoUpdateEst);
                 }
 
                 //Enviar Correo Autorizacion Salida Mercancia
                 var resultEmtail = EnviarAutorizacionSalida(payload);
 
 
-                //TE FALTA ACTUALIZAR LA ORDEN DE TRABAJO
-
                 // Validar que TODOS tengan Diferencia = 0
-                bool todosCero = balance
-                    .OfType<JObject>()
-                    .All(obj => obj["Diferencia"]?.ToObject<int>() == 0);
 
-                if (todosCero)
-                { //Los balances con 0s todas las salidas ok
-                    var paramUpdateOT = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_ORDEN_TRABAJO", (payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                var resultBalance = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetBalanceOT,
+                    parameters
+                );
+
+
+                if (resultBalance.JsonResult.Contains("ERROR") || resultBalance.JsonResult.Contains("Error"))
+                {
+                    log.Info($"🚀 ═══════════════════════════════════════════════════");
+                    log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                    log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                    log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible validar el balance de el estatus de la refacción: " + resultBalance.JsonResult);
+                }
+
+                else
+                {
+                    balance = JArray.Parse(resultBalance.JsonResult);
+
+
+                    bool todosCompletos = balance
+                        .OfType<JObject>()
+                        .All(obj => obj["ESTATUS_SURTIDO"]?.ToObject<string>() == "COMPLETA");
+
+                    if (todosCompletos)
+                    { //Los balances con 0s todas las salidas ok
+                        var paramUpdateOT = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
                         { "P_OT",     ( payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.Integer) },
                         { "P_ESTATUS", (2, ParameterDirection.Input, HanaDbType.NVarChar) },
                     };
 
-                    var resultUpdateOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCUpdateStatusOT, paramUpdateOT
-                    );
+                        var resultUpdateOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                            Logic.AD.GCUpdateStatusOT, paramUpdateOT
+                        );
 
-                    if (resultUpdateOT.JsonResult.Contains("Error"))
-                    {
+                        if (resultUpdateOT.JsonResult.Contains("Error"))
+                        {
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
+                            log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
 
+                            log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar el estatus de la OT, " + resultBalance.JsonResult);
+                        }
                     }
                 }
 

@@ -1138,6 +1138,8 @@ class SolicitudManager {
 
         articulos.forEach((art, index) => {
             // ✅ Acceso directo a las propiedades
+            const FolioSalida = art.FOLIO_SALIDA ?? art.Folio_Salida ?? "";
+            const CantidadSurtida = art.CANTIDAD_SURTIDA ?? art.Cantidad_Surtida ?? "";
             const refaccionSolicitada = art.REFACCION_SOLICITADA || '';
             const cantidadOriginal = art.CANTIDAD || art.Cantidad || 0;
             const nombreMostrar = art.NOMBRE_ARTICULO || art.NombreArticulo || refaccionSolicitada || 'N/A';
@@ -1190,6 +1192,7 @@ class SolicitudManager {
             tbody.append(`
             <tr class="${isAtendida ? 'table-success' : ''}" ${isAtendida ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Atendida"` : ''}>
                 <td class="text-center align-middle">${index + 1}</td>
+                <td class="text-center align-middle">${FolioSalida}</td>
                 <td class="text-center align-middle">
                     <input type="checkbox" class="form-check-input chk-articuloSalida"
                            data-idsolicitud="${art.ID_SOLICITUD}"
@@ -1209,8 +1212,8 @@ class SolicitudManager {
                 <td class="align-middle">${nombreMostrar}</td>
                     <td class="text-center align-middle">
                     <input type="number" min="1" max="${art.STOCK || maxStock}"
-                           class="form-control form-control-sm text-center fw-bold cantidadEditable"
-                           value="${cantidadDisponible}"
+                           class="form-control form-control-sm text-center fw-bold cantidadEditable" ${isAtendida ? 'disabled' : ''}
+                           value="${CantidadSurtida}"
                            data-stock="${art.STOCK || 0}"
                            data-min="${minStock}"
                            data-max="${maxStock}"
