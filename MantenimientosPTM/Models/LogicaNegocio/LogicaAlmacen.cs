@@ -361,8 +361,8 @@ namespace MantenimientosPTM
                         newLine["CostingCode3"] = articulo.Gastos;
                         newLine["CostingCode4"] = articulo.Cedis;
                         newLine["CostingCode5"] = payload.DataMovimiento.NumEmpleado;
-                        newLine["U_EMPLEADO"] = payload.NombreEmpleado;
-                        newLine["U_ALMACENISTA"] = payload.AlmacenistaEntrega;
+                        newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
+                        newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
 
 
                         // ✅ Cuenta contable si aplica

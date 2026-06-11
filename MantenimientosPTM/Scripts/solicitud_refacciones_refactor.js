@@ -340,19 +340,12 @@ class SolicitudRefaccionesApp {
         GlobalUtil.mostrarLoader(true);
 
         try {
-            const [articulos, salidas] = await Promise.all([
-                this.solicitudManager.obtenerArticulosPorOT(ot),
+            const [salidas] = await Promise.all([
                 this.solicitudManager.obtenerSalidasPorOrdenTrabajo(ot)
             ]);
 
-            const atendidos = articulos.filter(art => art.ESTATUS === 'Atendida');
+            this.solicitudManager.abrirModalDevolucion(salidas);
 
-            if (atendidos.length === 0) {
-                AlertManager.mostrar('No hay artículos con estatus Atendido en las órdenes de trabajo seleccionadas.', 'warning');
-                return;
-            }
-
-            this.solicitudManager.abrirModalDevolucion(atendidos, salidas);
         } catch (error) {
             console.error('Error al obtener artículos atendidos:', error);
             AlertManager.mostrar('Error al obtener los artículos atendidos.', 'warning');
@@ -442,11 +435,7 @@ class SolicitudRefaccionesApp {
             AlmacenistaEntrega: entrega
         };
 
-        if (operacion === "SALIDA") {
-            this.solicitudManager.postCreateSalidaMercancia(payload, $btn);
-        } else {
-            this.solicitudManager.postEntradaDevolucionMercancia(payload, $btn);
-        }
+        this.solicitudManager.postCreateSalidaMercancia(payload, $btn);
     }
 
     _guardarRechazo() {
@@ -1159,7 +1148,7 @@ class SolicitudManager {
             const urgenciaText = art.NIVEL_URGENCIA || 'N/A';
             const estatusText = art.ESTATUS || 'N/A';
 
-            let botonesAccion =`
+            let botonesAccion = `
             <button class="btn btn-sm btn-ptm-edit btn-del-ref"
                     data-idsolicitud="${art.ID_SOLICITUD}"
                     data-codigo="${refaccionSolicitada}"
@@ -1190,7 +1179,7 @@ class SolicitudManager {
             }
 
             tbody.append(`
-            <tr class="${isAtendida ? 'table-success' : ''}" ${isAtendida ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Atendida"` : ''}>
+            <tr class="${isAtendida ? 'salida_completada' : ''}" ${isAtendida ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Atendida"` : ''}>
                 <td class="text-center align-middle">${index + 1}</td>
                 <td class="text-center align-middle">${FolioSalida}</td>
                 <td class="text-center align-middle">
@@ -1358,7 +1347,8 @@ class SolicitudManager {
     // MÉTODO PARA ABRIR MODAL DE DEVOLUCIÓN
     // ========================================
 
-    abrirModalDevolucion(articulosAtendidos, salidas = []) {
+    abrirModalDevolucion(articulosAtendidos) {
+
         this.articulosAtendidos = articulosAtendidos;
 
         $('#badgeTotalDevolucion').text(articulosAtendidos.length);
@@ -1368,67 +1358,115 @@ class SolicitudManager {
 
         if (!articulosAtendidos || articulosAtendidos.length === 0) {
             tbody.html(`
-                <tr><td colspan="10" class="text-center">No hay artículos para devolver</td></tr>
-            `);
+            <tr>
+                <td colspan="12" class="text-center text-muted py-4">
+                    <i class="bi bi-info-circle me-1"></i>
+                    No hay artículos para devolver
+                </td>
+            </tr>
+        `);
             return;
         }
 
         articulosAtendidos.forEach((art, index) => {
-            // ✅ Buscar salida relacionada para obtener dimensiones y cantidad real
-            const salidaRelacionada = salidas.find(s => s.ItemCode === art.REFACCION_SOLICITADA);
-            const cantidadAtendida = salidaRelacionada?.CantidadTotal || art.CANTIDAD || 0;
+
+            const cantidadSolicitada = Number(art.CANTIDAD_SOLICITADA || 0);
+            const cantidadAtendida = Number(art.CANTIDAD_SURTIDA || 0);
 
             tbody.append(`
-                <tr>
-                    <td class="text-center">${index + 1}</td>
-                    <td class="text-center">
-                        <input type="checkbox" class="form-check-input chk-articulo-devolucion" checked>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge bg-blue-ptm badge-custom">${art.ORDEN_TRABAJO || 'N/A'}</span>
-                    </td>
-                    <td class="text-center">
-                        <small class="text-muted fw-semibold">${art.REFACCION_SOLICITADA || 'N/A'}</small>
-                    </td>
-                    <td>${art.NOMBRE_ARTICULO || art.REFACCION_SOLICITADA || 'N/A'}</td>
-                    <td class="text-center fw-semibold">${cantidadAtendida}</td>
-                    <td class="text-center">
-                        <input type="number"
-                            class="form-control form-control-sm cant-devolver text-center"
-                            min="1"
-                            max="${cantidadAtendida}"
-                            value="${cantidadAtendida}"
-                            data-idsolicitud="${art.ID_SOLICITUD}"
-                            data-ordentrabajo="${art.ORDEN_TRABAJO || ''}"
-                            data-codigo="${art.REFACCION_SOLICITADA || ''}"
-                            data-articulo="${art.NOMBRE_ARTICULO || ''}"
-                            data-cantidadatendida="${cantidadAtendida}"
-                            required>
-                    </td>
-                    <td class="text-center fw-semibold">${salidaRelacionada?.OcrCode1 || ''}</td>
-                    <td class="text-center fw-semibold">${salidaRelacionada?.OcrCode2 || ''}</td>
-                    <td class="text-center fw-semibold">${salidaRelacionada?.OcrCode3 || ''}</td>
-                    <td class="text-center fw-semibold">${salidaRelacionada?.OcrCode4 || ''}</td>
-                </tr>
-            `);
+            <tr>
+
+                <td class="text-center">
+                    ${index + 1}
+                </td>
+
+                <td class="text-center">
+                    <input type="checkbox"
+                           class="form-check-input chk-articulo-devolucion"
+                           checked>
+                </td>
+
+                <td class="text-center">
+                    <span class="badge bg-blue-ptm badge-custom">
+                        ${art.ORDEN_TRABAJO || 'N/A'}
+                    </span>
+                </td>
+
+                <td class="text-center">
+                    <small class="text-muted fw-semibold">
+                        ${art.ItemCode || art.REFACCION_SOLICITADA || 'N/A'}
+                    </small>
+                </td>
+
+                <td>
+                    ${art.ItemName || 'N/A'}
+                </td>
+
+                <td class="text-center fw-semibold">
+                    ${cantidadSolicitada}
+                </td>
+
+                <td class="text-center fw-semibold text-success">
+                    ${cantidadAtendida}
+                </td>
+
+                <td class="text-center">
+                    <input type="number"
+                           class="form-control form-control-sm cant-devolver text-center"
+                           min="1"
+                           max="${cantidadAtendida}"
+                           value="${cantidadAtendida}"
+
+                           data-idsolicitud="${art.ID_SOLICITUD}"
+                           data-ordentrabajo="${art.ORDEN_TRABAJO || ''}"
+                           data-codigo="${art.ItemCode || ''}"
+                           data-articulo="${art.ItemName || ''}"
+                           data-cantidadsolicitada="${cantidadSolicitada}"
+                           data-cantidadatendida="${cantidadAtendida}"
+
+                           required>
+                </td>
+
+                <td class="text-center fw-semibold">
+                    ${art.DEPT || ''}
+                </td>
+
+                <td class="text-center fw-semibold">
+                    ${art.PROCESO || ''}
+                </td>
+
+                <td class="text-center fw-semibold">
+                    ${art.GASTOS || ''}
+                </td>
+
+                <td class="text-center fw-semibold">
+                    ${art.CEDIS || ''}
+                </td>
+
+            </tr>
+        `);
         });
 
-        // ✅ Configurar eventos de selección
+        // Configurar eventos
         this._configurarEventosDevolucion();
 
-        // ✅ Inicializar firmas
+        // Inicializar firmas
         this.llenarFirmas();
 
-        // Limpiar campos
+        // Limpiar formulario
         $('#devolucionSolicitante').val('');
         $('#devolucionNumEmpleado').val('');
         $('#devolucionArea').val('');
-        $('#formDevolucionMercancia').removeClass('was-validated');
+
+        $('#formDevolucionMercancia')
+            .removeClass('was-validated');
+
         $('#alertDevolucionContainer').empty();
 
-        // ✅ Actualizar contador
+        // Actualizar contador
         this.actualizarContadorDevolucion();
 
+        // Mostrar modal
         $('#devolucionMercancia').modal('show');
     }
 
