@@ -355,7 +355,7 @@ namespace MantenimientosPTM
                         newLine["ItemCode"] = linea["REFACCION_SOLICITADA"].ToString();
                         //newLine["Quantity"] = Convert.ToDouble(linea["CANTIDAD"]);
                         newLine["Quantity"] = Convert.ToDouble(articulo.Cantidad);
-                        newLine["WarehouseCode"] = linea["DfltWH"].ToString();
+                        newLine["WarehouseCode"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["AlmacenP1"]: ConfigurationManager.AppSettings["AlmacenP2"]);
                         newLine["CostingCode"] = articulo.Departamento;
                         newLine["CostingCode2"] = articulo.Proceso;
                         newLine["CostingCode3"] = articulo.Gastos;
@@ -595,6 +595,9 @@ namespace MantenimientosPTM
                                 artInfo["CostingCode2"] = articulo.Proceso;
                                 artInfo["CostingCode3"] = articulo.Gastos;
                                 artInfo["CostingCode4"] = articulo.Cedis;
+                                artInfo["CostingCode5"] = payload.DataMovimiento.NumEmpleado;
+                                artInfo["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
+                                artInfo["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
                                 articulosData.Add(artInfo);
                             }
                         }
@@ -646,6 +649,7 @@ namespace MantenimientosPTM
                 dictGR["DocDueDate"] = DateTime.Now.ToString("yyyy-MM-dd");
                 dictGR["Comments"] = $"Devolución de refacciones — {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
                 dictGR["JournalMemo"] = $"Devolución interna solicitud: {payload.Referencia} orden trabajo: {payload.OrdenTrabajo}";
+                dictGR["Reference2"] = payload.DataMovimiento.Recibe;
                 dictGR["DocumentLines"] = new List<object>();
                 //FALTA SERIE = CEDIS
 
@@ -659,11 +663,14 @@ namespace MantenimientosPTM
 
                     newLine["ItemCode"] = linea["REFACCION_SOLICITADA"].ToString();
                     newLine["Quantity"] = Convert.ToDouble(linea["CANTIDAD"]);
-                    newLine["WarehouseCode"] = linea["DfltWH"].ToString();
+                    newLine["WarehouseCode"] = newLine["WarehouseCode"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["AlmacenP1"] : ConfigurationManager.AppSettings["AlmacenP2"]);
                     newLine["CostingCode"] = linea["CostingCode"];
                     newLine["CostingCode2"] = linea["CostingCode2"];
                     newLine["CostingCode3"] = linea["CostingCode3"];
                     newLine["CostingCode4"] = linea["CostingCode4"];
+                    newLine["CostingCode5"] = payload.DataMovimiento.NumEmpleado;
+                    newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
+                    newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
 
 
                     // Cuenta contable (opcional pero recomendable)

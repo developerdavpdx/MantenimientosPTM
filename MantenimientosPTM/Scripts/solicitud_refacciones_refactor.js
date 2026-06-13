@@ -500,13 +500,29 @@ class SolicitudRefaccionesApp {
                 }
             }
 
-            // Armar DataMovimiento desde inputs del modal
+            // --- VALIDACIÓN DE CAMPOS DEL MODAL ---
+            const solicitante = ($('#devolucionSolicitante').val() || $('#solicitante').val() || $('#nombre').val() || '').toString().trim();
+            const numEmpleado = ($('#devolucionNumEmpleado').val() || $('#numEmpleado').val() || '').toString().trim();
+            const area = ($('#devolucionArea').val() || $('#area').val() || '').toString().trim();
+            const entrega = ($('#devolucionEntrega').val() || $('#firmaAlmacen').val() || '').toString().trim();
+            const recibe = ($('#devolucionRecibe').val() || $('#firmaAutoriza').val() || '').toString().trim();
+
+            if (!solicitante || !numEmpleado || !area || !entrega || !recibe) {
+                AlertManager.mostrar('Por favor complete los campos requeridos: Solicitante, Número de empleado, Área, Entrega y Recibe.', 'warning', 'alertDevolucionContainer');
+                // Re-habilitar botón si fue pasado
+                if ($btn && $btn.length) {
+                    $btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
+                }
+                return;
+            }
+
+            // Armar DataMovimiento desde inputs del modal (usando los valores validados)
             const dataMovimiento = {
-                Solicitante: $('#solicitante').val() || $('#nombre').val() || '',
-                NumEmpleado: $('#numEmpleado').val() || '',
-                Area: $('#area').val() || '',
-                Entrega: $('#devolucionEntrega').val() || $('#firmaAlmacen').val() || '',
-                Recibe: $('#devolucionRecibe').val() || $('#firmaAutoriza').val() || ''
+                Solicitante: solicitante,
+                NumEmpleado: numEmpleado,
+                Area: area,
+                Entrega: entrega,
+                Recibe: recibe
             };
 
             const payload = {
@@ -517,13 +533,16 @@ class SolicitudRefaccionesApp {
             };
 
             // Enviar
-            await this.postEntradaDevolucionMercancia(payload, $btn);
+            await this.solicitudManager.postEntradaDevolucionMercancia(payload, $btn);
 
             // Si todo OK, cerrar modal y limpiar
             $('#devolucionMercancia').modal('hide');
         } catch (err) {
             console.error('Error en guardarDevolucion:', err);
             AlertManager.mostrar('Error al procesar la devolución.', 'warning', 'alertDevolucionContainer');
+            if ($btn && $btn.length) {
+                $btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
+            }
         }
     }
 
@@ -1454,15 +1473,15 @@ class SolicitudManager {
                 </td>
             </tr>
         `);
-            return;
         }
+        else {
 
-        articulosAtendidos.forEach((art, index) => {
+            articulosAtendidos.forEach((art, index) => {
 
-            const cantidadSolicitada = Number(art.CANTIDAD_SOLICITADA || 0);
-            const cantidadAtendida = Number(art.CANTIDAD_SURTIDA || 0);
+                const cantidadSolicitada = Number(art.CANTIDAD_SOLICITADA || 0);
+                const cantidadAtendida = Number(art.CANTIDAD_SURTIDA || 0);
 
-            tbody.append(`
+                tbody.append(`
             <tr>
 
                 <td class="text-center">
@@ -1501,7 +1520,7 @@ class SolicitudManager {
 
                 <td class="text-center">
                     <input type="number"
-                           class="form-control form-control-sm cant-devolver text-center"
+                           class="form-control form-control-sm cant-devolver cantidadEditable text-center"
                            min="1"
                            max="${cantidadAtendida}"
                            value="${cantidadAtendida}"
@@ -1534,7 +1553,8 @@ class SolicitudManager {
 
             </tr>
         `);
-        });
+            });
+        }
 
         // Configurar eventos
         this._configurarEventosDevolucion();
@@ -2241,17 +2261,18 @@ class SolicitudManager {
         const ordenTrabajo = row.OrdenTrabajo || '';
         const estatus = row.Estatus || '';
         const solicita = row.UsuarioSolicita || '';
-        const totalAtendidas = row.TotalAtendidas || 0;
+        const totalPendienteDevolucion =
+            row.totalPendienteDevolucion || 0;
         const esAdmin = true; // o basado en this.datos_usuario[0].TIPOUSUARIO
 
-        const dataAttrs = `data-ordentrabajo="${ordenTrabajo}" data-estatus="${estatus}" data-solicita="${solicita}" data-totalatendidas="${totalAtendidas}"`;
+        const dataAttrs = `data-ordentrabajo="${ordenTrabajo}" data-estatus="${estatus}" data-solicita="${solicita}" data-totalatendidas="${totalPendienteDevolucion}"`;
 
         const btn = (color, cssClass, icon, tooltip, attrs = '') =>
             `<button class="btn btn-sm ${color} ${cssClass}" data-bs-toggle="tooltip" title="${tooltip}" ${attrs} ${dataAttrs}>
                 <i class="bi bi-${icon}"></i>
             </button>`;
 
-        const devolucionBtn = esAdmin && totalAtendidas > 0
+        const devolucionBtn = esAdmin && totalPendienteDevolucion > 0
             ? btn('btn-ptm-primary', 'btn-devolucion-mercancia', 'arrow-return-left', 'Generar Devolución de Mercancía')
             : '';
 

@@ -420,6 +420,9 @@ namespace MantenimientosPTM
             [JsonProperty("TOTAL_ATENDIDAS")]
             public int TotalAtendidas { get; set; }
 
+            [JsonProperty("TOTAL_PENDIENTE_DEVOLUCION")]
+            public decimal totalPendienteDevolucion { get; set; }
+
             [JsonProperty("FECHA_PRIMERA")]
             public string FechaPrimera { get; set; }
 
