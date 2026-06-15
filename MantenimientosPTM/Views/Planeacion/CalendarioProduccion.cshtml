@@ -1,0 +1,181 @@
+﻿@{
+    ViewBag.Title = "Calendario de Producción";
+}
+
+<link href="~/Content/CalendarioProduccion.css" rel="stylesheet" />
+
+<div class="row m-0 ps-3 pt-4 pe-3 position-relative header-custom">
+    <div class="col-12 col-xl-12 p-0">
+        <div class="card shadow">
+
+            <!-- ══════════════════ HEADER ══════════════════ -->
+            <div class="card-header header-fijo-custom text-dark">
+                <div class="row g-3 align-items-center">
+                    <div class="col-12 col-sm-6 col-md-4 col-xl-4 text-center text-sm-start">
+                        <h4 class="mb-0 text-color-logo">
+                            <i class="bi bi-calendar-week me-2"></i>
+                            Calendario Plan de Producción
+                        </h4>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-8 col-xl-8">
+                        <div class="d-flex flex-column flex-sm-row justify-content-center justify-content-sm-end gap-2">
+                            <button id="btnExportarExcel"
+                                    class="btn-filtro-limpiar"
+                                    data-bs-toggle="tooltip"
+                                    title="Exportar a Excel">
+                                <i class="bi bi-file-earmark-excel-fill me-1"></i>
+                                Exportar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════ FILTROS ══════════════════ -->
+            <div class="row m-0 pt-3 pb-2">
+                <div class="col-12">
+                    <form id="formFiltrosCalendario" autocomplete="on">
+                        <div class="filtros-panel">
+                            <div class="filtros-titulo">
+                                <i class="bi bi-sliders" style="color:#0ea5d8"></i>
+                                Filtros de búsqueda
+                            </div>
+                            <div class="row g-2 align-items-end">
+
+                                <!-- Mes y Año -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="CalFiltroMesAnio">
+                                        <i class="bi bi-calendar2-month-fill"></i> Mes y Año
+                                    </label>
+                                    <input type="month" class="filtro-input"
+                                           id="CalFiltroMesAnio" name="CalFiltroMesAnio">
+                                </div>
+
+                                <!-- Proceso -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="CalFiltroProceso">
+                                        <i class="bi bi-gear"></i> Proceso
+                                    </label>
+                                    <div class="select-wrapper">
+                                        <select class="filtro-input" id="CalFiltroProceso" name="CalFiltroProceso">
+                                            <option value="">Todos los procesos...</option>
+                                        </select>
+                                        <div class="select-loader d-none" id="loader_CalFiltroProceso">
+                                            <span class="spinner-border spinner-border-sm"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Línea de Producción -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="CalFiltroLinea">
+                                        <i class="bi bi-diagram-3-fill"></i> Línea de Producción
+                                    </label>
+                                    <div class="select-wrapper">
+                                        <select class="filtro-input" id="CalFiltroLinea" name="CalFiltroLinea" disabled>
+                                            <option value="">Todas las líneas...</option>
+                                        </select>
+                                        <div class="select-loader d-none" id="loader_CalFiltroLinea">
+                                            <span class="spinner-border spinner-border-sm"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Vista -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="CalVistaSelector">
+                                        <i class="bi bi-grid-3x3-gap-fill"></i> Vista
+                                    </label>
+                                    <select class="filtro-input" id="CalVistaSelector">
+                                        <option value="week">Semana</option>
+                                        <option value="month">Mes</option>
+                                    </select>
+                                </div>
+
+                                <!-- Botones -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                                    <button type="button"
+                                            class="btn-filtro-aplicar"
+                                            id="btnBuscarCalendario"
+                                            title="Buscar planes">
+                                        <i class="bi bi-search"></i>
+                                        Buscar
+                                    </button>
+                                    <button type="button"
+                                            class="btn-filtro-limpiar"
+                                            id="btnLimpiarCalendario"
+                                            title="Limpiar filtros">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                        Limpiar
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ══════════════════ CALENDARIO ══════════════════ -->
+            <div class="row m-0 pb-3">
+                <div class="col-12">
+
+                    <!-- Barra de navegación del calendario -->
+                    <div class="cal-nav-bar d-flex align-items-center gap-2 px-2 pb-2">
+                        <span class="cal-titulo-mes" id="calTituloMes">Junio 2026</span>
+                        <button class="btn-cal-nav" id="btnCalAnterior" title="Semana anterior">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button class="btn-cal-nav" id="btnCalSiguiente" title="Semana siguiente">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                        <button class="btn-cal-hoy" id="btnCalHoy">Hoy</button>
+                        <div class="ms-auto cal-legend" id="calLeyenda"></div>
+                    </div>
+
+                    <!-- Tabla del calendario -->
+                    <div class="cal-scroll-wrapper">
+                        <table class="cal-table" id="calTabla">
+                            <thead id="calThead"></thead>
+                            <tbody id="calTbody"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Estado vacío -->
+                    <div id="calVacio" class="cal-empty-state d-none">
+                        <i class="bi bi-calendar-x" style="font-size:2.5rem; color:#0ea5d8;"></i>
+                        <p class="mt-2 mb-0 fw-semibold">Sin planes para el periodo seleccionado</p>
+                        <p class="text-muted small">Ajusta los filtros o navega a otro periodo</p>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TOOLTIP FLOTANTE (detalle del evento)
+══════════════════════════════════════════════════════ -->
+<div id="calTooltip" class="cal-tooltip-box d-none">
+    <div class="cal-tooltip-header" id="calTooltipHeader"></div>
+    <div class="cal-tooltip-body" id="calTooltipBody"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     LOADER FULLSCREEN (reutiliza el de Global)
+══════════════════════════════════════════════════════ -->
+<div id="calendarLoader" style="display:none;">
+    <div class="calendar-loader-overlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-3 text-white fw-semibold">Cargando calendario...</p>
+    </div>
+</div>
+
+<!-- Container de alerts Bootstrap -->
+<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index:9999; margin-top:70px;"></div>
+
+<script src="~/Scripts/calendario_produccion_refactor.js"></script>

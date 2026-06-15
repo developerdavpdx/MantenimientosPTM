@@ -450,102 +450,6 @@ class SolicitudRefaccionesApp {
         this.solicitudManager.postCreateSalidaMercancia(payload, $btn);
     }
 
-    // Construye payload desde el modal de devolución y envía la petición
-    async guardarDevolucion($btn = null) {
-        try {
-            const items = [];
-
-            $('#bodyArticulosDevolucion tr').each(function () {
-                const $row = $(this);
-                const $chk = $row.find('.chk-articulo-devolucion');
-                // Si no hay checkbox, omitir
-                if (!$chk.length) return;
-                if (!$chk.is(':checked')) return;
-
-                const idSolicitud = parseInt($row.find('.cant-devolver').data('idsolicitud') || 0);
-                const ordenTrabajo = $row.find('.cant-devolver').data('ordentrabajo') || $row.find('span.badge').text().trim();
-                const codigo = $row.find('.cant-devolver').data('codigo') || $row.find('small.text-muted').text().trim();
-                const articulo = $row.find('.cant-devolver').data('articulo') || $row.find('td:nth-child(5)').text().trim();
-                const cantidadAtendida = parseInt($row.find('.cant-devolver').data('cantidadatendida') || $row.find('td:nth-child(7)').text().trim() || 0);
-                const cantidadDevolver = parseInt($row.find('.cant-devolver').val() || 0);
-                const departamento = $row.find('td:nth-child(9)').text().trim() || $row.find('.departamento').val() || '';
-                const proceso = $row.find('td:nth-child(10)').text().trim() || $row.find('.proceso').val() || '';
-                const gastos = $row.find('td:nth-child(11)').text().trim() || $row.find('.gastos').val() || '';
-                const cedis = $row.find('td:nth-child(12)').text().trim() || $row.find('.cedis').val() || '';
-
-                items.push({
-                    IdSolicitud: idSolicitud,
-                    OrdenTrabajo: ordenTrabajo,
-                    Codigo: codigo,
-                    Articulo: articulo,
-                    CantidadAtendida: cantidadAtendida,
-                    CantidadDevolver: cantidadDevolver,
-                    Departamento: departamento,
-                    Proceso: proceso,
-                    Gastos: gastos,
-                    Cedis: cedis
-                });
-            });
-
-            if (items.length === 0) {
-                AlertManager.mostrar('Debes seleccionar al menos un artículo para devolver.', 'warning', 'alertDevolucionContainer');
-                return;
-            }
-
-            // Validar cantidades
-            for (const it of items) {
-                if (!it.CantidadDevolver || it.CantidadDevolver <= 0) {
-                    AlertManager.mostrar('Ingrese cantidad a devolver mayor a 0 en los artículos seleccionados.', 'warning', 'alertDevolucionContainer');
-                    return;
-                }
-            }
-
-            // --- VALIDACIÓN DE CAMPOS DEL MODAL ---
-            const solicitante = ($('#devolucionSolicitante').val() || $('#solicitante').val() || $('#nombre').val() || '').toString().trim();
-            const numEmpleado = ($('#devolucionNumEmpleado').val() || $('#numEmpleado').val() || '').toString().trim();
-            const area = ($('#devolucionArea').val() || $('#area').val() || '').toString().trim();
-            const entrega = ($('#devolucionEntrega').val() || $('#firmaAlmacen').val() || '').toString().trim();
-            const recibe = ($('#devolucionRecibe').val() || $('#firmaAutoriza').val() || '').toString().trim();
-
-            if (!solicitante || !numEmpleado || !area || !entrega || !recibe) {
-                AlertManager.mostrar('Por favor complete los campos requeridos: Solicitante, Número de empleado, Área, Entrega y Recibe.', 'warning', 'alertDevolucionContainer');
-                // Re-habilitar botón si fue pasado
-                if ($btn && $btn.length) {
-                    $btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
-                }
-                return;
-            }
-
-            // Armar DataMovimiento desde inputs del modal (usando los valores validados)
-            const dataMovimiento = {
-                Solicitante: solicitante,
-                NumEmpleado: numEmpleado,
-                Area: area,
-                Entrega: entrega,
-                Recibe: recibe
-            };
-
-            const payload = {
-                Articulos: items,
-                DataMovimiento: dataMovimiento,
-                Referencia: $('#numAjuste').val() || $('#valeFolio').text().trim() || '',
-                OrdenTrabajo: items[0].OrdenTrabajo || ''
-            };
-
-            // Enviar
-            await this.solicitudManager.postEntradaDevolucionMercancia(payload, $btn);
-
-            // Si todo OK, cerrar modal y limpiar
-            $('#devolucionMercancia').modal('hide');
-        } catch (err) {
-            console.error('Error en guardarDevolucion:', err);
-            AlertManager.mostrar('Error al procesar la devolución.', 'warning', 'alertDevolucionContainer');
-            if ($btn && $btn.length) {
-                $btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
-            }
-        }
-    }
-
     _guardarRechazo() {
         const $btn = $("#btnGuardarRech");
         $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
@@ -1473,15 +1377,15 @@ class SolicitudManager {
                 </td>
             </tr>
         `);
+            return;
         }
-        else {
 
-            articulosAtendidos.forEach((art, index) => {
+        articulosAtendidos.forEach((art, index) => {
 
-                const cantidadSolicitada = Number(art.CANTIDAD_SOLICITADA || 0);
-                const cantidadAtendida = Number(art.CANTIDAD_SURTIDA || 0);
+            const cantidadSolicitada = Number(art.CANTIDAD_SOLICITADA || 0);
+            const cantidadAtendida = Number(art.CANTIDAD_SURTIDA || 0);
 
-                tbody.append(`
+            tbody.append(`
             <tr>
 
                 <td class="text-center">
@@ -1520,7 +1424,7 @@ class SolicitudManager {
 
                 <td class="text-center">
                     <input type="number"
-                           class="form-control form-control-sm cant-devolver cantidadEditable text-center"
+                           class="form-control form-control-sm cant-devolver text-center"
                            min="1"
                            max="${cantidadAtendida}"
                            value="${cantidadAtendida}"
@@ -1553,8 +1457,7 @@ class SolicitudManager {
 
             </tr>
         `);
-            });
-        }
+        });
 
         // Configurar eventos
         this._configurarEventosDevolucion();
@@ -2261,18 +2164,17 @@ class SolicitudManager {
         const ordenTrabajo = row.OrdenTrabajo || '';
         const estatus = row.Estatus || '';
         const solicita = row.UsuarioSolicita || '';
-        const totalPendienteDevolucion =
-            row.totalPendienteDevolucion || 0;
+        const totalAtendidas = row.TotalAtendidas || 0;
         const esAdmin = true; // o basado en this.datos_usuario[0].TIPOUSUARIO
 
-        const dataAttrs = `data-ordentrabajo="${ordenTrabajo}" data-estatus="${estatus}" data-solicita="${solicita}" data-totalatendidas="${totalPendienteDevolucion}"`;
+        const dataAttrs = `data-ordentrabajo="${ordenTrabajo}" data-estatus="${estatus}" data-solicita="${solicita}" data-totalatendidas="${totalAtendidas}"`;
 
         const btn = (color, cssClass, icon, tooltip, attrs = '') =>
             `<button class="btn btn-sm ${color} ${cssClass}" data-bs-toggle="tooltip" title="${tooltip}" ${attrs} ${dataAttrs}>
                 <i class="bi bi-${icon}"></i>
             </button>`;
 
-        const devolucionBtn = esAdmin && totalPendienteDevolucion > 0
+        const devolucionBtn = esAdmin && totalAtendidas > 0
             ? btn('btn-ptm-primary', 'btn-devolucion-mercancia', 'arrow-return-left', 'Generar Devolución de Mercancía')
             : '';
 

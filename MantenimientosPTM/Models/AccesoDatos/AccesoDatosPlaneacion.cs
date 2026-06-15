@@ -126,6 +126,12 @@ namespace MantenimientosPTM
             [JsonProperty("GrupoArt")]
             public string GrupoArt { get; set; }
 
+            [JsonProperty("PesoMinimo")]
+            public decimal? PesoMinimo { get; set; }
+
+            [JsonProperty("PesoMaximo")]
+            public decimal? PesoMaximo { get; set; }
+
             [JsonProperty("StockTotal")]
             public decimal? StockTotal { get; set; }
 
@@ -316,8 +322,24 @@ namespace MantenimientosPTM
                 NVO_DIA_FIN_MANT?.ToString("dd/MM/yyyy");
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? NVO_PZSXDIA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? NVO_KGSXDIA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string NVO_PRODUCCION_TEORICA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? NVO_PRODUCCION_TEORICA_PZS { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? NVO_PRODUCCION_TEORICA_KGS { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -344,12 +366,12 @@ namespace MantenimientosPTM
             public string ID_NVO_PROCESO { get; set; }
             public string NVO_ARTICULO { get; set; }
             public string NVO_ARTICULO_DESC { get; set; }
-            public decimal? KGSXDIA { get; set; }
-            public decimal? PZSXDIA { get; set; }
+            public decimal? NVO_KGSXDIA { get; set; }
+            public decimal? NVO_PZSXDIA { get; set; }
             public string NVO_DIA_INICIO_MANT_STR { get; set; }
             public string NVO_DIA_FIN_MANT_STR { get; set; }
-            public decimal? PRODUCCION_TEORICA_KGS { get; set; }
-            public decimal? PRODUCCION_TEORICA_PZS { get; set; }
+            public decimal? NVO_PRODUCCION_TEORICA_KGS { get; set; }
+            public decimal? NVO_PRODUCCION_TEORICA_PZS { get; set; }
             public decimal? NVO_PRODUCCION_REAL { get; set; }
             public string NVO_COMENTARIOS { get; set; }
             public string NVO_FECHA_PLAN { get; set; }
@@ -437,12 +459,12 @@ namespace MantenimientosPTM
                         ID_NVO_PROCESO = fila.ID_NVO_PROCESO,
                         NVO_ARTICULO = fila.NVO_ARTICULO,
                         NVO_ARTICULO_DESC = fila.NVO_ARTICULO_DESC,
-                        KGSXDIA = fila.KGSXDIA,
-                        PZSXDIA = fila.PZSXDIA,
+                        NVO_KGSXDIA = fila.NVO_KGSXDIA,
+                        NVO_PZSXDIA = fila.NVO_PZSXDIA,
                         NVO_DIA_INICIO_MANT_STR = fila.NVO_DIA_INICIO_MANT_STR,
                         NVO_DIA_FIN_MANT_STR = fila.NVO_DIA_FIN_MANT_STR,
-                        PRODUCCION_TEORICA_KGS = fila.PRODUCCION_TEORICA_KGS,
-                        PRODUCCION_TEORICA_PZS = fila.PRODUCCION_TEORICA_PZS,
+                        NVO_PRODUCCION_TEORICA_KGS = fila.NVO_PRODUCCION_TEORICA_KGS,
+                        NVO_PRODUCCION_TEORICA_PZS = fila.NVO_PRODUCCION_TEORICA_PZS,
                         NVO_PRODUCCION_REAL = fila.NVO_PRODUCCION_REAL,
                         NVO_COMENTARIOS = fila.NVO_COMENTARIOS,
                         NVO_FECHA_PLAN = fila.NVO_FECHA_PLAN

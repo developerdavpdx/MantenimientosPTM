@@ -200,7 +200,7 @@
                                 <select class="form-select-custom" id="TipoEquipo" name="TipoEquipo" required autocomplete="off">
                                     <option value="">Seleccionar tipo...</option>
                                 </select>
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione un tipo de equipo.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione un tipo de equipo.</div>
                             </div>
                         </div>
                     </div>
@@ -219,7 +219,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="NombreEquipo" name="NombreEquipo"
                                        placeholder="Ingrese nombre de equipo" required autocomplete="on">
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El nombre del equipo es obligatorio.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El nombre del equipo es obligatorio.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label-custom" for="DescripcionEquipo">
@@ -227,7 +227,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="DescripcionEquipo" name="DescripcionEquipo"
                                        placeholder="Ingrese la descripción de equipo" required autocomplete="on">
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  La descripción del equipo es obligatoria.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  La descripción del equipo es obligatoria.</div>
                             </div>
                         </div>
                     </div>
@@ -247,7 +247,7 @@
                                 <select class="form-select-custom" id="Area" name="Area" required autocomplete="off">
                                     <option value="">Seleccionar área...</option>
                                 </select>
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione un área.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione un área.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label-custom" for="LineaProduccion">
@@ -260,7 +260,7 @@
                                     <div class="select-loader d-none" id="loader_LineaProduccion">
                                         <span class="spinner-border spinner-border-sm"></span>
                                     </div>
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione una línea de producción.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione una línea de producción.</div>
                                 </div>
                             </div>
                         </div>
@@ -280,7 +280,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="CentroCostos" name="CentroCostos"
                                        placeholder="Ingrese centro de costos" required autocomplete="on">
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El centro de costos es obligatorio.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El centro de costos es obligatorio.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label-custom" for="NumeroDocPmCalidad">
@@ -288,7 +288,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="NumeroDocPmCalidad" name="NumeroDocPmCalidad"
                                        placeholder="Número de doc pm.calidad" required autocomplete="on">
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El número de documento es obligatorio.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El número de documento es obligatorio.</div>
                             </div>
                         </div>
                     </div>
@@ -315,7 +315,7 @@
                                         <option value="semestral">Semestral</option>
                                         <option value="anual">Anual</option>*@
                                 </select>
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione la periodicidad.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione la periodicidad.</div>
                             </div>
 
                             <div class="col-md-6" id="divRangoMantenimiento">
@@ -327,13 +327,13 @@
                                         <select class="form-select-custom" id="DiaInicioMant" name="DiaInicioMant" required autocomplete="off">
                                             <option value="">Día inicio</option>
                                         </select>
-                                        <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Seleccione día inicial.</div>
+                                        <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Seleccione día inicial.</div>
                                     </div>
                                     <div class="flex-fill">
                                         <select class="form-select-custom" id="DiaFinMant" name="DiaFinMant" required autocomplete="off">
                                             <option value="">Día fin</option>
                                         </select>
-                                        <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Seleccione día final.</div>
+                                        <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Seleccione día final.</div>
                                     </div>
                                 </div>
                             </div>
@@ -345,7 +345,7 @@
                                     <i class="bi bi-calendar-plus"></i> Fecha Inicio Mantenimiento
                                 </label>
                                 <input type="date" class="form-control-custom" id="FechaInicioMant" name="FechaInicioMant" required autocomplete="off">
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Seleccione la fecha de inicio del mantenimiento.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Seleccione la fecha de inicio del mantenimiento.</div>
                             </div>
                         </div>
                     </div>
@@ -434,7 +434,7 @@
                                       rows="4"
                                       placeholder="Describe el motivo de la pausa del equipo..."
                                       required autocomplete="off"></textarea>
-                            <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Describa el motivo de pausa.</div>
+                            <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Describa el motivo de pausa.</div>
                             <div class="mt-1" style="font-size:0.78rem; color: var(--modal-text-muted);">
                                 <i class="bi bi-lightbulb text-warning"></i> Ejemplo: Falla mecánica, mantenimiento preventivo, etc.
                             </div>
@@ -512,7 +512,7 @@
                                    placeholder="Ejemplo: Extrusoras, Recibidores..."
                                    required />
 
-                            <div class="modal-error-msg">
+                            <div class="modal-error-msg invalid-feedback">
                                 <img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Ingrese el tipo de equipo.
                             </div>
 
@@ -603,7 +603,7 @@
                                     <i class="bi bi-calendar3"></i> Fecha de Solicitud <span class="text-danger">*</span>
                                 </label>
                                 <input type="date" class="form-control-custom" id="FechaSolicitud" name="FechaSolicitud" required autocomplete="off">
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione la fecha de solicitud de baja.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione la fecha de solicitud de baja.</div>
                             </div>
                             <div class="col-12">
                                 <label class="form-label-custom" for="MotivoBaja">
@@ -611,7 +611,7 @@
                                 </label>
                                 <textarea class="form-control-custom" id="MotivoBaja" name="MotivoBaja" rows="2"
                                           placeholder="Describa el motivo de la baja del activo fijo..." autocomplete="on"></textarea>
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El motivo de la baja es obligatorio.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El motivo de la baja es obligatorio.</div>
                                 <div class="mt-1" style="font-size:0.78rem; color: var(--modal-text-muted);">
                                     <i class="bi bi-lightbulb text-warning"></i> Ejemplo: Deterioro por uso, obsolescencia tecnológica, etc.
                                 </div>
@@ -634,7 +634,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="CodigoActivo" name="CodigoActivo"
                                            placeholder="Ej. AF12345" required autocomplete="on">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El código del activo es obligatorio.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El código del activo es obligatorio.</div>
                                 </div>
                                 <div class="col-md-8">
                                     <label class="form-label-custom" for="DescripcionActivo">
@@ -642,7 +642,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="DescripcionActivo" name="DescripcionActivo"
                                            placeholder="Ej. Equipo de Laboratorio Marca XYZ" required autocomplete="on">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  La descripción del activo es obligatoria.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  La descripción del activo es obligatoria.</div>
                                 </div>
                             </div>
                         </div>
@@ -663,7 +663,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="Desecho" name="Desecho"
                                            placeholder="Ej. Chatarrización" autocomplete="on">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el tipo de desecho.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el tipo de desecho.</div>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label-custom" for="TipoActivoFijo">
@@ -671,7 +671,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="TipoActivoFijo" name="TipoActivoFijo"
                                            placeholder="Ej. Equipo de Laboratorio" autocomplete="on">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el tipo de activo.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el tipo de activo.</div>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label-custom" for="Venta">
@@ -679,7 +679,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="Venta" name="Venta"
                                            placeholder="Ej. Venta interna" autocomplete="on">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el tipo de venta.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el tipo de venta.</div>
                                 </div>
                             </div>
                             <div class="row g-3 mt-1">
@@ -689,7 +689,7 @@
                                     </label>
                                     <input type="number" class="form-control-custom" id="Piezas" name="Piezas"
                                            min="0" placeholder="0" autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el número de piezas.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el número de piezas.</div>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label-custom" for="Kilos">
@@ -697,7 +697,7 @@
                                     </label>
                                     <input type="number" class="form-control-custom" id="Kilos" name="Kilos"
                                            min="0" step="0.01" placeholder="0.00" autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el peso en kilogramos.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el peso en kilogramos.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="ValorIva">
@@ -705,7 +705,7 @@
                                     </label>
                                     <input type="number" class="form-control-custom" id="ValorIva" name="ValorIva"
                                            min="0" step="0.01" placeholder="0.00" autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el valor con IVA.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el valor con IVA.</div>
                                 </div>
                             </div>
                         </div>
@@ -726,7 +726,7 @@
                                     </label>
                                     <textarea class="form-control-custom" id="Observacion" name="Observacion"
                                               rows="2" placeholder="Escriba las observaciones contables..." autocomplete="on"></textarea>
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Escriba sus observaciones.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Escriba sus observaciones.</div>
                                 </div>
                                 <div class="col-md-5">
                                     <label class="form-label-custom" for="EncargadoActivos">
@@ -734,7 +734,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="EncargadoActivos" name="EncargadoActivos"
                                            placeholder="C.P. Juan Francisco Castañón Cortes" autocomplete="on">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el encargado de activos.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el encargado de activos.</div>
                                 </div>
                             </div>
                         </div>
@@ -779,7 +779,7 @@
                                 <input type="file" class="form-control-custom" id="archivoPDF" name="archivoPDF"
                                        accept=".pdf,application/pdf" required>
 
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione un archivo PDF.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione un archivo PDF.</div>
 
                                 <small class="text-muted">
                                     <i class="bi bi-info-circle me-1"></i>
@@ -823,7 +823,7 @@
                                 <div class="flex-grow-1">
                                     <input type="email" class="form-control-custom" id="inputCorreoNotificacion"
                                            placeholder="ejemplo@empresa.com" autocomplete="off">
-                                    <div id="errorCorreo" class="modal-error-msg" style="display:none;">
+                                    <div id="errorCorreo" class="modal-error-msg invalid-feedback" style="display:none;">
                                         <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Ingrese un correo válido.
                                     </div>
                                 </div>
@@ -1019,7 +1019,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="Linea" name="Linea"
                                        placeholder="Ingrese nombre de la línea" required autocomplete="on">
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El nombre de la línea es obligatorio.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El nombre de la línea es obligatorio.</div>
                                 <div class="mt-1" style="font-size:0.78rem; color: var(--modal-text-muted);">
                                     <i class="bi bi-lightbulb text-warning"></i> Ejemplo: LÍNEA 1, LÍNEA 2, etc.
                                 </div>

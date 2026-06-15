@@ -20,7 +20,7 @@ namespace MantenimientosPTM
         {
             get
             {
-                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOConsultaSRByOT\"";
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOConsultaArticulosPorOT\"";
             }
         }
 
@@ -420,6 +420,9 @@ namespace MantenimientosPTM
             [JsonProperty("TOTAL_ATENDIDAS")]
             public int TotalAtendidas { get; set; }
 
+            [JsonProperty("TOTAL_PENDIENTE_DEVOLUCION")]
+            public decimal totalPendienteDevolucion { get; set; }
+
             [JsonProperty("FECHA_PRIMERA")]
             public string FechaPrimera { get; set; }
 
@@ -446,34 +449,58 @@ namespace MantenimientosPTM
         {
             [JsonProperty("ID_SOLICITUD")]
             public int IdSolicitud { get; set; }
+
             [JsonProperty("ORDEN_TRABAJO")]
             public string OrdenTrabajo { get; set; }
+
             [JsonProperty("ID_EQUIPO")]
             public int IdEquipo { get; set; }
+
             [JsonProperty("REFACCION_SOLICITADA")]
             public string RefaccionSolicitada { get; set; }
+
             [JsonProperty("NOMBRE_ARTICULO")]
             public string NombreArticulo { get; set; }
-            [JsonProperty("STOCK")]                  // 👈 Campo nuevo
+
+            [JsonProperty("STOCK")]
             public decimal Stock { get; set; }
+
+            [JsonProperty("MIN_STOCK")]
+            public decimal MinStock { get; set; }
+
+            [JsonProperty("MAX_STOCK")]
+            public decimal MaxStock { get; set; }
+
             [JsonProperty("CANTIDAD")]
             public int Cantidad { get; set; }
+
             [JsonProperty("NIVEL_URGENCIA")]
             public string NivelUrgencia { get; set; }
+
             [JsonProperty("DESCRIPCION_NECESIDAD")]
             public string DescripcionNecesidad { get; set; }
+
             [JsonProperty("FECHA_SOLICITUD")]
             public string FechaSolicitud { get; set; }
+
             [JsonProperty("ESTATUS")]
             public string Estatus { get; set; }
+
             [JsonProperty("USUARIO_SOLICITA")]
             public string UsuarioSolicita { get; set; }
+
             [JsonProperty("USUARIO_ATIENDE")]
             public string UsuarioAtiende { get; set; }
+
             [JsonProperty("FECHA_ATENCION")]
             public string FechaAtencion { get; set; }
+
             [JsonProperty("FOLIO_COMPRA")]
             public string FolioCompra { get; set; }
+            [JsonProperty("FOLIO_SALIDA")]
+            public string FolioSalida { get; set; }
+            [JsonProperty("CANTIDAD_SURTIDA")]
+            public string CantidadSurtida { get; set; }
         }
 
         // Modelo para cada línea de solicitud
@@ -528,6 +555,15 @@ namespace MantenimientosPTM
             [JsonProperty("CANTIDAD_REQUERIDA")]
             public int CantidadRequerida { get; set; }
 
+            [JsonProperty("STOCK_ACTUAL")]
+            public decimal StockActual { get; set; }
+
+            [JsonProperty("MIN_STOCK")]
+            public decimal MinStock { get; set; }
+
+            [JsonProperty("MAX_STOCK")]
+            public decimal MaxStock { get; set; }
+
             [JsonProperty("NIVEL_URGENCIA")]
             public string NivelUrgencia { get; set; }
 
@@ -543,27 +579,42 @@ namespace MantenimientosPTM
             [JsonProperty("USUARIO_SOLICITA")]
             public string UsuarioSolicita { get; set; }
         }
+
         //Resumen de solicitudes de compra.
         public class SolicitudCompraResume
         {
             [JsonProperty("ID_SOLICITUD_COMPRA")]
             public int IdSolicitudCompra { get; set; }
+
             [JsonProperty("FOLIO_COMPRA")]
             public string FolioCompra { get; set; }
+
             [JsonProperty("COMENTARIOS")]
             public string Comentarios { get; set; }
+
+            [JsonProperty("ORDEN_TRABAJO")]
+            public string OrdenTrabajo { get; set; }
+
+            [JsonProperty("TOTAL_OTS")]
+            public int TotalOts { get; set; }
+
             [JsonProperty("FECHA_SOLICITUD")]
             public string FechaSolicitud { get; set; }
+
             [JsonProperty("ESTATUS")]
             public string Estatus { get; set; }
+
             [JsonProperty("USUARIO_SOLICITA")]
             public string UsuarioSolicita { get; set; }
+
             [JsonProperty("DOC_NUM")]
-            public string DocNum { get; set; }       // ⬅️ nuevo
+            public string DocNum { get; set; }
+
             [JsonProperty("DOC_ENTRY")]
-            public string DocEntry { get; set; }     // ⬅️ nuevo
+            public string DocEntry { get; set; }
+
             [JsonProperty("RESPONSE_SAP")]
-            public string ResponseSap { get; set; }  // ⬅️ nuevo
+            public string ResponseSap { get; set; }
         }
 
         public class OrdenCompraDTO

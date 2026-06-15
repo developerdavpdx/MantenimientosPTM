@@ -1157,10 +1157,10 @@ class GlobalUtil {
             { text: '⚙️ Capacidades', width: 30 },
             { text: '🔧 Proceso', width: 30 },
             { text: '📆 Mes/Año', width: 22 },
+            { text: '📅 Rango Días', width: 26 },
             { text: '📋 Producción Teórica', width: 24 },
             { text: '📊 Producción Real', width: 24 },
-            { text: '💬 Comentarios', width: 44 },
-            { text: '📅 Rango Días', width: 26 }
+            { text: '💬 Comentarios', width: 44 }
         ];
 
         headers.forEach((header, index) => {
@@ -1175,462 +1175,44 @@ class GlobalUtil {
         });
         headerRow.height = 35;
 
-        // Localizar columnas actuales por texto de encabezado
-        function findColByFragment(fragment) {
-            let col = -1;
-            headerRow.eachCell((cell, c) => {
-                try {
-                    let v = '';
-                    if (cell.value && typeof cell.value === 'object' && cell.value.richText) {
-                        v = cell.value.richText.map(t => t.text).join('');
-                    } else {
-                        v = String(cell.value || '');
-                    }
-                    if (v.includes(fragment)) col = c;
-                } catch (e) { }
-            });
-            return col;
-        }
-
-        const newRangoCol = findColByFragment('Rango Días');
-        const comentariosCol = findColByFragment('Comentarios');
-        // Columna histórica donde el código original colocaba 'Rango Días' (1-based)
-        const oldRangoCol = 6;
-
-        // Declaración previa de slots para evitar TDZ (se rellenará más abajo)
-        let slots = [];
-
-        // Funciones auxiliares para fechas (espera formatos dd/mm/yyyy o ISO)
-        const parseDateStr = (s) => {
-            if (!s) return null;
-            const slashPattern = /^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/; // dd/mm/yyyy
-            const m = String(s).match(slashPattern);
-            if (m) {
-                const d = parseInt(m[1], 10);
-                const mo = parseInt(m[2], 10) - 1;
-                const y = parseInt(m[3], 10);
-                const dt = new Date(y, mo, d);
-                return Number.isNaN(dt.getTime()) ? null : dt;
-            }
-            // Fallback a ISO u otros formatos reconocidos por Date
-            const iso = new Date(s);
-            return Number.isNaN(iso.getTime()) ? null : iso;
-        };
-
         const fmtNum = (n) => (parseFloat(n) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
-
-        // Determinar rango global de fechas (incluye historiales)
-        let minDate = null;
-        let maxDate = null;
-        const updateRange = (d) => {
-            if (!d) return;
-            if (!minDate || d < minDate) minDate = d;
-            if (!maxDate || d > maxDate) maxDate = d;
-        };
-        data.forEach(r => {
-            const s = parseDateStr(r.DIA_INICIO_MANT_STR);
-            const e = parseDateStr(r.DIA_FIN_MANT_STR);
-            updateRange(s);
-            updateRange(e);
-            (r.BITACORA || []).forEach(b => {
-                updateRange(parseDateStr(b.NVO_DIA_INICIO_MANT_STR));
-                updateRange(parseDateStr(b.NVO_DIA_FIN_MANT_STR));
-            });
-        });
-
-        // Generar columnas (días o semanas) entre minDate y maxDate
-        const dayColumns = [];
-        if (minDate && maxDate && minDate <= maxDate) {
-            // normalizar horas a 00:00
-            minDate = new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate());
-            maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate());
-            for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
-                dayColumns.push(new Date(d));
-            }
-        }
-
-        // Decidir si usar semanas para agrupar (rango grande)
-        const MAX_DAILY_COLUMNS = 45; // umbral; ajustar si es necesario
-        const useWeeks = dayColumns.length > MAX_DAILY_COLUMNS;
-
-        // Buscar la columna real que contiene 'Rango Días' en la fila de cabecera
-        let rangoColIndex = -1;
-        headerRow.eachCell((cell, col) => {
-            try {
-                let text = '';
-                if (cell.value && typeof cell.value === 'object' && cell.value.richText) {
-                    text = cell.value.richText.map(t => t.text).join('');
-                } else {
-                    text = String(cell.value || '');
-                }
-                if (text.includes('Rango Días')) {
-                    rangoColIndex = col;
-                }
-            } catch (e) { /* ignore */ }
-        });
-
-        // Buscar la primera columna que parece de fecha (p. ej. '05/06') para no pisar columnas intermedias
-        let firstDateCol = -1;
-        headerRow.eachCell((cell, col) => {
-            try {
-                let s = '';
-                if (cell.value && typeof cell.value === 'object' && cell.value.richText) {
-                    s = cell.value.richText.map(t => t.text).join('');
-                } else {
-                    s = String(cell.value || '');
-                }
-                if (/\d{2}\/\d{2}/.test(s)) {
-                    firstDateCol = col;
-                }
-            } catch (e) { /* ignore */ }
-        });
-
-        // Determinar el inicio del Gantt: preferir la primera columna de fecha si existe,
-        // si no, colocar el Gantt después de TODAS las columnas estáticas para no sobrescribirlas
-        let ganttStartCol;
-        if (firstDateCol > 0) ganttStartCol = firstDateCol;
-        else ganttStartCol = headers.length + 1;
-
-        if (rangoColIndex > 0) {
-            worksheet.getColumn(rangoColIndex).width = 50;
-            headerRow.getCell(rangoColIndex).alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
-        }
-
-        slots = [];
-        if (!useWeeks) {
-            // slots por día (Date)
-            for (const dt of dayColumns) slots.push(dt);
-        } else {
-            // slots por semana (objetos {start,end}) — semana inicia lunes
-            const getStartOfWeek = d => {
-                const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-                const day = dt.getDay();
-                // day 0 = domingo, queremos inicio lunes -> calcular offset
-                const diff = (day === 0) ? 6 : day - 1; // domingo->6, lunes->0
-                dt.setDate(dt.getDate() - diff);
-                return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
-            };
-            let w = getStartOfWeek(minDate);
-            while (w <= maxDate) {
-                const start = new Date(w.getFullYear(), w.getMonth(), w.getDate());
-                const end = new Date(start);
-                end.setDate(start.getDate() + 6);
-                slots.push({ start, end });
-                w.setDate(w.getDate() + 7);
-            }
-        }
-
-        // Crear encabezados según slots (día o semana)
-        slots.forEach((slot, idx) => {
-            const colIndex = ganttStartCol + idx;
-            const cell = headerRow.getCell(colIndex);
-            if (!useWeeks) {
-                const dt = slot;
-                const dd = String(dt.getDate()).padStart(2, '0');
-                const mm = String(dt.getMonth() + 1).padStart(2, '0');
-                cell.value = `${dd}/${mm}`;
-                cell.alignment = { vertical: 'middle', horizontal: 'center', textRotation: 90, wrapText: true };
-                worksheet.getColumn(colIndex).width = 3.6;
-            } else {
-                const a = slot.start;
-                const b = slot.end;
-                const ad = String(a.getDate()).padStart(2, '0');
-                const am = String(a.getMonth() + 1).padStart(2, '0');
-                const bd = String(b.getDate()).padStart(2, '0');
-                const bm = String(b.getMonth() + 1).padStart(2, '0');
-                cell.value = `${ad}/${am} - ${bd}/${bm}`;
-                cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-                worksheet.getColumn(colIndex).width = 9;
-            }
-            cell.font = { name: 'Segoe UI', size: 8, bold: true };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
-        });
-        headerRow.height = 35;
-
-        // Paleta de colores basada en el azul PTM con variantes armónicas (se rotan por fila)
-        const palette = [
-            {
-                name: 'PTM Blue',
-                gradientStart: 'FFE7F7FF',
-                gradientEnd: 'FF0058A1',
-                light: 'FFBBDEFB',
-                histLight: 'FFE3F2FD',
-                histGradientStart: 'FFF8FBFF',
-                histGradientEnd: 'FFE5F3FF'
-            },
-            {
-                name: 'Deep Blue',
-                gradientStart: 'FFEAF6FF',
-                gradientEnd: 'FF1976D2',
-                light: 'FFD9EAFB',
-                histLight: 'FFF0F6FF',
-                histGradientStart: 'FFF6FBFF',
-                histGradientEnd: 'FFEAF6FF'
-            },
-            {
-                name: 'Teal',
-                gradientStart: 'FFF0FCFB',
-                gradientEnd: 'FF007C91',
-                light: 'FFD6F3F5',
-                histLight: 'FFF0FBFA',
-                histGradientStart: 'FFF7FEFF',
-                histGradientEnd: 'FFDFF7F9'
-            },
-            {
-                name: 'Cyan',
-                gradientStart: 'FFEFF9FF',
-                gradientEnd: 'FF00A8CC',
-                light: 'FFD7F3FA',
-                histLight: 'FFF0FAFF',
-                histGradientStart: 'FFF7FDFF',
-                histGradientEnd: 'FFDFF7FF'
-            },
-            {
-                name: 'Green',
-                gradientStart: 'FFF0FBF0',
-                gradientEnd: 'FF2E7D32',
-                light: 'FFDFF6E7',
-                histLight: 'FFF3FAF1',
-                histGradientStart: 'FFF7FFF5',
-                histGradientEnd: 'FFE6F7E8'
-            },
-            {
-                name: 'Soft Yellow',
-                gradientStart: 'FFFFFBEA',
-                gradientEnd: 'FFF7D358',
-                light: 'FFFFF3CC',
-                histLight: 'FFFFF9E6',
-                histGradientStart: 'FFFFFEF8',
-                histGradientEnd: 'FFFFF1D1'
-            },
-            {
-                name: 'Orange',
-                gradientStart: 'FFFFF4EB',
-                gradientEnd: 'FFEF6C00',
-                light: 'FFFFE0C2',
-                histLight: 'FFFFF6ED',
-                histGradientStart: 'FFFFF8F2',
-                histGradientEnd: 'FFFFEDE0'
-            },
-            {
-                name: 'Purple',
-                gradientStart: 'FFF8F4FF',
-                gradientEnd: 'FF6A1B9A',
-                light: 'FFEDDFF7',
-                histLight: 'FFF6F1FB',
-                histGradientStart: 'FFFBF7FF',
-                histGradientEnd: 'FFF2E8FF'
-            }
-        ];
 
         let currentRow = 5;
 
-        // Mezclar paleta cada exportación para obtener colores diferentes
-        const shuffle = (arr) => {
-            const a = arr.slice();
-            for (let i = a.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                const tmp = a[i];
-                a[i] = a[j];
-                a[j] = tmp;
-            }
-            return a;
-        };
-
-        // Excluir paleta morada de la exportación y mezclar
-        const exportPalette = palette.filter(p => p.name !== 'Purple');
-        const shuffledPalette = shuffle(exportPalette.length ? exportPalette : palette);
-
         data.forEach((row, index) => {
             const excelRow = worksheet.getRow(currentRow);
-            // seleccionar color de paleta para esta fila (usa paleta mezclada)
-            const pal = shuffledPalette[index % shuffledPalette.length];
-            // preparar variantes semi-translúcidas para históricos (usar ARGB con alpha)
-            const alphaStart = '33'; // ~20% opacidad
-            const alphaEnd = '66';   // ~40% opacidad
-            const safeHex = (s) => (s && s.length === 8) ? s.substring(2) : s; // remove leading alpha
-            const histGradStartAlpha = alphaStart + safeHex(pal.histGradientStart);
-            const histGradEndAlpha = alphaEnd + safeHex(pal.histGradientEnd);
-            const histLightAlpha = alphaEnd + safeHex(pal.histLight);
-            // fallback colores más contrastados para historiales (Excel puede ignorar alpha)
-            const histStrongStart = pal.gradientStart || pal.histGradientStart;
-            const histStrongEnd = pal.gradientEnd || pal.histGradientEnd;
-            // Mover valores de las columnas antiguas (6..9) a las nuevas columnas según encabezado
-            try {
-                const mappings = [
-                    { old: 6, fragment: 'Rango Días' },
-                    { old: 7, fragment: 'Producción Teórica' },
-                    { old: 8, fragment: 'Producción Real' },
-                    { old: 9, fragment: 'Comentarios' }
-                ];
-                for (const m of mappings) {
-                    const targetCol = findColByFragment(m.fragment);
-                    if (targetCol > 0) {
-                        const oldCell = excelRow.getCell(m.old);
-                        const newCell = excelRow.getCell(targetCol);
-                        if ((oldCell.value || '') && (!newCell.value || String(newCell.value).trim() === '')) {
-                            newCell.value = oldCell.value;
-                            oldCell.value = null;
-                        }
-                    }
-                }
-            } catch (e) { /* ignore */ }
             const bgColor = index % 2 === 0 ? 'FFFFFFFF' : 'FFF7F9FC';
             const capacidades = [row.PZSXDIA ? `${fmtNum(row.PZSXDIA)} PZ/día` : null, row.KGSXDIA ? `${fmtNum(row.KGSXDIA)} KG/día` : null].filter(Boolean).join(' | ');
+            const rowData = [row.LINEA_PRODUCCION_DESC || '', `${row.ARTICULO || ''} - ${row.ARTICULO_DESC || ''}`, capacidades, row.PROCESO || '', `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`, `Del ${row.DIA_INICIO_MANT_STR} - Al ${row.DIA_FIN_MANT_STR}`, [row.PRODUCCION_TEORICA_PZS ? `${fmtNum(row.PRODUCCION_TEORICA_PZS)} PZ` : null, row.PRODUCCION_TEORICA_KGS ? `${fmtNum(row.PRODUCCION_TEORICA_KGS)} KG` : null].filter(Boolean).join(' | '), fmtNum(row.PRODUCCION_REAL), row.COMENTARIOS || ''];
 
-            // Helper para escribir en la columna que coincida con el encabezado
-            const writeByHeader = (fragment, value) => {
-                try {
-                    const c = findColByFragment(fragment);
-                    if (c <= 0) return;
-                    const cell = excelRow.getCell(c);
-                    cell.value = value;
-                    cell.font = { name: 'Segoe UI', size: 10 };
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
-                    const firstTwo = ['Línea de Producción', 'Artículo'];
-                    const isFirstTwo = firstTwo.some(f => fragment.includes(f));
-                    cell.alignment = { vertical: 'middle', horizontal: isFirstTwo ? 'left' : 'center', indent: isFirstTwo ? 1 : 0, wrapText: true };
-                    cell.border = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
-                } catch (e) { /* ignore */ }
-            };
-
-            // Escribir campos por encabezado
-            writeByHeader('Línea de Producción', row.LINEA_PRODUCCION_DESC || '');
-            writeByHeader('Artículo', `${row.ARTICULO || ''} - ${row.ARTICULO_DESC || ''}`);
-            writeByHeader('Capacidades', capacidades);
-            writeByHeader('Proceso', row.PROCESO || '');
-            writeByHeader('Mes/Año', DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || '');
-            writeByHeader('Rango Días', `Del ${row.DIA_INICIO_MANT_STR} - Al ${row.DIA_FIN_MANT_STR}`);
-            writeByHeader('Producción Teórica', [row.PRODUCCION_TEORICA_PZS ? `${fmtNum(row.PRODUCCION_TEORICA_PZS)} PZ` : null, row.PRODUCCION_TEORICA_KGS ? `${fmtNum(row.PRODUCCION_TEORICA_KGS)} KG` : null].filter(Boolean).join(' | '));
-            writeByHeader('Producción Real', fmtNum(row.PRODUCCION_REAL));
-            writeByHeader('Comentarios', row.COMENTARIOS || '');
+            rowData.forEach((value, colIndex) => {
+                const cell = excelRow.getCell(colIndex + 1);
+                cell.value = value;
+                cell.font = { name: 'Segoe UI', size: 10 };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                cell.alignment = { vertical: 'middle', horizontal: colIndex <= 1 ? 'left' : 'center', indent: colIndex <= 1 ? 1 : 0, wrapText: true };
+                cell.border = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+            });
 
             excelRow.height = 38;
-            // Marcar rango Gantt en columnas diarias
-            const start = parseDateStr(row.DIA_INICIO_MANT_STR);
-            const end = parseDateStr(row.DIA_FIN_MANT_STR);
-            if (start && end && slots.length) {
-                if (!useWeeks) {
-                    for (let i = 0; i < slots.length; i++) {
-                        const colIndex = ganttStartCol + i;
-                        const dt = slots[i];
-                        const cell = excelRow.getCell(colIndex);
-                        if (dt >= new Date(start.getFullYear(), start.getMonth(), start.getDate()) && dt <= new Date(end.getFullYear(), end.getMonth(), end.getDate())) {
-                            cell.fill = {
-                                type: 'gradient',
-                                gradient: 'angle',
-                                degree: 90,
-                                stops: [
-                                    { position: 0, color: { argb: pal.gradientStart } },
-                                    { position: 1, color: { argb: pal.gradientEnd } }
-                                ]
-                            };
-                            cell.border = { left: { style: 'thin', color: { argb: pal.gradientEnd } }, right: { style: 'thin', color: { argb: pal.gradientEnd } } };
-                        }
-                    }
-                } else {
-                    // marcar semanas si el slot es un objeto {start,end}
-                    for (let i = 0; i < slots.length; i++) {
-                        const colIndex = ganttStartCol + i;
-                        const slot = slots[i];
-                        const cell = excelRow.getCell(colIndex);
-                        if (!(slot.end < start || slot.start > end)) {
-                            cell.fill = {
-                                type: 'gradient',
-                                gradient: 'angle',
-                                degree: 90,
-                                stops: [
-                                    { position: 0, color: { argb: pal.gradientStart } },
-                                    { position: 1, color: { argb: pal.gradientEnd } }
-                                ]
-                            };
-                            cell.border = { left: { style: 'thin', color: { argb: pal.gradientEnd } }, right: { style: 'thin', color: { argb: pal.gradientEnd } } };
-                        }
-                    }
-                }
-            }
             currentRow++;
 
             const updates = (row.BITACORA || []).filter(b => b.BIT_ACCION === 'UPDATE');
             updates.forEach((bit) => {
                 const histRow = worksheet.getRow(currentRow);
-                const capPzsHist = (bit.NVO_PZSXDIA !== undefined && bit.NVO_PZSXDIA != null) ? bit.NVO_PZSXDIA : (bit.PZSXDIA !== undefined ? bit.PZSXDIA : null);
-                const capKgsHist = (bit.NVO_KGSXDIA !== undefined && bit.NVO_KGSXDIA != null) ? bit.NVO_KGSXDIA : (bit.KGSXDIA !== undefined ? bit.KGSXDIA : null);
-                const capacidadesHist = [capPzsHist ? `${fmtNum(capPzsHist)} PZ/día` : null, capKgsHist ? `${fmtNum(capKgsHist)} KG/día` : null].filter(Boolean).join(' | ');
-                const histProdTeorPzs = (bit.NVO_PRODUCCION_TEORICA_PZS !== undefined && bit.NVO_PRODUCCION_TEORICA_PZS != null) ? bit.NVO_PRODUCCION_TEORICA_PZS : (bit.PRODUCCION_TEORICA_PZS !== undefined ? bit.PRODUCCION_TEORICA_PZS : null);
-                const histProdTeorKgs = (bit.NVO_PRODUCCION_TEORICA_KGS !== undefined && bit.NVO_PRODUCCION_TEORICA_KGS != null) ? bit.NVO_PRODUCCION_TEORICA_KGS : (bit.PRODUCCION_TEORICA_KGS !== undefined ? bit.PRODUCCION_TEORICA_KGS : null);
-                const histData = [`↳ HISTORIAL ${row.LINEA_PRODUCCION_DESC || ''}`, bit.NVO_ARTICULO ? `${bit.NVO_ARTICULO} - ${bit.NVO_ARTICULO_DESC || ''}` : '', capacidadesHist, bit.NVO_PROCESO || '', `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`, (bit.NVO_DIA_INICIO_MANT_STR && bit.NVO_DIA_FIN_MANT_STR) ? `Del ${bit.NVO_DIA_INICIO_MANT_STR} - Al ${bit.NVO_DIA_FIN_MANT_STR}` : '', [histProdTeorPzs ? `${fmtNum(histProdTeorPzs)} PZ` : null, histProdTeorKgs ? `${fmtNum(histProdTeorKgs)} KG` : null].filter(Boolean).join(' | '), fmtNum(bit.NVO_PRODUCCION_REAL), bit.NVO_COMENTARIOS || ''];
+                const capacidadesHist = [bit.PZSXDIA ? `${fmtNum(bit.PZSXDIA)} PZ/día` : null, bit.KGSXDIA ? `${fmtNum(bit.KGSXDIA)} KG/día` : null].filter(Boolean).join(' | ');
+                const histData = [`↳ HISTORIAL ${row.LINEA_PRODUCCION_DESC || ''}`, bit.NVO_ARTICULO ? `${bit.NVO_ARTICULO} - ${bit.NVO_ARTICULO_DESC || ''}` : '', capacidadesHist, bit.NVO_PROCESO || '', `${DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || ''}`, (bit.NVO_DIA_INICIO_MANT_STR && bit.NVO_DIA_FIN_MANT_STR) ? `Del ${bit.NVO_DIA_INICIO_MANT_STR} - Al ${bit.NVO_DIA_FIN_MANT_STR}` : '', [bit.PRODUCCION_TEORICA_PZS ? `${fmtNum(bit.PRODUCCION_TEORICA_PZS)} PZ` : null, bit.PRODUCCION_TEORICA_KGS ? `${fmtNum(bit.PRODUCCION_TEORICA_KGS)} KG` : null].filter(Boolean).join(' | '), fmtNum(bit.NVO_PRODUCCION_REAL), bit.NVO_COMENTARIOS || ''];
 
-                // Escribir historiales por encabezado
-                const writeHist = (fragment, value) => {
-                    try {
-                        const c = findColByFragment(fragment);
-                        if (c <= 0) return;
-                        const cell = histRow.getCell(c);
-                        cell.value = value;
-                        cell.font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF546E7A' } };
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: pal.histLight } };
-                        const firstTwo = ['Línea de Producción', 'Artículo'];
-                        const isFirstTwo = firstTwo.some(f => fragment.includes(f));
-                        cell.alignment = { vertical: 'middle', horizontal: isFirstTwo ? 'left' : 'center', indent: isFirstTwo ? 2 : 0, wrapText: true };
-                        cell.border = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
-                    } catch (e) { /* ignore */ }
-                };
-
-                writeHist('Línea de Producción', `↳ HISTORIAL ${row.LINEA_PRODUCCION_DESC || ''}`);
-                writeHist('Artículo', bit.NVO_ARTICULO ? `${bit.NVO_ARTICULO} - ${bit.NVO_ARTICULO_DESC || ''}` : '');
-                writeHist('Capacidades', capacidadesHist);
-                writeHist('Proceso', bit.NVO_PROCESO || '');
-                writeHist('Mes/Año', DateUtils.getMesAnioString(row.FECHA_PLAN_STRING) || '');
-                writeHist('Rango Días', (bit.NVO_DIA_INICIO_MANT_STR && bit.NVO_DIA_FIN_MANT_STR) ? `Del ${bit.NVO_DIA_INICIO_MANT_STR} - Al ${bit.NVO_DIA_FIN_MANT_STR}` : '');
-                writeHist('Producción Teórica', [histProdTeorPzs ? `${fmtNum(histProdTeorPzs)} PZ` : null, histProdTeorKgs ? `${fmtNum(histProdTeorKgs)} KG` : null].filter(Boolean).join(' | '));
-                writeHist('Producción Real', fmtNum(bit.NVO_PRODUCCION_REAL));
-                writeHist('Comentarios', bit.NVO_COMENTARIOS || '');
+                histData.forEach((value, colIndex) => {
+                    const cell = histRow.getCell(colIndex + 1);
+                    cell.value = value;
+                    cell.font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF546E7A' } };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3F2FD' } };
+                    cell.alignment = { vertical: 'middle', horizontal: colIndex <= 1 ? 'left' : 'center', indent: colIndex <= 1 ? 2 : 0, wrapText: true };
+                    cell.border = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+                });
 
                 histRow.height = 34;
-                // Marcar rango Gantt para historial
-                const hStart = parseDateStr(bit.NVO_DIA_INICIO_MANT_STR);
-                const hEnd = parseDateStr(bit.NVO_DIA_FIN_MANT_STR);
-                if (hStart && hEnd && slots.length) {
-                    if (!useWeeks) {
-                        for (let i = 0; i < slots.length; i++) {
-                            const colIndex = ganttStartCol + i;
-                            const dt = slots[i];
-                            const cell = histRow.getCell(colIndex);
-                            if (dt >= new Date(hStart.getFullYear(), hStart.getMonth(), hStart.getDate()) && dt <= new Date(hEnd.getFullYear(), hEnd.getMonth(), hEnd.getDate())) {
-                            // Usar gradiente más contrastado para historiales (fallback a colores fuertes si alpha ignorado)
-                            cell.fill = {
-                                type: 'gradient',
-                                gradient: 'angle',
-                                degree: 90,
-                                stops: [
-                                    { position: 0, color: { argb: histStrongStart } },
-                                    { position: 1, color: { argb: histStrongEnd } }
-                                ]
-                            };
-                            cell.border = { left: { style: 'thin', color: { argb: histStrongEnd } }, right: { style: 'thin', color: { argb: histStrongEnd } } };
-                            }
-                        }
-                    } else {
-                        for (let i = 0; i < slots.length; i++) {
-                            const colIndex = ganttStartCol + i;
-                            const slot = slots[i];
-                            const cell = histRow.getCell(colIndex);
-                            if (!(slot.end < hStart || slot.start > hEnd)) {
-                                cell.fill = {
-                                    type: 'gradient',
-                                    gradient: 'angle',
-                                    degree: 90,
-                                    stops: [
-                                        { position: 0, color: { argb: pal.histGradientStart } },
-                                        { position: 1, color: { argb: pal.histGradientEnd } }
-                                    ]
-                                };
-                                cell.border = { left: { style: 'thin', color: { argb: pal.histGradientEnd } }, right: { style: 'thin', color: { argb: pal.histGradientEnd } } };
-                            }
-                        }
-                    }
-                }
                 currentRow++;
             });
         });
@@ -1647,159 +1229,6 @@ class GlobalUtil {
 
         worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 4 }];
         worksheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: 9 } };
-
-        // Post-procesado: forzar títulos de fecha horizontales y dibujar barras tipo progreso
-        try {
-            const fixedColsCount = headers.length;
-            const ganttStartCol = fixedColsCount + 1;
-            const dataStartRow = headerRow.number + 1;
-
-            // Asegurar columnas Gantt horizontales y ancho más amplio para mejor visibilidad
-            for (let i = 0; i < slots.length; i++) {
-                const col = worksheet.getColumn(ganttStartCol + i);
-                col.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-                // ancho mayor para mejorar lectura (doble del anterior)
-                col.width = 16;
-            }
-
-            // Dibujar barras mergeadas por cada plano (principal) y su historial
-            for (let r = 0; r < data.length; r++) {
-                const rowNum = dataStartRow + r;
-                const rowData = data[r];
-                const s = parseDateStr(rowData.DIA_INICIO_MANT_STR);
-                const e = parseDateStr(rowData.DIA_FIN_MANT_STR);
-                if (s && e) {
-                    const startIndex = slots.findIndex(sl => s >= sl.start && s <= sl.end);
-                    const endIndex = slots.findIndex(sl => e >= sl.start && e <= sl.end);
-                    if (startIndex >= 0 && endIndex >= startIndex) {
-                        const startCol = ganttStartCol + startIndex;
-                        const endCol = ganttStartCol + endIndex;
-                        try {
-                            worksheet.mergeCells(rowNum, startCol, rowNum, endCol);
-                            // reducir la altura de la fila para que la barra sea más delgada
-                            worksheet.getRow(rowNum).height = 14;
-                            const cell = worksheet.getCell(rowNum, startCol);
-                            cell.value = null;
-                            // Usar un relleno tipo gradiente para dar sensación de profundidad
-                            // Azul estilo barra de progreso (gradiente más marcado)
-                            // Elegir color de la paleta por índice de fila
-                            const pal = palette[r % palette.length];
-                            cell.fill = {
-                                type: 'gradient',
-                                gradient: 'path',
-                                center: { left: 0.5, top: 0.5 },
-                                stops: [
-                                    { position: 0, color: { argb: pal.gradientStart } },
-                                    { position: 1, color: { argb: pal.gradientEnd } }
-                                ]
-                            };
-                            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                            // Simular contorno para que parezca una barra con borde
-                            cell.border = {
-                                left: { style: 'thin', color: { argb: 'FF5A9BD6' } },
-                                right: { style: 'thin', color: { argb: 'FF5A9BD6' } },
-                                top: { style: 'thin', color: { argb: '00FFFFFF' } },
-                                bottom: { style: 'thin', color: { argb: '00FFFFFF' } }
-                            };
-                        } catch (ex) {
-                            // merge puede fallar si ya existe un merge; ignorar
-                        }
-                    }
-                }
-
-                // Dibujar barras para historiales (color más claro)
-                (rowData.BITACORA || []).forEach(b => {
-                    const bs = parseDateStr(b.NVO_DIA_INICIO_MANT_STR);
-                    const be = parseDateStr(b.NVO_DIA_FIN_MANT_STR);
-                    if (!bs || !be) return;
-                    const bi = slots.findIndex(sl => bs >= sl.start && bs <= sl.end);
-                    const ei = slots.findIndex(sl => be >= sl.start && be <= sl.end);
-                    if (bi >= 0 && ei >= bi) {
-                        const sc = ganttStartCol + bi;
-                        const ec = ganttStartCol + ei;
-                        try {
-                            worksheet.mergeCells(rowNum, sc, rowNum, ec);
-                            worksheet.getRow(rowNum).height = 14;
-                            const bcell = worksheet.getCell(rowNum, sc);
-                            bcell.value = null;
-                            // Histórico: color de la paleta pero más claro
-                            const palH = palette[r % palette.length];
-                            bcell.fill = {
-                                type: 'gradient',
-                                gradient: 'path',
-                                center: { left: 0.5, top: 0.5 },
-                                stops: [
-                                    { position: 0, color: { argb: palH.histGradientStart } },
-                                    { position: 1, color: { argb: palH.histGradientEnd } }
-                                ]
-                            };
-                            bcell.alignment = { vertical: 'middle', horizontal: 'center' };
-                        } catch (ex) {
-                            // ignorar errores de merge
-                        }
-                    }
-                });
-            }
-        } catch (err) {
-            // no bloquear la exportación por errores visuales
-            console.warn('Post-procesado Gantt falló:', err);
-        }
-
-        // --- Leyenda: mostrar muestras de color y etiquetas a la derecha del Gantt ---
-        try {
-            const legendColStart = ganttStartCol + slots.length + 2;
-            const legendRowTop = 2;
-            // Mostrar muestras de color y etiquetas sincronizadas con la paleta generada
-            const legendPal = shuffledPalette[0] || palette[0];
-            worksheet.getColumn(legendColStart).width = 4;
-            worksheet.getColumn(legendColStart + 1).width = 20;
-            worksheet.mergeCells(legendRowTop, legendColStart, legendRowTop, legendColStart);
-            const sampleCell = worksheet.getCell(legendRowTop, legendColStart);
-            sampleCell.fill = { type: 'gradient', gradient: 'path', center: { left: 0.5, top: 0.5 }, stops: [{ position: 0, color: { argb: legendPal.gradientStart } }, { position: 1, color: { argb: legendPal.gradientEnd } }] };
-            sampleCell.border = { left: { style: 'thin', color: { argb: legendPal.gradientEnd } }, right: { style: 'thin', color: { argb: legendPal.gradientEnd } } };
-            const labelCell = worksheet.getCell(legendRowTop, legendColStart + 1);
-            labelCell.value = 'Producción Teórica';
-            labelCell.font = { name: 'Segoe UI', size: 9 };
-            labelCell.alignment = { vertical: 'middle', horizontal: 'left' };
-
-            // Histórico: usar variante de historial de la paleta
-            const legendRow2 = legendRowTop + 1;
-            worksheet.getColumn(legendColStart + 1).width = 20;
-            const sampleCell2 = worksheet.getCell(legendRow2, legendColStart);
-            sampleCell2.fill = { type: 'gradient', gradient: 'path', center: { left: 0.5, top: 0.5 }, stops: [{ position: 0, color: { argb: legendPal.histGradientStart } }, { position: 1, color: { argb: legendPal.histGradientEnd } }] };
-            sampleCell2.border = { left: { style: 'thin', color: { argb: legendPal.histGradientEnd } }, right: { style: 'thin', color: { argb: legendPal.histGradientEnd } } };
-            const labelCell2 = worksheet.getCell(legendRow2, legendColStart + 1);
-            labelCell2.value = 'Historial (modificaciones)';
-            labelCell2.font = { name: 'Segoe UI', size: 9 };
-            labelCell2.alignment = { vertical: 'middle', horizontal: 'left' };
-        } catch (ex) {
-            console.warn('No se pudo dibujar leyenda:', ex);
-        }
-
-        // --- Línea vertical que marca la fecha actual ---
-        try {
-            const today = new Date();
-            const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const todayIndex = slots.findIndex(sl => t >= sl.start && t <= sl.end);
-            if (todayIndex >= 0) {
-                const colIndex = ganttStartCol + todayIndex;
-                const firstRowToMark = 3; // incluir fila de meses/encabezados
-                const lastRowToMark = dataStartRow + data.length - 1;
-                for (let rr = firstRowToMark; rr <= lastRowToMark; rr++) {
-                    const cell = worksheet.getCell(rr, colIndex);
-                    // Dar borde más marcado para la línea vertical
-                    cell.border = Object.assign({}, cell.border || {}, {
-                        left: { style: 'medium', color: { argb: 'FF0B63C0' } },
-                        right: { style: 'medium', color: { argb: 'FF0B63C0' } }
-                    });
-                }
-                // Resaltar ligeramente fondo de la columna (solo en encabezado de fechas)
-                const headerHighlight = worksheet.getCell(headerRow.number - 1, colIndex);
-                if (headerHighlight) headerHighlight.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEAF6FF' } };
-            }
-        } catch (ex) {
-            console.warn('No se pudo dibujar la línea de fecha actual:', ex);
-        }
 
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -1895,7 +1324,7 @@ class EquiposUtil {
                     FiltroLinea.empty();
 
                     selectElement.append('<option value="">Todas las líneas</option>');
-                    // selectElement.prop("disabled", false);
+                    selectElement.prop("disabled", false);
                     FiltroLinea.append('<option value="">Todas las líneas</option>');
 
                     // 🔥 Agrupar por planta
@@ -2003,9 +1432,24 @@ class EquiposUtil {
 
     static llenarLineasCheckbox(Planta, Area, Produccion, FieldContainer) {
 
-        $('#cardsPlaneacionGrid')
-            .removeClass('d-none')
-            .show();
+        document.getElementById('cardsPlaneacionGrid').innerHTML =
+            Array(3).fill('<div class="skeleton-card col-md-4"></div>').join('');
+
+        $(`#cardsPlaneacionGrid`).html(`
+                <div class="ai-loader">
+
+                    <div class="ai-core">
+                        <div class="ai-ring"></div>
+                        <div class="ai-ring delay"></div>
+                        <div class="ai-ring delay2"></div>
+                    </div>
+
+                    <div class="ai-wave"></div>
+
+                    <p class="ai-text">CARGANDO LÍNEAS...</p>
+
+                </div>
+            `);
 
         $.ajax({
             url: `/${GlobalUtil.URLBaseEquipos}/GetLineasPorPlanta`,
@@ -2074,15 +1518,16 @@ class EquiposUtil {
                 );
             },
             complete: function () {
+
                 setTimeout(function () {
-                    $(`#cardsPlaneacionGrid`).fadeOut(500, () => {
-                        $(`#cardsPlaneacionGrid`).addClass('d-none');
-                        $("#LineasProduccionContainer")
-                            .removeClass("d-none")
-                            .hide()
-                            .fadeIn(2000);
-                    });
+                    $(`#cardsPlaneacionGrid`).html(``);
+                    $("#LineasProduccionContainer")
+                        .removeClass("d-none")
+                        .hide()
+                        .fadeIn(2000);
                 }, 1000);
+                
+               
             }
         });
     }
@@ -3332,9 +2777,6 @@ class GestionArticulos {
         item.on('click', () => {
             this._seleccionarArticulo(articulo);
             $(this._inputBuscar).val('');
-            //REINICIAR FECHAS
-            $("#DiaInicioMant").val('');
-            $("#DiaFinMant").val('');
             this.ocultarSugerencias();
         });
         return item;

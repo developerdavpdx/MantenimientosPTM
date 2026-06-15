@@ -42,62 +42,6 @@
         color: white !important;
     }
 
-    /* ========================================
-   HEADERS DE GRUPOS
-   ======================================== */
-
-    /* Header grupo TIEMPO NO DISPONIBLE (Rosa) */
-    .ag-theme-alpine .ag-header-group-cell.header-grupo-rosa {
-        background: #ff69b4 !important;
-        color: white !important;
-        font-weight: bold;
-        font-size: 12px;
-        text-align: center;
-        border-right: 2px solid white;
-    }
-
-        .ag-theme-alpine .ag-header-group-cell.header-grupo-rosa .ag-header-group-cell-label {
-            color: white !important;
-            justify-content: center;
-        }
-
-    /* Header grupo TIEMPO NO PRODUCTIVO (Verde claro) */
-    .ag-theme-alpine .ag-header-group-cell.header-grupo-verde-claro {
-        background: #90ee90 !important;
-        color: #333 !important;
-        font-weight: bold;
-        font-size: 12px;
-        text-align: center;
-        border-right: 2px solid white;
-    }
-
-        .ag-theme-alpine .ag-header-group-cell.header-grupo-verde-claro .ag-header-group-cell-label {
-            color: #333 !important;
-            justify-content: center;
-        }
-
-
-    /* Header grupo DISPONIBILIDAD (Azul) */
-    .ag-theme-alpine .ag-header-group-cell.header-grupo-azul {
-        background: #9fc5e8 !important;
-        color: #000 !important;
-        font-weight: bold;
-        font-size: 12px;
-        text-align: center;
-        border-right: 2px solid white;
-    }
-
-        .ag-theme-alpine .ag-header-group-cell.header-grupo-azul .ag-header-group-cell-label {
-            color: #000 !important;
-            justify-content: center;
-        }
-
-    /* Todos los headers de grupo */
-    .ag-theme-alpine .ag-header-group-cell {
-        padding: 8px 6px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    }
-
 /* ========================================
    CLASES PARA COLOREAR CELDAS
    ======================================== */

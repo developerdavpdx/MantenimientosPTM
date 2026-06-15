@@ -19,6 +19,7 @@ using System.Web;
 using System.Web.Mvc;
 using System.Web.UI.WebControls;
 using static MantenimientosPTM.AccesoDatosAlmacen;
+using static MantenimientosPTM.AccesoDatosPlaneacion;
 
 namespace MantenimientosPTM.Controllers
 {
@@ -628,7 +629,17 @@ namespace MantenimientosPTM.Controllers
                     var paramsEstatus = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
                         { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_ESTATUS", ("Espera Autorizacion", ParameterDirection.Input, HanaDbType.NVarChar) }
+
+                        { "P_CENTRO_COSTO_1", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CENTRO_COSTO_2", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CENTRO_COSTO_3", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CENTRO_COSTO_4", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+
+                        { "P_ESTATUS", ("Espera Autorizacion", ParameterDirection.Input, HanaDbType.NVarChar) },
+
+                        { "P_DOC_NUM", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_DOC_ENTRY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_RESPONSE_SAP", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) }
                     };
 
                     var resultEstatus = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -1429,25 +1440,13 @@ namespace MantenimientosPTM.Controllers
                     return Json(jsonResponse, JsonRequestBehavior.AllowGet);
                 }
 
-
                 var data = new
                 {
-                    DocNum = sapResult.DocNum,
-                    DocEntry = sapResult.DocEntry
+                    sapResult.DocNum,
+                    sapResult.DocEntry
                 };
 
-                //VALIDAR SI LA CANTIDAD ESTA COMPLETA
-                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_ORDEN_TRABAJO", (payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
-                    };
-
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCGetBalanceOT,
-                    parameters
-                );
-
-                JArray balance = JArray.Parse(resultHana.JsonResult);
+                JArray balance = new JArray();
 
                 foreach (var articulo in payload.Contabilizacion)
                 {
@@ -1480,8 +1479,6 @@ namespace MantenimientosPTM.Controllers
 
 
 
-                    var error = "";
-                    var IdGenerado = -1;
 
                     var parametros = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
@@ -1497,8 +1494,8 @@ namespace MantenimientosPTM.Controllers
                         { "P_PROCESO",     (articulo.Proceso, ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_GASTOS",     (articulo.Gastos, ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_CEDIS",     (articulo.Cedis, ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_ID_GENERADO",     (IdGenerado, ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_ERROR",     (error, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CANTIDAD_REAL",     (articulo.Cantidad, ParameterDirection.Input, HanaDbType.Decimal) },
+                        { "P_ESTATUS",     (1, ParameterDirection.Input, HanaDbType.Integer) }
 
                     };
 
@@ -1508,73 +1505,92 @@ namespace MantenimientosPTM.Controllers
                     );
 
 
-                    string resultadoEnc = resultInsert.JsonResult.ToString();
-                    if (resultadoEnc.Contains("ERROR"))
-                        throw new Exception("Error al insertar el movimiento en el sistema: " + resultadoEnc);
-
-
-
-
-                    // Buscar con validación
-                    var objetoEncontrado = balance
-                        .Where(obj => obj is JObject)
-                        .Cast<JObject>()
-                        .FirstOrDefault(obj => obj.ContainsKey("ItemCode") &&
-                                              obj["ItemCode"]?.ToString() == articulo.ItemCode);
-
-                    string Estatus = "Pendiente";
-
-                    if (objetoEncontrado != null)
+                    if (resultInsert.JsonResult.Contains("ERROR") || resultInsert.JsonResult.Contains("Error"))
                     {
-                        if (objetoEncontrado["Diferencia"]?.ToObject<int>() == 0)
+                        log.Info($"🚀 ═══════════════════════════════════════════════════");
+                        log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                        log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                        log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} , pero no fue posible registrar el movimiento en la bitácora con la siguiente estructura: " + parametros.ToString() + resultInsert.JsonResult);
+                    }
+                    else
+                    {
+                        var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                         {
-                            Estatus = "Atendida";
+                            { "P_ID_SOLICITUD",     ( articulo.IdSolicitud, ParameterDirection.Input, HanaDbType.Integer) },
+                            { "P_ESTATUS", ("Atendida", ParameterDirection.Input, HanaDbType.NVarChar) },
+                        };
+
+                        var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                            Logic.AD.GCUpdateEstatusSolicitud, paramUpdate
+                        );
+
+                        if (resultUpdate.JsonResult.Contains("ERROR") || resultUpdate.JsonResult.Contains("Error"))
+                        {
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
+                            log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                            log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar el estatus de la refacción: " + resultUpdate.JsonResult);
                         }
                     }
-
-                    //FALTA COMPARAR CANTIDADES PARA SABER SI EN VERDAD YA QUEDO ATENDIDA
-                    var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_ID_SOLICITUD",     ( articulo.IdSolicitud, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_ESTATUS", (Estatus, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    };
-
-                    var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCUpdateEstatusSolicitud, paramUpdate
-                    );
-
-
-                    string resultadoUpdateEst = resultUpdate.JsonResult.ToString();
-                    if (resultadoUpdateEst.Contains("ERROR") || resultadoUpdateEst.Contains("Error"))
-                        throw new Exception("Error al actualizar el estatus de la solicitud: " + resultadoUpdateEst);
                 }
 
                 //Enviar Correo Autorizacion Salida Mercancia
                 var resultEmtail = EnviarAutorizacionSalida(payload);
 
 
-                //TE FALTA ACTUALIZAR LA ORDEN DE TRABAJO
-
                 // Validar que TODOS tengan Diferencia = 0
-                bool todosCero = balance
-                    .OfType<JObject>()
-                    .All(obj => obj["Diferencia"]?.ToObject<int>() == 0);
 
-                if (todosCero)
-                { //Los balances con 0s todas las salidas ok
-                    var paramUpdateOT = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_ORDEN_TRABAJO", (payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                var resultBalance = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetBalanceOT,
+                    parameters
+                );
+
+
+                if (resultBalance.JsonResult.Contains("ERROR") || resultBalance.JsonResult.Contains("Error"))
+                {
+                    log.Info($"🚀 ═══════════════════════════════════════════════════");
+                    log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                    log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                    log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible validar el balance de el estatus de la refacción: " + resultBalance.JsonResult);
+                }
+
+                else
+                {
+                    balance = JArray.Parse(resultBalance.JsonResult);
+
+
+                    bool todosCompletos = balance
+                        .OfType<JObject>()
+                        .All(obj => obj["ESTATUS_SURTIDO"]?.ToObject<string>() == "COMPLETA");
+
+                    if (todosCompletos)
+                    { //Los balances con 0s todas las salidas ok
+                        var paramUpdateOT = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
                         { "P_OT",     ( payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.Integer) },
                         { "P_ESTATUS", (2, ParameterDirection.Input, HanaDbType.NVarChar) },
                     };
 
-                    var resultUpdateOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCUpdateStatusOT, paramUpdateOT
-                    );
+                        var resultUpdateOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                            Logic.AD.GCUpdateStatusOT, paramUpdateOT
+                        );
 
-                    if (resultUpdateOT.JsonResult.Contains("Error"))
-                    {
+                        if (resultUpdateOT.JsonResult.Contains("Error") || resultUpdateOT.JsonResult.Contains("ERROR"))
+                        {
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
+                            log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
 
+                            log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar el estatus de la OT, " + resultBalance.JsonResult);
+                        }
                     }
                 }
 
@@ -1759,8 +1775,8 @@ namespace MantenimientosPTM.Controllers
             try
             {
                 // ✅ Leer body JSON
-                string body = await new System.IO.StreamReader(Request.InputStream).ReadToEndAsync();
-                var payload = JsonConvert.DeserializeObject<AccesoDatosAlmacen.DevolucionMercanciaRequest>(body);
+                string body = await new StreamReader(Request.InputStream).ReadToEndAsync();
+                var payload = JsonConvert.DeserializeObject<DevolucionMercanciaRequest>(body);
 
                 if (payload == null || payload.Articulos == null || payload.Articulos.Count == 0)
                 {
@@ -1777,18 +1793,18 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 // ✅ Convertir DevolucionMercanciaRequest a SalidasMercanciaRequest para compatibilidad con la lógica existente
-                var salidaRequest = new AccesoDatosAlmacen.SalidasMercanciaRequest
+                var salidaRequest = new SalidasMercanciaRequest
                 {
                     Referencia = payload.Referencia,
                     OrdenTrabajo = payload.OrdenTrabajo,
                     DataMovimiento = payload.DataMovimiento,
-                    Contabilizacion = new List<AccesoDatosAlmacen.Contabilizacion>()
+                    Contabilizacion = new List<Contabilizacion>()
                 };
 
                 // Por cada artículo, crear una entrada en Contabilizacion
                 foreach (var articulo in payload.Articulos)
                 {
-                    salidaRequest.Contabilizacion.Add(new AccesoDatosAlmacen.Contabilizacion
+                    salidaRequest.Contabilizacion.Add(new Contabilizacion
                     {
                         IdSolicitud = articulo.IdSolicitud,
                         ItemCode = articulo.Codigo,
@@ -1817,87 +1833,91 @@ namespace MantenimientosPTM.Controllers
 
                 var data = new
                 {
-                    DocNum = sapResult.DocNum,
-                    DocEntry = sapResult.DocEntry
+                    sapResult.DocNum,
+                    sapResult.DocEntry
                 };
 
                 // ✅ Obtener las dimensiones (Departamentos, Procesos, etc.) de las OTs
                 // Usar la primera OT para obtener las dimensiones (asumiendo que todas las devoluciones son de la misma OT o similar)
-                var primeraOT = payload.Articulos.FirstOrDefault()?.IdSolicitud;
-                if (primeraOT > 0)
-                {
-                    // Obtener la información de la salida para las dimensiones
-                    var paramSalida = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_ID_SOLICITUD", (primeraOT, ParameterDirection.Input, HanaDbType.NVarChar) }
-                    };
-                    var resultSalida = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCSGetLastMovimientoSalida, paramSalida);
+                //var primeraOT = payload.Articulos.FirstOrDefault()?.IdSolicitud;
 
-                    if (!resultSalida.JsonResult.ToString().Contains("ERROR") && resultSalida.JsonResult.ToString() != "[]")
-                    {
-                        //var salidas = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(
-                        //    resultSalida.JsonResult.ToString().Replace("[", "").Replace("]", ""));
+                //if (primeraOT > 0)
+                //{
+                //    // Obtener la información de la salida para las dimensiones
+                //    var paramSalida = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                //    {
+                //        { "P_ID_SOLICITUD", (primeraOT, ParameterDirection.Input, HanaDbType.NVarChar) }
+                //    };
+                //    var resultSalida = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCSGetLastMovimientoSalida, paramSalida);
 
-                        dynamic salidas = JsonConvert.DeserializeObject(resultSalida.JsonResult);
-                        //int idSol = result[0].IdSol;
+                //    if (!resultSalida.JsonResult.ToString().Contains("ERROR") && resultSalida.JsonResult.ToString() != "[]")
+                //    {
+                //        //var salidas = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(
+                //        //    resultSalida.JsonResult.ToString().Replace("[", "").Replace("]", ""));
 
-                        if (salidas.Count > 0)
-                        {
-                            //var salidaInfo = salidas[0];
-                            foreach (var salidaInfo in salidas)
-                            {
-                                // ✅ Registrar movimiento en sistema interno
-                                var error = "";
-                                var IdGenerado = -1;
+                //        dynamic salidas = JsonConvert.DeserializeObject(resultSalida.JsonResult);
+                //        //int idSol = result[0].IdSol;
 
-                                var parametros = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                            {
-                                { "P_ID_SOLICITUD", (salidaInfo.ContainsKey("ID_SOLICITUD") ?  salidaInfo["ID_SOLICITUD"].ToString() : "", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_TIPO", ("DEVOLUCION", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_SOLICITANTE", (payload.DataMovimiento.Solicitante, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_NUM_EMPLEADO", (payload.DataMovimiento.NumEmpleado, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_AREA", (payload.DataMovimiento.Area, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_DOCENTRY", (data.DocEntry, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_ENTREGA", (payload.DataMovimiento.Entrega, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_RECIBE", (payload.DataMovimiento.Recibe, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_DEPT", (salidaInfo.ContainsKey("DEPT") ? salidaInfo["DEPT"].ToString() : "", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_PROCESO", (salidaInfo.ContainsKey("PROCESO") ? salidaInfo["PROCESO"].ToString() : "", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_GASTOS", (salidaInfo.ContainsKey("GASTOS") ? salidaInfo["GASTOS"].ToString() : "", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_CEDIS", (salidaInfo.ContainsKey("CEDIS") ? salidaInfo["CEDIS"].ToString() : "", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_ID_GENERADO", (IdGenerado, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_ERROR", (error, ParameterDirection.Input, HanaDbType.NVarChar) },
-                            };
+                //        if (salidas.Count > 0)
+                //        {
 
-                                var resultInsert = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                                    Logic.AD.GCInsertarMovimientoAlm, parametros
-                                );
-
-                                string resultadoEnc = resultInsert.JsonResult.ToString();
-                                if (resultadoEnc.Contains("ERROR"))
-                                    throw new Exception("Error al insertar la devolución en el sistema: " + resultadoEnc);
-                            }
-
-
-                        }
-                    }
-                }
+                //        }
+                //    }
+                //}
 
                 // ✅ Actualizar estatus de cada artículo a "Devuelto"
                 foreach (var articulo in payload.Articulos)
                 {
-                    var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+
+                    var parametros = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
                         { "P_ID_SOLICITUD", (articulo.IdSolicitud, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_ESTATUS", ("Devuelto", ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_TIPO", ("DEVOLUCION", ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_SOLICITANTE", (payload.DataMovimiento.Solicitante, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_NUM_EMPLEADO", (payload.DataMovimiento.NumEmpleado, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_AREA", (payload.DataMovimiento.Area, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_DOCENTRY", (data.DocEntry, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_ENTREGA", (payload.DataMovimiento.Entrega, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_RECIBE", (payload.DataMovimiento.Recibe, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_DEPT", (articulo.Departamento, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_PROCESO", (articulo.Proceso, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_GASTOS", (articulo.Gastos, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CEDIS", (articulo.Cedis, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CANTIDAD_REAL",     (articulo.CantidadDevolver, ParameterDirection.Input, HanaDbType.Decimal) },
+                        { "P_ESTATUS",(1, ParameterDirection.Input, HanaDbType.Integer) }
                     };
 
-                    var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCUpdateEstatusSolicitud, paramUpdate
+                    var resultInsert = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCInsertarMovimientoAlm, parametros
                     );
 
-                    string resultadoUpdateEst = resultUpdate.JsonResult.ToString();
-                    if (resultadoUpdateEst.Contains("ERROR") || resultadoUpdateEst.Contains("Error"))
-                        log.Warn($"⚠️ Error al actualizar el estatus de la solicitud {articulo.IdSolicitud}: {resultadoUpdateEst}");
+                    if (resultInsert.JsonResult.Contains("Error") || resultInsert.JsonResult.Contains("ERROR"))
+                    {
+                        log.Info($"🚀 ═══════════════════════════════════════════════════");
+                        log.Info($"🚀 Error CrearDevoluciónMercancia — OT: {payload.Referencia}");
+                        log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                        log.Error($"❌ Se registró la devolución de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible registrar el movimiento en almacén, " + resultInsert.JsonResult);
+                    }
+
+                    //var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                    //{
+                    //    { "P_ID_SOLICITUD", (articulo.IdSolicitud, ParameterDirection.Input, HanaDbType.Integer) },
+                    //    { "P_ESTATUS", ("Devuelto", ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //};
+
+                    //var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    //    Logic.AD.GCUpdateEstatusSolicitud, paramUpdate
+                    //);
+
+                    //if (resultUpdate.JsonResult.Contains("Error") || resultUpdate.JsonResult.Contains("ERROR"))
+                    //{
+                    //    log.Info($"🚀 ═══════════════════════════════════════════════════");
+                    //    log.Info($"🚀 Error CrearDevoluciónMercancia — OT: {payload.Referencia}");
+                    //    log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                    //    log.Error($"❌ Se registró la devolución de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar la solicitud de refacción, " + resultUpdate.JsonResult);
+                    //}
                 }
 
                 //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
@@ -2239,8 +2259,7 @@ namespace MantenimientosPTM.Controllers
 
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FILTRO_ORDEN", (ordenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_ALMACEN", (codPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FILTRO_ORDEN", (ordenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(

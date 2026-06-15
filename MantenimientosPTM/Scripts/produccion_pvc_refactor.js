@@ -1,4 +1,33 @@
 // ========================================
+// GESTOR DE EVENTOS
+// ========================================
+class GestionEventosPVC {
+    constructor() {
+        this.URLBase = "Produccion";
+        this.datos_usuario = GlobalUtil.getDatosUsuario();
+        this.appProduccion = new GestionProduccionPVC(this.datos_usuario, this.URLBase);
+    }
+
+    inicializar() {
+        // Inicializar UI
+        UIManager.inicializarUI();
+
+        // Inicializar la aplicación principal
+        this.appProduccion.inicializar();
+
+        console.log('✅ Sistema Completo PVC inicializado');
+    }
+}
+
+// ========================================
+// INICIALIZACIÓN
+// ========================================
+$(document).ready(function () {
+    const app = new GestionEventosPVC();
+    app.inicializar();
+});
+
+// ========================================
 // GESTOR DE UI
 // ========================================
 class UIManager {
@@ -14,28 +43,60 @@ class UIManager {
 // ========================================
 // APLICACIÓN PRINCIPAL - GESTIÓN PVC
 // ========================================
-class GestionProduccionPVC {
+class GestionProduccionPVC extends GestionProduccionBase {
     constructor(datos_usuario, URLBase) {
-        this.URLBase = URLBase;
-        this.datos_usuario = datos_usuario;
-        this.gridApi = null;
-        this.gridColumnApi = null;
-        this.datosOriginales = [];
-        this.cambiosPendientes = [];
-        this.columnDefs = null;
-        this.listaLineas = [];
-        this.gestionArticulos = new GestionArticulos(this.datos_usuario, 0);
+        super(datos_usuario, URLBase, 110);
     }
 
     async inicializar() {
-        await this.cargarLineas();
-        this.configurarEventos();
-        this.cargarDatosIniciales();
-        this.inicializarTooltips();
-        this.configurarMenuContextual();
+        await this.inicializarCommon();
         // 🔥 CONSULTAR DATOS
         this.consultarDatos(null, null, null);
         console.log('✅ Sistema PVC inicializado');
+    }
+
+    crearTotalesTemplate() {
+        return {
+            // GENERALES
+            Mes: null,
+            Fecha: null,
+            Linea: null,
+            Producto: null,
+            Turno: null,
+            TRIP: null,
+            // PRODUCCIÓN
+            PesoMinimo: 0,
+            TRFabricados: 0,
+            ProduccionNetaReal: 0,
+            PesoEstandar: 0,
+            PorcentajeSobrepeso: 0,
+            TotalScrapKg: 0,
+            PorcentajeScrap: 0,
+            // DISPONIBILIDAD
+            HorasProgramadas: 0,
+            // TIEMPO NO DISPONIBLE (ejemplos)
+            MantenimientoPreventivo: 0,
+            ControlInventarios: 0,
+            FaltaMateriaInsumos: 0,
+            CambioMolde: 0,
+            Calentamiento: 0,
+            ParoArranqueNoProgramado: 0,
+            ArranqueEstabilizacion: 0,
+            // TIEMPO NO PRODUCTIVO
+            MttoCorrectivos: 0,
+            FallaElectrica: 0,
+            Servicios: 0,
+            CambioMoldeSetupExcesos: 0,
+            Herramental: 0,
+            FallaOperacion: 0,
+            LimpiezaTanque: 0,
+            FaltaMaterial: 0,
+            FaltaPersonal: 0,
+            FaltaRefacciones: 0,
+            // KPIS
+            TiempoDisponible: 0,
+            TiempoProductivo: 0
+        };
     }
 
     cargarDatosIniciales() {
@@ -52,7 +113,7 @@ class GestionProduccionPVC {
                 TRIP: null,
 
                 // PRODUCCIÓN
-                PesoMinimo: 3,
+                PesoMinimo: 0,
                 TRFabricados: null,
                 ProduccionNetaReal: null,
                 PesoEstandar: null,
@@ -121,10 +182,6 @@ class GestionProduccionPVC {
 
                 this.cargarDatosGrid(datos);
 
-                setTimeout(() => {
-                    GlobalUtil.mostrarLoader(false);
-                }, 1000);
-
             } else {
 
                 AlertManager.mostrar(
@@ -133,10 +190,6 @@ class GestionProduccionPVC {
                 );
 
                 this.cargarDatosGrid(null);
-
-                setTimeout(() => {
-                    GlobalUtil.mostrarLoader(false);
-                }, 1000);
             }
 
         } catch (error) {
@@ -152,7 +205,9 @@ class GestionProduccionPVC {
             setTimeout(() => {
                 $("#tablaProduccion").removeClass("d-none");
             }, 1000);
-
+            setTimeout(() => {
+                GlobalUtil.mostrarLoader(false);
+            }, 1000);
         }
 
     }
@@ -199,7 +254,7 @@ class GestionProduccionPVC {
                         ][new Date(item.FECHA).getMonth()]
                         : null
                 ),
-                PesoMinimo: item.PESO_MINIMO || 3,
+                PesoMinimo: item.PESO_MINIMO || 0,
                 TRFabricados: item.TR_FABRICADOS,
                 ProduccionNetaReal: item.PRODUCCION_NETA_REAL,
                 PesoEstandar: item.PESO_ESTANDAR,
@@ -301,7 +356,9 @@ class GestionProduccionPVC {
                         width: 140,
                         cellClass: 'celda-azul',
                         pinned: 'left',
-                        cellEditor: 'articuloAutocompleteEditor'
+                        cellEditor: 'articuloAutocompleteEditor',
+
+                        tooltipField: 'DescripcionArticulo'
                     },
 
                     {
@@ -590,7 +647,8 @@ class GestionProduccionPVC {
             context: {
                 datos_usuario: this.datos_usuario,
                 gestionArticulos: this.gestionArticulos,
-                URLBase: this.URLBase
+                URLBase: this.URLBase,
+                appProduccion: this
             },
 
             rowData: this.datosOriginales,
@@ -649,8 +707,6 @@ class GestionProduccionPVC {
 
                 this.gridApi = params.api;
                 this.gridColumnApi = params.columnApi;
-
-                this.agregarFilaTotales();
             },
 
             getRowStyle: params => {
@@ -673,188 +729,10 @@ class GestionProduccionPVC {
 
     agregarFilaTotales() {
 
-        const totales = {
+        const totales = this.obtenerTotalesGrid();
 
-            id: 'TOTALES',
-
-            // GENERALES
-            Mes: null,
-            Fecha: null,
-            Linea: null,
-            Producto: null,
-            Turno: null,
-            TRIP: null,
-
-            // PRODUCCIÓN
-            PesoMinimo: null,
-            TRFabricados: 0,
-            ProduccionNetaReal: 0,
-            PesoEstandar: 0,
-            PorcentajeSobrepeso: null,
-            TotalScrapKg: 0,
-            PorcentajeScrap: null,
-
-            // DISPONIBILIDAD
-            HorasProgramadas: 0,
-
-            // TIEMPO NO DISPONIBLE
-            MantenimientoPreventivo: 0,
-            ControlInventarios: 0,
-            FaltaMateriaInsumos: 0,
-            CambioMolde: 0,
-            Calentamiento: 0,
-            ParoArranqueNoProgramado: 0,
-            ArranqueEstabilizacion: 0,
-
-            // TIEMPO NO PRODUCTIVO
-            MttoCorrectivos: 0,
-            FallaElectrica: 0,
-            Servicios: 0,
-            CambioMoldeSetupExcesos: 0,
-            Herramental: 0,
-            FallaOperacion: 0,
-            LimpiezaTanque: 0,
-            FaltaMaterial: 0,
-            FaltaPersonal: 0,
-            FaltaRefacciones: 0,
-
-            // KPIS
-            TiempoDisponible: 0,
-            TiempoProductivo: 0
-        };
-
-        this.gridApi.forEachNode((node) => {
-
-            if (node.data && node.data.id !== 'TOTALES') {
-
-                // ========================================
-                // PRODUCCIÓN
-                // ========================================
-
-                totales.TRFabricados += parseFloat(node.data.TRFabricados || 0);
-
-                totales.ProduccionNetaReal += parseFloat(node.data.ProduccionNetaReal || 0);
-
-                totales.PesoEstandar += parseFloat(node.data.PesoEstandar || 0);
-
-                totales.TotalScrapKg += parseFloat(node.data.TotalScrapKg || 0);
-
-                // ========================================
-                // DISPONIBILIDAD
-                // ========================================
-
-                totales.HorasProgramadas += parseFloat(node.data.HorasProgramadas || 0);
-
-                // ========================================
-                // TIEMPO NO DISPONIBLE
-                // ========================================
-
-                totales.MantenimientoPreventivo += parseFloat(node.data.MantenimientoPreventivo || 0);
-
-                totales.ControlInventarios += parseFloat(node.data.ControlInventarios || 0);
-
-                totales.FaltaMateriaInsumos += parseFloat(node.data.FaltaMateriaInsumos || 0);
-
-                totales.CambioMolde += parseFloat(node.data.CambioMolde || 0);
-
-                totales.Calentamiento += parseFloat(node.data.Calentamiento || 0);
-
-                totales.ParoArranqueNoProgramado += parseFloat(node.data.ParoArranqueNoProgramado || 0);
-
-                totales.ArranqueEstabilizacion += parseFloat(node.data.ArranqueEstabilizacion || 0);
-
-                // ========================================
-                // TIEMPO NO PRODUCTIVO
-                // ========================================
-
-                totales.MttoCorrectivos += parseFloat(node.data.MttoCorrectivos || 0);
-
-                totales.FallaElectrica += parseFloat(node.data.FallaElectrica || 0);
-
-                totales.Servicios += parseFloat(node.data.Servicios || 0);
-
-                totales.CambioMoldeSetupExcesos += parseFloat(node.data.CambioMoldeSetupExcesos || 0);
-
-                totales.Herramental += parseFloat(node.data.Herramental || 0);
-
-                totales.FallaOperacion += parseFloat(node.data.FallaOperacion || 0);
-
-                totales.LimpiezaTanque += parseFloat(node.data.LimpiezaTanque || 0);
-
-                totales.FaltaMaterial += parseFloat(node.data.FaltaMaterial || 0);
-
-                totales.FaltaPersonal += parseFloat(node.data.FaltaPersonal || 0);
-
-                totales.FaltaRefacciones += parseFloat(node.data.FaltaRefacciones || 0);
-
-                // ========================================
-                // KPIS
-                // ========================================
-
-                totales.TiempoDisponible += parseFloat(node.data.TiempoDisponible || 0);
-
-                totales.TiempoProductivo += parseFloat(node.data.TiempoProductivo || 0);
-            }
-        });
-
-        // ========================================
-        // CALCULAR PORCENTAJES TOTALES
-        // ========================================
-
-        if (totales.PesoEstandar > 0) {
-
-            totales.PorcentajeSobrepeso =
-                ((totales.ProduccionNetaReal / totales.PesoEstandar) - 1) * 100;
-        }
-
-        const totalProduccionScrap =
-            totales.ProduccionNetaReal + totales.TotalScrapKg;
-
-        if (totalProduccionScrap > 0) {
-
-            totales.PorcentajeScrap =
-                (totales.TotalScrapKg / totalProduccionScrap) * 100;
-        }
-
-        let filaTotalesExistente = null;
-
-        this.gridApi.forEachNode((node) => {
-
-            if (node.data && node.data.id === 'TOTALES') {
-
-                filaTotalesExistente = node.data;
-            }
-        });
-
-        if (filaTotalesExistente) {
-
-            this.gridApi.applyTransaction({
-                update: [totales]
-            });
-
-        } else {
-
-            this.gridApi.applyTransaction({
-                add: [totales]
-            });
-        }
-
-    }
-
-    ajustarAlturaGrid() {
-        requestAnimationFrame(() => {
-            const gridDiv = document.querySelector('#tablaProduccion');
-            if (!gridDiv || !this.gridApi) return;
-
-            const headerHeight = 120;
-            const rowHeight = 40;
-            const totalRows = this.gridApi.getDisplayedRowCount();
-            const scrollbarHeight = 20;
-
-            const alturaCalculada = headerHeight + (totalRows * rowHeight) + scrollbarHeight;
-            const alturaFinal = alturaCalculada + 40;
-
-            gridDiv.style.height = alturaFinal + 'px';
+        this.gridApi.applyTransaction({
+            add: [totales]
         });
     }
 
@@ -871,10 +749,6 @@ class GestionProduccionPVC {
         }
 
         const row = event.data;
-
-        // ========================================
-        // MES AUTOMÁTICO
-        // ========================================
 
         if (row.Fecha) {
 
@@ -896,197 +770,58 @@ class GestionProduccionPVC {
             ];
 
             row.Mes = meses[fecha.getMonth()];
-
         }
 
-        // ========================================
-        // PRODUCCIÓN
-        // ========================================
-        row.PesoEstandar = this.calcularPesoEstandar(row);
-        row.PorcentajeSobrepeso = this.calcularSobrepeso(row);
-        row.PorcentajeScrap = this.calcularScrap(row);
+        // 🔥 UNA SOLA LLAMADA
+        this.recalcularFila(row);
 
-        // ========================================
-        // PRODUCTIVIDAD
-        // ========================================
-        row.TiempoDisponible = this.calcularTiempoDisponible(row);
-        row.TiempoProductivo = this.calcularTiempoProductivo(row);
+        event.node.setData(row);
 
-        // REGISTRAR CAMBIO
-        const cambio = {
-            id: event.data.id,
+        this.cambiosPendientes.push({
+            id: row.id,
             campo: event.colDef.field,
             valorAnterior: event.oldValue,
             valorNuevo: event.newValue
-        };
-
-
-
-        this.cambiosPendientes.push(cambio);
-
-        this.gridApi.refreshCells({
-            force: true
         });
 
-        this.gridApi.redrawRows();
-
+        this.gridApi.refreshCells({
+            rowNodes: [event.node],
+            force: true
+        });
 
         this.recalcularTotales();
     }
 
+    recalcularFila(row) {
+
+        row.PesoEstandar =
+            this.calcularPesoEstandar(row);
+
+        row.PorcentajeSobrepeso =
+            this.calcularSobrepeso(row);
+
+        row.PorcentajeScrap =
+            this.calcularScrap(row);
+
+        row.TiempoDisponible =
+            this.calcularTiempoDisponible(row);
+
+        row.TiempoProductivo =
+            this.calcularTiempoProductivo(row);
+    }
+
     recalcularTotales() {
 
-        const filaTotales = {
-
-            id: 'TOTALES',
-
-            // GENERALES
-            Mes: null,
-            Fecha: null,
-            Linea: null,
-            Producto: null,
-            Turno: null,
-            TRIP: null,
-
-            // PRODUCCIÓN
-            PesoMinimo: null,
-            TRFabricados: 0,
-            ProduccionNetaReal: 0,
-            PesoEstandar: 0,
-            PorcentajeSobrepeso: null,
-            TotalScrapKg: 0,
-            PorcentajeScrap: null,
-
-            // DISPONIBILIDAD
-            HorasProgramadas: 0,
-
-            // TIEMPO NO DISPONIBLE
-            MantenimientoPreventivo: 0,
-            ControlInventarios: 0,
-            FaltaMateriaInsumos: 0,
-            CambioMolde: 0,
-            Calentamiento: 0,
-            ParoArranqueNoProgramado: 0,
-            ArranqueEstabilizacion: 0,
-
-            // TIEMPO NO PRODUCTIVO
-            MttoCorrectivos: 0,
-            FallaElectrica: 0,
-            Servicios: 0,
-            CambioMoldeSetupExcesos: 0,
-            Herramental: 0,
-            FallaOperacion: 0,
-            LimpiezaTanque: 0,
-            FaltaMaterial: 0,
-            FaltaPersonal: 0,
-            FaltaRefacciones: 0,
-
-            // KPIS
-            TiempoDisponible: 0,
-            TiempoProductivo: 0
-        };
+        const filaTotales = this.obtenerTotalesGrid();
 
         this.gridApi.forEachNode((node) => {
 
-            if (node.data.id !== 'TOTALES') {
-
-                // ========================================
-                // PRODUCCIÓN
-                // ========================================
-
-                filaTotales.TRFabricados += parseFloat(node.data.TRFabricados || 0);
-
-                filaTotales.ProduccionNetaReal += parseFloat(node.data.ProduccionNetaReal || 0);
-
-                filaTotales.PesoEstandar += parseFloat(node.data.PesoEstandar || 0);
-
-                filaTotales.TotalScrapKg += parseFloat(node.data.TotalScrapKg || 0);
-
-                // ========================================
-                // DISPONIBILIDAD
-                // ========================================
-
-                filaTotales.HorasProgramadas += parseFloat(node.data.HorasProgramadas || 0);
-
-                // ========================================
-                // TIEMPO NO DISPONIBLE
-                // ========================================
-
-                filaTotales.MantenimientoPreventivo += parseFloat(node.data.MantenimientoPreventivo || 0);
-
-                filaTotales.ControlInventarios += parseFloat(node.data.ControlInventarios || 0);
-
-                filaTotales.FaltaMateriaInsumos += parseFloat(node.data.FaltaMateriaInsumos || 0);
-
-                filaTotales.CambioMolde += parseFloat(node.data.CambioMolde || 0);
-
-                filaTotales.Calentamiento += parseFloat(node.data.Calentamiento || 0);
-
-                filaTotales.ParoArranqueNoProgramado += parseFloat(node.data.ParoArranqueNoProgramado || 0);
-
-                filaTotales.ArranqueEstabilizacion += parseFloat(node.data.ArranqueEstabilizacion || 0);
-
-                // ========================================
-                // TIEMPO NO PRODUCTIVO
-                // ========================================
-
-                filaTotales.MttoCorrectivos += parseFloat(node.data.MttoCorrectivos || 0);
-
-                filaTotales.FallaElectrica += parseFloat(node.data.FallaElectrica || 0);
-
-                filaTotales.Servicios += parseFloat(node.data.Servicios || 0);
-
-                filaTotales.CambioMoldeSetupExcesos += parseFloat(node.data.CambioMoldeSetupExcesos || 0);
-
-                filaTotales.Herramental += parseFloat(node.data.Herramental || 0);
-
-                filaTotales.FallaOperacion += parseFloat(node.data.FallaOperacion || 0);
-
-                filaTotales.LimpiezaTanque += parseFloat(node.data.LimpiezaTanque || 0);
-
-                filaTotales.FaltaMaterial += parseFloat(node.data.FaltaMaterial || 0);
-
-                filaTotales.FaltaPersonal += parseFloat(node.data.FaltaPersonal || 0);
-
-                filaTotales.FaltaRefacciones += parseFloat(node.data.FaltaRefacciones || 0);
-
-                // ========================================
-                // KPIS
-                // ========================================
-
-                filaTotales.TiempoDisponible += parseFloat(node.data.TiempoDisponible || 0);
-
-                filaTotales.TiempoProductivo += parseFloat(node.data.TiempoProductivo || 0);
-            }
-        });
-
-        // ========================================
-        // CALCULAR %
-        // ========================================
-
-        if (filaTotales.PesoEstandar > 0) {
-
-            filaTotales.PorcentajeSobrepeso =
-                ((filaTotales.ProduccionNetaReal / filaTotales.PesoEstandar) - 1) * 100;
-        }
-
-        const totalProduccionScrap =
-            filaTotales.ProduccionNetaReal + filaTotales.TotalScrapKg;
-
-        if (totalProduccionScrap > 0) {
-
-            filaTotales.PorcentajeScrap =
-                (filaTotales.TotalScrapKg / totalProduccionScrap) * 100;
-        }
-
-        this.gridApi.forEachNode((node) => {
-
-            if (node.data.id === 'TOTALES') {
+            if (node.data?.id === 'TOTALES') {
 
                 node.setData(filaTotales);
             }
-        });
 
+        });
     }
 
     configurarEventos() {
@@ -1147,7 +882,17 @@ class GestionProduccionPVC {
         console.log(datos);
 
         if (datos.length === 0) {
-            AlertManager.mostrar('No hay datos para guardar', 'warning');
+
+            AlertManager.mostrar(
+                'No hay datos para guardar',
+                'warning'
+            );
+
+            $("#btnGuardarCambios").prop("disabled", false);
+
+            $("#btnGuardarCambios")
+                .html('<i class="bi bi-save me-1"></i>Guardar');
+
             return;
         }
 
@@ -1236,10 +981,6 @@ class GestionProduccionPVC {
                 $("#btnGuardarCambios").html('<i class="bi bi-save me-1"></i>Guardar');
                 $("#btnGuardarCambios").prop("disabled", false);
 
-            },
-
-            complete: () => {
-                GlobalUtil.mostrarLoader(false);
             }
 
         });
@@ -1295,7 +1036,7 @@ class GestionProduccionPVC {
                     TIEMPO_PRODUCTIVO: node.data.TiempoProductivo || 0,
 
                     USUARIO: this.datos_usuario[0].EMAIL,
-                    PLANTA:this.datos_usuario[0].PLANTA
+                    PLANTA: this.datos_usuario[0].PLANTA
                 });
 
             }
@@ -1349,11 +1090,15 @@ class GestionProduccionPVC {
         return disponible - tiempoNoProductivo;
     }
 
+    generarIdTemporal() {
+        return `TMP_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    }
+
     agregarFila(params) {
 
         const nuevaFila = {
 
-            id: Date.now(),
+            id: this.generarIdTemporal(),
 
             // ========================================
             // GENERALES
@@ -1370,7 +1115,7 @@ class GestionProduccionPVC {
             // PRODUCCIÓN
             // ========================================
 
-            PesoMinimo: 3,
+            PesoMinimo: 0,
             TRFabricados: null,
             ProduccionNetaReal: null,
             PesoEstandar: 0,
@@ -1434,7 +1179,7 @@ class GestionProduccionPVC {
 
         const nuevaFila = {
 
-            id: Date.now(),
+            id: this.generarIdTemporal(),
             ID_REGISTRO: null,
 
             // ========================================
@@ -1452,7 +1197,7 @@ class GestionProduccionPVC {
             // PRODUCCIÓN
             // ========================================
 
-            PesoMinimo: filaActual.PesoMinimo || 3,
+            PesoMinimo: filaActual.PesoMinimo || 0,
             TRFabricados: filaActual.TRFabricados,
             ProduccionNetaReal: filaActual.ProduccionNetaReal,
             TotalScrapKg: filaActual.TotalScrapKg,
@@ -1495,20 +1240,7 @@ class GestionProduccionPVC {
         // RECALCULAR FORMULAS
         // ========================================
 
-        nuevaFila.PesoEstandar =
-            this.calcularPesoEstandar(nuevaFila);
-
-        nuevaFila.PorcentajeSobrepeso =
-            this.calcularSobrepeso(nuevaFila);
-
-        nuevaFila.PorcentajeScrap =
-            this.calcularScrap(nuevaFila);
-
-        nuevaFila.TiempoDisponible =
-            this.calcularTiempoDisponible(nuevaFila);
-
-        nuevaFila.TiempoProductivo =
-            this.calcularTiempoProductivo(nuevaFila);
+        this.recalcularFila(nuevaFila);
 
         this.gridApi.applyTransaction({
             add: [nuevaFila],
@@ -1545,37 +1277,40 @@ class GestionProduccionPVC {
 
         const menu = document.getElementById("menuContextual");
 
-        document.querySelector('#tablaProduccion')
-            .addEventListener("contextmenu", (e) => {
+        const tabla = document.querySelector('#tablaProduccion');
 
-                e.preventDefault();
+        if (!tabla) return;
 
-                menu.style.display = "block";
-                menu.style.left = e.pageX + "px";
-                menu.style.top = e.pageY + "px";
+        tabla.addEventListener("contextmenu", (e) => {
 
-                const cell = this.gridApi.getCellRanges()?.[0];
-                const rowIndex = this.gridApi.getFocusedCell()?.rowIndex
-                    ?? this.gridApi.getDisplayedRowCount() - 1;
+            e.preventDefault();
 
-                this.filaSeleccionada =
-                    this.gridApi.getDisplayedRowAtIndex(rowIndex);
+            menu.style.display = "block";
+            menu.style.left = e.pageX + "px";
+            menu.style.top = e.pageY + "px";
 
-                if (this.filaSeleccionada?.data?.id === 'TOTALES') {
-                    menu.style.display = "none";
-                    return;
-                }
+            const cell = this.gridApi.getCellRanges()?.[0];
+            const rowIndex = this.gridApi.getFocusedCell()?.rowIndex
+                ?? this.gridApi.getDisplayedRowCount() - 1;
 
-                const eliminar = menu.querySelector('[data-action="eliminar"]');
+            this.filaSeleccionada =
+                this.gridApi.getDisplayedRowAtIndex(rowIndex);
 
-                // 🔥 Ocultar eliminar si tiene ID
-                if (this.filaSeleccionada?.data?.ID_REGISTRO) {
-                    eliminar.style.display = "none";
-                } else {
-                    eliminar.style.display = "block";
-                }
+            if (this.filaSeleccionada?.data?.id === 'TOTALES') {
+                menu.style.display = "none";
+                return;
+            }
 
-            });
+            const eliminar = menu.querySelector('[data-action="eliminar"]');
+
+            // 🔥 Ocultar eliminar si tiene ID
+            if (this.filaSeleccionada?.data?.ID_REGISTRO) {
+                eliminar.style.display = "none";
+            } else {
+                eliminar.style.display = "block";
+            }
+
+        });
 
         document.addEventListener("click", () => {
             menu.style.display = "none";
@@ -1611,7 +1346,7 @@ class GestionProduccionPVC {
 
         try {
 
-            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA,null,1);
+            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, null, 1);
 
             this.listaLineas = lineas;
 
@@ -1689,38 +1424,120 @@ class GestionProduccionPVC {
 
         return (scrap / total) * 100;
     }
-}
 
-// ========================================
-// GESTOR DE EVENTOS
-// ========================================
-class GestionEventosPVC {
-    constructor() {
-        this.URLBase = "Produccion";
-        this.datos_usuario = GlobalUtil.getDatosUsuario();
-        this.appProduccion = new GestionProduccionPVC(this.datos_usuario, this.URLBase);
+    obtenerTotalesGrid() {
+
+        const totales = {
+
+            id: 'TOTALES',
+
+            // GENERALES
+            Mes: null,
+            Fecha: null,
+            Linea: null,
+            Producto: null,
+            Turno: null,
+            TRIP: null,
+
+            // PRODUCCIÓN
+            PesoMinimo: 0,
+            TRFabricados: 0,
+            ProduccionNetaReal: 0,
+            PesoEstandar: 0,
+            PorcentajeSobrepeso: null,
+            TotalScrapKg: 0,
+            PorcentajeScrap: null,
+
+            // DISPONIBILIDAD
+            HorasProgramadas: 0,
+
+            // TIEMPO NO DISPONIBLE
+            MantenimientoPreventivo: 0,
+            ControlInventarios: 0,
+            FaltaMateriaInsumos: 0,
+            CambioMolde: 0,
+            Calentamiento: 0,
+            ParoArranqueNoProgramado: 0,
+            ArranqueEstabilizacion: 0,
+
+            // TIEMPO NO PRODUCTIVO
+            MttoCorrectivos: 0,
+            FallaElectrica: 0,
+            Servicios: 0,
+            CambioMoldeSetupExcesos: 0,
+            Herramental: 0,
+            FallaOperacion: 0,
+            LimpiezaTanque: 0,
+            FaltaMaterial: 0,
+            FaltaPersonal: 0,
+            FaltaRefacciones: 0,
+
+            // KPIS
+            TiempoDisponible: 0,
+            TiempoProductivo: 0
+        };
+
+        this.gridApi.forEachNode((node) => {
+
+            if (!node.data || node.data.id === 'TOTALES') {
+                return;
+            }
+
+            totales.TRFabricados += Number(node.data.TRFabricados || 0);
+            totales.ProduccionNetaReal += Number(node.data.ProduccionNetaReal || 0);
+            totales.PesoEstandar += Number(node.data.PesoEstandar || 0);
+            totales.TotalScrapKg += Number(node.data.TotalScrapKg || 0);
+
+            totales.HorasProgramadas += Number(node.data.HorasProgramadas || 0);
+
+            totales.MantenimientoPreventivo += Number(node.data.MantenimientoPreventivo || 0);
+            totales.ControlInventarios += Number(node.data.ControlInventarios || 0);
+            totales.FaltaMateriaInsumos += Number(node.data.FaltaMateriaInsumos || 0);
+            totales.CambioMolde += Number(node.data.CambioMolde || 0);
+            totales.Calentamiento += Number(node.data.Calentamiento || 0);
+            totales.ParoArranqueNoProgramado += Number(node.data.ParoArranqueNoProgramado || 0);
+            totales.ArranqueEstabilizacion += Number(node.data.ArranqueEstabilizacion || 0);
+
+            totales.MttoCorrectivos += Number(node.data.MttoCorrectivos || 0);
+            totales.FallaElectrica += Number(node.data.FallaElectrica || 0);
+            totales.Servicios += Number(node.data.Servicios || 0);
+            totales.CambioMoldeSetupExcesos += Number(node.data.CambioMoldeSetupExcesos || 0);
+            totales.Herramental += Number(node.data.Herramental || 0);
+            totales.FallaOperacion += Number(node.data.FallaOperacion || 0);
+            totales.LimpiezaTanque += Number(node.data.LimpiezaTanque || 0);
+            totales.FaltaMaterial += Number(node.data.FaltaMaterial || 0);
+            totales.FaltaPersonal += Number(node.data.FaltaPersonal || 0);
+            totales.FaltaRefacciones += Number(node.data.FaltaRefacciones || 0);
+
+            totales.TiempoDisponible += Number(node.data.TiempoDisponible || 0);
+            totales.TiempoProductivo += Number(node.data.TiempoProductivo || 0);
+
+        });
+
+        if (totales.PesoEstandar > 0) {
+
+            totales.PorcentajeSobrepeso =
+                ((totales.ProduccionNetaReal / totales.PesoEstandar) - 1) * 100;
+        }
+
+        const totalProduccion =
+            totales.ProduccionNetaReal + totales.TotalScrapKg;
+
+        if (totalProduccion > 0) {
+
+            totales.PorcentajeScrap =
+                (totales.TotalScrapKg / totalProduccion) * 100;
+        }
+
+        return totales;
     }
-
-    inicializar() {
-        // Inicializar UI
-        UIManager.inicializarUI();
-
-        // Inicializar la aplicación principal
-        this.appProduccion.inicializar();
-
-        console.log('✅ Sistema Completo PVC inicializado');
-    }
 }
-
-// ========================================
-// INICIALIZACIÓN
-// ========================================
-$(document).ready(function () {
-    const app = new GestionEventosPVC();
-    app.inicializar();
-});
 
 class ArticuloAutocompleteEditor {
+
+    constructor() {
+        this.articuloSeleccionado = null;
+    }
 
     init(params) {
 
@@ -1743,6 +1560,8 @@ class ArticuloAutocompleteEditor {
         this.datos_usuario = params.context.datos_usuario;
         this.URLBase = params.context.URLBase;
 
+        this.appProduccion = params.context.appProduccion;
+
         $(this.eInput).on('input', async (e) => {
 
             const query = e.target.value;
@@ -1752,7 +1571,7 @@ class ArticuloAutocompleteEditor {
                 const articulos = await this.gestionArticulos.obtenerArticulos(
                     query,
                     this.datos_usuario[0].EMAIL,
-                    110
+                    0
                 );
 
                 this.mostrarSugerencias(articulos);
@@ -1791,9 +1610,32 @@ class ArticuloAutocompleteEditor {
 
                 this.eInput.value = articulo.CodigoArticulo;
 
+                this.articuloSeleccionado = articulo;
+
+                const row = this.params.node.data;
+
+                row.Producto = articulo.CodigoArticulo;
+
+                row.PesoMinimo = articulo.PesoMinimo || 0;
+
+                row.DescripcionArticulo = articulo.DescripcionArticulo;
+
+                // 🔥 Recalcular KPIs de la fila
+                const app = this.params.context.appProduccion;
+
+                app.recalcularFila(row);
+
+                // 🔥 Actualizar totales
+                app.recalcularTotales();
+
                 this.eDropdown.innerHTML = '';
 
-                this.params.stopEditing(); // 🔥 cerrar editor automáticamente
+                this.params.api.refreshCells({
+                    rowNodes: [this.params.node],
+                    force: true
+                });
+
+                this.params.stopEditing();
 
             });
 
@@ -1829,56 +1671,17 @@ class ArticuloAutocompleteEditor {
 // ========================================
 // EXPORTADOR EXCEL PARA PVC
 // ========================================
-class ExcelExporterPVC {
+class ExcelExporterPVC extends ExcelExporterBase {
     constructor(gridApi, columnDefs) {
-        this.gridApi = gridApi;
-        this.columnDefs = columnDefs;
+        super(gridApi, columnDefs);
     }
 
-    async exportarConFormato() {
-        if (typeof ExcelJS === 'undefined') {
-            console.error('❌ ExcelJS no cargado');
-            alert('Error: Librería de Excel no disponible');
-            return;
-        }
+    getSheetName() { return 'Causas Tiempos Muertos PVC'; }
+    getFileNamePrefix() { return 'Produccion_PVC'; }
+    getTextFields() { return ['Mes','Fecha','Producto','TRIP','Linea','Turno']; }
 
-        try {
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet('Causas Tiempos Muertos PVC');
-
-            const estructura = this.analizarEstructuraColumnas();
-
-            this.agregarFilaGrupos(worksheet, estructura);
-            this.agregarFilaHeaders(worksheet, estructura);
-            this.agregarFilasDatos(worksheet, estructura);
-            this.aplicarEstilos(worksheet, estructura);
-            this.ajustarAnchos(worksheet);
-
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            });
-
-            const fecha = new Date().toISOString().split('T')[0];
-            const nombreArchivo = `Produccion_PVC_${fecha}.xlsx`;
-
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = nombreArchivo;
-            link.click();
-
-            URL.revokeObjectURL(link.href);
-
-            console.log('✅ Excel PVC exportado correctamente');
-            if (typeof AlertManager !== 'undefined') {
-                AlertManager.mostrar('Excel exportado correctamente', 'success');
-            }
-
-        } catch (error) {
-            console.error('Error al exportar:', error);
-            alert('Error al exportar Excel: ' + error.message);
-        }
-    }
+    getTotalsFontColor() { return 'FF0058A1'; }
+    getTotalsBorderColor() { return 'FF0058A1'; }
 
     analizarEstructuraColumnas() {
         const grupos = [];

@@ -201,15 +201,15 @@ textarea.form-control-custom {
     }
 
 /* Mensaje de error de validación */
-.modal-error-msg {
+.modal-error-msg invalid-feedback {
     font-size: 0.78rem;
     color: #D32F2F;
     margin-top: 4px;
     display: none;
 }
 
-.was-validated .form-control-custom:invalid ~ .modal-error-msg,
-.was-validated .form-select-custom:invalid ~ .modal-error-msg {
+.was-validated .form-control-custom:invalid ~ .modal-error-msg invalid-feedback,
+.was-validated .form-select-custom:invalid ~ .modal-error-msg invalid-feedback {
     display: block;
 }
 

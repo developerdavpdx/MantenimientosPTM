@@ -663,6 +663,20 @@ footer {
     background: white;
 }
 
+.autocomplete-sugerencias-proveedores {
+    position: absolute;
+    z-index: 9999;
+    right: 0;
+    left: auto;
+    min-width: max-content;
+    max-height: 250px;
+    overflow: auto;
+    background: white;
+    border: none !important;
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px rgba(13, 110, 253, 0.10), 0 8px 24px rgba(13, 110, 253, 0.18);
+}
+
 .autocomplete-centrocostos {
     position: fixed; /* ⬅️ relativo al viewport, ignora overflow de ancestros */
     z-index: 99999;
@@ -1001,4 +1015,37 @@ footer {
 
 .bg_universal_ptm {
     background: linear-gradient(135deg, var(--modal-primary) 0%, var(--modal-primary-mid) 60%, var(--modal-primary-light) 100%);
+}
+
+.punto-pulso {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #1291ce;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    animation: pulso 1.5s infinite;
+}
+
+@keyframes pulso {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    25%, 75% {
+        opacity: 0;
+    }
+}
+
+.punto-pulso-absolute {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background: #1291ce;
+    border-radius: 50%;
+    margin-left: -15px;
+    margin-top: 8px;
+    animation: pulso 1.5s infinite;
+    position: absolute;
 }

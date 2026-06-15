@@ -196,6 +196,7 @@
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\bootstrap.rtl.css" />
     <Content Include="Content\bootstrap.rtl.min.css" />
+    <Content Include="Content\CalendarioProduccion.css" />
     <Content Include="Content\CalendarioPlaneacion.css" />
     <Content Include="Content\CalendarioMantenimientoPreventivo.css" />
     <Content Include="Content\chartist.min.css" />
@@ -2319,6 +2320,7 @@
     <Content Include="Scripts\bootstrap.esm.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Scripts\calendario_produccion_refactor.js" />
     <Content Include="Scripts\calendario_planeacion_refactor.js" />
     <Content Include="Scripts\DatalistAutocomplete.js" />
     <Content Include="Scripts\dataTables.dataTables.min.js" />
@@ -2839,6 +2841,7 @@
     <Content Include="Views\Almacen\SolicitudOC.cshtml" />
     <Content Include="Views\Almacen\SolicitudRefacciones.cshtml" />
     <Content Include="Views\Almacen\ReporteStock.cshtml" />
+    <Content Include="Views\Planeacion\CalendarioProduccion.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

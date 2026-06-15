@@ -181,10 +181,13 @@ class GestionEventosApp {
         });
 
         $('#btnAplicarFiltrosParo').on('click', () => {
+            $("#LineasProduccionContainer").addClass("d-none");
             const Planta = $("#FiltroPlantaParo").val();
             const Proceso = $("#FiltroProcesoParo").val() || null;
-            EquiposUtil.llenarLineasCheckbox(Planta, Proceso, 1, "contenedorLineasParo");
-            $("#LineasProduccionContainer").removeClass("d-none");
+            if(Planta && Proceso)
+                EquiposUtil.llenarLineasCheckbox(Planta, Proceso, 1, "contenedorLineasParo");
+            else
+                AlertManager.mostrar('Selecciona una planta y un proceso', 'warning','alertParoContainer');
         });
 
         $('#btnAplicarFiltros').on('click', () => {
@@ -937,57 +940,58 @@ class ProduccionManager {
             return;
         }
 
+        $('#tablaParos tbody tr').empty();
+
         lineasSeleccionadas.forEach(linea => {
 
             // Evitar duplicados
-            let existe = false;
+            // let existe = false;
 
-            $('#tablaParos tbody tr').each(function () {
+            // $('#tablaParos tbody tr').each(function () {
 
-                const lineaTabla = $(this).find('td').eq(0).attr('data-value');
+            //     const lineaTabla = $(this).find('td').eq(0).attr('data-value');
 
-                if (lineaTabla == linea.id) {
-                    existe = true;
-                }
+            //     if (lineaTabla == linea.id) {
+            //         existe = true;
+            //     }
 
-            });
+            // });
 
-            if (existe) return;
-
+            // if (existe) return;
             const fila = `
-        <tr>
-            <td data-value="${linea.id}">
-                ${linea.texto}
-            </td>
+                <tr>
+                    <td data-value="${linea.id}">
+                        ${linea.texto}
+                    </td>
 
-            <td>
-                <select class="form-select form-select-sm paro-categoria" data-value="${categoria}">
-                    ${this.generarOpcionesCategorias(categoria)}
-                </select>
-            </td>
+                    <td>
+                        <select class="form-select form-select-sm paro-categoria" data-value="${categoria}">
+                            ${this.generarOpcionesCategorias(categoria)}
+                        </select>
+                    </td>
 
-            <td>
-                <input type="text" step="0.1"
-                       class="form-control form-control-sm paro-articulo" />
-            </td>
+                    <td>
+                        <input type="text" step="0.1"
+                               class="form-control form-control-sm paro-articulo" />
+                    </td>
 
-            <td>
-                <input type="number" step="0.1"
-                       class="form-control form-control-sm paro-duracion" />
-            </td>
+                    <td>
+                        <input type="number" step="0.1"
+                               class="form-control form-control-sm paro-duracion" />
+                    </td>
 
-            <td>
-                <input type="text"
-                       class="form-control form-control-sm paro-comentarios" />
-            </td>
+                    <td>
+                        <input type="text"
+                               class="form-control form-control-sm paro-comentarios" />
+                    </td>
 
-            <td class="text-center">
-                <button type="button"
-                        class="btn btn-sm btn-danger btnEliminarFila">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </td>
-        </tr>
+                    <td class="text-center">
+                        <button type="button"
+                                class="btn btn-sm btn-danger btnEliminarFila">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
         `;
 
             $('#tablaParos tbody').append(fila);
@@ -1200,7 +1204,7 @@ class ProduccionManager {
             link.download = `Paros_Produccion_${fecha}.xlsx`;
             link.click();
 
-            AlertManager.mostrar('¡Excel exportado con éxito! 🎉', 'success');
+            AlertManager.mostrar('¡Excel exportado con éxito!', 'success');
 
         } catch (error) {
             console.error('Error al exportar:', error);
@@ -1259,6 +1263,7 @@ class AutocompleteParoArticulo {
                         articulos
                     );
 
+
                 } catch (error) {
 
                     console.error(error);
@@ -1273,7 +1278,7 @@ class AutocompleteParoArticulo {
 
             if (!$(e.target).closest('.autocomplete-wrapper').length) {
 
-                $('.autocomplete-dropdown').remove();
+                $('.autocomplete-dropdownv2').remove();
 
             }
 
@@ -1296,7 +1301,7 @@ class AutocompleteParoArticulo {
         }
 
         const dropdown = $(`
-            <div class="autocomplete-dropdown">
+            <div class="autocomplete-dropdownv2">
             </div>
         `);
 
@@ -1310,18 +1315,45 @@ class AutocompleteParoArticulo {
             `);
 
             item.on('click', () => {
+                input.val(articulo.CodigoArticulo);
 
-                input.val(
-                    articulo.CodigoArticulo
-                );
+                const tituloTooltip = `📦 ${articulo.DescripcionArticulo}`;
+                input.attr('title', tituloTooltip);
 
-                // 🔥 guardar metadata en el TR
+                // Usar API pública de Bootstrap para reutilizar o crear tooltip sin disponer la instancia
+                if (input && input[0] && typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    try {
+                        const tt = bootstrap.Tooltip.getOrCreateInstance(input[0]);
+
+                        if (typeof tt.setContent === 'function') {
+                            // Actualizar contenido de forma segura
+                            tt.setContent({ '.tooltip-inner': tituloTooltip });
+                            // Mantener atributo original por compatibilidad
+                            try {
+                                input.attr('data-bs-original-title', tituloTooltip);
+                            } catch (_) {}
+                            if (typeof tt.update === 'function') tt.update();
+                        } else {
+                            // Fallback: recrear sin usar dispose() para evitar estados intermedios inconsistentes
+                            try {
+                                tt.dispose && tt.dispose();
+                            } catch (e) {
+                                console.warn('Error al disponer tooltip (fallback):', e);
+                            }
+                            try {
+                                new bootstrap.Tooltip(input[0]);
+                            } catch (e) {
+                                console.warn('No se pudo inicializar tooltip (fallback):', e);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Error gestionando tooltip:', e);
+                    }
+                }
+
                 const row = input.closest('tr');
 
-                row.data(
-                    'articulo',
-                    articulo
-                );
+                row.data('articulo', articulo);
 
                 dropdown.remove();
 
@@ -1338,7 +1370,7 @@ class AutocompleteParoArticulo {
     removerDropdown(input) {
 
         input
-            .siblings('.autocomplete-dropdown')
+            .siblings('.autocomplete-dropdownv2')
             .remove();
 
     }

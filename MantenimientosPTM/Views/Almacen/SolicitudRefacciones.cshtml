@@ -199,7 +199,7 @@
                                     <option value="OT-025">OT-025 - ROB-6AX</option>
                                     <option value="OT-028">OT-028 - EMP-345</option>
                                 </select>
-                                <div class="modal-error-msg">⚠️ Selecciona una orden de trabajo.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Selecciona una orden de trabajo.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label-custom" for="solicitudEquipo">
@@ -224,14 +224,14 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="refaccionNombre" required
                                        placeholder="Ej: Rodamiento axial 6008-2RS">
-                                <div class="modal-error-msg">⚠️ Ingresa el nombre de la refacción.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa el nombre de la refacción.</div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label-custom" for="refaccionCantidad">
                                     <i class="bi bi-123"></i> Cantidad <span class="text-danger">*</span>
                                 </label>
                                 <input type="number" class="form-control-custom" id="refaccionCantidad" min="1" required>
-                                <div class="modal-error-msg">⚠️ Ingresa la cantidad.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa la cantidad.</div>
                             </div>
                         </div>
                     </div>
@@ -254,7 +254,7 @@
                                     <option value="Urgente">Urgente</option>
                                     <option value="Crítico">Crítico</option>
                                 </select>
-                                <div class="modal-error-msg">⚠️ Selecciona el nivel de urgencia.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Selecciona el nivel de urgencia.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label-custom" for="refaccionEstatus">
@@ -267,7 +267,7 @@
                                     <option value="En tránsito">En tránsito</option>
                                     <option value="Entregado">Entregado</option>
                                 </select>
-                                <div class="modal-error-msg">⚠️ Selecciona el estatus.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Selecciona el estatus.</div>
                             </div>
                             <div class="col-12">
                                 <label class="form-label-custom" for="refaccionDescripcion">
@@ -340,8 +340,11 @@
                                         <input type="checkbox" id="chkSelectAllSC" title="Seleccionar todos">
                                     </th>
                                     <th>Orden de Trabajo</th>
-                                    <th>Código</th>
+                                    <th>Código Refacción</th>
                                     <th>Artículo</th>
+                                    <th class="text-end">Stock</th>
+                                    <th class="text-end">Min</th>
+                                    <th class="text-end">Max</th>
                                     <th>Cant. Requerida</th>
                                     <th>Cant. a Encargar <span class="text-danger">*</span></th>
                                 </tr>
@@ -358,7 +361,7 @@
                         </label>
                         <textarea class="form-control-custom" id="ComentariosSC" rows="3"
                                   placeholder="Comentarios adicionales..."></textarea>
-                        <div class="modal-error-msg">⚠️ Ingresa un comentario.</div>
+                        <div class="modal-error-msg invalid-feedback">⚠️ Ingresa un comentario.</div>
                     </div>
 
                     <div id="alertSolicitudCompraContainer" class="mt-2"></div>
@@ -384,7 +387,7 @@
      MODAL: DEVOLUCIÓN DE MERCANCÍA
 ═════════════════════════════════════════════ -->
 <div class="modal fade" id="devolucionMercancia" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-dialog modal-dialog-centered modal-xl" style="max-width:90%">
         <div class="modal-content">
 
             <!-- ── Header ── -->
@@ -414,21 +417,21 @@
                                 <i class="bi bi-person-circle"></i> Solicitante <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control-custom" id="devolucionSolicitante" required>
-                            <div class="modal-error-msg">⚠️ Ingrese el nombre del solicitante.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Ingrese el nombre del solicitante.</div>
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label-custom" for="devolucionNumEmpleado">
                                 <i class="bi bi-person-vcard-fill"></i> # de Empleado <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control-custom" id="devolucionNumEmpleado" required>
-                            <div class="modal-error-msg">⚠️ Ingrese el número de empleado.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Ingrese el número de empleado.</div>
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label-custom" for="devolucionArea">
                                 <i class="bi bi-columns-gap"></i> Área <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control-custom" id="devolucionArea" required>
-                            <div class="modal-error-msg">⚠️ Ingrese el área.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Ingrese el área.</div>
                         </div>
                     </div>
 
@@ -441,7 +444,7 @@
                             <select class="form-select-custom" id="devolucionEntrega" required>
                                 <option value="">Seleccionar...</option>
                             </select>
-                            <div class="modal-error-msg">⚠️ Seleccione quien entrega.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Seleccione quien entrega.</div>
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label-custom" for="devolucionRecibe">
@@ -450,7 +453,7 @@
                             <select class="form-select-custom" id="devolucionRecibe" required>
                                 <option value="">Seleccionar...</option>
                             </select>
-                            <div class="modal-error-msg">⚠️ Seleccione quien recibe.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Seleccione quien recibe.</div>
                         </div>
                     </div>
 
@@ -471,19 +474,35 @@
                             <table class="table table-striped table-sm CustomTableResponsive" id="tablaArticulosDevolucion">
                                 <thead class="table-light text-center position-sticky top-0" style="z-index: 1;">
                                     <tr>
+
                                         <th style="width: 40px;">#</th>
+
                                         <th style="width: 40px;">
                                             <input type="checkbox" id="chkAllDevolucion" disabled>
                                         </th>
+
                                         <th>Orden Trabajo</th>
+
                                         <th>Código</th>
+
                                         <th>Artículo</th>
+
+                                        <th style="width: 100px;">Cant. Solicitada</th>
+
                                         <th style="width: 100px;">Cant. Atendida</th>
-                                        <th style="width: 100px;">Cant. a Devolver <span class="text-danger">*</span></th>
+
+                                        <th style="width: 100px;">
+                                            Cant. a Devolver
+                                            <span class="text-danger">*</span>
+                                        </th>
+
                                         <th style="width: 100px;">DEPARTAMENTO</th>
-                                        <th style="width: 100px;">PROCESO </th>
-                                        <th style="width: 100px;">GASTOS </th>
-                                        <th style="width: 100px;">CEDIS </th>
+
+                                        <th style="width: 100px;">PROCESO</th>
+
+                                        <th style="width: 100px;">GASTOS</th>
+
+                                        <th style="width: 100px;">CEDIS</th>
 
                                     </tr>
                                 </thead>
@@ -503,13 +522,12 @@
 
                 <!-- ── Footer ── -->
                 <div class="modal-footer-custom">
-                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle me-1"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-danger btn-sm" id="btnRechazarDev">Rechazar</button>
-
                     <button type="button" class="btn-modal-guardar" id="btnGuardarDevolucion">
                         <i class="bi bi-floppy-fill me-1"></i> Guardar
+                    </button>
+                    <button type="button" class="btn-ptm btn-ptm-mid" id="btnRechazarDev">Rechazar</button>
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
                     </button>
                 </div>
             </form>
@@ -560,7 +578,7 @@
                                 </label>
                                 <input type="date" class="form-control-custom" id="fechaDia"
                                        name="Fecha dia" required readonly autocomplete="off">
-                                <div class="modal-error-msg">
+                                <div class="modal-error-msg invalid-feedback">
                                     <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor ingrese la fecha.
                                 </div>
                             </div>
@@ -570,7 +588,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="numAjuste"
                                        name="# de Ajuste" placeholder="# de Ajuste" required readonly autocomplete="off">
-                                <div class="modal-error-msg">
+                                <div class="modal-error-msg invalid-feedback">
                                     <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor ingrese el número de ajuste.
                                 </div>
                             </div>
@@ -592,7 +610,7 @@
                                 <input type="text" class="form-control-custom" id="solicitante"
                                        name="solicitante" placeholder="Nombre del solicitante"
                                        required autocomplete="on">
-                                <div class="modal-error-msg">
+                                <div class="modal-error-msg invalid-feedback">
                                     <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor ingrese el nombre del solicitante.
                                 </div>
                             </div>
@@ -603,7 +621,7 @@
                                 <input type="text" class="form-control-custom" id="numEmpleado"
                                        name="Numero Empleado" placeholder="Número de empleado"
                                        required autocomplete="on">
-                                <div class="modal-error-msg">
+                                <div class="modal-error-msg invalid-feedback">
                                     <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor ingrese el número de empleado.
                                 </div>
                             </div>
@@ -613,7 +631,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="area"
                                        name="Área" placeholder="Área" required autocomplete="on">
-                                <div class="modal-error-msg">
+                                <div class="modal-error-msg invalid-feedback">
                                     <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor ingrese el área.
                                 </div>
                             </div>
@@ -646,6 +664,7 @@
                                 <thead class="table-light text-center position-sticky top-0" style="z-index:1;">
                                     <tr>
                                         <th style="width:40px;">#</th>
+                                        <th>Folio Salida</th>
                                         <th style="width:40px;">
                                             <input type="checkbox" id="chkAllSelect" disabled>
                                         </th>
@@ -654,6 +673,8 @@
                                         <th>Artículo</th>
                                         <th style="width:70px;">Cantidad</th>
                                         <th style="width:70px;">Stock</th>
+                                        <th style="width:70px;">Min</th>
+                                        <th style="width:70px;">Max</th>
                                         <th style="width:90px;">Urgencia</th>
                                         <th style="width:90px;">Estatus</th>
                                         <th style="width:90px;">Departamento</th>
@@ -665,7 +686,7 @@
                                 </thead>
                                 <tbody id="bodyArticulosSalida">
                                     <tr>
-                                        <td colspan="14" class="text-center text-muted py-4">
+                                        <td colspan="16" class="text-center text-muted py-4">
                                             <i class="bi bi-info-circle me-1"></i>
                                             Seleccione una solicitud para ver los artículos
                                         </td>
@@ -690,7 +711,7 @@
                                 <select class="form-select-custom" id="firmaAlmacen"
                                         name="firmaAlmacen" required>
                                 </select>
-                                <div class="modal-error-msg">
+                                <div class="modal-error-msg invalid-feedback">
                                     <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor seleccione el nombre del almacenista.
                                 </div>
                             </div>
@@ -701,7 +722,7 @@
                                 <select class="form-select-custom" id="firmaAutoriza"
                                         name="firmaAutoriza" required>
                                 </select>
-                                <div class="modal-error-msg">
+                                <div class="modal-error-msg invalid-feedback">
                                     <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor seleccione el nombre de quien recibe.
                                 </div>
                             </div>
@@ -772,7 +793,7 @@
                                 <option value="obsoleto">Obsoleto</option>
                                 <option value="no_coincide">La refacción no coincide</option>
                             </select>
-                            <div class="modal-error-msg">⚠️ Por favor selecciona el motivo de rechazo.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Por favor selecciona el motivo de rechazo.</div>
                         </div>
 
                         <!-- Comentarios -->
@@ -866,7 +887,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="nombreProv" name="Solicitante"
                                        placeholder="Nombre del proveedor" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese el nombre del proveedor.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese el nombre del proveedor.</div>
                                 <div class="list-group position-absolute col-12 col-md-4 d-none" id="acNombre"></div>
                             </div>
 
@@ -876,7 +897,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="codigoProv" name="Proveedor"
                                        placeholder="Código de proveedor" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese el código del proveedor.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese el código del proveedor.</div>
                             </div>
 
                             <div class="col-12 col-md-4 position-relative">
@@ -885,7 +906,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="ordenCompra" name="Orden Compra"
                                        placeholder="Orden de compra" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese la orden de compra.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese la orden de compra.</div>
                                 <div class="list-group position-absolute col-12 col-md-12 d-none" id="acOC"></div>
                             </div>
 
@@ -895,7 +916,7 @@
                                 </label>
                                 <input type="date" class="form-control-custom" id="FechaCount"
                                        name="Fecha contabilización" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese una fecha.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese una fecha.</div>
                             </div>
 
                             <div class="col-12 col-md-4">
@@ -904,7 +925,7 @@
                                 </label>
                                 <input type="date" class="form-control-custom" id="FechaV"
                                        name="Fecha vencimiento" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese la fecha de vencimiento.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese la fecha de vencimiento.</div>
                             </div>
 
                             <div class="col-12 col-md-4">
@@ -913,7 +934,7 @@
                                 </label>
                                 <input type="date" class="form-control-custom" id="FechaDoc"
                                        name="Fecha documento" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese la fecha del documento.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese la fecha del documento.</div>
                             </div>
 
                             <div class="col-12 col-md-4">
@@ -922,7 +943,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="NoEntrada"
                                        name="Número Entrada" readonly required value="231244">
-                                <div class="modal-error-msg">⚠️ Campo requerido.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Campo requerido.</div>
                             </div>
 
                             <div class="col-12 col-md-8">
@@ -1137,7 +1158,7 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div class="modal-error-msg" id="errorArticulosMP" style="display: none;">
+                                    <div class="modal-error-msg invalid-feedback" id="errorArticulosMP" style="display: none;">
                                         <img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Agregue al menos un artículo a la solicitud.
                                     </div>
                                 </div>
@@ -1160,7 +1181,7 @@
                                               class="form-control-custom validacion" id="RdescripcionNecesidad"
                                               rows="3" placeholder="Describa por qué necesita esta refacción..."
                                               autocomplete="on"></textarea>
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa por qué necesita la refacción.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa por qué necesita la refacción.</div>
                                 </div>
                             </div>
                         </div>*@
