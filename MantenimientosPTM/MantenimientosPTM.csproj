@@ -135,6 +135,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\BundleConfig.cs" />
+    <Compile Include="App_Start\BundleConfig2.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\Startup.cs" />
@@ -160,12 +161,16 @@
     <Compile Include="Models\AccesoDatos\AccesoDatosMantenimientosCorrectivos.cs" />
     <Compile Include="Models\AccesoDatos\AccesoDatosMantenimientosPreventivos.cs" />
     <Compile Include="Models\AccesoDatos\AccesoDatosEquipos.cs" />
+    <Compile Include="Models\AccesoDatos\AccesoDatosPTM.cs" />
     <Compile Include="Models\AccesoDatos\LoginServiceLayer.cs" />
     <Compile Include="Models\Dto\PlanProduccionDto.cs" />
+    <Compile Include="Models\Dto\PTMRequestDTO.cs" />
+    <Compile Include="Models\Dto\PTMResponseDTO.cs" />
     <Compile Include="Models\GlobalCommands.cs" />
     <Compile Include="Models\LogicaNegocio\EmailNotificationService.cs" />
     <Compile Include="Models\LogicaNegocio\LogicaAlmacen.cs" />
     <Compile Include="Models\LogicaNegocio\LogicaMetricas.cs" />
+    <Compile Include="Models\LogicaNegocio\LogicaOCFacturacion.cs" />
     <Compile Include="Models\LogicaNegocio\LogicaPlaneacion.cs" />
     <Compile Include="Models\LogicaNegocio\LogicaProduccion.cs" />
     <Compile Include="Models\LogicaNegocio\LogicaMantenimientosCorrectivos.cs" />
@@ -207,6 +212,7 @@
     <Content Include="Content\Images\adios.gif" />
     <Content Include="Content\Images\alerta.gif" />
     <Content Include="Content\Images\ok.gif" />
+    <Content Include="Content\Images\PAC.png" />
     <Content Include="Content\Images\user.png" />
     <Content Include="Content\ParosProduccion.css" />
     <Content Include="Content\Images\LogoPTMWhite.png" />
@@ -2845,11 +2851,13 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
+    <Folder Include="Data\" />
     <Folder Include="EvidenciaRutinas\" />
     <Folder Include="FirmasOTCorrectivo\" />
     <Folder Include="FirmasOTPreventivo\" />
     <Folder Include="Models\Mapping\" />
     <Folder Include="SolicitudesBaja\" />
+    <Folder Include="Views\ObtencionFacturasPTM\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

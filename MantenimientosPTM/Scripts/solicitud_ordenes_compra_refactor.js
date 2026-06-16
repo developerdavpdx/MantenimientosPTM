@@ -144,6 +144,7 @@ class SolicitudCompraApp {
             const btn = $(event.currentTarget);
             const IdSolicitudCompra = btn.data('id');
             const FolioCompra = btn.data('folio');
+            const OrdenCompra = btn.data('ot');
 
             $('#subtitleRequisicion').html(
                 `<i class="bi bi-cash-stack me-1"></i> Folio: <strong>${FolioCompra}</strong>`
@@ -165,6 +166,15 @@ class SolicitudCompraApp {
                     AlertManager.mostrar('No se encontraron artículos para esta solicitud.', 'warning');
                     return;
                 }
+
+                //Se realiza la peticion para obtener las facturas
+                const responseFacturas = await $.ajax({
+                    url: `/${this.URLBase}/ObtenerFacturasPTM`,
+                    type: 'GET',
+                    data: {
+                        oc: OrdenCompra 
+                    }
+                });
 
                 // ✅ Agrupar por CodigoArticulo
                 const agrupados = Object.values(
@@ -192,25 +202,25 @@ class SolicitudCompraApp {
                         .join('');
 
                     $('#bodyRequisicionArticulos').append(`
-                <tr data-idsdetalle='${JSON.stringify(item.IdsDetalle)}'
-                    data-codigoarticulo="${item.CodigoArticulo}">
-                    <td class="text-left">${ordenesBadges}</td>
-                    <td class="text-center">
-                        <small class="fw-semibold text-muted">${item.CodigoArticulo || ''}</small>
-                    </td>
-                    <td>${item.NombreArticulo || 'N/A'}</td>
-                    <td class="text-center fw-semibold">${item.CantidadEncargar || 0}</td>
-                    <td>
-                        <div class="sol-buscar-proveedor-wrap">
-                            <input type="text" class="form-control-custom sol-buscar-proveedor"
-                                   id="BuscarProveedor_${i}" placeholder="Buscar proveedor..." autocomplete="off">
-                            <div id="sugerenciasProveedor_${i}" class="autocomplete-sugerencias-proveedores"></div>
-                            <input type="hidden" id="CodigoProveedor_${i}" class="sol-codigo-proveedor">
-                            <input type="hidden" id="NombreProveedor_${i}" class="sol-nombre-proveedor">
-                        </div>
-                    </td>
-                </tr>
-            `);
+                        <tr data-idsdetalle='${JSON.stringify(item.IdsDetalle)}'
+                            data-codigoarticulo="${item.CodigoArticulo}">
+                            <td class="text-left">${ordenesBadges}</td>
+                            <td class="text-center">
+                                <small class="fw-semibold text-muted">${item.CodigoArticulo || ''}</small>
+                            </td>
+                            <td>${item.NombreArticulo || 'N/A'}</td>
+                            <td class="text-center fw-semibold">${item.CantidadEncargar || 0}</td>
+                            <td>
+                                <div class="sol-buscar-proveedor-wrap">
+                                    <input type="text" class="form-control-custom sol-buscar-proveedor"
+                                           id="BuscarProveedor_${i}" placeholder="Buscar proveedor..." autocomplete="off">
+                                    <div id="sugerenciasProveedor_${i}" class="autocomplete-sugerencias-proveedores"></div>
+                                    <input type="hidden" id="CodigoProveedor_${i}" class="sol-codigo-proveedor">
+                                    <input type="hidden" id="NombreProveedor_${i}" class="sol-nombre-proveedor">
+                                </div>
+                            </td>
+                        </tr>
+                    `);
 
                     const gestion = new GestionProveedores({
                         inputBuscar: `#BuscarProveedor_${i}`,
@@ -236,6 +246,139 @@ class SolicitudCompraApp {
                             gestion.ocultarSugerencias();
                         }
                     });
+
+                    //Se comienzan a colocar las cards mostrando las facturas ligadas a OC
+                    //Parseamos la data obtenida
+                    const dataFacturas = JSON.parse(responseFacturas.Data);
+                    const facturas = dataFacturas.data.facturas; //Obtenemos las facturas
+                    let htmlFacturas = '';
+                    let badgeEstado = 'bg-success';
+
+                    facturas.forEach(f => {
+
+                        //Seleccion tipo de estado de factura
+                        switch (f.estado.toLowerCase()) {
+
+                            case 'registrada':
+                                badgeEstado = 'bg-success';
+                                break;
+
+                            case 'pendiente':
+                                badgeEstado = 'bg-warning text-dark';
+                                break;
+
+                            case 'rechazada':
+                                badgeEstado = 'bg-danger';
+                                break;
+                        }
+
+                        htmlFacturas += `
+                             <div class="col-12 col-md-6 col-xl-4">
+                                <div class="card cards-facturas border-0 rounded-4 factura-card h-100">
+                                    <!-- ENCABEZADO -->
+                                    <div class="card-header text-white border-0 py-3">
+                                        <div class="form-check contenedor-checkFactura">
+                                            
+                                            <div class="factura-id">
+                                                ID: ${f.id}
+                                            </div>
+                                            <input class="form-check-input mb-2 me-1 radio-factura"
+                                                    type="radio"
+                                                    name="facturaSeleccionada"
+
+                                                    data-id="${f.id}"
+                                                    data-factura="${f.uuid}"
+                                                    data-oc="${f.oc}"
+                                                    data-folio="${f.folio}"
+                                                    data-total="${f.total}"
+                                                    data-rfcEmisor="${f.rfcEmisor}"
+                                                    id="radioFactura_${f.folio}">
+
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            
+                                            <div>
+                                                <div class="factura-title mb-1">
+                                                    FACTURA ELECTRÓNICA
+                                                </div>
+
+                                                <small class="factura-Emisor">
+                                                    RFC Emisor: ${f.rfcEmisor}
+                                                </small>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="fw-bold">${f.folio}</div>
+
+                                                <span class="badge ${badgeEstado} rounded-pill mt-2 pb-2">
+                                                    ${f.estado}
+                                                </span>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+
+                                    <!-- BODY -->
+                                    <div class="card-body">
+
+                                        <div class="row g-3">
+
+                                            <!-- PROVEEDOR -->
+                                            <div class="col-12">
+                                                <small class="text-muted d-block">
+                                                    Proveedor:
+                                                </small>
+                                                <div class="fw-semibold">
+                                                   ${f.razon}
+                                                </div>
+                                            </div>
+                                            <!-- OC -->
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">
+                                                    Orden de Compra:
+                                                </small>
+                                                <div class="fw-semibold">
+                                                    ${f.oc}
+                                                </div>
+                                            </div>
+                                            <!-- FECHA -->
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">
+                                                    Fecha:
+                                                </small>
+                                                <div class="fw-semibold">
+                                                    ${f.fechaFactura}
+                                                </div>
+                                            </div>
+
+                                            <!-- MONEDA -->
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Moneda:</small>
+                                                <div class="fw-semibold">${f.moneda}</div>
+                                            </div>
+
+                                        </div>
+
+                                        <!-- TOTAL -->
+                                        <div class="factura-area-total p-3 mt-4">
+                                            <div class="text-muted small">TOTAL</div>
+                                            <div class="fs-3 fw-bold text-success ms-3">$${this.formatearImporte(f.total)}</div>
+                                        </div>
+
+                                    </div>
+
+                                    <!-- UUID -->
+                                    <div class="card-footer pb-3">
+                                        <div class="small text-muted fw-semibold">UUID:</div>
+                                        <small class="text-break factura-uuid ms-3">${f.uuid}</small>
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        `;
+                    });
+                    $('#contenedorFacturas').html(htmlFacturas);
+
                 });
 
                 $('#SolcitarModal').modal('show');
@@ -245,6 +388,9 @@ class SolicitudCompraApp {
                 console.error(error);
             }
         });
+
+        
+
 
         //COMPLETAR SOLICITUD DE COMPRA
         $("#completeSolCompra").on("click", async () => {
@@ -391,6 +537,13 @@ class SolicitudCompraApp {
         }
     }
 
+    formatearImporte(total) {
+        return Number(total).toLocaleString('es-MX', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
 
     _recargarTabla() {
         if ($.fn.DataTable.isDataTable('#tablaSolicitudesCompra')) {
@@ -399,6 +552,8 @@ class SolicitudCompraApp {
             this.compraManager.llenarSolicitudesCompra();
         }
     }
+
+
 }
 
 // ========================================
@@ -577,6 +732,7 @@ class CompraManager {
                         <button class="btn btn-sm btn-ptm-rutina btn-aprobar"
                             data-id="${row.IdSolicitudCompra}"
                             data-folio="${row.FolioCompra}"
+                            data-OT="${row.OrdenTrabajo}"
                             title="Generar Requisición">
                             <i class="bi bi-cart-check"></i>
                         </button>`;

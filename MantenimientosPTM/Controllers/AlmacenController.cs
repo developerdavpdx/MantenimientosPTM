@@ -1,5 +1,7 @@
 using log4net;
 using MantenimientosPTM.Hubs;
+using MantenimientosPTM.Models.Dto;
+using MantenimientosPTM.Models.LogicaNegocio;
 using MantenimientosPTM.Service.Email.Implementations;
 using MantenimientosPTM.Service.Email.Models;
 using Microsoft.AspNet.SignalR;
@@ -2472,7 +2474,59 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        [HttpGet]
+        public JsonResult ObtenerFacturasPTM(string oc)
+        {
+            var response = new GlobalCommands.JsonResponseMtto();
 
+            try
+            {
+                var resultado = new LogicaOCFacturacion().ObtenerFacturasPorOC(oc);
+
+                response.Status = "OK";
+                response.Message = "Consulta exitosa";
+
+                //Datos temporales para la carga de facturas 
+                resultado.data.facturas.Add(new PTMFacturaDto
+                {
+                    id = "1501",
+                    oc = "OC-12345",
+                    folio = "FAC-001",
+                    uuid = "2A4B6C8D-0001",
+                    rfcEmisor = "AAA010101AAA",
+                    razon = "Proveedor Demo SA de CV",
+                    total = "15000.0000",
+                    moneda = "MXN",
+                    fechaFactura = "2026-04-20 00:00:00.000",
+                    estado = "Registrada"
+                });
+
+                resultado.data.facturas.Add(new PTMFacturaDto
+                {
+                    id = "1502",
+                    oc = "OC-12345",
+                    folio = "FAC-002",
+                    uuid = "2A4B6C8D-0002",
+                    rfcEmisor = "AAA010101AAA",
+                    razon = "Proveedor Demo SA de CV",
+                    total = "8200.0000",
+                    moneda = "MXN",
+                    fechaFactura = "2026-04-21 00:00:00.000",
+                    estado = "Pendiente"
+                });
+
+                response.Data = JsonConvert.SerializeObject(resultado);
+            }
+            catch (Exception ex)
+            {
+                response.Status = "ERROR";
+                response.Message = ex.Message;
+                response.Data = "";
+            }
+
+            return Json(response, JsonRequestBehavior.AllowGet);
+
+        }
 
 
         #endregion

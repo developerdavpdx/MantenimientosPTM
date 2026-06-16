@@ -68,6 +68,7 @@ class GestionEventosApp {
             }
         });
     }
+
     //CALENDAR MANAGER
     configurarEventosCalendarManager() {
         $('#btnGuardarEvento').on('click', (e) => this.calendarManager.guardarPlan(e));
