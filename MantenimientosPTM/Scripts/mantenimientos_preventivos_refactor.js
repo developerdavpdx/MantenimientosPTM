@@ -1097,9 +1097,11 @@ class MantenimientoManager {
                     $(row).attr('data-area', data.Area);
                     $(row).attr('data-linea', data.LineaProduccion);
                     $(row).attr('data-periodicidad', data.PeriodicidadMantenimiento);
+                    $(row).attr('data-id-periodicidad', data.IdPeriodicidad);
 
                     $(row).data('mantenimiento-completo', {
                         idEquipo: data.IdEquipo,
+                        idPeriodicidad: data.IdPeriodicidad,
                         nombreEquipo: (data.NombreEquipo + ' ' + data.NumeroDocPmCalidad),
                         descripcionEquipo: data.DescripcionEquipo,
                         area: data.Area,
@@ -1118,9 +1120,9 @@ class MantenimientoManager {
 
                     table.columns.adjust();
 
-                    // 🔥 Corregir ancho del empty table
                     const api = this.api();
 
+                    // 🔥 Corregir ancho del empty table
                     if (api.data().count() === 0) {
 
                         const totalColumnas = api.columns().visible().reduce((a, b) => a + (b ? 1 : 0), 0);
@@ -1131,7 +1133,47 @@ class MantenimientoManager {
                                 'text-align': 'center',
                                 'width': '100%'
                             });
+
+                        return;
                     }
+
+                    // =====================================
+                    // Detectar mantenimientos coincidentes
+                    // =====================================
+
+                    let grupos = {};
+
+                    api.rows({ page: 'current' }).every(function () {
+
+                        let data = this.data();
+
+                        let llave =
+                            data.IdEquipo + '|' +
+                            data.FechaInicioMantenimiento + '|' +
+                            data.FechaFinMantenimiento;
+
+                        if (!grupos[llave]) {
+                            grupos[llave] = [];
+                        }
+
+                        grupos[llave].push(this.node());
+
+                    });
+
+                    Object.keys(grupos).forEach(function (key) {
+
+                        if (grupos[key].length > 1) {
+
+                            grupos[key].forEach(function (row) {
+
+                                $(row).addClass('mp-periodicidad-duplicada');
+
+                            });
+
+                        }
+
+                    });
+
                 }
             });
 
@@ -1422,6 +1464,7 @@ class MantenimientoManager {
                 const datosCompletos = fila.data('mantenimiento-completo');
                 return {
                     IdEquipo: datosCompletos.idEquipo,
+                    IdPeriodicidad: datosCompletos.idPeriodicidad,
                     NombreEquipo: datosCompletos.nombreEquipo,
                     FechaInicioMantenimiento: datosCompletos.fechaInicioMantenimiento,  // ✅ NUEVO
                     FechaFinMantenimiento: datosCompletos.fechaFinMantenimiento,         // ✅ NUEVO

@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Sap.Data.Hana;
 using System;
 using System.Collections.Generic;
@@ -24,6 +23,65 @@ namespace MantenimientosPTM.Controllers
         #endregion
 
         #region Endpoints
+        [HttpPost]
+        public JsonResult InsertaEquiposProduccion()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            AccesoDatosEquipos.EquipoMTTO RequestData;
+
+            try
+            {
+                // Leer el cuerpo de la solicitud JSON
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    // Deserializar JSON al modelo EquipoMTTO
+                    RequestData = JsonConvert.DeserializeObject<AccesoDatosEquipos.EquipoMTTO>(jsonData);
+                }
+
+                // Convertir modelo a parámetros HANA
+                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null); // true para que agregue P_
+                var excludedParams = new[] { "P_IDEQUIPO", "P_PERIODICIDADESMANTENIMIENTO" }; // Cambié a mayúsculas
+                var parameters = allparameters
+                    .Where(p => !excludedParams.Contains(p.Key))
+                    .ToDictionary(p => p.Key, p => p.Value);
+
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertaEquipo, parameters);
+                // Ejecutar stored procedure para insertar equipo
+
+                // Obtener ID generado si existe
+                var nuevoId = resultHana.JsonResult;
+
+                foreach (var periodicidad in RequestData.PeriodicidadesMantenimiento)
+                {
+                    var paramPeriodicidad = Logic.GlobalCommands.ConvertToHanaParameters(new AccesoDatosEquipos.PeriodicidadEquipoMTTO { IdPeriodicidad = periodicidad, IdEquipo = int.Parse(nuevoId),Usuario = RequestData.Usuario }, true, null);
+
+                    Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCInsertaPeriodicidadesEquipo,
+                        paramPeriodicidad
+                    );
+                }
+
+                // Construir respuesta JSON
+                jsonResponse.Status = nuevoId != null ? "SI" : "NO";
+                jsonResponse.Message = nuevoId != null ? "Equipo insertado correctamente." : "No se pudo insertar el equipo.";
+                jsonResponse.Data = nuevoId;
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible generar el equipo: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+        }
 
         [HttpPost]
         public JsonResult InsertarLinea()
@@ -132,105 +190,6 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpPost]
-        public JsonResult InsertaEquiposProduccion()
-        {
-            var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            AccesoDatosEquipos.EquipoMTTO RequestData;
-
-            try
-            {
-                // Leer el cuerpo de la solicitud JSON
-                Request.InputStream.Position = 0;
-                using (var reader = new StreamReader(Request.InputStream))
-                {
-                    string jsonData = reader.ReadToEnd();
-                    if (string.IsNullOrEmpty(jsonData))
-                        throw new Exception("No se recibió información.");
-
-                    // Deserializar JSON al modelo EquipoMTTO
-                    RequestData = JsonConvert.DeserializeObject<AccesoDatosEquipos.EquipoMTTO>(jsonData);
-                }
-
-                // Convertir modelo a parámetros HANA
-                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null); // true para que agregue P_
-                var excludedParams = new[] { "P_IDEQUIPO", "P_PERIODICIDADESMANTENIMIENTO" }; // Cambié a mayúsculas
-                var parameters = allparameters
-                    .Where(p => !excludedParams.Contains(p.Key))
-                    .ToDictionary(p => p.Key, p => p.Value);
-
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertaEquipo, parameters);
-
-                if (resultHana.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    jsonResponse = new GlobalCommands.JsonResponseMtto()
-                    {
-                        Status = "ERROR",
-                        Message = "No fue posible insertar el equipo: " + resultHana.JsonResult,
-                        Data = string.Empty
-                    };
-                    return Json(jsonResponse);
-                }
-
-                // Ejecutar stored procedure para insertar equipo
-
-                // Obtener ID generado si existe
-                var nuevoId = resultHana.JsonResult;
-                int IdEquipo = int.Parse(JArray.Parse(nuevoId)[0]["ID_EQUIPO"].ToString());
-                bool errorPeriodicidad = false;
-                foreach (var periodicidad in RequestData.PeriodicidadesMantenimiento)
-                {
-                    try
-                    {
-                        var paramPeriodicidad = Logic.GlobalCommands.ConvertToHanaParameters(new AccesoDatosEquipos.PeriodicidadEquipoMTTO { Id_Periodicidad = periodicidad, Id_Equipo = IdEquipo, Usuario = RequestData.Usuario }, true, null);
-
-                        var resultHanaPeriodicidad = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                            Logic.AD.GCInsertaPeriodicidadesEquipo,
-                            paramPeriodicidad
-                        );
-
-                        if (resultHanaPeriodicidad.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            errorPeriodicidad = true;
-                            break;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        errorPeriodicidad = true;
-                        break;
-                    }
-                }
-
-                if (errorPeriodicidad)
-                {
-                    jsonResponse = new GlobalCommands.JsonResponseMtto()
-                    {
-                        Status = "ERROR",
-                        Message = "El equipo fue insertado pero no fue posible guardar su periodicidad:",
-                        Data = string.Empty
-                    };
-                    return Json(jsonResponse);
-                }
-
-
-                // Construir respuesta JSON
-                jsonResponse.Status = nuevoId != null ? "SI" : "NO";
-                jsonResponse.Message = nuevoId != null ? "Equipo insertado correctamente." : "No se pudo insertar el equipo.";
-                jsonResponse.Data = nuevoId;
-
-                return Json(jsonResponse);
-            }
-            catch (Exception ex)
-            {
-                jsonResponse.Status = "ERROR";
-                jsonResponse.Message = "No fue posible generar el equipo: " + ex.Message;
-                jsonResponse.Data = string.Empty;
-
-                return Json(jsonResponse);
-            }
-        }
-
-        [HttpPost]
         public JsonResult AcualizaEquiposProduccion()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
@@ -251,14 +210,7 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
-                var excludedParams = new[]
-                {
-                    "P_ESTATUS",
-                    "P_USUARIO",
-                    "P_FECHAPAUSA",
-                    "P_FECHABAJA",
-                    "P_PERIODICIDADESMANTENIMIENTO"
-                };
+                var excludedParams = new[] { "P_ESTATUS", "P_USUARIO", "P_FECHAPAUSA", "P_FECHABAJA" };
                 var parameters = allparameters
                     .Where(p => !excludedParams.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value);
@@ -276,75 +228,10 @@ namespace MantenimientosPTM.Controllers
 
                 else
                 {
-                    bool errorPeriodicidad = false;
-
-                    try
-                    {
-                        // Eliminar periodicidades actuales
-                        var parametrosEliminar = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
-                        {
-                            { "P_ID_EQUIPO", (RequestData.IdEquipo, ParameterDirection.Input, HanaDbType.Integer) },
-                        };
-
-                        var resultEliminar = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                            Logic.AD.GCEliminarPeriodicidadesEquipo,
-                            parametrosEliminar
-                        );
-
-                        if (resultEliminar.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            errorPeriodicidad = true;
-                        }
-
-                        // Insertar las nuevas periodicidades
-                        if (!errorPeriodicidad)
-                        {
-                            foreach (var periodicidad in RequestData.PeriodicidadesMantenimiento)
-                            {
-                                var paramPeriodicidad =
-                                    Logic.GlobalCommands.ConvertToHanaParameters(
-                                        new AccesoDatosEquipos.PeriodicidadEquipoMTTO
-                                        {
-                                            Id_Periodicidad = periodicidad,
-                                            Id_Equipo = RequestData.IdEquipo,
-                                            Usuario = RequestData.Usuario
-                                        },
-                                        true,
-                                        null
-                                    );
-
-                                var resultPeriodicidad =
-                                    Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                                        Logic.AD.GCInsertaPeriodicidadesEquipo,
-                                        paramPeriodicidad
-                                    );
-
-                                if (resultPeriodicidad.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
-                                {
-                                    errorPeriodicidad = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        errorPeriodicidad = true;
-                    }
-
-                    if (errorPeriodicidad)
-                    {
-                        jsonResponse.Status = "ERROR";
-                        jsonResponse.Message =
-                            "El equipo fue actualizado, pero ocurrió un problema al actualizar las periodicidades.";
-                        jsonResponse.Data = string.Empty;
-                    }
-                    else
-                    {
-                        jsonResponse.Status = "SI";
-                        jsonResponse.Message = "Equipo actualizado correctamente";
-                        jsonResponse.Data = string.Empty;
-                    }
+                    // Construir respuesta JSON
+                    jsonResponse.Status = "SI";
+                    jsonResponse.Message = $"Equipo actualizado correctamente";
+                    jsonResponse.Data = string.Empty;
                 }
 
                 return Json(jsonResponse);

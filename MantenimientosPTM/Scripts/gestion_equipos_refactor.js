@@ -376,7 +376,7 @@ class EquipoManager {
         EquiposUtil.llenarProcesos(this.PLANTA, "Area", "FiltroProceso");
         EquiposUtil.llenarRangoDias();
         this.inicializarCorreos(); // 🔥 AGREGAR AQUÍ
-        this.llenarPeriodicidad("PeriodicidadMantenimiento");
+        this.llenarPeriodicidad("PeriodicidadesMantenimiento");
         console.log('✅ EquipoManager inicializada correctamente');
     }
 
@@ -728,20 +728,26 @@ class EquipoManager {
                     {
                         data: null,
                         render: function (data, type, row) {
-                            if (row.PeriodicidadMantenimiento != "") {
-                                return `<i class="bi bi-calendar-week me-1 text-muted"></i>
-            ${DateUtils.formatearPeriodicidad(
-                                    row.PeriodicidadMantenimiento,
-                                    row.DiaInicioMant,
-                                    row.DiaFinMant,
-                                    row.FechaInicioMant
-                                )}`;
-                            }
-                            else {
+
+                            if (!row.PeriodicidadMantenimiento) {
                                 return `<i class="bi bi-calendar-week me-1 text-muted"></i> N/A`;
                             }
 
+                            let periodicidades = row.PeriodicidadMantenimiento
+                                .split(',')
+                                .map(x => x.trim())
+                                .filter(x => x);
 
+                            let html = periodicidades.map(p =>
+                                `<div class="d-flex mb-2">
+                                <i class="bi bi-calendar-week me-1 text-muted"></i>
+                                    <span class="badge bg-blue-ptm badge-custom">
+                                        ${p} (${row.DiaInicioMant}-${row.DiaFinMant})
+                                    </span>
+                                </div>`
+                            ).join('');
+
+                            return `${html}`;
                         }
                     },
 
@@ -954,7 +960,6 @@ class EquipoManager {
                     }
 
                     selectElement.empty();
-                    selectElement.append('<option value="">Seleccionar periodicidad...</option>');
 
                     periodicidadData.forEach(p => {
                         selectElement.append(
@@ -979,15 +984,26 @@ class EquipoManager {
 
     // Método auxiliar para cargar datos de periodicidad
     cargarPeriodicidad(periodicidadData) {
-        if (!periodicidadData || !periodicidadData.tipo) return;
 
-        const periodicidadTipo = periodicidadData.id.toLowerCase();
+        if (!periodicidadData || !periodicidadData.id) return;
 
-        // Seleccionar el tipo de periodicidad
-        $('#PeriodicidadMantenimiento').val(periodicidadTipo).trigger('change');
-        $('#FechaInicioMant').val(this.convertirFechaParaInput(periodicidadData.fecha));
-        $('#DiaInicioMant').val(periodicidadData.inicio);
-        $('#DiaFinMant').val(periodicidadData.fin);
+        let periodicidades = periodicidadData.id
+            .split(',')
+            .map(x => x.trim())
+            .filter(x => x !== '');
+
+        $('#PeriodicidadesMantenimiento')
+            .val(periodicidades)
+            .trigger('change');
+
+        $('#FechaInicioMant')
+            .val(this.convertirFechaParaInput(periodicidadData.fecha));
+
+        $('#DiaInicioMant')
+            .val(periodicidadData.inicio);
+
+        $('#DiaFinMant')
+            .val(periodicidadData.fin);
     }
 
     // Método auxiliar para convertir fecha de DD/MM/YYYY a YYYY-MM-DD

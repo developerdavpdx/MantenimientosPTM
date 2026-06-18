@@ -844,7 +844,7 @@ footer {
     letter-spacing: 2px;
     animation: flicker 1.5s infinite;
     font-family: "Segoe UI", sans-serif;
-    font-weight:bold;
+    font-weight: bold;
 }
 
 /* 🌟 Glow central */
@@ -940,6 +940,7 @@ footer {
     gap: 8px;
     padding: 8px 12px;
 }
+
 .sugerencia-item-empty {
     position: relative;
     display: block;
@@ -1048,4 +1049,12 @@ footer {
     margin-top: 8px;
     animation: pulso 1.5s infinite;
     position: absolute;
+}
+
+.mp-periodicidad-duplicada {
+    background-color: #fff3cd !important;
+}
+
+.mp-periodicidad-duplicada td {
+    background-color: #fff3cd !important;
 }

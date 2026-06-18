@@ -1,7 +1,9 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
+using System.Linq;
 
 namespace MantenimientosPTM
 {
@@ -15,6 +17,13 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertaEquipo\"";
             }
         }
+        public string GCInsertaPeriodicidadesEquipo
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarPeriodicidadEquipo\"";
+            }
+        }
         public string GCActualizaEquipo
         {
             get
@@ -22,6 +31,14 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOActualizaEquipo\"";
             }
         }
+        public string GCEliminarPeriodicidadesEquipo
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarPeriodicidadesEquipo\"";
+            }
+        }
+
         public string GCActualizaEstatusEquipo
         {
             get
@@ -194,7 +211,7 @@ namespace MantenimientosPTM
             // IdEquipo
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public int IdEquipo { get; set; }
+            public int? IdEquipo { get; set; }
             // Planta
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -238,7 +255,12 @@ namespace MantenimientosPTM
             // Periodicidad de mantenimiento
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public int PeriodicidadMantenimiento { get; set; }
+            public List<int> PeriodicidadesMantenimiento { get; set; }
+
+            public int PeriodicidadMantenimiento
+            {
+                get { return PeriodicidadesMantenimiento?.FirstOrDefault() ?? 0; }
+            }
 
             // Día de inicio de mantenimiento
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -276,6 +298,21 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(null)]
             public DateTime? FechaBaja { get; set; }
+        }
+        public class PeriodicidadEquipoMTTO
+        {
+            // IdEquipo
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public int? Id_Equipo { get; set; }
+            // IdPeriodicidad
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public int? Id_Periodicidad { get; set; }
+            // Usuario
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public string Usuario { get; set; }
         }
         public class EquipoMTTOLIST
         {

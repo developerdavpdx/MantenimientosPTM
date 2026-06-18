@@ -122,6 +122,10 @@ namespace MantenimientosPTM
             [JsonProperty("PERIODICIDAD_MANTENIMIENTO")]
             public string PeriodicidadMantenimiento { get; set; }
 
+            // Periodicidad de mantenimiento
+            [JsonProperty("ID_PERIODICIDAD")]
+            public string IdPeriodicidad { get; set; }
+
             // Día de inicio de mantenimiento (configurado)
             [JsonProperty("DIA_INICIO_MANT")]
             public int DiaInicioMant { get; set; }
