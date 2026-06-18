@@ -1055,6 +1055,33 @@ footer {
     background-color: #fff3cd !important;
 }
 
-.mp-periodicidad-duplicada td {
-    background-color: #fff3cd !important;
+    .mp-periodicidad-duplicada td {
+        background-color: #fff3cd !important;
+    }
+
+
+.select2-container {
+    z-index: 999999 !important;
+}
+
+.select2-dropdown {
+    z-index: 999999 !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background: #0d6efd !important;
+    border: none !important;
+    color: white !important;
+    border-radius: 20px !important;
+    padding: 4px 15px !important;
+    font-size: 12px !important;
+    font-weight: 600;
+}
+
+.badge-custom {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 14px;
+    white-space: nowrap;
+    margin: 1px;
 }

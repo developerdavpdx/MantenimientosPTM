@@ -337,6 +337,12 @@ class UIManager {
         $("#MantenimientosContainer a").addClass("whiteText");
         $("#mantenimientos-collapse").addClass("show");
         $("#GestionEquiposURL").addClass("selected-item");
+        $('#PeriodicidadesMantenimiento').select2({
+            placeholder: 'Seleccionar periodicidades',
+            width: '100%',
+            closeOnSelect: false,
+            dropdownParent: $('#equipoModal')
+        });
 
         // Ocultar campos inicialmente
         $('#divDiaMantenimiento').hide();
@@ -738,14 +744,14 @@ class EquipoManager {
                                 .map(x => x.trim())
                                 .filter(x => x);
 
-                            let html = periodicidades.map(p =>
-                                `<div class="d-flex mb-2">
-                                <i class="bi bi-calendar-week me-1 text-muted"></i>
+                            let html = `<div class="d-flex flex-wrap justify-content-center gap-1">
+                                ${periodicidades.map(p => `
                                     <span class="badge bg-blue-ptm badge-custom">
+                                    <i class="bi bi-calendar-week me-1 text-white"></i>
                                         ${p} (${row.DiaInicioMant}-${row.DiaFinMant})
                                     </span>
-                                </div>`
-                            ).join('');
+                                `).join('')}
+                            </div>`;
 
                             return `${html}`;
                         }
