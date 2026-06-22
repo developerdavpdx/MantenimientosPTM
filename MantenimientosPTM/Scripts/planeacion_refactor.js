@@ -307,7 +307,7 @@ class PlaneacionManager {
 
         // ✅ NUEVO: estado interno de paginación de cards
         this._cardsPagina = 1;
-        this._cardsPorPagina = 6; // ajusta a tu gusto
+        this._cardsPorPagina = 12; // ajusta a tu gusto
         this._cardsTotal = 0;
 
         EquiposUtil.llenarLineas(this.PLANTA, "PlanLinea", "ParoLinea");
@@ -1185,6 +1185,12 @@ class PlaneacionManager {
         const produccionTeorica = $('#ProduccionTeorica').val();
         const produccionReal = $('#ProduccionReal').val();
         const comentarios = $("#Comentarios").val();
+
+        // ❗ Validación: no permitir continuar si no hay código de artículo
+        if (!codigoarticulo || codigoarticulo.trim() === '') {
+            AlertManager.mostrar('Por favor, seleccione un código de artículo valido.', 'warning', 'alertPlanContainer');
+            return false;
+        }
 
         const fechaInicio = new Date(diaInicio);
         const fechaFin = new Date(diaFin);
