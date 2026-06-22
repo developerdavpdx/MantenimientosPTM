@@ -190,6 +190,22 @@ class GestionEventosApp {
             });
         });
 
+        $(document).on('click', '#cardsPlaneacionGrid .btn-act.delupdateplan', (e) => {
+            const btn = $(e.currentTarget);
+            this.calendarManager.eliminarActualizacionPlan({
+                id: btn.data('id'),
+                linea: btn.data('linea'),
+                mes: btn.data('mes'),
+                periodo: btn.data('periodo'),  // ✅
+                articulo: btn.data('articulo'),
+                teorica: btn.data('teorica'),
+                real: btn.data('real'),
+                comentarios: btn.data('comentarios'),
+                fechamov: btn.data('fechamov'),
+                usuario: btn.data('usuario')
+            });
+        });
+
         $("#PlanProceso")
             .off('change')
             .on('change', (e) => {
@@ -216,8 +232,13 @@ class GestionEventosApp {
                     Proceso,
                     1,
                     "FiltroLinea",
-                    null
+                    null,
+                    () => {
+
+                        this.calendarManager.llenarTablaPlanProduccion()
+                    }
                 );
+
             });
 
         $("#PlanLinea")
@@ -651,7 +672,7 @@ class PlaneacionManager {
             </div>
 
             <!-- Historial -->
-            ${this._renderBitacora(d.BITACORA || [])}
+            ${this._renderBitacora(d.BITACORA || [], d)}
 
             <!-- FOOTER -->
             <div class="card-foot">
@@ -732,7 +753,7 @@ class PlaneacionManager {
         el.innerHTML = h;
     }
 
-    _renderBitacora(bitacora = []) {
+    _renderBitacora(bitacora = [], plan = {}) {
 
         // Si no hay registros, no renderiza nada
         if (!bitacora.length) return '';
@@ -892,8 +913,32 @@ class PlaneacionManager {
                         </span>
                     </div>
 
-                    <!-- Detalle -->
+                <!-- Detalle -->
                     ${detalle}
+                    <!-- Acciones (para cualquier ajuste, excepto 'Plan creado') -->
+                    ${c.cls === 'bit-update' ? `
+                    <div class="bit-actions" style="display:flex;justify-content:flex-end;margin-top:12px;">
+
+                        <button class="btn-act delupdateplan"
+                                title="Eliminar actualización"
+                                data-id="${b.ID_BITACORA}"
+                                data-linea="${b.NVO_LINEA_PRODUCCION || plan.LINEA_PRODUCCION_DESC || 'N/A'}"
+                                data-mes="${this._getMesAnio(b.NVO_FECHA_PLAN || plan.FECHA_PLAN_STRING)}"
+                                data-periodo="${(b.NVO_DIA_INICIO_MANT_STR && b.NVO_DIA_FIN_MANT_STR) ? `Del ${b.NVO_DIA_INICIO_MANT_STR} — Al ${b.NVO_DIA_FIN_MANT_STR}` : (plan.DIA_INICIO_MANT_STR || plan.DIA_FIN_MANT_STR ? `Del ${plan.DIA_INICIO_MANT_STR || 0} — Al ${plan.DIA_FIN_MANT_STR || 0}` : '')}"
+                                data-articulo="${b.NVO_ARTICULO || (plan.ARTICULO ? plan.ARTICULO.substring(0, 45) : 'Sin artículo')}"
+                                data-teoricapzs="${(b.NVO_PRODUCCION_TEORICA_PZS !== undefined && b.NVO_PRODUCCION_TEORICA_PZS !== null) ? this._fmtNum(b.NVO_PRODUCCION_TEORICA_PZS) : this._fmtNum(plan.PRODUCCION_TEORICA_PZS || 0)}"
+                                data-teoricakgs="${(b.NVO_PRODUCCION_TEORICA_KGS !== undefined && b.NVO_PRODUCCION_TEORICA_KGS !== null) ? this._fmtNum(b.NVO_PRODUCCION_TEORICA_KGS) : this._fmtNum(plan.PRODUCCION_TEORICA_KGS || 0)}"
+                                data-real="${(b.NVO_PRODUCCION_REAL !== undefined && b.NVO_PRODUCCION_REAL !== null) ? this._fmtNum(b.NVO_PRODUCCION_REAL) : (plan.PRODUCCION_REAL ? this._fmtNum(plan.PRODUCCION_REAL) : '0')}"
+                                data-comentarios="${b.NVO_COMENTARIOS || ''}"
+                                data-fechamov="${b.BIT_FECHA_MOVIMIENTO || ''}"
+                                data-usuario="${b.BIT_USUARIO || ''}"
+                                style="background:#fef9c3;border:1px solid rgba(0,0,0,0.06);padding:6px;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#c62828;">
+
+                            <i class="bi bi-trash3-fill"></i>
+
+                        </button>
+
+                    </div>` : ''}
 
                 </div>
             </div>`;
@@ -960,6 +1005,7 @@ class PlaneacionManager {
                 FiltroFechaFin: $("#FiltroFechaFin").val() || null,
                 FiltroMesAnio: $("#FiltroMesAnio").val() || null,
                 FiltroLinea: $("#FiltroLinea").val() || null,
+                FiltroProceso: $("#FiltroProceso").val() || null,
                 FiltroPlanta: this.PLANTA || null,
             },
             success: (json) => {
@@ -993,13 +1039,34 @@ class PlaneacionManager {
         ConfirmManager.mostrar({
             titulo: `¿Eliminar plan #${id}?`,
             mensaje: `
-            <div style="text-align:left; font-size:0.9rem; line-height:2;">
-                <div><i class="bi bi-diagram-3-fill me-2 text-primary"></i><strong>Línea:</strong> ${linea}</div>
-                <div><i class="bi bi-calendar3 me-2 text-primary"></i><strong>Mes:</strong> ${mes}</div>
-                <div><i class="bi bi-calendar-range me-2 text-primary"></i><strong>Período:</strong> ${periodo}</div>
-                <div><i class="bi bi-box-seam-fill me-2 text-primary"></i><strong>Artículo:</strong> ${articulo}</div>
-                <hr style="margin:8px 0;">
-                <span class="text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Esta acción no se puede deshacer.</span>
+            <div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-hash me-2 text-primary"></i><strong>ID:</strong> ${id}</div>
+                    <div style="min-width:180px;color:#e6f0ff;"><i class="bi bi-diagram-3-fill me-2 text-primary"></i><strong>Línea:</strong> ${linea}</div>
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-calendar3 me-2 text-primary"></i><strong>Mes:</strong> ${mes}</div>
+                    <div style="min-width:220px;color:#e6f0ff;"><i class="bi bi-calendar-range me-2 text-primary"></i><strong>Período:</strong> ${periodo}</div>
+                </div>
+
+                <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <div style="flex:1;min-width:260px;color:#e6f0ff;"><i class="bi bi-box-seam-fill me-2 text-primary"></i><strong>Artículo:</strong> ${articulo}</div>
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-box-fill me-2 text-primary"></i><strong>Prod. teórica:</strong> ${teorica || '0'}</div>
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-graph-up-arrow me-2 text-primary"></i><strong>Prod. real:</strong> ${real || '0'}</div>
+                </div>
+
+                <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:200px;color:#e6f0ff;"><i class="bi bi-building me-2 text-primary"></i><strong>Planta:</strong> ${this.datos_usuario && this.datos_usuario[0] ? this.datos_usuario[0].PLANTA : ''}</div>
+                    <div style="min-width:260px;color:#e6f0ff;"><i class="bi bi-person-circle me-2 text-primary"></i><strong>Usuario:</strong> ${this.datos_usuario && this.datos_usuario[0] ? this.datos_usuario[0].EMAIL : ''}</div>
+                </div>
+
+                <hr style="margin:10px 0;">
+
+                <div style="font-size:0.9rem;color:#fff7d6;">
+                    <strong>Importante:</strong> Al confirmar, se eliminará <strong>el plan completo</strong> #${id} incluyendo todas sus actualizaciones y bitácora asociada. Esta operación es <span style="color:#ff8a80;"><strong>irreversible</strong></span>.
+                </div>
+
+                <div style="margin-top:8px;color:#e6e6e6;font-size:0.88rem;">
+                    Si no estás seguro, cancela y revisa la bitácora o exporta los datos del plan. También puedes eliminar solo una actualización desde el historial si ese es el caso.
+                </div>
             </div>
         `,
             onConfirm: () => {
@@ -1012,6 +1079,71 @@ class PlaneacionManager {
                         ID_PLAN: id,
                         PLANTA: this.datos_usuario[0].PLANTA,
                         USUARIO: this.datos_usuario[0].EMAIL
+                    }),
+                    success: (response) => {
+                        if (response.Status === 'SI') {
+                            AlertManager.mostrar(`Plan #${id} de ${linea} eliminado correctamente`, 'success');
+                            this.cargarCards();
+                        } else {
+                            AlertManager.mostrar(`${response.Message || 'Error al eliminar'}`, 'warning');
+                        }
+                        GlobalUtil.mostrarLoader(false);
+                    },
+                    error: () => {
+                        AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+                        GlobalUtil.mostrarLoader(false);
+                    }
+                });
+            }
+        });
+    }
+
+    eliminarActualizacionPlan({ id, linea, mes, periodo, articulo, teorica, real, comentarios, fechamov, usuario }) {
+        ConfirmManager.mostrar({
+            titulo: `¿Eliminar actualización de plan?`,
+            mensaje: `
+            <div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:180px;color:#e6f0ff;"><i class="bi bi-diagram-3-fill me-2 text-primary"></i><strong>Línea:</strong> ${linea}</div>
+                    <div style="min-width:180px;color:#e6f0ff;"><i class="bi bi-calendar3 me-2 text-primary"></i><strong>Mes:</strong> ${mes}</div>
+                    <div style="min-width:220px;color:#e6f0ff;"><i class="bi bi-calendar-range me-2 text-primary"></i><strong>Período:</strong> ${periodo}</div>
+                </div>
+
+                <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <div style="flex:1;min-width:260px;color:#e6f0ff;"><i class="bi bi-box-seam-fill me-2 text-primary"></i><strong>Artículo:</strong> ${articulo}</div>
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-box-fill me-2 text-primary"></i><strong>Prod. teórica:</strong> ${teorica || '0'}</div>
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-graph-up-arrow me-2 text-primary"></i><strong>Prod. real:</strong> ${real || '0'}</div>
+                </div>
+
+                <div style="margin-top:8px;color:#e6f0ff;">
+                    <i class="bi bi-clock-history me-2 text-primary"></i><strong>Fecha movimiento:</strong> ${fechamov || ''}
+                </div>
+
+                ${comentarios ? `<div style="margin-top:8px;color:#e6f0ff;"><i class="bi bi-chat-left-text me-2 text-primary"></i><strong>Comentarios:</strong> ${String(comentarios).replace(/\n/g, '<br>')}</div>` : ''}
+
+                <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:200px;color:#e6f0ff;"><i class="bi bi-building me-2 text-primary"></i><strong>Planta:</strong> ${this.datos_usuario && this.datos_usuario[0] ? this.datos_usuario[0].PLANTA : ''}</div>
+                </div>
+
+                <hr style="margin:10px 0;">
+
+                <div style="font-size:0.9rem;color:#fff7d6;">
+                    <strong>Nota:</strong> Al confirmar, se eliminará la actualización plan. Esta operación es <span style="color:#ff8a80;"><strong>irreversible</strong></span>.
+                </div>
+
+                <div style="margin-top:8px;color:#e6e6e6;font-size:0.88rem;">
+                    Revisa cuidadosamente la información anterior antes de continuar.
+                </div>
+            </div>
+        `,
+            onConfirm: () => {
+                GlobalUtil.mostrarLoader(true);
+                $.ajax({
+                    url: `/${this.URLBase}/EliminarBitacoraPlanProduccion`,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        IDBITACORA: id
                     }),
                     success: (response) => {
                         if (response.Status === 'SI') {
@@ -1184,9 +1316,11 @@ class PlaneacionManager {
     abrirModalAgregarPlan(e) {
         e.preventDefault();
         this.llenarDiasDelMes();
+        ValidationManager.limpiarValidacion('#eventForm'); // AGREGAR ESTA LÍNEA
+        $('#eventForm')[0].reset();
         $('#PlanLinea').prop("disabled", false);
+        $('#PlanProceso').prop("disabled", false);
         $('#IdPlanEditar').val('');
-        $("#eventForm")[0].reset();
         $("#PlanCap").val(Math.floor(Math.random() * (50 - 10 + 1)) + 10);
         $('#addEventModal').modal('show');
     }
@@ -1263,7 +1397,7 @@ class PlaneacionManager {
                 }
 
                 // ── Proceso ──────────────────────────────────────────────────────────
-                $('#PlanProceso').val(datos.ID_PROCESO);
+                $('#PlanProceso').val(datos.ID_PROCESO).prop('disabled', true);;
 
                 // ── Línea ────────────────────────────────────────────────────────────
                 EquiposUtil.llenarLineas(

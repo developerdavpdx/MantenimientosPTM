@@ -1878,6 +1878,8 @@ class EquiposUtil {
 
                 this.hideSelectLoader(Fieldoptiongroup);
                 this.hideSelectLoader(Fieldfilter);
+                selectElement.empty();
+                FiltroLinea.empty();
 
                 if (data.Status === 'OK') {
 
@@ -1890,9 +1892,6 @@ class EquiposUtil {
                             console.warn('No se pudo parsear Data:', e);
                         }
                     }
-
-                    selectElement.empty();
-                    FiltroLinea.empty();
 
                     selectElement.append('<option value="">Todas las líneas</option>');
                     // selectElement.prop("disabled", false);
@@ -1924,10 +1923,6 @@ class EquiposUtil {
                     });
 
 
-                    if (callback) {
-                        callback();
-                    }
-
                 } else if (data.Status === 'NO') {
 
                     AlertManager.mostrar(data.Message, 'warning');
@@ -1935,6 +1930,12 @@ class EquiposUtil {
                 } else if (data.Status === 'warning') {
 
                     AlertManager.mostrar('Error: ' + data.Message, 'warning');
+                }
+                // Ejecutar callback siempre que se haya pasado (éxito o no)
+                try {
+                    if (typeof callback === 'function') callback();
+                } catch (err) {
+                    console.error('Error ejecutando callback en llenarLineas:', err);
                 }
             },
             error: () => {
@@ -1946,6 +1947,12 @@ class EquiposUtil {
                     'Error de conexión. No fue posible obtener el listado de líneas.',
                     'warning'
                 );
+                // Asegurar que el callback se invoque también en caso de error de conexión
+                try {
+                    if (typeof callback === 'function') callback();
+                } catch (err) {
+                    console.error('Error ejecutando callback en llenarLineas (error):', err);
+                }
             }
         });
     }
@@ -2124,7 +2131,7 @@ class EquiposUtil {
                     selectElement.empty();
                     FiltroProceso.empty();
 
-                    selectElement.append('<option value="">Selecciona el área de producción</option>');
+                    selectElement.append('<option value="">Todas las áreas</option>');
                     FiltroProceso.append('<option value="">Todos los procesos</option>');
 
                     AreasData.forEach(area => {

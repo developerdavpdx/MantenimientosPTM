@@ -38,6 +38,13 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarPlanProduccion\"";
             }
         }
+        public string GCSpPdxMTTOEliminarBitacoraPlanProduccion
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarBitacoraPlanProduccion\"";
+            }
+        }
         public string GCConsultaOrdenesFabricacion
         {
             get

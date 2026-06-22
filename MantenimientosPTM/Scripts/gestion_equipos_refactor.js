@@ -1061,7 +1061,9 @@ class EquipoManager {
         var fechaActual = new Date().toISOString().split('T')[0];
         $("#FechaInicioMant").attr("min", fechaActual);
         $("#TipoEquipo").prop("disabled", false);
-        $("#PeriodicidadMantenimiento").prop("disabled", false);
+        $('#PeriodicidadesMantenimiento')
+            .val([])
+            .trigger('change').prop("disabled", false);
         $("#DiaInicioMant").prop("disabled", false);
         $("#DiaFinMant").prop("disabled", false);
         $("#FechaInicioMant").attr("readonly", false);

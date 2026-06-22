@@ -149,7 +149,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
     vertical-align: middle;
     position: sticky;
     left: 0;

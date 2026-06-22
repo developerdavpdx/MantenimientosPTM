@@ -606,6 +606,58 @@ namespace MantenimientosPTM.Controllers
                 return Json(jsonResponse);
             }
         }
+
+        [HttpPost]
+        public JsonResult EliminarBitacoraPlanProduccion()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            try
+            {
+                // Leer el cuerpo de la solicitud JSON
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    var requestDto = JsonConvert.DeserializeObject<BitacoralanProduccionDeleteDto>(jsonData);
+
+                    // Crear parámetros en el formato correcto para HANA
+                    // Convertir DTO a parámetros HANA (ConvertToHanaParameters asigna tipos apropiados)
+                    var parametros = Logic.GlobalCommands.ConvertToHanaParameters(requestDto, true, null);
+
+                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCSpPdxMTTOEliminarBitacoraPlanProduccion,
+                        parametros
+                    );
+
+                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                    {
+                        jsonResponse.Status = "NO";
+                        jsonResponse.Message = $"No fue posible eliminar el historial del plan: {resultHana.JsonResult}";
+                        jsonResponse.Data = string.Empty;
+                        return Json(jsonResponse);
+                    }
+
+                    var resultado = JArray.Parse(resultHana.JsonResult);
+                    string estatus = (string)resultado[0]["ESTATUS"];
+                    string mensaje = (string)resultado[0]["MENSAJE"];
+
+                    jsonResponse.Status = (estatus == "OK") ? "SI" : "NO";
+                    jsonResponse.Message = (estatus == "OK") ? "Historial del plan eliminado correctamente." : mensaje;
+                    jsonResponse.Data = resultHana.JsonResult;
+                    return Json(jsonResponse);
+                }
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible eliminar el plan de producción: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
         #endregion
     }
 }
