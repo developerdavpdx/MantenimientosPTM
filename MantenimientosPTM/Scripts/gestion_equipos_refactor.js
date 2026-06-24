@@ -21,19 +21,6 @@ $(document).ready(function () {
         }
     );
 
-    // // 🔥 INICIALIZAR HEADER FIJO CON EL GESTOR GLOBAL
-    // window.HeaderFijoGlobalManager.crear(
-    //     '.card-header.header-fijo-custom',      // ✅ Header
-    //     '.position-relative.header-custom',     // ✅ Contenedor
-    //     'headerTipos',                 // ID único
-    //     {
-    //         topOffset: 45,
-    //         backgroundColor: 'white',
-    //         boxShadow: '0 4px 12px rgba(0, 88, 161, 0.3)',
-    //         animacion: true
-    //     }
-    // );
-
     console.log('✅ Header fijo inicializado correctamente');
 });
 
@@ -2619,7 +2606,7 @@ class EquipoManager {
                 '<thead><tr><th style="width:10%">ID</th><th>Resultado</th><th>Mensaje</th></tr></thead><tbody>';
 
             rows.forEach(r => {
-                const id = r.IdLinea || r.ID_LINEA || r.id || '';
+                const id = r.IdTipo || r.ID_TIPO || r.id || '';
                 const statusRaw = r.Status || r.STATUS || '';
                 const status = (statusRaw === 'OK') ? 'SI' : statusRaw;
 
