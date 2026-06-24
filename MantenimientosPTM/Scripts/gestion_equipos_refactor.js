@@ -145,7 +145,7 @@ class GestionEquiposApp {
                 EquiposUtil.llenarLineas(
                     this.datos_usuario[0].PLANTA,
                     Area,
-                    null,
+                    0,
                     "LineaProduccion",
                     null
                 );
@@ -160,7 +160,7 @@ class GestionEquiposApp {
                 EquiposUtil.llenarLineas(
                     this.datos_usuario[0].PLANTA,
                     Proceso,
-                    null,
+                    0,
                     "FiltroLinea",
                     null
                 );
@@ -1140,7 +1140,7 @@ class EquipoManager {
             EquiposUtil.llenarLineas(
                 this.datos_usuario[0].PLANTA,
                 equipoData.idarea,
-                1,
+                0,
                 "LineaProduccion",
                 null,
                 () => {
@@ -1994,7 +1994,7 @@ class EquipoManager {
                     $("#formLinea")[0].reset();
                     $("#formLinea").removeClass("was-validated");
 
-                    EquiposUtil.llenarLineas(this.PLANTA, "LineaProduccion", "FiltroLinea");
+                    EquiposUtil.llenarLineas(this.PLANTA,null,0, "LineaProduccion", "FiltroLinea");
 
                     setTimeout(function () {
                         $("#btnGuardarLinea").html('<i class="bi bi-save me-1"></i>Guardar');
@@ -2051,7 +2051,7 @@ class EquipoManager {
                     $("#formAgregarTipoEquipo").removeClass("was-validated");
 
                     //PENDIENTE LLENAR TIPOS DE EQUIPO
-                    EquiposUtil.llenarLineas(this.PLANTA, "LineaProduccion", "FiltroLinea");
+                    EquiposUtil.llenarLineas(this.PLANTA,null,0, "LineaProduccion", "FiltroLinea");
 
                     setTimeout(function () {
                         $("#btnGuardarTipoEquipo").html('<i class="bi bi-save me-1"></i>Guardar');
