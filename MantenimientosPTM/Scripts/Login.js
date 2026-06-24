@@ -85,19 +85,19 @@ class ValidationManagerLogin {
                             }, 1000);
                         }
                         //Almacen
-                        else if (datos_usuario[0].TIPOUSUARIO == "Almacen") {
+                        else if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen") {
                             setTimeout(function () {
                                 window.location.href = '/Almacen/SolicitudRefacciones';
                             }, 1000);
                         }
                         //Planeacion
-                        else if (datos_usuario[0].TIPOUSUARIO == "Planeacion") {
+                        else if (datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion") {
                             setTimeout(function () {
                                 window.location.href = '/Planeacion/Planeacion';
                             }, 1000);
                         }
                         //Produccion
-                        else if (datos_usuario[0].TIPOUSUARIO == "Produccion") {
+                        else if (datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion") {
                             setTimeout(function () {
                                 window.location.href = '/Produccion/ParosProduccion';
                             }, 1000);
