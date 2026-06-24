@@ -125,12 +125,26 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarLinea\"";
             }
         }
+        public string GCEliminarLinea
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarLinea\"";
+            }
+        }
 
         public string GCInsertarTipoEquipo
         {
             get
             {
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarTipoEquipo\"";
+            }
+        }
+        public string GCEliminarTipoEquipo
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarTipoEquipo\"";
             }
         }
         #endregion
@@ -140,6 +154,28 @@ namespace MantenimientosPTM
         {
             public int Planta { get; set; }
             public string Linea { get; set; }
+            // Id del área asociada a la línea (opcional)
+            public int? Area { get; set; }
+        }
+        public class EliminarLineaProduccion
+        {
+            public int IdLinea { get; set; }
+        }
+
+        public class EliminarLineasRequest
+        {
+            public List<int> Lineas { get; set; }
+            public bool Permanente { get; set; }
+            public int PLANTA { get; set; }
+            public string USUARIO { get; set; }
+        }
+
+        public class EliminarTiposRequest
+        {
+            public List<int> Tipos { get; set; }
+            public bool Permanente { get; set; }
+            public int PLANTA { get; set; }
+            public string USUARIO { get; set; }
         }
 
         public class TipoEquipo
@@ -151,6 +187,19 @@ namespace MantenimientosPTM
             public string ESTATUS { get; set; }
 
             public DateTime? FECHA_CREACION { get; set; }
+        }
+
+        public class EliminarTipoEquipoRequest
+        {
+            public List<int> TiposEquipo { get; set; } = new List<int>();
+
+            public bool Permanente { get; set; }
+
+            public string USUARIO { get; set; }
+        }
+        public class EliminarTipoEquipo
+        {
+            public int IdTipoEquipo { get; set; }
         }
         public class PlantaSeleccionada
         {

@@ -919,10 +919,14 @@ class GlobalUtil {
         return datos_usuario ? JSON.parse(datos_usuario) : null;
     }
     // ✅ Nueva función para mostrar/ocultar loader
-    static mostrarLoader(mostrar) {
+    static mostrarLoader(mostrar,description = "") {
         const loader = document.getElementById('calendarLoader');
         if (loader) {
             loader.style.display = mostrar ? 'flex' : 'none';
+        }
+        const loaderDescription = document.getElementById('loading_description');
+        if (loaderDescription) {
+            loaderDescription.textContent = description;
         }
     }
     //Obtener datos cualquier formulario
@@ -2298,6 +2302,41 @@ class EquiposUtil {
             error: function (xhr, status, error) {
                 AlertManager.mostrar('Error de conexión. No fue posible obtener el listado de equipos.', 'warning');
             }
+        });
+    }
+
+    static obtenerTipoEquipos() {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: `/${GlobalUtil.URLBaseEquipos}/GetTipoEquipos`,
+                type: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                success: function (data) {
+                    try {
+                        if (data && data.Status === 'OK') {
+                            let equiposData = data.Data || [];
+                            if (typeof equiposData === 'string') {
+                                try {
+                                    equiposData = JSON.parse(equiposData);
+                                } catch (e) {
+                                    console.warn('No se pudo parsear Data:', e);
+                                }
+                            }
+                            const lista = (equiposData || []).map(t => ({ value: t.ID_TIPO_EQUIPO, label: t.DESCRIPCION }));
+                            resolve(lista);
+                            return;
+                        }
+                    } catch (ex) {
+                        console.warn('obtenerTipoEquipos: error procesando respuesta', ex);
+                    }
+                    resolve([]);
+                },
+                error: function () {
+                    resolve([]);
+                }
+            });
         });
     }
 

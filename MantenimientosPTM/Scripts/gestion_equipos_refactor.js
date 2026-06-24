@@ -21,6 +21,19 @@ $(document).ready(function () {
         }
     );
 
+    // // 🔥 INICIALIZAR HEADER FIJO CON EL GESTOR GLOBAL
+    // window.HeaderFijoGlobalManager.crear(
+    //     '.card-header.header-fijo-custom',      // ✅ Header
+    //     '.position-relative.header-custom',     // ✅ Contenedor
+    //     'headerTipos',                 // ID único
+    //     {
+    //         topOffset: 45,
+    //         backgroundColor: 'white',
+    //         boxShadow: '0 4px 12px rgba(0, 88, 161, 0.3)',
+    //         animacion: true
+    //     }
+    // );
+
     console.log('✅ Header fijo inicializado correctamente');
 });
 
@@ -77,8 +90,13 @@ class GestionEquiposApp {
         // Evento para abrir modal de agregar
         $('#AgregarLinea').on('click', (e) => this.equipoManager.abrirModalAgregarLinea(e));
 
+        // Si existe botón para gestionar líneas
+        $('#GestionarLineas').off('click').on('click', (e) => this.equipoManager.abrirModalGestionarLineas(e));
+
         // Evento para abrir modal de agregar
         $('#AgregarTipoEquipo').on('click', (e) => this.equipoManager.abrirModalAgregarTipoEquipo(e));
+        // Evento para gestionar tipos (lista / eliminar)
+        $('#GestionarTipos').off('click').on('click', (e) => this.equipoManager.abrirModalGestionarTipos(e));
 
         // 🔥 EXPORTAR A EXCEL
         $('#btnExportarExcel').on('click', () => this.equipoManager.exportarExcelEquipos());
@@ -89,8 +107,13 @@ class GestionEquiposApp {
         // Evento para pausar/reanudar
         $(document).on('click', '.btn-pausar', (e) => this.equipoManager.abrirModalPausarEquipo(e));
 
+        // Evento para eliminar tipo (individual)
+        $(document).on('click', '.btn-eliminar-tipo', (e) => this.equipoManager.abrirConfirmEliminarTipo(e));
+
         // Evento para eliminar
         $(document).on('click', '.btn-eliminar', (e) => this.equipoManager.abrirModalSolicitudeliminarEquipo(e));
+        // Evento para eliminar una LÍNEA (abrir confirmación rápida)
+        $(document).on('click', '.btn-eliminar-linea', (e) => this.equipoManager.abrirConfirmEliminarLinea(e));
 
         // ✅ CORRECTO - Debes pasar "e" como parámetro
         $('#formEquipo').on('submit', (e) => this.equipoManager.guardarEquipo(e));
@@ -159,6 +182,23 @@ class GestionEquiposApp {
         $('#FiltroOrdenTrabajo').on('keypress', function (e) {
             if (e.key === 'Enter') {
                 $('#tablaEquipos').DataTable().ajax.reload();
+            }
+        });
+
+        // Mostrar/ocultar botón Guardar según pestaña activa en modal de líneas
+        $('#lineaModal').off('shown.bs.tab').on('shown.bs.tab', 'button[data-bs-toggle="tab"]', (e) => {
+            try {
+                const tabId = $(e.target).attr('id');
+                if (tabId === 'tab-listar') {
+                    $('#btnGuardarLinea,#btnCancelarGLinea').hide();
+                    $("#footer_lineas").addClass("justify-content-start");
+                    this.equipoManager.renderListarLineas();
+                } else {
+                    $('#btnGuardarLinea,#btnCancelarGLinea').show();
+                    $("#footer_lineas").removeClass("justify-content-start");
+                }
+            } catch (err) {
+                // noop
             }
         });
     }
@@ -1360,13 +1400,293 @@ class EquipoManager {
         $('#formLinea')[0].reset();
         ValidationManager.limpiarValidacion('#formLinea'); // AGREGAR ESTA LÍNEA
         $('#PlantaLine').val(`${this.PLANTA}`);
+        // Llenar select de áreas para la línea
+        EquiposUtil.llenarProcesos(this.PLANTA, 'AreaLine', null);
+        // Activar pestaña 'Alta' y mostrar modal
+        try {
+            const tabEl = document.getElementById('tab-alta');
+            if (tabEl) {
+                const tab = new bootstrap.Tab(tabEl);
+                tab.show();
+            }
+        } catch (err) {
+            console.warn('No se pudo activar pestaña alta:', err);
+        }
+
         $('#lineaModal').modal('show');
+    }
+
+    // ========================================
+    // GESTIONAR TIPOS DE EQUIPO (LISTAR / ELIMINAR)
+    // ========================================
+    abrirModalGestionarTipos(e) {
+        e.preventDefault();
+        // Cargar lista de tipos
+        this.renderListarTipos();
+        // Abrir modal de gestión de tipos (listado/eliminar). Si no existe, caer al modal de alta.
+        try {
+            const gestionEl = document.getElementById('modalGestionTipos');
+            const targetModal = gestionEl ? '#modalGestionTipos' : '#modalAgregarTipoEquipo';
+
+            // Invocar renderListarTipos al cambiar a la pestaña 'Listar / Eliminar' en cualquiera de los modales
+            $(targetModal).off('shown.bs.tab').on('shown.bs.tab', 'button[data-bs-toggle="tab"]', (e) => {
+                try {
+                    const tabId = $(e.target).attr('id');
+                    if (tabId === 'tab-listar-tipo' || tabId === 'tab-listar') {
+                        this.renderListarTipos();
+                    }
+                } catch (err) {
+                    // noop
+                }
+            });
+
+            // Mostrar modal correspondiente
+            $(targetModal).modal('show');
+        } catch (err) {
+            console.warn('No se pudo abrir modal de gestión de tipos:', err);
+            $('#modalAgregarTipoEquipo').modal('show');
+        }
+    }
+
+    async renderListarTipos() {
+        // Preferir el contenedor dentro del modal actualmente visible (evita conflictos con ids duplicados)
+        let container = $('.modal.show').find('#ListaTiposContainer').first();
+        if (!container || container.length === 0) {
+            container = $('#ListaTiposContainer').first();
+        }
+
+        if (!container || container.length === 0) {
+            console.warn('Contenedor ListaTiposContainer no encontrado en la vista');
+            return;
+        }
+
+        container.html(`<div class="ai-loader">
+
+            <div class="ai-core">
+                <div class="ai-ring"></div>
+                <div class="ai-ring delay"></div>
+                <div class="ai-ring delay2"></div>
+            </div>
+
+            <div class="ai-wave"></div>
+
+            <p class="ai-text">CARGANDO TIPOS...</p>
+
+        </div>`);
+
+        try {
+            let lista = null;
+            if (EquiposUtil.obtenerTipoEquipos) {
+                lista = await EquiposUtil.obtenerTipoEquipos();
+            } else {
+                // Fallback: intentar obtener desde llenarTipoEquipos (no devuelve lista) -> llamar GetTipoEquipos vía ajax
+                lista = [];
+            }
+
+            // Normalizar posibles formas de respuesta
+            if (!Array.isArray(lista)) {
+                if (lista && Array.isArray(lista.Data)) lista = lista.Data;
+                else if (lista && Array.isArray(lista.Results)) lista = lista.Results;
+                else if (lista && Array.isArray(lista.DataArray)) lista = lista.DataArray;
+                else if (lista && typeof lista === 'string') {
+                    try { lista = JSON.parse(lista); } catch (err) { lista = []; }
+                } else {
+                    lista = [];
+                }
+            }
+
+            if (!lista || lista.length === 0) {
+                container.html('<div class="text-muted">No hay tipos registrados.</div>');
+                return;
+            }
+
+            // Normalizar items a { value, label }
+            lista = lista.map(item => {
+                if (!item) return { value: '', label: '' };
+                if (item.value !== undefined && item.label !== undefined) return item;
+                return {
+                    value: item.ID_TIPO_EQUIPO || item.ID_TIPO || item.ID || item.id || item.VALUE || '',
+                    label: item.DESCRIPCION || item.DESCR || item.LABEL || item.label || item.NOMBRE || item.NAME || ''
+                };
+            });
+
+            const elementos = lista.map((item, idx) => {
+                return `
+                    <div class="d-flex align-items-center justify-content-between py-2 border-bottom tipo-item" style="display:none;">
+                        <div class="d-flex align-items-center gap-3">
+                            <input class="form-check-input tipo-checkbox" type="checkbox" value="${item.value}" id="chk_tipo_${item.value}">
+                            <label for="chk_tipo_${item.value}" style="margin-bottom:0;"><strong class="nombre-tipo">${item.label}</strong></label>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-ptm-eliminar btn-eliminar-tipo" data-bs-toggle="tooltip" title="Eliminar" data-id="${item.value}" data-nombre="${item.label}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.empty();
+            elementos.forEach((html, i) => {
+                const $el = $(html).appendTo(container);
+                $el.hide().delay(i * 50).fadeIn(180);
+            });
+
+            // Inicializar tooltips
+            try {
+                container.find('[data-bs-toggle="tooltip"]').each(function () { new bootstrap.Tooltip(this); });
+            } catch (err) { /* noop */ }
+
+            // Asegurar checkbox seleccionar todo reseteado (dentro del modal activo)
+            const modalRoot = container.closest('.modal');
+            if (modalRoot && modalRoot.length) {
+                modalRoot.find('#chkSeleccionarTodoTipos').prop('checked', false);
+            }
+
+            // Configurar eventos (scope dentro del contenedor/modal)
+            this.configurarEventosListarTipos(container);
+
+        } catch (err) {
+            container.html(`<div class="text-danger">Error al cargar tipos: ${err}</div>`);
+        }
+    }
+
+    configurarEventosListarTipos(container) {
+        // Scope: buscar elementos dentro del modal que contiene el container (evita conflictos con ids duplicados)
+        const modal = container.closest('.modal');
+        const chkAll = modal.find('#chkSeleccionarTodoTipos');
+        const btnEliminar = modal.find('#btnEliminarSeleccionadasTipos');
+        const accionesInfo = modal.find('#accionesTiposInfo');
+
+        // Seleccionar todo
+        chkAll.off('change').on('change', function () {
+            const checks = container.find('.tipo-checkbox');
+            const checked = $(this).is(':checked');
+            checks.prop('checked', checked);
+            if (accionesInfo && accionesInfo.length) accionesInfo.text(`${checks.filter(':checked').length} seleccionados`);
+        });
+
+        // Actualizar contador
+        container.find('.tipo-checkbox').off('change').on('change', () => {
+            const count = container.find('.tipo-checkbox:checked').length;
+            if (accionesInfo && accionesInfo.length) accionesInfo.text(`${count} seleccionados`);
+        });
+
+        // Eliminar múltiples
+        btnEliminar.off('click').on('click', () => {
+            const selected = container.find('.tipo-checkbox:checked').map(function () { return $(this).val(); }).get();
+            if (!selected || selected.length === 0) {
+                AlertManager.mostrar('Seleccione al menos un tipo para eliminar', 'warning');
+                return;
+            }
+
+            ConfirmManager.mostrar({
+                titulo: `¿Eliminar ${selected.length} tipo(s)?`,
+                mensaje: `<div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;"><div>Se eliminarán <strong>${selected.length}</strong> tipo(s). Esta operación será verificada por el servidor y algunas filas pueden no eliminarse si tienen dependencias.</div><hr style="margin:10px 0;"><div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irrevocable.</div></div>`,
+                onConfirm: () => {
+                    $.ajax({
+                        url: `/${this.URLBase}/EliminarTipos`,
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ Tipos: selected, Permanente: false, PLANTA: this.PLANTA, USUARIO: this.datos_usuario[0].EMAIL }),
+                        beforeSend: () => { GlobalUtil.mostrarLoader(true, "Eliminando por favor espere…"); },
+                        success: (response) => {
+                            GlobalUtil.mostrarLoader(false, "Cargando equipos por favor espere...");
+                            let results = [];
+                            if (response.DataArray && response.DataArray.length) results = response.DataArray;
+                            else if (response.Results && response.Results.length) results = response.Results;
+                            else if (response.Data && typeof response.Data === 'string') {
+                                try { results = JSON.parse(response.Data); } catch (err) { results = []; }
+                            }
+
+                            if (results && results.length > 0) {
+                                // Mostrar resultados dentro del modal activo
+                                const resultContainer = modal.find('#ResultDeleteContainer').length ? modal.find('#ResultDeleteContainer') : $('#ResultDeleteContainer');
+                                this.mostrarResultadosEliminacion(results, resultContainer);
+                                this.renderListarTipos();
+                            } else if (response.Status === 'SI') {
+                                AlertManager.mostrar(response.Message || 'Operación completada.', 'success');
+                                this.renderListarTipos();
+                            } else {
+                                AlertManager.mostrar(response.Message || 'No fue posible eliminar los tipos', 'warning');
+                            }
+                        },
+                        error: () => { GlobalUtil.mostrarLoader(false); AlertManager.mostrar('Error al conectar con el servidor', 'warning'); }
+                    });
+                }
+            });
+        });
+
+        // Cambios en filtro si aplica (no hay filtros por ahora)
+    }
+
+    abrirConfirmEliminarTipo(e) {
+        e.preventDefault();
+        const id = $(e.currentTarget).data('id');
+        const nombre = $(e.currentTarget).data('nombre') || $(e.currentTarget).closest('tr').find('.nombre-tipo').text() || '';
+
+        ConfirmManager.mostrar({
+            titulo: `¿Eliminar tipo ${nombre || id}?`,
+            mensaje: `<div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;"><div>Se eliminará el tipo <strong>${nombre || id}</strong>. Esta operación será verificada por el servidor y puede fallar si hay dependencias.</div><hr style="margin:10px 0;"><div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irreversible.</div></div>`,
+            onConfirm: () => {
+                const datos = { Tipos: [id], Permanente: false, PLANTA: this.PLANTA, USUARIO: this.datos_usuario[0].EMAIL };
+                $.ajax({
+                    url: `/${this.URLBase}/EliminarTipos`,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(datos),
+                    beforeSend: () => { GlobalUtil.mostrarLoader(true, "Eliminando por favor espere…"); },
+                    success: (response) => {
+                        GlobalUtil.mostrarLoader(false, "Cargando equipos por favor espere...");
+                        let results = [];
+                        if (response.DataArray && response.DataArray.length) results = response.DataArray;
+                        else if (response.Results && response.Results.length) results = response.Results;
+                        else if (response.Data && typeof response.Data === 'string') {
+                            try { results = JSON.parse(response.Data); } catch (err) { results = []; }
+                        }
+
+                        const first = (results && results.length > 0) ? results[0] : null;
+
+                        if (results && results.length > 0) {
+                            // Mostrar resultados dentro del modal donde se originó la acción
+                            const originModal = $(e.currentTarget).closest('.modal');
+                            const resultContainer = originModal.find('#ResultDeleteContainer').length ? originModal.find('#ResultDeleteContainer') : $('#ResultDeleteContainer');
+                            this.mostrarResultadosEliminacion(results, resultContainer);
+                            this.renderListarTipos();
+                        } else if (response.Status === 'SI' || (first && first.Status === 'SI')) {
+                            AlertManager.mostrar(response.Message || 'Tipo eliminado correctamente.', 'success');
+                            this.renderListarTipos();
+                        } else {
+                            AlertManager.mostrar((first && first.Message) || response.Message || 'No fue posible eliminar el tipo', 'warning');
+                        }
+                    },
+                    error: () => { GlobalUtil.mostrarLoader(false); AlertManager.mostrar('Error al conectar con el servidor', 'warning'); }
+                });
+            }
+        });
     }
 
     abrirModalAgregarTipoEquipo(e) {
         e.preventDefault();
         $('#formAgregarTipoEquipo')[0].reset();
         ValidationManager.limpiarValidacion('#formAgregarTipoEquipo'); // AGREGAR ESTA LÍNEA
+        // Cargar la lista inicialmente para que al cambiar a la pestaña 'Listar / Eliminar' no quede en "Cargando..."
+        this.renderListarTipos();
+
+        // Asegurar que al cambiar a la pestaña 'Listar / Eliminar' se cargue la lista
+        try {
+            $('#modalAgregarTipoEquipo').off('shown.bs.tab').on('shown.bs.tab', 'button[data-bs-toggle="tab"]', (ev) => {
+                try {
+                    const tabId = $(ev.target).attr('id');
+                    if (tabId === 'tab-listar-tipo' || tabId === 'tab-listar') {
+                        this.renderListarTipos();
+                    }
+                } catch (err) { /* noop */ }
+            });
+        } catch (err) {
+            // noop
+        }
+
         $('#modalAgregarTipoEquipo').modal('show');
     }
 
@@ -1664,7 +1984,8 @@ class EquipoManager {
         // Recopilar los datos
         const datos = {
             Planta: this.PLANTA, // ✅ CAMBIAR ESTA LÍNEA
-            Linea: $("#Linea").val()
+            Linea: $("#Linea").val(),
+            Area: parseInt($("#AreaLine").val() || 0)
         };
 
 
@@ -1690,7 +2011,6 @@ class EquipoManager {
 
                     setTimeout(function () {
                         $("#btnGuardarLinea").html('<i class="bi bi-save me-1"></i>Guardar');
-                        $("#lineaModal").modal('hide');
                     }, 3000);
 
                 } else {
@@ -2012,6 +2332,369 @@ class EquipoManager {
             $('#btnExportarExcelEquipos')
                 .html('<i class="bi bi-file-earmark-excel-fill me-1"></i>Exportar')
                 .prop('disabled', false);
+        }
+    }
+
+
+    // ========================================
+    // ELIMINAR LINEA
+    // ========================================
+    abrirModalGestionarLineas(e) {
+        e.preventDefault();
+
+        $('#GestionPlanta').val(this.PLANTA);
+        // Llenar select de áreas (usa la misma función que ya existe)
+        EquiposUtil.llenarProcesos(this.PLANTA, 'GestionArea', 'AreaLine');
+
+        // Cargar líneas inicialmente
+        this.renderListarLineas();
+
+        // Asegurar que se muestre la pestaña 'Listar' antes de abrir el modal (si existe)
+        try {
+            const tabEl = document.getElementById('tab-alta');
+            if (tabEl) {
+                const tab = new bootstrap.Tab(tabEl);
+                tab.show();
+            }
+        } catch (err) {
+            console.warn('No se pudo activar pestaña listar:', err);
+        }
+
+        // Inicializar tooltip del botón eliminar seleccionadas
+        try {
+            const btnDel = document.getElementById('btnEliminarSeleccionadas');
+            if (btnDel) new bootstrap.Tooltip(btnDel);
+        } catch (err) {
+            // noop
+        }
+
+        // Abrir el modal de líneas (usamos el modal principal de línea que ahora incluye pestañas)
+        $('#lineaModal').modal('show');
+    }
+
+    async renderListarLineas() {
+        $("#delAllLineasContainer").addClass("d-none");
+        const area = $('#GestionArea').val() || null;
+        const container = $('#ListaLineasContainer');
+        container.html(`<div class="ai-loader">
+
+                    <div class="ai-core">
+                        <div class="ai-ring"></div>
+                        <div class="ai-ring delay"></div>
+                        <div class="ai-ring delay2"></div>
+                    </div>
+
+                    <div class="ai-wave"></div>
+
+                    <p class="ai-text">CARGANDO LÍNEAS...</p>
+
+                </div>`);
+
+        try {
+            const lista = await EquiposUtil.obtenerLineas(this.PLANTA, area, null);
+
+            if (!lista || lista.length === 0) {
+                container.html('<div class="text-muted">No hay líneas registradas.</div>');
+                return;
+            }
+
+            // Renderizar listado con checkboxes
+            const rows = lista.map(item => {
+                return `
+                    <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                        <div class="d-flex align-items-center gap-3">
+                            <input class="form-check-input linea-checkbox" type="checkbox" value="${item.value}" id="chk_linea_${item.value}">
+                            <label for="chk_linea_${item.value}" style="margin-bottom:0;">
+                                <strong class="nombre-linea">${item.label}</strong>
+                            </label>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-linea" data-id="${item.value}" data-nombre="${item.label}">
+                                <i class="bi bi-trash"></i> Eliminar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Añadir elementos de forma animada (staggered)
+            container.empty();
+            const elementos = [];
+            lista.forEach((item, idx) => {
+                // usar estilo de botón de basura consistente
+                const row = `
+                    <div class="d-flex align-items-center justify-content-between py-2 border-bottom linea-item" style="display:none;">
+                        <div class="d-flex align-items-center gap-3">
+                            <input class="form-check-input linea-checkbox" type="checkbox" value="${item.value}" id="chk_linea_${item.value}">
+                            <label for="chk_linea_${item.value}" style="margin-bottom:0;">
+                                <strong class="nombre-linea">${item.label}</strong>
+                            </label>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-ptm-eliminar btn-eliminar-linea" data-bs-toggle="tooltip" title="Eliminar" data-id="${item.value}" data-nombre="${item.label}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                elementos.push(row);
+            });
+
+            // Append with staggered animation
+            elementos.forEach((html, i) => {
+                const $el = $(html).appendTo(container);
+                $el.hide().delay(i * 60).fadeIn(220);
+            });
+
+            // Inicializar tooltips para botones agregados
+            try {
+                container.find('[data-bs-toggle="tooltip"]').each(function () {
+                    // eslint-disable-next-line no-new
+                    new bootstrap.Tooltip(this);
+                });
+            } catch (err) {
+                // noop
+            }
+
+            $("#chkSeleccionarTodoLineas").prop('checked', false);
+            // Configurar bindings de eventos en un método separado para mantener render limpio
+            this.configurarEventosListarLineas(container);
+
+        } catch (err) {
+            container.html(`<div class="text-danger">Error al cargar líneas: ${err}</div>`);
+        }
+        finally {
+            $("#delAllLineasContainer").removeClass("d-none");
+        }
+    }
+
+    // Separar bindings de eventos relacionados con el listado de líneas
+    configurarEventosListarLineas(container) {
+        // Bind seleccionar todo (checkbox)
+        $('#chkSeleccionarTodoLineas').off('change').on('change', function () {
+            const checks = container.find('.linea-checkbox');
+            const checked = $(this).is(':checked');
+            checks.prop('checked', checked);
+            $('#accionesLineasInfo').text(`${checks.filter(':checked').length} seleccionadas`);
+        });
+
+        // Actualizar contador al cambiar
+        container.find('.linea-checkbox').off('change').on('change', () => {
+            const count = container.find('.linea-checkbox:checked').length;
+            $('#accionesLineasInfo').text(`${count} seleccionadas`);
+        });
+
+        // Bind eliminar múltiples
+        $('#btnEliminarSeleccionadas').off('click').on('click', () => {
+            const selected = container.find('.linea-checkbox:checked').map(function () { return $(this).val(); }).get();
+            if (!selected || selected.length === 0) {
+                AlertManager.mostrar('Seleccione al menos una línea para eliminar', 'warning');
+                return;
+            }
+
+            // Mostrar confirmación con ConfirmManager
+            ConfirmManager.mostrar({
+                titulo: `¿Eliminar ${selected.length} línea(s)?`,
+                mensaje: `
+                    <div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;">
+                        <div>Se eliminarán <strong>${selected.length}</strong> línea(s). Esta operación será verificada por el servidor y algunas líneas pueden no eliminarse si tienen dependencias.</div>
+                        <hr style="margin:10px 0;">
+                        <div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irrevocable.</div>
+                    </div>
+                `,
+                onConfirm: () => {
+                    $.ajax({
+                        url: `/${this.URLBase}/EliminarLineas`,
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ Lineas: selected, Permanente: false, PLANTA: this.PLANTA, USUARIO: this.datos_usuario[0].EMAIL }),
+                        beforeSend: () => { GlobalUtil.mostrarLoader(true, "Eliminando por favor espere…"); },
+                        success: (response) => {
+                            GlobalUtil.mostrarLoader(false, "Cargando equipos por favor espere...");
+                            // Normalizar resultados: puede venir en DataArray, Results o Data (JSON string)
+                            let results = [];
+                            if (response.DataArray && response.DataArray.length) results = response.DataArray;
+                            else if (response.Results && response.Results.length) results = response.Results;
+                            else if (response.Data && typeof response.Data === 'string') {
+                                try { results = JSON.parse(response.Data); } catch (err) { results = []; }
+                            }
+
+                            if (results && results.length > 0) {
+                                const resultContainer = container.closest('.modal').find('#ResultDeleteContainer').length ? container.closest('.modal').find('#ResultDeleteContainer') : $('#ResultDeleteContainer');
+                                this.mostrarResultadosEliminacion(results, resultContainer);
+                                // Recargar lista y datatable
+                                this.renderListarLineas();
+                            } else if (response.Status === 'SI') {
+                                // Éxito sin detalles
+                                AlertManager.mostrar(response.Message || 'Operación completada.', 'success');
+                                this.renderListarLineas();
+                            } else {
+                                AlertManager.mostrar(response.Message || 'No fue posible eliminar las líneas', 'warning');
+                            }
+                        },
+                        error: () => {
+                            GlobalUtil.mostrarLoader(false, "Cargando equipos por favor espere...");
+                            AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+                        }
+                    });
+                }
+            });
+        });
+
+        $("#GestionArea")
+            .off('change')
+            .on('change', (e) => {
+                this.renderListarLineas();
+            });
+    }
+
+
+    // Mostrar confirmación rápida en línea similar al flujo masivo
+    abrirConfirmEliminarLinea(e) {
+        e.preventDefault();
+        const id = $(e.currentTarget).data('id') || $(e.currentTarget).closest('tr').data('id');
+        const nombre = $(e.currentTarget).data('nombre') || $(e.currentTarget).closest('tr').find('.nombre-linea').text() || '';
+
+        ConfirmManager.mostrar({
+            titulo: `¿Eliminar línea ${nombre || id}?`,
+            mensaje: `
+                <div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;">
+                    <div>Se eliminará la línea <strong>${nombre || id}</strong>. Esta operación será verificada por el servidor y puede fallar si hay dependencias.</div>
+                    <hr style="margin:10px 0;">
+                    <div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irreversible.</div>
+                </div>
+            `,
+            onConfirm: () => {
+                // Reusar endpoint masivo con un solo id
+                const datos = { Lineas: [id], Permanente: false, PLANTA: this.PLANTA, USUARIO: this.datos_usuario[0].EMAIL };
+                $.ajax({
+                    url: `/${this.URLBase}/EliminarLineas`,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(datos),
+                    beforeSend: () => { GlobalUtil.mostrarLoader(true, "Eliminando por favor espere…"); },
+                    success: (response) => {
+                        GlobalUtil.mostrarLoader(false, "Cargando equipos por favor espere...");
+                        // Normalizar resultados (aceptar DataArray, Results o Data JSON string)
+                        let results = [];
+                        if (response.DataArray && response.DataArray.length) results = response.DataArray;
+                        else if (response.Results && response.Results.length) results = response.Results;
+                        else if (response.Data && typeof response.Data === 'string') {
+                            try { results = JSON.parse(response.Data); } catch (err) { results = []; }
+                        }
+
+                        const first = (results && results.length > 0) ? results[0] : null;
+
+                        if (results && results.length > 0) {
+                            // Mostrar tabla de resultados (aunque sea una sola fila)
+                            const originModal = $(e.currentTarget).closest('.modal');
+                            const resultContainer = originModal.find('#ResultDeleteContainer').length ? originModal.find('#ResultDeleteContainer') : $('#ResultDeleteContainer');
+                            this.mostrarResultadosEliminacion(results, resultContainer);
+                            this.renderListarLineas();
+                        } else if (response.Status === 'SI' || (first && first.Status === 'SI')) {
+                            AlertManager.mostrar(response.Message || 'Línea eliminada correctamente.', 'success');
+                            this.renderListarLineas();
+                        } else {
+                            AlertManager.mostrar((first && first.Message) || response.Message || 'No fue posible eliminar la línea', 'warning');
+                        }
+                    },
+                    error: () => {
+                        GlobalUtil.mostrarLoader(false, "Cargando equipos por favor espere...");
+                        AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+                    }
+                });
+            }
+        });
+    }
+
+    // Mostrar resultados en un modal temporal.
+    mostrarResultadosEliminacion(results, $container) {
+        try {
+            const rows = results || [];
+            if (!rows || rows.length === 0) return;
+
+            // Construir tabla HTML
+            let tableHtml = '<div style="max-height:360px; overflow:auto;">' +
+                '<table class="table table-sm mb-0">' +
+                '<thead><tr><th style="width:10%">ID</th><th>Resultado</th><th>Mensaje</th></tr></thead><tbody>';
+
+            rows.forEach(r => {
+                const id = r.IdLinea || r.ID_LINEA || r.id || '';
+                const statusRaw = r.Status || r.STATUS || '';
+                const status = (statusRaw === 'OK') ? 'SI' : statusRaw;
+
+                let msg = '';
+                if (r.Message) {
+                    msg = r.Message;
+                    if (typeof msg === 'string' && (msg.trim().startsWith('[') || msg.trim().startsWith('{'))) {
+                        try {
+                            const parsed = JSON.parse(msg);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                msg = parsed.map(p => p.Message || p.MESSAGE || JSON.stringify(p)).join(' | ');
+                            } else if (parsed && (parsed.Message || parsed.MESSAGE)) {
+                                msg = parsed.Message || parsed.MESSAGE;
+                            } else {
+                                msg = JSON.stringify(parsed);
+                            }
+                        } catch (err) {
+                            // keep original
+                        }
+                    }
+                } else if (r.MESSAGE) {
+                    msg = r.MESSAGE;
+                }
+
+                const badge = (status === 'SI' || status === 'OK' || status === 'SUCCESS') ? '<span class="text-success">✔</span>' : '<span class="text-danger">✖</span>';
+                tableHtml += `<tr><td>${id}</td><td>${badge} ${status}</td><td>${msg}</td></tr>`;
+            });
+
+            tableHtml += '</tbody></table></div>';
+
+            // Construir modal dinámico
+            const modalId = 'ptmElimResultModal_' + Date.now();
+            const modalHtml = `
+                <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Resultado de eliminación</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        ${tableHtml}
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            `;
+
+            const $modal = $(modalHtml).appendTo('body');
+            try {
+                const bsModal = new bootstrap.Modal(document.getElementById(modalId));
+                bsModal.show();
+
+                // Auto cerrar después de 6s
+                // const timeoutId = setTimeout(() => {
+                //     try { bsModal.hide(); } catch (e) { }
+                // }, 6000);
+
+                // Limpiar DOM al cerrarse
+                // $modal.on('hidden.bs.modal', function () {
+                //     clearTimeout(timeoutId);
+                //     $modal.remove();
+                // });
+
+            } catch (err) {
+                // fallback: insertar tabla en el contenedor si modal no disponible
+                const $el = $(tableHtml).prependTo($container);
+                $el.hide().slideDown(220);
+                setTimeout(() => { $el.slideUp(220, function () { $(this).remove(); }); }, 6000);
+            }
+        } catch (err) {
+            console.warn('mostrarResultadosEliminacion error', err);
         }
     }
 }

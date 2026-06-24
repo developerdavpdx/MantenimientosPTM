@@ -48,7 +48,8 @@ namespace MantenimientosPTM.Controllers
                 var parametrosLinea = new
                 {
                     P_PLANTA = RequestData.Planta,
-                    P_LINEA = RequestData.Linea ?? ""
+                    P_LINEA = RequestData.Linea ?? "",
+                    P_ID_AREA = RequestData.Area ?? 0
                 };
                 // Convertir modelo a parámetros HANA
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosLinea, false, null);
@@ -71,6 +72,320 @@ namespace MantenimientosPTM.Controllers
 
                 return Json(jsonResponse);
             }
+        }
+
+        [HttpPost]
+        public JsonResult EliminarLineas()
+        {
+            // Delegar procesamiento a método común
+            Request.InputStream.Position = 0;
+            using (var reader = new StreamReader(Request.InputStream))
+            {
+                string jsonData = reader.ReadToEnd();
+                if (string.IsNullOrEmpty(jsonData))
+                    return Json(new GlobalCommands.JsonResponseMtto { Status = "NO", Message = "No se recibió información.", Data = string.Empty });
+
+                var req = JsonConvert.DeserializeObject<AccesoDatosEquipos.EliminarLineasRequest>(jsonData);
+                var respuesta = ProcesarEliminarLineas(req);
+                return Json(respuesta);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult EliminarLinea()
+        {
+            // Endpoint para eliminación individual que reusa la lógica masiva
+            Request.InputStream.Position = 0;
+            using (var reader = new StreamReader(Request.InputStream))
+            {
+                string jsonData = reader.ReadToEnd();
+                if (string.IsNullOrEmpty(jsonData))
+                    return Json(new GlobalCommands.JsonResponseMtto { Status = "NO", Message = "No se recibió información.", Data = string.Empty });
+
+                // Intentar parsear IdLinea y campos adicionales
+                JObject jo = null;
+                try { jo = JObject.Parse(jsonData); } catch { }
+
+                int id = 0;
+                if (jo != null)
+                {
+                    id = jo.Value<int?>("IdLinea") ?? jo.Value<int?>("ID_LINEA") ?? jo.Value<int?>("id") ?? 0;
+                }
+                else
+                {
+                    try
+                    {
+                        var tmp = JsonConvert.DeserializeObject<AccesoDatosEquipos.EliminarLineaProduccion>(jsonData);
+                        id = tmp?.IdLinea ?? 0;
+                    }
+                    catch { }
+                }
+
+                if (id <= 0)
+                    return Json(new GlobalCommands.JsonResponseMtto { Status = "NO", Message = "Id de línea inválido.", Data = string.Empty });
+
+                var req = new AccesoDatosEquipos.EliminarLineasRequest
+                {
+                    Lineas = new List<int> { id },
+                    Permanente = jo?.Value<bool?>("Permanente") ?? false,
+                    PLANTA = jo?.Value<int?>("PLANTA") ?? 0,
+                    USUARIO = jo?.Value<string>("USUARIO") ?? string.Empty
+                };
+
+                var respuesta = ProcesarEliminarLineas(req);
+                return Json(respuesta);
+            }
+        }
+
+        // Método privado que procesa la eliminación (masiva o individual) usando el SP por id
+        private GlobalCommands.JsonResponseMtto ProcesarEliminarLineas(AccesoDatosEquipos.EliminarLineasRequest RequestData)
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+
+            var listaLineas = RequestData?.Lineas ?? new List<int>();
+            var resultados = new List<object>();
+
+            foreach (var id in listaLineas)
+            {
+                try
+                {
+                    var parametrosLinea = new
+                    {
+                        P_ID_LINEA = id
+                    };
+
+                    var allparamsLinea = Logic.GlobalCommands.ConvertToHanaParameters(parametrosLinea, false, null);
+                    var resHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCEliminarLinea, allparamsLinea);
+                    var jr = resHana.JsonResult ?? string.Empty;
+
+                    // Normalizar respuesta del SP (puede devolver JSON array como string)
+                    try
+                    {
+                        // Si viene un JSON array (string) intentar parsear
+                        if (!string.IsNullOrWhiteSpace(jr) && (jr.TrimStart().StartsWith("[") || jr.TrimStart().StartsWith("{")))
+                        {
+                            try
+                            {
+                                var arr = JArray.Parse(jr);
+                                if (arr.Count > 0)
+                                {
+                                    var first = arr[0];
+                                    var statusToken = first["Status"] ?? first["STATUS"];
+                                    var msgToken = first["Message"] ?? first["MESSAGE"];
+                                    var totalToken = first["TOTAL_EQUIPOS"] ?? first["TOTAL"];
+
+                                    var statusVal = statusToken != null ? statusToken.ToString() : string.Empty;
+                                    var messageVal = msgToken != null ? msgToken.ToString() : (jr ?? string.Empty);
+                                    if (totalToken != null)
+                                    {
+                                        messageVal = messageVal + " (Total dependencias: " + totalToken.ToString() + ")";
+                                    }
+
+                                    if (statusVal.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
+                                    {
+                                        resultados.Add(new { IdLinea = id, Status = "NO", Message = messageVal });
+                                    }
+                                    else
+                                    {
+                                        resultados.Add(new { IdLinea = id, Status = "SI", Message = messageVal });
+                                    }
+
+                                    continue; // siguiente id
+                                }
+                            }
+                            catch
+                            {
+                                // si no es parseable como array, seguir y evaluar jr como texto
+                            }
+                        }
+
+                        // Si llega aquí, jr no es un JSON parseable o no contiene estructura esperada.
+                        if (jr.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            // devolver mensaje limpio si es posible
+                            resultados.Add(new { IdLinea = id, Status = "NO", Message = jr });
+                        }
+                        else
+                        {
+                            resultados.Add(new { IdLinea = id, Status = "SI", Message = jr });
+                        }
+                    }
+                    catch
+                    {
+                        // En caso de cualquier error al procesar jr, devolver el texto crudo
+                        resultados.Add(new { IdLinea = id, Status = "NO", Message = jr });
+                    }
+                }
+                catch (Exception exInner)
+                {
+                    resultados.Add(new { IdLinea = id, Status = "NO", Message = exInner.Message });
+                }
+            }
+
+            var anySi = resultados.Any(r => ((dynamic)r).Status == "SI");
+            var allSi = resultados.All(r => ((dynamic)r).Status == "SI");
+            jsonResponse.Status = allSi ? "SI" : (anySi ? "PARCIAL" : "NO");
+            jsonResponse.Message = jsonResponse.Status == "SI" ? "Eliminación completada." : "Operación finalizada con resultados parciales o errores.";
+            // Devolver resultados como JSON string en Data para que el cliente lo parsee explícitamente.
+            // También limpiar DataArray para evitar ambigüedades en el cliente.
+            try
+            {
+                jsonResponse.Data = JsonConvert.SerializeObject(resultados);
+                // Si la clase JsonResponseMtto tiene DataArray, limpiarla. Si no existe, esto se ignorará en tiempo de compilación.
+                try { jsonResponse.DataArray = null; } catch { /* prop puede no existir */ }
+            }
+            catch
+            {
+                jsonResponse.Data = string.Empty;
+                try { jsonResponse.DataArray = null; } catch { /* prop puede no existir */ }
+            }
+
+            return jsonResponse;
+        }
+
+        [HttpPost]
+        public JsonResult EliminarTipos()
+        {
+            // Delegar procesamiento a método común específico para tipos
+            Request.InputStream.Position = 0;
+            using (var reader = new StreamReader(Request.InputStream))
+            {
+                string jsonData = reader.ReadToEnd();
+                if (string.IsNullOrEmpty(jsonData))
+                    return Json(new GlobalCommands.JsonResponseMtto { Status = "NO", Message = "No se recibió información.", Data = string.Empty });
+
+                var req = JsonConvert.DeserializeObject<AccesoDatosEquipos.EliminarTiposRequest>(jsonData);
+                var respuesta = ProcesarEliminarTipos(req);
+                return Json(respuesta);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult EliminarTipo()
+        {
+            // Endpoint para eliminación individual de tipo que reusa la lógica masiva
+            Request.InputStream.Position = 0;
+            using (var reader = new StreamReader(Request.InputStream))
+            {
+                string jsonData = reader.ReadToEnd();
+                if (string.IsNullOrEmpty(jsonData))
+                    return Json(new GlobalCommands.JsonResponseMtto { Status = "NO", Message = "No se recibió información.", Data = string.Empty });
+
+                JObject jo = null;
+                try { jo = JObject.Parse(jsonData); } catch { }
+
+                int id = 0;
+                if (jo != null)
+                {
+                    id = jo.Value<int?>("IdTipo") ?? jo.Value<int?>("ID_TIPO_EQUIPO") ?? jo.Value<int?>("id") ?? 0;
+                }
+                else
+                {
+                    try
+                    {
+                        var tmp = JsonConvert.DeserializeObject<dynamic>(jsonData);
+                        id = tmp?.IdTipo ?? tmp?.ID_TIPO_EQUIPO ?? 0;
+                    }
+                    catch { }
+                }
+
+                if (id <= 0)
+                    return Json(new GlobalCommands.JsonResponseMtto { Status = "NO", Message = "Id de tipo inválido.", Data = string.Empty });
+
+                var req = new AccesoDatosEquipos.EliminarTiposRequest
+                {
+                    Tipos = new List<int> { id },
+                    Permanente = jo?.Value<bool?>("Permanente") ?? false,
+                    PLANTA = jo?.Value<int?>("PLANTA") ?? 0,
+                    USUARIO = jo?.Value<string>("USUARIO") ?? string.Empty
+                };
+
+                var respuesta = ProcesarEliminarTipos(req);
+                return Json(respuesta);
+            }
+        }
+
+        // Método privado que procesa la eliminación (masiva o individual) para tipos de equipo
+        private GlobalCommands.JsonResponseMtto ProcesarEliminarTipos(AccesoDatosEquipos.EliminarTiposRequest RequestData)
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+
+            var listaTipos = RequestData?.Tipos ?? new List<int>();
+            var resultados = new List<object>();
+
+            foreach (var id in listaTipos)
+            {
+                try
+                {
+                    var parametros = new { P_ID_TIPO_EQUIPO = id };
+                    var allparams = Logic.GlobalCommands.ConvertToHanaParameters(parametros, false, null);
+                    var resHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCEliminarTipoEquipo, allparams);
+                    var jr = resHana.JsonResult ?? string.Empty;
+
+                    // Intentar parsear JSON devuelto por el SP y normalizar
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(jr) && (jr.TrimStart().StartsWith("[") || jr.TrimStart().StartsWith("{")))
+                        {
+                            var arr = JArray.Parse(jr);
+                            if (arr.Count > 0)
+                            {
+                                var first = arr[0];
+                                var statusToken = first["Status"] ?? first["STATUS"];
+                                var msgToken = first["Message"] ?? first["MESSAGE"];
+                                var totalToken = first["TOTAL_EQUIPOS"] ?? first["TOTAL"];
+
+                                var statusVal = statusToken != null ? statusToken.ToString() : string.Empty;
+                                var messageVal = msgToken != null ? msgToken.ToString() : (jr ?? string.Empty);
+                                if (totalToken != null)
+                                {
+                                    messageVal = messageVal + " (Total dependencias: " + totalToken.ToString() + ")";
+                                }
+
+                                if (statusVal.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    resultados.Add(new { IdTipo = id, Status = "NO", Message = messageVal });
+                                }
+                                else
+                                {
+                                    resultados.Add(new { IdTipo = id, Status = "SI", Message = messageVal });
+                                }
+
+                                continue;
+                            }
+                        }
+
+                        if (jr.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
+                            resultados.Add(new { IdTipo = id, Status = "NO", Message = jr });
+                        else
+                            resultados.Add(new { IdTipo = id, Status = "SI", Message = jr });
+                    }
+                    catch
+                    {
+                        resultados.Add(new { IdTipo = id, Status = "NO", Message = jr });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    resultados.Add(new { IdTipo = id, Status = "NO", Message = ex.Message });
+                }
+            }
+
+            var anySi = resultados.Any(r => ((dynamic)r).Status == "SI");
+            var allSi = resultados.All(r => ((dynamic)r).Status == "SI");
+            jsonResponse.Status = allSi ? "SI" : (anySi ? "PARCIAL" : "NO");
+            jsonResponse.Message = jsonResponse.Status == "SI" ? "Eliminación completada." : "Operación finalizada con resultados parciales o errores.";
+            try
+            {
+                jsonResponse.Data = JsonConvert.SerializeObject(resultados);
+                try { jsonResponse.DataArray = null; } catch { }
+            }
+            catch
+            {
+                jsonResponse.Data = string.Empty;
+            }
+
+            return jsonResponse;
         }
 
         [HttpPost]

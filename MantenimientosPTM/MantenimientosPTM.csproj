@@ -205,6 +205,7 @@
     <Content Include="Content\CalendarioPlaneacion.css" />
     <Content Include="Content\CalendarioMantenimientoPreventivo.css" />
     <Content Include="Content\chartist.min.css" />
+    <Content Include="Content\GestionEquipos.css" />
     <Content Include="Content\dataTables.dataTables.min.css" />
     <Content Include="Content\fixedColumns.dataTables.min.css" />
     <Content Include="Content\fixedHeader.dataTables.min.css" />
