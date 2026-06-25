@@ -355,7 +355,7 @@ namespace MantenimientosPTM
                         newLine["ItemCode"] = linea["REFACCION_SOLICITADA"].ToString();
                         //newLine["Quantity"] = Convert.ToDouble(linea["CANTIDAD"]);
                         newLine["Quantity"] = Convert.ToDouble(articulo.Cantidad);
-                        newLine["WarehouseCode"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["AlmacenP1"]: ConfigurationManager.AppSettings["AlmacenP2"]);
+                        newLine["WarehouseCode"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["AlmacenP1"] : ConfigurationManager.AppSettings["AlmacenP2"]);
                         newLine["CostingCode"] = articulo.Departamento;
                         newLine["CostingCode2"] = articulo.Proceso;
                         newLine["CostingCode3"] = articulo.Gastos;
@@ -509,9 +509,9 @@ namespace MantenimientosPTM
         public async Task<int> GetSerieByName(string Cedis)
         {
             var paramgs = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_SERIES_NAME",     (  Cedis ?? string.Empty, ParameterDirection.Input, HanaDbType.Integer) },
-                    };
+            {
+                { "P_SERIES_NAME",     (  Cedis ?? string.Empty, ParameterDirection.Input, HanaDbType.Integer) },
+            };
 
             var resultGS = GlobalCommands.ExecuteProcedureHanaAuto(
                 AD.GCGetSerieByName, paramgs

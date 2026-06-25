@@ -56,6 +56,20 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarSolicitudCompraDetalleMP\"";
             }
         }
+        public string GCActualizarCabeceraSolicitudCompraMP
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOActualizarCabeceraSolicitudCompraMP\"";
+            }
+        }
+        public string GCActualizarSolicitudCompraDetalleMP
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOActualizarSolicitudCompraDetalleMP\"";
+            }
+        }
         public string GCConsultaSolicitudesCompraMP
         {
             get
@@ -110,13 +124,6 @@ namespace MantenimientosPTM
             }
         }
 
-        public string GCActualizarCabeceraSolicitudCompraMP
-        {
-            get
-            {
-                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOActualizarCabeceraSolicitudCompraMP\"";
-            }
-        }
 
         public string GCUpdateEstatusAuthSC
         {
@@ -524,6 +531,67 @@ namespace MantenimientosPTM
 
             [JsonProperty("UsuarioSolicita")]
             public string UsuarioSolicita { get; set; }
+        }
+
+        // Modelo principal que recibe el JS
+        public class UpdatePurchaseRequest
+        {
+            [JsonProperty("Requisicion")]
+            public RequisicionModel Requisicion { get; set; }
+
+            [JsonProperty("Comentarios")]
+            public string Comentarios { get; set; }
+
+            [JsonProperty("UsuarioSolicita")]
+            public string UsuarioSolicita { get; set; }
+        }
+
+        public class RequisicionModel
+        {
+            [JsonProperty("IdSolicitudCompra")]
+            public int IdSolicitudCompra { get; set; }
+
+            [JsonProperty("Articulos")]
+            public List<ArticuloRequisicionModel> Articulos { get; set; }
+
+            [JsonProperty("Contabilizacion")]
+            public ContabilizacionModel Contabilizacion { get; set; }
+        }
+
+        public class ArticuloRequisicionModel
+        {
+            [JsonProperty("IdsDetalle")]
+            public List<int> IdsDetalle { get; set; }
+
+            [JsonProperty("CodigoArticulo")]
+            public long CodigoArticulo { get; set; }
+
+            [JsonProperty("NombreArticulo")]
+            public string NombreArticulo { get; set; }
+
+            [JsonProperty("CantidadTotal")]
+            public int CantidadTotal { get; set; }
+
+            [JsonProperty("codigoProveedor")]
+            public string CodigoProveedor { get; set; }
+
+            [JsonProperty("nombreProveedor")]
+            public string NombreProveedor { get; set; }
+        }
+
+        public class ContabilizacionModel
+        {
+            [JsonProperty("Departamento")]
+            public string Departamento { get; set; }
+
+            [JsonProperty("Proceso")]
+            public string Proceso { get; set; }
+
+            [JsonProperty("Gastos")]
+            public string Gastos { get; set; }
+
+            [JsonProperty("Cedis")]
+            public string Cedis { get; set; }
         }
 
         public class SolicitudCompraDetalle

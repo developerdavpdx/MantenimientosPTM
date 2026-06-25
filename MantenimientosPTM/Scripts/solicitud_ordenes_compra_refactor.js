@@ -6,6 +6,7 @@ class SolicitudCompraApp {
         this.URLBase = "Almacen";
         this.datos_usuario = GlobalUtil.getDatosUsuario();
         this.compraManager = new CompraManager(this.URLBase, this.datos_usuario);
+        this.IdSolicitudCompra = 0;
         // ✅ Instanciar los 4 centros de costo — una vez al cargar
         this.centrosCosto = {
             departamento: new GestionCentrosCosto({
@@ -33,7 +34,6 @@ class SolicitudCompraApp {
                 dimCode: 4
             })
         };
-
         window.AppSolicitudCompra = this;
     }
 
@@ -142,7 +142,7 @@ class SolicitudCompraApp {
             Object.values(this.centrosCosto).forEach(g => g.limpiar());
 
             const btn = $(event.currentTarget);
-            const IdSolicitudCompra = btn.data('id');
+            this.IdSolicitudCompra = btn.data('id');
             const FolioCompra = btn.data('folio');
             const OrdenCompra = btn.data('ot');
 
@@ -150,7 +150,6 @@ class SolicitudCompraApp {
                 `<i class="bi bi-cash-stack me-1"></i> Folio: <strong>${FolioCompra}</strong>`
             );
 
-            $('#formGenerarRequisicion').data('id-solicitud-compra', IdSolicitudCompra);
             $('#bodyRequisicionArticulos').empty();
             $('#formGenerarRequisicion')[0].reset();
             $('#formGenerarRequisicion').removeClass('was-validated');
@@ -159,7 +158,7 @@ class SolicitudCompraApp {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/GetDetallesSolicitudCompraMP`,
                     type: 'POST',
-                    data: { IdSolicitudCompra }
+                    data: { IdSolicitudCompra: this.IdSolicitudCompra }
                 });
 
                 if (!response || !response.data || response.data.length === 0) {
@@ -172,7 +171,7 @@ class SolicitudCompraApp {
                     url: `/${this.URLBase}/ObtenerFacturasPTM`,
                     type: 'GET',
                     data: {
-                        oc: OrdenCompra 
+                        oc: OrdenCompra
                     }
                 });
 
@@ -209,7 +208,7 @@ class SolicitudCompraApp {
                                 <small class="fw-semibold text-muted">${item.CodigoArticulo || ''}</small>
                             </td>
                             <td>${item.NombreArticulo || 'N/A'}</td>
-                            <td class="text-center fw-semibold">${item.CantidadEncargar || 0}</td>
+                            <td class="text-center fw-semibold"><span class="badge bg-blue-ptm badge-custom">${item.CantidadEncargar || 0}</span></td>
                             <td>
                                 <div class="sol-buscar-proveedor-wrap">
                                     <input type="text" class="form-control-custom sol-buscar-proveedor"
@@ -389,7 +388,7 @@ class SolicitudCompraApp {
             }
         });
 
-        
+
 
 
         //COMPLETAR SOLICITUD DE COMPRA
@@ -449,7 +448,7 @@ class SolicitudCompraApp {
 
             // ─── Payload final ─────────────────────────────────────────────────────
             const payload = {
-                IdSolicitudCompra: $('#formGenerarRequisicion').data('id-solicitud-compra'),
+                IdSolicitudCompra: this.IdSolicitudCompra,
                 Articulos: articulos,
                 Contabilizacion: contabilizacion
             };
@@ -467,16 +466,13 @@ class SolicitudCompraApp {
             .html('<i class="bi bi-hourglass-split me-1"></i> Guardando...');
 
         try {
-            // ✅ Paso 1: Crear solicitud de compra con estatus "Espera Autorizacion"
+            // ✅ Paso 1: Actualizar solicitud de compra con estatus "Espera Autorizacion"
             const responseInsert = await $.ajax({
-                url: `/${this.URLBase}/InsertarSolicitudOrdenCompraMP`,
+                url: `/${this.URLBase}/ActualizarSolicitudOrdenCompraMP`,
                 type: 'POST',
                 contentType: 'application/json; charset=utf-8',
                 data: JSON.stringify({
-                    Solicitudes: payload.Articulos.map(art => ({
-                        IdSolicitud: art.IdsDetalle[0], // Usar el primer ID de detalle
-                        CantidadEncargar: art.CantidadTotal
-                    })),
+                    Requisicion: payload,
                     Comentarios: "Solicitud enviada para autorización",
                     UsuarioSolicita: this.datos_usuario[0].EMAIL
                 }),
@@ -729,7 +725,7 @@ class CompraManager {
                             title="Ver detalle">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-ptm-rutina btn-aprobar"
+                        <button class="btn btn-sm btn-ptm-mid btn-aprobar"
                             data-id="${row.IdSolicitudCompra}"
                             data-folio="${row.FolioCompra}"
                             data-OT="${row.OrdenTrabajo}"
@@ -753,23 +749,21 @@ class CompraManager {
                         title: "OT(s)",
                         className: "text-center",
                         render: function (data, type, row) {
-
                             if (!row.OrdenTrabajo)
                                 return '<em class="text-muted">Sin OT</em>';
 
-                            const textoCorto =
-                                row.OrdenTrabajo.length > 40
-                                    ? row.OrdenTrabajo.substring(0, 40) + '...'
-                                    : row.OrdenTrabajo;
+                            const folios = row.OrdenTrabajo
+                                .split(',')
+                                .map(f => f.trim())
+                                .filter(f => f.length > 0);
 
-                            return `
-                            <div>
-                                <div
-                                    class="small mt-1"
-                                    title="${row.OrdenTrabajo}">
-                                    ${textoCorto}
-                                </div>
-                            </div>`;
+                            const badgesHtml = folios
+                                .map(folio => `<span class="badge btn-ptm-mid badge-custom me-1 mb-1"><i class="bi bi-cash-stack me-1"></i>${folio}</span>`)
+                                .join('');
+
+                            return `<div class="d-flex flex-wrap justify-content-center" title="${row.OrdenTrabajo}">
+                                    ${badgesHtml}
+                                    </div>`;
                         }
                     },
                     // Columna 3: Fecha Solicitud

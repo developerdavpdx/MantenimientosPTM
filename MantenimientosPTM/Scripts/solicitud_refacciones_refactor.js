@@ -1287,68 +1287,82 @@ class SolicitudManager {
             }
 
             tbody.append(`
-            <tr class="${isAtendida ? 'salida_completada' : ''}" ${isAtendida ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Atendida"` : ''}>
-                <td class="text-center align-middle">${index + 1}</td>
-                <td class="text-center align-middle">${FolioSalida}</td>
-                <td class="text-center align-middle">
-                    <input type="checkbox" class="form-check-input chk-articuloSalida"
-                           data-idsolicitud="${art.ID_SOLICITUD}"
-                           data-codigo="${refaccionSolicitada}"
-                           data-nombrearticulo="${art.NOMBRE_ARTICULO}"
-                           data-ordentrabajo="${art.ORDEN_TRABAJO}"
-                           data-nombre="${nombreMostrar}"
-                           data-cantidad="${cantidadDisponible}"
-                           data-cantidadoriginal="${cantidadOriginal}"
-                           ${isAtendida ? 'disabled' : ''}>
-                </td>
-                <td class="text-center align-middle">${botonesAccion}</td>
-                <td class="text-center align-middle">
-                    ${!isAtendida ? `<span class="punto-pulso-absolute"></span>` : ''}
-                    <span class="badge bg-dark">${refaccionSolicitada || 'N/A'}</span>
-                </td>
-                <td class="align-middle">${nombreMostrar}</td>
+                <tr class="${isAtendida ? 'salida_completada' : ''}" ${isAtendida ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Atendida"` : ''}>
+                    <td class="text-center align-middle">${index + 1}</td>
                     <td class="text-center align-middle">
-                    <input type="number" min="1" max="${art.STOCK || maxStock}"
-                           class="form-control form-control-sm text-center fw-bold cantidadEditable" ${isAtendida ? 'disabled' : ''}
-                           value="${CantidadSurtida}"
-                           data-stock="${art.STOCK || 0}"
-                           data-min="${minStock}"
-                           data-max="${maxStock}"
-                           ${isAtendida ? 'readonly' : ''}>
-                </td>
-                <td class="text-center align-middle">${art.STOCK || 0}</td>
-                <td class="text-center align-middle">${minStock}</td>
-                <td class="text-center align-middle">${maxStock}</td>
-                <td class="text-center align-middle">
-                    <span class="badge ${urgenciaClass}">${urgenciaText}</span>
-                </td>
-                <td class="text-center align-middle">
-                    <span class="badge ${estatusClass}">${estatusText}</span>
-                </td>
-                <td class="text-center align-middle">
-                    <input type="text" class="form-control form-control-sm departamento text-center"
-                           value="${dept}" readonly>
-                </td>
-                <td class="text-center align-middle">
-                    <select class="form-select form-select-sm proceso">
-                        ${procesosHtml}
-                    </select>
-                </td>
-                <td class="text-center align-middle">
-                    <select class="form-select form-select-sm gastos">
-                        ${gastosHtml}
-                    </select>
-                </td>
-                <td class="text-center align-middle">
-                    <input type="text" class="form-control form-control-sm cedis text-center"
-                           value="${cedis}" readonly>
-                </td>
-                <td class="text-center align-middle">
-                    <input type="text" class="form-control form-control-sm nombre_empleado text-center"
-                           value="${nombreEmpleado}">
-                </td>
-            </tr>
-        `);
+                        <i class="bi bi-file-earmark-text text-info me-1"></i>${FolioSalida}
+                    </td>
+                    <td class="text-center align-middle">
+                        <input type="checkbox" class="form-check-input chk-articuloSalida"
+                               data-idsolicitud="${art.ID_SOLICITUD}"
+                               data-codigo="${refaccionSolicitada}"
+                               data-nombrearticulo="${art.NOMBRE_ARTICULO}"
+                               data-ordentrabajo="${art.ORDEN_TRABAJO}"
+                               data-nombre="${nombreMostrar}"
+                               data-cantidad="${cantidadDisponible}"
+                               data-cantidadoriginal="${cantidadOriginal}"
+                               ${isAtendida ? 'disabled' : ''}>
+                    </td>
+                    <td class="text-center align-middle">${botonesAccion}</td>
+                    <td class="text-center align-middle">
+                        ${!isAtendida ? `<span class="punto-pulso-absolute"></span>` : ''}
+                        <span class="badge bg-dark"><i class="bi bi-upc-scan me-1"></i>${refaccionSolicitada || 'N/A'}</span>
+                    </td>
+                    <td class="align-middle">
+                        <i class="bi bi-box-seam text-muted me-1"></i>${nombreMostrar}
+                    </td>
+                    <td class="text-center align-middle">
+                        <input type="number" min="1" max="${art.STOCK || maxStock}"
+                               class="form-control form-control-sm text-center fw-bold cantidadEditable" ${isAtendida ? 'disabled' : ''}
+                               value="${CantidadSurtida}"
+                               data-stock="${art.STOCK || 0}"
+                               data-min="${minStock}"
+                               data-max="${maxStock}"
+                               ${isAtendida ? 'readonly' : ''}>
+                    </td>
+                    <td class="text-center align-middle">
+                        <i class="bi bi-box-seam text-info me-1"></i>${art.STOCK || 0}
+                    </td>
+                    <td class="text-center align-middle">
+                        <i class="bi bi-arrow-down-circle text-warning me-1"></i>${minStock}
+                    </td>
+                    <td class="text-center align-middle">
+                        <i class="bi bi-arrow-up-circle text-success me-1"></i>${maxStock}
+                    </td>
+                    <td class="text-center align-middle">
+                        <span class="badge ${urgenciaClass}">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>${urgenciaText}
+                        </span>
+                    </td>
+                    <td class="text-center align-middle">
+                        <span class="badge ${estatusClass}">
+                            <i class="bi bi-flag-fill me-1"></i>${estatusText}
+                        </span>
+                    </td>
+                    <td class="text-center align-middle">
+                        <input type="text" class="form-control form-control-sm departamento text-center"
+                               value="${dept}" readonly>
+                    </td>
+                    <td class="text-center align-middle">
+                        <select class="form-select form-select-sm proceso">
+                            ${procesosHtml}
+                        </select>
+                    </td>
+                    <td class="text-center align-middle">
+                        <select class="form-select form-select-sm gastos">
+                            ${gastosHtml}
+                        </select>
+                    </td>
+                    <td class="text-center align-middle">
+                        <input type="text" class="form-control form-control-sm cedis text-center"
+                               value="${cedis}" readonly>
+                    </td>
+                    <td class="text-center align-middle">
+                        <input type="text" class="form-control form-control-sm nombre_empleado text-center"
+                               value="${nombreEmpleado}">
+                    </td>
+                </tr>
+            `);
         });
 
         // ✅ Reinicializar tooltips para los nuevos elementos
@@ -1801,37 +1815,37 @@ class SolicitudManager {
             const maxStock = (solicitud.MaxStock ?? solicitud.maxStock ?? 0);
 
             tbody.append(`
-                <tr>
-                    <td class="text-center">
-                        <input type="checkbox" class="form-check-input chk-solicitud-sc" checked>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge bg-blue-ptm badge-custom">${ordenTrabajo || 'N/A'}</span>
-                    </td>
-                    <td class="text-center">
-                        <small class="text-muted fw-semibold">${codigoRefaccion || 'N/A'}</small>
-                    </td>
-                    <td>${nombreArticulo || 'N/A'}</td>
-                    <td class="text-end fw-semibold">${stock.toLocaleString('es-MX')}</td>
-                    <td class="text-end fw-semibold">${minStock.toLocaleString('es-MX')}</td>
-                    <td class="text-end fw-semibold">${maxStock.toLocaleString('es-MX')}</td>
-                    <td class="text-center fw-semibold">${cantidadReq}</td>
-                    <td class="text-center">
-                        <input type="number"
-                            class="form-control form-control-sm cant-encargar text-center"
-                            min="1"
-                            max="${cantidadReq}"
-                            value="${cantidadReq}"
-                            data-idsolicitud="${idSolicitud}"
-                            data-ordentrabajo="${ordenTrabajo}"
-                            data-codigorefaccion="${codigoRefaccion}"
-                            data-refaccion="${nombreArticulo}"
-                            data-cantidad="${cantidadReq}"
-                            data-index="${index}"
-                            required>
-                    </td>
-                </tr>
-            `);
+            <tr>
+                <td class="text-center">
+                    <input type="checkbox" class="form-check-input chk-solicitud-sc" checked>
+                </td>
+                <td class="text-center">
+                    <span class="badge bg-blue-ptm badge-custom"><i class="bi bi-file-earmark-text me-1"></i>${ordenTrabajo || 'N/A'}</span>
+                </td>
+                <td class="text-center">
+                    <small class="text-muted fw-s"><i class="bi bi-upc-scan me-1"></i>${codigoRefaccion || 'N/A'}</small>
+                </td>
+                <td><i class="bi bi-box-seam text-muted me-1"></i>${nombreArticulo || 'N/A'}</td>
+                <td class="text-end fw-semibold"><i class="bi bi-box-seam text-info me-1"></i>${stock.toLocaleString('es-MX')}</td>
+                <td class="text-end fw-semibold"><i class="bi bi-arrow-down-circle text-warning me-1"></i>${minStock.toLocaleString('es-MX')}</td>
+                <td class="text-end fw-semibold"><i class="bi bi-arrow-up-circle text-success me-1"></i>${maxStock.toLocaleString('es-MX')}</td>
+                <td class="text-center fw-semibold"><span class="badge bg-blue-ptm badge-custom">${cantidadReq}</span></td>
+                <td class="text-center">
+                    <input type="number"
+                        class="form-control form-control-sm cant-encargar text-center"
+                        min="1"
+                        max="${cantidadReq}"
+                        value="${cantidadReq}"
+                        data-idsolicitud="${idSolicitud}"
+                        data-ordentrabajo="${ordenTrabajo}"
+                        data-codigorefaccion="${codigoRefaccion}"
+                        data-refaccion="${nombreArticulo}"
+                        data-cantidad="${cantidadReq}"
+                        data-index="${index}"
+                        required>
+                </td>
+            </tr>
+        `);
         });
 
         // ✅ Configurar eventos del modal

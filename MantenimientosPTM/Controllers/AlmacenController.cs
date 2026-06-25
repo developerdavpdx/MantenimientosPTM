@@ -670,6 +670,98 @@ namespace MantenimientosPTM.Controllers
                 return Json(jsonResponse);
             }
         }
+        public JsonResult ActualizarSolicitudOrdenCompraMP()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            UpdatePurchaseRequest RequestData;
+            try
+            {
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+                    RequestData = JsonConvert.DeserializeObject<UpdatePurchaseRequest>(jsonData);
+                }
+
+                if (RequestData?.Requisicion == null)
+                    throw new Exception("No se recibió la información de la requisición.");
+
+                var idSolicitudCompra = RequestData.Requisicion.IdSolicitudCompra;
+                var contabilizacion = RequestData.Requisicion.Contabilizacion;
+                var articulos = RequestData.Requisicion.Articulos ?? new List<ArticuloRequisicionModel>();
+
+                // ───────────────────────────────────────────
+                // 1️⃣ Actualizar CABECERA
+                // ───────────────────────────────────────────
+                var paramsEstatus = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+            {
+                { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
+                { "P_CENTRO_COSTO_1", ((object)contabilizacion?.Departamento ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_CENTRO_COSTO_2", ((object)contabilizacion?.Proceso ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_CENTRO_COSTO_3", ((object)contabilizacion?.Gastos ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_CENTRO_COSTO_4", ((object)contabilizacion?.Cedis ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_ESTATUS", ("Espera Autorizacion", ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_DOC_NUM", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_DOC_ENTRY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_RESPONSE_SAP", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) }
+            };
+
+                var resultEstatus = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCActualizarCabeceraSolicitudCompraMP, paramsEstatus
+                );
+
+                if (resultEstatus.JsonResult.Contains("ERROR"))
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "Error al actualizar el estatus de la solicitud.";
+                    return Json(jsonResponse);
+                }
+
+                // ───────────────────────────────────────────
+                // 2️⃣ Actualizar DETALLE — recorrer artículos y sus IdsDetalle
+                // ───────────────────────────────────────────
+                foreach (var articulo in articulos)
+                {
+                    if (articulo.IdsDetalle == null || !articulo.IdsDetalle.Any())
+                        continue;
+
+                    foreach (var idDetalle in articulo.IdsDetalle)
+                    {
+                        var paramsDetalle = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                    {
+                        { "P_ID_DETALLE", (idDetalle, ParameterDirection.Input, HanaDbType.Integer) },
+                        { "P_CARD_CODE", ((object)articulo.CodigoProveedor ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    };
+
+                        var resultDetalle = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                            Logic.AD.GCActualizarSolicitudCompraDetalleMP, paramsDetalle
+                        );
+
+                        if (resultDetalle.JsonResult.Contains("ERROR"))
+                        {
+                            jsonResponse.Status = "ERROR";
+                            jsonResponse.Message = $"Error al actualizar el detalle ID_DETALLE={idDetalle} (artículo {articulo.CodigoArticulo}).";
+                            return Json(jsonResponse);
+                        }
+                    }
+                }
+
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = $"Solicitud de autorización para requisición de compra #{idSolicitudCompra} generada correctamente. En espera de autorización.";
+                jsonResponse.Data = idSolicitudCompra.ToString();
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible procesar la solicitud: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+
         [HttpPost]
         public JsonResult ActualizarRefaccionOT()
         {
@@ -813,8 +905,14 @@ namespace MantenimientosPTM.Controllers
                         emails = emailsData.Select(e => e["Email"].ToString()).ToList();
                     }
 
+                    //Si no hay emails retornar respuesta exitosa
                     if (emails.Count == 0)
-                        throw new Exception("No se encontraron destinatarios para el correo.");
+                    {
+                        jsonResponse.Status = "OK";
+                        jsonResponse.Message = "Solicitud enviada para autorización correctamente.";
+                        jsonResponse.Data = idSolicitudCompra.ToString();
+                        return Json(jsonResponse);
+                    }
 
                     // ✅ 2. Codificar parámetros para URL
                     string idEncoded = HttpUtility.UrlEncode(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(idSolicitudCompra.ToString())));
