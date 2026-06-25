@@ -85,6 +85,11 @@ class GestionEquiposApp {
         // Evento para gestionar tipos (lista / eliminar)
         $('#GestionarTipos').off('click').on('click', (e) => this.equipoManager.abrirModalGestionarTipos(e));
 
+        // Evento para abrir modal de agregar área
+        $('#AgregarArea').on('click', (e) => this.equipoManager.abrirModalAgregarArea(e));
+        // Evento para gestionar áreas (lista / eliminar)
+        $('#GestionarAreas').off('click').on('click', (e) => this.equipoManager.abrirModalGestionarAreas(e));
+
         // 🔥 EXPORTAR A EXCEL
         $('#btnExportarExcel').on('click', () => this.equipoManager.exportarExcelEquipos());
 
@@ -96,6 +101,9 @@ class GestionEquiposApp {
 
         // Evento para eliminar tipo (individual)
         $(document).on('click', '.btn-eliminar-tipo', (e) => this.equipoManager.abrirConfirmEliminarTipo(e));
+
+        // Evento para eliminar área (individual)
+        $(document).on('click', '.btn-eliminar-area', (e) => this.equipoManager.abrirConfirmEliminarArea(e));
 
         // Evento para eliminar
         $(document).on('click', '.btn-eliminar', (e) => this.equipoManager.abrirModalSolicitudeliminarEquipo(e));
@@ -116,6 +124,9 @@ class GestionEquiposApp {
 
         // ✅ CORRECTO - Debes pasar "e" como parámetro
         $('#formAgregarTipoEquipo').on('submit', (e) => this.equipoManager.InsertarTipoEquipo(e));
+
+        // ✅ CORRECTO - Debes pasar "e" como parámetro para agregar área
+        $('#formAgregarArea').on('submit', (e) => this.equipoManager.InsertarArea(e));
 
         // Botón aplicar filtros
         $('#btnAplicarFiltros').off('click').on('click', function () {
@@ -145,7 +156,7 @@ class GestionEquiposApp {
                 EquiposUtil.llenarLineas(
                     this.datos_usuario[0].PLANTA,
                     Area,
-                    0,
+                    null,
                     "LineaProduccion",
                     null
                 );
@@ -160,7 +171,7 @@ class GestionEquiposApp {
                 EquiposUtil.llenarLineas(
                     this.datos_usuario[0].PLANTA,
                     Proceso,
-                    0,
+                    null,
                     "FiltroLinea",
                     null
                 );
@@ -1140,7 +1151,7 @@ class EquipoManager {
             EquiposUtil.llenarLineas(
                 this.datos_usuario[0].PLANTA,
                 equipoData.idarea,
-                0,
+                null,
                 "LineaProduccion",
                 null,
                 () => {
@@ -1435,6 +1446,33 @@ class EquipoManager {
         }
     }
 
+    // ========================================
+    // GESTIONAR ÁREAS (LISTAR / ELIMINAR)
+    // ========================================
+    abrirModalGestionarAreas(e) {
+        e.preventDefault();
+        // Cargar lista de áreas
+        this.renderListarAreas();
+        // Abrir modal de gestión de áreas
+        try {
+            $('#modalAgregarArea').off('shown.bs.tab').on('shown.bs.tab', 'button[data-bs-toggle="tab"]', (e) => {
+                try {
+                    const tabId = $(e.target).attr('id');
+                    if (tabId === 'tab-listar-area') {
+                        this.renderListarAreas();
+                    }
+                } catch (err) {
+                    // noop
+                }
+            });
+
+            $('#modalAgregarArea').modal('show');
+        } catch (err) {
+            console.warn('No se pudo abrir modal de gestión de áreas:', err);
+            $('#modalAgregarArea').modal('show');
+        }
+    }
+
     async renderListarTipos() {
         // Preferir el contenedor dentro del modal actualmente visible (evita conflictos con ids duplicados)
         let container = $('.modal.show').find('#ListaTiposContainer').first();
@@ -1607,6 +1645,162 @@ class EquipoManager {
         // Cambios en filtro si aplica (no hay filtros por ahora)
     }
 
+    async renderListarAreas() {
+        // Preferir el contenedor dentro del modal actualmente visible
+        let container = $('.modal.show').find('#ListaAreasContainer').first();
+        if (!container || container.length === 0) {
+            container = $('#ListaAreasContainer').first();
+        }
+
+        if (!container || container.length === 0) {
+            console.warn('Contenedor ListaAreasContainer no encontrado en la vista');
+            return;
+        }
+
+        container.html(`<div class="ai-loader">
+            <div class="ai-core">
+                <div class="ai-ring"></div>
+                <div class="ai-ring delay"></div>
+                <div class="ai-ring delay2"></div>
+            </div>
+            <div class="ai-wave"></div>
+            <p class="ai-text">CARGANDO ÁREAS...</p>
+        </div>`);
+
+        try {
+            let lista = await EquiposUtil.obtenerAreas(this.PLANTA);
+
+            // Normalizar posibles formas de respuesta
+            if (!Array.isArray(lista)) {
+                if (lista && Array.isArray(lista.Data)) lista = lista.Data;
+                else if (lista && Array.isArray(lista.Results)) lista = lista.Results;
+                else if (lista && Array.isArray(lista.DataArray)) lista = lista.DataArray;
+                else if (lista && typeof lista === 'string') {
+                    try { lista = JSON.parse(lista); } catch (err) { lista = []; }
+                } else {
+                    lista = [];
+                }
+            }
+
+            if (!lista || lista.length === 0) {
+                container.html('<div class="text-muted">No hay áreas registradas.</div>');
+                return;
+            }
+
+            // Normalizar items a { value, label }
+            lista = lista.map(item => {
+                if (!item) return { value: '', label: '' };
+                if (item.value !== undefined && item.label !== undefined) return item;
+                return {
+                    value: item.ID_AREA || item.ID || item.id || item.VALUE || '',
+                    label: item.AREA || item.LABEL || item.label || item.NOMBRE || item.NAME || ''
+                };
+            });
+
+            const elementos = lista.map((item, idx) => {
+                return `
+                    <div class="d-flex align-items-center justify-content-between py-2 border-bottom area-item" style="display:none;">
+                        <div class="d-flex align-items-center gap-3">
+                            <input class="form-check-input area-checkbox" type="checkbox" value="${item.value}" id="chk_area_${item.value}">
+                            <label for="chk_area_${item.value}" style="margin-bottom:0;"><strong class="nombre-area">${item.label}</strong></label>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-ptm-eliminar btn-eliminar-area" data-bs-toggle="tooltip" title="Eliminar" data-id="${item.value}" data-nombre="${item.label}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.empty();
+            elementos.forEach((html, i) => {
+                const $el = $(html).appendTo(container);
+                $el.hide().delay(i * 50).fadeIn(180);
+            });
+
+            // Inicializar tooltips
+            try {
+                container.find('[data-bs-toggle="tooltip"]').each(function () { new bootstrap.Tooltip(this); });
+            } catch (err) { /* noop */ }
+
+            // Asegurar checkbox seleccionar todo reseteado
+            const modalRoot = container.closest('.modal');
+            if (modalRoot && modalRoot.length) {
+                modalRoot.find('#chkSeleccionarTodoAreas').prop('checked', false);
+            }
+
+            // Configurar eventos
+            this.configurarEventosListarAreas(container);
+
+        } catch (err) {
+            container.html(`<div class="text-danger">Error al cargar áreas: ${err}</div>`);
+        }
+    }
+
+    configurarEventosListarAreas(container) {
+        // Scope: buscar elementos dentro del modal que contiene el container
+        const modal = container.closest('.modal');
+        const chkAll = modal.find('#chkSeleccionarTodoAreas');
+        const btnEliminar = modal.find('#btnEliminarSeleccionadasAreas');
+
+        // Seleccionar todo
+        chkAll.off('change').on('change', function () {
+            const checks = container.find('.area-checkbox');
+            const checked = $(this).is(':checked');
+            checks.prop('checked', checked);
+        });
+
+        // Actualizar estado de checkboxes
+        container.find('.area-checkbox').off('change').on('change', () => {
+            // noop - solo tracking de cambio
+        });
+
+        // Eliminar múltiples
+        btnEliminar.off('click').on('click', () => {
+            const selected = container.find('.area-checkbox:checked').map(function () { return $(this).val(); }).get();
+            if (!selected || selected.length === 0) {
+                AlertManager.mostrar('Seleccione al menos un área para eliminar', 'warning');
+                return;
+            }
+
+            ConfirmManager.mostrar({
+                titulo: `¿Eliminar ${selected.length} área(s)?`,
+                mensaje: `<div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;"><div>Se eliminarán <strong>${selected.length}</strong> área(s). Esta operación será verificada por el servidor y algunas áreas pueden no eliminarse si tienen dependencias.</div><hr style="margin:10px 0;"><div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irrevocable.</div></div>`,
+                onConfirm: () => {
+                    $.ajax({
+                        url: `/${this.URLBase}/EliminarAreas`,
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ Areas: selected, Permanente: false, PLANTA: this.PLANTA, USUARIO: this.datos_usuario[0].EMAIL }),
+                        beforeSend: () => { GlobalUtil.mostrarLoader(true, "Eliminando por favor espere…"); },
+                        success: (response) => {
+                            GlobalUtil.mostrarLoader(false, "Cargando áreas por favor espere...");
+                            let results = [];
+                            if (response.DataArray && response.DataArray.length) results = response.DataArray;
+                            else if (response.Results && response.Results.length) results = response.Results;
+                            else if (response.Data && typeof response.Data === 'string') {
+                                try { results = JSON.parse(response.Data); } catch (err) { results = []; }
+                            }
+
+                            if (results && results.length > 0) {
+                                const resultContainer = modal.find('#ResultDeleteAreaContainer').length ? modal.find('#ResultDeleteAreaContainer') : $('#ResultDeleteAreaContainer');
+                                this.mostrarResultadosEliminacion(results, resultContainer);
+                                this.renderListarAreas();
+                            } else if (response.Status === 'SI') {
+                                AlertManager.mostrar(response.Message || 'Operación completada.', 'success');
+                                this.renderListarAreas();
+                            } else {
+                                AlertManager.mostrar(response.Message || 'No fue posible eliminar las áreas', 'warning');
+                            }
+                        },
+                        error: () => { GlobalUtil.mostrarLoader(false); AlertManager.mostrar('Error al conectar con el servidor', 'warning'); }
+                    });
+                }
+            });
+        });
+    }
+
     abrirConfirmEliminarTipo(e) {
         e.preventDefault();
         const id = $(e.currentTarget).data('id');
@@ -1675,6 +1869,75 @@ class EquipoManager {
         }
 
         $('#modalAgregarTipoEquipo').modal('show');
+    }
+
+    abrirModalAgregarArea(e) {
+        e.preventDefault();
+        $('#formAgregarArea')[0].reset();
+        ValidationManager.limpiarValidacion('#formAgregarArea');
+        // Cargar la lista inicialmente
+        this.renderListarAreas();
+
+        // Asegurar que al cambiar a la pestaña 'Listar / Eliminar' se cargue la lista
+        try {
+            $('#modalAgregarArea').off('shown.bs.tab').on('shown.bs.tab', 'button[data-bs-toggle="tab"]', (ev) => {
+                try {
+                    const tabId = $(ev.target).attr('id');
+                    if (tabId === 'tab-listar-area') {
+                        this.renderListarAreas();
+                    }
+                } catch (err) { /* noop */ }
+            });
+        } catch (err) {
+            // noop
+        }
+
+        $('#modalAgregarArea').modal('show');
+    }
+
+    abrirConfirmEliminarArea(e) {
+        e.preventDefault();
+        const id = $(e.currentTarget).data('id');
+        const nombre = $(e.currentTarget).data('nombre') || $(e.currentTarget).closest('tr').find('.nombre-area').text() || '';
+
+        ConfirmManager.mostrar({
+            titulo: `¿Eliminar área ${nombre || id}?`,
+            mensaje: `<div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;"><div>Se eliminará el área <strong>${nombre || id}</strong>. Esta operación será verificada por el servidor y puede fallar si hay dependencias.</div><hr style="margin:10px 0;"><div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irreversible.</div></div>`,
+            onConfirm: () => {
+                const datos = { Areas: [id], Permanente: false, PLANTA: this.PLANTA, USUARIO: this.datos_usuario[0].EMAIL };
+                $.ajax({
+                    url: `/${this.URLBase}/EliminarAreas`,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(datos),
+                    beforeSend: () => { GlobalUtil.mostrarLoader(true, "Eliminando por favor espere…"); },
+                    success: (response) => {
+                        GlobalUtil.mostrarLoader(false, "Cargando áreas por favor espere...");
+                        let results = [];
+                        if (response.DataArray && response.DataArray.length) results = response.DataArray;
+                        else if (response.Results && response.Results.length) results = response.Results;
+                        else if (response.Data && typeof response.Data === 'string') {
+                            try { results = JSON.parse(response.Data); } catch (err) { results = []; }
+                        }
+
+                        const first = (results && results.length > 0) ? results[0] : null;
+
+                        if (results && results.length > 0) {
+                            const originModal = $(e.currentTarget).closest('.modal');
+                            const resultContainer = originModal.find('#ResultDeleteAreaContainer').length ? originModal.find('#ResultDeleteAreaContainer') : $('#ResultDeleteAreaContainer');
+                            this.mostrarResultadosEliminacion(results, resultContainer);
+                            this.renderListarAreas();
+                        } else if (response.Status === 'SI' || (first && first.Status === 'SI')) {
+                            AlertManager.mostrar(response.Message || 'Área eliminada correctamente.', 'success');
+                            this.renderListarAreas();
+                        } else {
+                            AlertManager.mostrar((first && first.Message) || response.Message || 'No fue posible eliminar el área', 'warning');
+                        }
+                    },
+                    error: () => { GlobalUtil.mostrarLoader(false); AlertManager.mostrar('Error al conectar con el servidor', 'warning'); }
+                });
+            }
+        });
     }
 
     abrirModalPausarEquipo(e) {
@@ -1994,7 +2257,7 @@ class EquipoManager {
                     $("#formLinea")[0].reset();
                     $("#formLinea").removeClass("was-validated");
 
-                    EquiposUtil.llenarLineas(this.PLANTA,null,0, "LineaProduccion", "FiltroLinea");
+                    EquiposUtil.llenarLineas(this.PLANTA,null,null, "LineaProduccion", "FiltroLinea");
 
                     setTimeout(function () {
                         $("#btnGuardarLinea").html('<i class="bi bi-save me-1"></i>Guardar');
@@ -2051,7 +2314,7 @@ class EquipoManager {
                     $("#formAgregarTipoEquipo").removeClass("was-validated");
 
                     //PENDIENTE LLENAR TIPOS DE EQUIPO
-                    EquiposUtil.llenarLineas(this.PLANTA,null,0, "LineaProduccion", "FiltroLinea");
+                    EquiposUtil.llenarLineas(this.PLANTA,null,null, "LineaProduccion", "FiltroLinea");
 
                     setTimeout(function () {
                         $("#btnGuardarTipoEquipo").html('<i class="bi bi-save me-1"></i>Guardar');
@@ -2072,6 +2335,62 @@ class EquipoManager {
                 $("#btnGuardarTipoEquipo").html('<i class="bi bi-save me-1"></i>Guardar');
                 $("#btnGuardarTipoEquipo").prop("disabled", false);
                 AlertManager.mostrar('Error al conectar con el servidor', 'warning', "alertTipoEquipoContainer");
+            }
+        });
+    }
+
+    InsertarArea(e) {
+
+        e.preventDefault(); // Evitar el submit tradicional
+
+        // Validar formulario
+        if (!ValidationManager.validarFormulario('#formAgregarArea')) {
+            AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', 'alertAreaContainer');
+            return false;
+        }
+
+        // Recopilar los datos
+        const datos = {
+            AREA: $("#NombreArea").val(),
+            PLANTA: this.PLANTA
+        };
+
+        $("#btnGuardarArea").html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
+        $("#btnGuardarArea").prop("disabled", true);
+
+        $.ajax({
+            url: `/${this.URLBase}/InsertarArea`,
+            type: 'POST',
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(datos),
+            dataType: 'json',
+            success: (response) => {
+                if (response.Status === 'SI') {
+                    $("#btnGuardarArea").html('<i class="bi bi-check-circle-fill me-2 text-white"></i>Área agregada correctamente');
+                    $("#btnGuardarArea").prop("disabled", false);
+
+                    // Hacer el reset
+                    $("#formAgregarArea")[0].reset();
+                    $("#formAgregarArea").removeClass("was-validated");
+
+                    setTimeout(function () {
+                        $("#btnGuardarArea").html('<i class="bi bi-save me-1"></i>Guardar');
+                    }, 3000);
+
+                    EquiposUtil.llenarProcesos(this.PLANTA, 'GestionArea', 'AreaLine');
+
+                } else {
+                    let customMessage = JSON.parse(response.Data);
+                    let FinalMessage = response.Message + " " + customMessage[0].Message;
+                    $("#btnGuardarArea").html('<i class="bi bi-save me-1"></i>Guardar');
+                    $("#btnGuardarArea").prop("disabled", false);
+                    AlertManager.mostrar(FinalMessage + "." || 'Error al insertar nueva área', 'warning', "alertAreaContainer");
+                }
+            },
+            error: (xhr, status, error) => {
+                $("#btnGuardarArea").html('<i class="bi bi-save me-1"></i>Guardar');
+                $("#btnGuardarArea").prop("disabled", false);
+                AlertManager.mostrar('Error al conectar con el servidor', 'warning', "alertAreaContainer");
             }
         });
     }

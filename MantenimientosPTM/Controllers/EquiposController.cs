@@ -389,6 +389,279 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpPost]
+        public JsonResult InsertarArea()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            AccesoDatosEquipos.Area RequestData;
+
+            try
+            {
+                // Leer JSON
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    RequestData = JsonConvert.DeserializeObject<AccesoDatosEquipos.Area>(jsonData);
+                }
+
+                // Parámetros HANA
+                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, false, null);
+
+                var excludedParams = new[]
+                {
+                    "P_ID_AREA",
+                    "P_STATUS"
+                };
+
+                var parameters = allparameters
+                    .Where(p => !excludedParams.Contains(p.Key))
+                    .ToDictionary(p => p.Key, p => p.Value);
+
+                // Ejecutar SP
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCInsertarArea,
+                    parameters
+                );
+
+                // Respuesta
+                jsonResponse.Status =
+                    resultHana.JsonResult.Contains("ERROR") ||
+                    resultHana.JsonResult.Contains("DUPLICADO")
+                        ? "NO"
+                        : "SI";
+
+                jsonResponse.Message =
+                    resultHana.JsonResult.Contains("ERROR")
+                        ? "No fue posible insertar el área."
+                        : resultHana.JsonResult.Contains("DUPLICADO")
+                            ? "El área ya existe."
+                            : "Área insertada correctamente.";
+
+                jsonResponse.Data = resultHana.JsonResult;
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible insertar el área: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult EliminarAreas()
+        {
+            // Delegar procesamiento a método común específico para áreas
+            Request.InputStream.Position = 0;
+            using (var reader = new StreamReader(Request.InputStream))
+            {
+                string jsonData = reader.ReadToEnd();
+                if (string.IsNullOrEmpty(jsonData))
+                    return Json(new GlobalCommands.JsonResponseMtto { Status = "NO", Message = "No se recibió información.", Data = string.Empty });
+
+                var req = JsonConvert.DeserializeObject<AccesoDatosEquipos.EliminarAreasRequest>(jsonData);
+                var respuesta = ProcesarEliminarAreas(req);
+                return Json(respuesta);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult EliminarArea()
+        {
+            // Endpoint para eliminación individual de área que reutiliza la lógica masiva
+            Request.InputStream.Position = 0;
+            using (var reader = new StreamReader(Request.InputStream))
+            {
+                string jsonData = reader.ReadToEnd();
+                if (string.IsNullOrEmpty(jsonData))
+                    return Json(new GlobalCommands.JsonResponseMtto
+                    {
+                        Status = "NO",
+                        Message = "No se recibió información.",
+                        Data = string.Empty
+                    });
+
+                JObject jo = null;
+                try { jo = JObject.Parse(jsonData); } catch { }
+
+                int id = 0;
+                if (jo != null)
+                {
+                    id = jo.Value<int?>("IdArea")
+                      ?? jo.Value<int?>("ID_AREA")
+                      ?? jo.Value<int?>("id")
+                      ?? 0;
+                }
+                else
+                {
+                    try
+                    {
+                        var tmp = JsonConvert.DeserializeObject<dynamic>(jsonData);
+                        id = tmp?.IdArea ?? tmp?.ID_AREA ?? 0;
+                    }
+                    catch { }
+                }
+
+                if (id <= 0)
+                    return Json(new GlobalCommands.JsonResponseMtto
+                    {
+                        Status = "NO",
+                        Message = "Id de área inválido.",
+                        Data = string.Empty
+                    });
+
+                var req = new AccesoDatosEquipos.EliminarAreasRequest
+                {
+                    Areas = new List<int> { id },
+                    Permanente = jo?.Value<bool?>("Permanente") ?? false,
+                    PLANTA = jo?.Value<int?>("PLANTA") ?? 0,
+                    USUARIO = jo?.Value<string>("USUARIO") ?? string.Empty
+                };
+
+                var respuesta = ProcesarEliminarAreas(req);
+                return Json(respuesta);
+            }
+        }
+
+        private GlobalCommands.JsonResponseMtto ProcesarEliminarAreas(AccesoDatosEquipos.EliminarAreasRequest RequestData)
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+
+            var listaAreas = RequestData?.Areas ?? new List<int>();
+            var resultados = new List<object>();
+
+            foreach (var id in listaAreas)
+            {
+                try
+                {
+                    var parametros = new
+                    {
+                        P_ID_AREA = id
+                    };
+
+                    var allparams = Logic.GlobalCommands.ConvertToHanaParameters(parametros, false, null);
+
+                    var resHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCEliminarArea,
+                        allparams);
+
+                    var jr = resHana.JsonResult ?? string.Empty;
+
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(jr) &&
+                            (jr.TrimStart().StartsWith("[") || jr.TrimStart().StartsWith("{")))
+                        {
+                            var arr = JArray.Parse(jr);
+
+                            if (arr.Count > 0)
+                            {
+                                var first = arr[0];
+
+                                var statusToken = first["Status"] ?? first["STATUS"];
+                                var msgToken = first["Message"] ?? first["MESSAGE"];
+                                var totalToken = first["TOTAL_EQUIPOS"] ?? first["TOTAL"];
+
+                                var statusVal = statusToken != null ? statusToken.ToString() : string.Empty;
+                                var messageVal = msgToken != null ? msgToken.ToString() : jr;
+
+                                if (totalToken != null)
+                                {
+                                    messageVal += " (Total dependencias: " + totalToken.ToString() + ")";
+                                }
+
+                                if (statusVal.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    resultados.Add(new
+                                    {
+                                        IdArea = id,
+                                        Status = "NO",
+                                        Message = messageVal
+                                    });
+                                }
+                                else
+                                {
+                                    resultados.Add(new
+                                    {
+                                        IdArea = id,
+                                        Status = "SI",
+                                        Message = messageVal
+                                    });
+                                }
+
+                                continue;
+                            }
+                        }
+
+                        if (jr.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            resultados.Add(new
+                            {
+                                IdArea = id,
+                                Status = "NO",
+                                Message = jr
+                            });
+                        }
+                        else
+                        {
+                            resultados.Add(new
+                            {
+                                IdArea = id,
+                                Status = "SI",
+                                Message = jr
+                            });
+                        }
+                    }
+                    catch
+                    {
+                        resultados.Add(new
+                        {
+                            IdArea = id,
+                            Status = "NO",
+                            Message = jr
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    resultados.Add(new
+                    {
+                        IdArea = id,
+                        Status = "NO",
+                        Message = ex.Message
+                    });
+                }
+            }
+
+            var anySi = resultados.Any(r => ((dynamic)r).Status == "SI");
+            var allSi = resultados.All(r => ((dynamic)r).Status == "SI");
+
+            jsonResponse.Status = allSi ? "SI" : (anySi ? "PARCIAL" : "NO");
+            jsonResponse.Message = jsonResponse.Status == "SI"
+                ? "Eliminación completada."
+                : "Operación finalizada con resultados parciales o errores.";
+
+            try
+            {
+                jsonResponse.Data = JsonConvert.SerializeObject(resultados);
+                try { jsonResponse.DataArray = null; } catch { }
+            }
+            catch
+            {
+                jsonResponse.Data = string.Empty;
+            }
+
+            return jsonResponse;
+        }
+
+        [HttpPost]
         public JsonResult InsertarTipoEquipo()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
@@ -445,6 +718,7 @@ namespace MantenimientosPTM.Controllers
                 return Json(jsonResponse);
             }
         }
+
 
         [HttpPost]
         public JsonResult InsertaEquiposProduccion()

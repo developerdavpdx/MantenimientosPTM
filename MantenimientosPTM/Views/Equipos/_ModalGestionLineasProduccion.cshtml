@@ -1,0 +1,140 @@
+﻿<!-- ══════════════════════════════════════════════
+     MODAL AGREGAR / EDITAR LÍNEA DE PRODUCCIÓN
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="lineaModal" tabindex="-1" aria-hidden="true" data-bs-keyboard="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-diagram-3-fill"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom" id="modalLineaTitulo">Agregar Nueva Línea de Producción</div>
+                        <div class="modal-subtitle-custom">Complete los datos de la línea</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Body ── -->
+            <form id="formLinea" class="needs-validation" novalidate autocomplete="on">
+                <div class="modal-body-custom">
+                    <input type="hidden" id="IdLinea" name="IdLinea" autocomplete="off">
+
+                    <!-- Nav tabs: Listar / Alta -->
+                    <ul class="nav nav-tabs mb-3" id="lineaTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tab-alta" data-bs-toggle="tab" data-bs-target="#tabAlta" type="button" role="tab" aria-controls="tabAlta" aria-selected="true">Nueva</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-listar" data-bs-toggle="tab" data-bs-target="#tabListar" type="button" role="tab" aria-controls="tabListar" aria-selected="false">Listar / Eliminar</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+
+                        <!-- Pestaña Alta / Editar -->
+                        <div class="tab-pane fade show active" id="tabAlta" role="tabpanel" aria-labelledby="tab-alta">
+                            <div class="mb-3">
+                                <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                                    <i class="bi bi-info-circle-fill me-2"></i>Información de la Línea
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label-custom" for="PlantaLine">
+                                            <i class="bi bi-building"></i> Planta
+                                        </label>
+                                        <input type="text" class="form-control-custom" id="PlantaLine" name="PlantaLine" readonly autocomplete="off">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label-custom" for="AreaLine">
+                                            <i class="bi bi-diagram-3"></i> Área
+                                        </label>
+                                        <div class="select-wrapper">
+                                            <select class="form-select-custom" id="AreaLine" name="AreaLine" required autocomplete="off">
+                                                <option value="">Seleccionar área...</option>
+                                            </select>
+                                            <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione el área.</div>
+                                            <div class="select-loader d-none" id="loader_AreaLine">
+                                                <span class="spinner-border spinner-border-sm"></span>
+                                            </div>
+                                        </div>
+                                        <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione un área.</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label-custom" for="Linea">
+                                            <i class="bi bi-diagram-3"></i> Nombre de la Línea
+                                        </label>
+                                        <input type="text" class="form-control-custom" id="Linea" name="Linea"
+                                               placeholder="Ingrese nombre de la línea" required autocomplete="on">
+                                        <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El nombre de la línea es obligatorio.</div>
+                                        <div class="mt-1" style="font-size:0.78rem; color: var(--modal-text-muted);">
+                                            <i class="bi bi-lightbulb text-warning"></i> Ejemplo: LÍNEA 1, LÍNEA 2, etc.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Alerta Container -->
+                                <div class="row pt-3 g-3">
+                                    <div class="col-12">
+                                        <div id="alertLineaContainer"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Pestaña Listar / Eliminar -->
+                        <div class="tab-pane fade" id="tabListar" role="tabpanel" aria-labelledby="tab-listar">
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label-custom">Planta</label>
+                                    <input type="text" id="GestionPlanta" class="form-control-custom" readonly />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom">Área</label>
+                                    <select id="GestionArea" class="form-select-custom">
+                                        <option value="">Todas las áreas</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 d-flex align-items-center justify-content-between gap-2 d-none" id="delAllLineasContainer">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="chkSeleccionarTodoLineas">
+                                    <label class="form-check-label ms-2 text-black" for="chkSeleccionarTodoLineas">Seleccionar todo</label>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-sm btnEliminarLineas" id="btnEliminarSeleccionadas" data-bs-toggle="tooltip" title="Eliminar seleccionadas">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="ListaLineasContainer">
+                                <div class="text-center text-muted">Cargando...</div>
+                            </div>
+                            <div id="ResultDeleteContainer">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom" id="footer_lineas">
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal" id="btnCancelarGLinea">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn-modal-guardar" id="btnGuardarLinea">
+                        <i class="bi bi-floppy-fill me-1"></i> Guardar Línea
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

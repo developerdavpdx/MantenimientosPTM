@@ -1,0 +1,312 @@
+﻿<!-- ══════════════════════════════════════════════
+     MODAL SOLICITUD DE BAJA DE ACTIVO FIJO
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalBajaActivo" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered" style="max-width:95%">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-file-earmark-x-fill"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Solicitud de Baja de Activo Fijo</div>
+                        <div class="modal-subtitle-custom">Complete los datos para registrar la solicitud</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Formulario ── -->
+            <form id="formBajaActivo" class="needs-validation overflow-auto" novalidate autocomplete="on">
+                <div class="modal-body-custom">
+
+                    <!-- Encabezado Documento -->
+                    <div id="DocHeader" class="p-3 rounded mb-4 border" style="background:#fff;">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <img src="~/Content/Images/LogoPTM.png" alt="Logo PTM" style="height:60px; width:auto;">
+                            <div class="text-center">
+                                <h6 class="fw-bold mb-0 text-uppercase" style="font-size:0.85rem;">PLASTICS TECHNOLOGY DE MÉXICO, S. DE R.L. DE C.V.</h6>
+                                <p class="mb-0 fw-semibold" style="font-size:0.82rem; color: var(--modal-primary);">
+                                    SOLICITUD DE BAJA DE ACTIVO FIJO
+                                </p>
+                            </div>
+                        </div>
+                        <hr class="divider-custom mb-0">
+                    </div>
+
+                    <!-- Sección 1: Información General -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-calendar-check-fill me-2"></i>Información General
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="FechaSolicitud">
+                                    <i class="bi bi-calendar3"></i> Fecha de Solicitud <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" class="form-control-custom" id="FechaSolicitud" name="FechaSolicitud" required autocomplete="off">
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione la fecha de solicitud de baja.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label-custom" for="MotivoBaja">
+                                    <i class="bi bi-chat-left-text-fill"></i> Motivo de Baja <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control-custom" id="MotivoBaja" name="MotivoBaja" rows="2"
+                                          placeholder="Describa el motivo de la baja del activo fijo..." autocomplete="on"></textarea>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El motivo de la baja es obligatorio.</div>
+                                <div class="mt-1" style="font-size:0.78rem; color: var(--modal-text-muted);">
+                                    <i class="bi bi-lightbulb text-warning"></i> Ejemplo: Deterioro por uso, obsolescencia tecnológica, etc.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 2: Descripción del Activo -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-box-seam-fill me-2"></i>Descripción del Activo
+                        </h6>
+                        <div class="p-3 rounded border" style="background:#fff;">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label-custom" for="CodigoActivo">
+                                        <i class="bi bi-upc-scan"></i> Código <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="CodigoActivo" name="CodigoActivo"
+                                           placeholder="Ej. AF12345" required autocomplete="on">
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El código del activo es obligatorio.</div>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label-custom" for="DescripcionActivo">
+                                        <i class="bi bi-card-text"></i> Descripción <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="DescripcionActivo" name="DescripcionActivo"
+                                           placeholder="Ej. Equipo de Laboratorio Marca XYZ" required autocomplete="on">
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  La descripción del activo es obligatoria.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 3: Forma de Baja -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-arrow-down-circle-fill me-2"></i>Forma de Baja
+                        </h6>
+                        <div class="p-3 rounded border" style="background:#fff;">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label-custom" for="Desecho">
+                                        <i class="bi bi-trash"></i> Desecho
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="Desecho" name="Desecho"
+                                           placeholder="Ej. Chatarrización" autocomplete="on">
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el tipo de desecho.</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label-custom" for="TipoActivoFijo">
+                                        <i class="bi bi-bookmark"></i> Tipo de Activo Fijo
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="TipoActivoFijo" name="TipoActivoFijo"
+                                           placeholder="Ej. Equipo de Laboratorio" autocomplete="on">
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el tipo de activo.</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label-custom" for="Venta">
+                                        <i class="bi bi-cash-coin"></i> Venta
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="Venta" name="Venta"
+                                           placeholder="Ej. Venta interna" autocomplete="on">
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el tipo de venta.</div>
+                                </div>
+                            </div>
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-3">
+                                    <label class="form-label-custom" for="Piezas">
+                                        <i class="bi bi-123"></i> Piezas
+                                    </label>
+                                    <input type="number" class="form-control-custom" id="Piezas" name="Piezas"
+                                           min="0" placeholder="0" autocomplete="off">
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el número de piezas.</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label-custom" for="Kilos">
+                                        <i class="bi bi-speedometer"></i> Kilogramos
+                                    </label>
+                                    <input type="number" class="form-control-custom" id="Kilos" name="Kilos"
+                                           min="0" step="0.01" placeholder="0.00" autocomplete="off">
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el peso en kilogramos.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="ValorIva">
+                                        <i class="bi bi-calculator"></i> Valor con IVA
+                                    </label>
+                                    <input type="number" class="form-control-custom" id="ValorIva" name="ValorIva"
+                                           min="0" step="0.01" placeholder="0.00" autocomplete="off">
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el valor con IVA.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 4: Información Contable -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-calculator-fill me-2"></i>Información Contable
+                        </h6>
+                        <div class="p-3 rounded border" style="background:#fff;">
+                            <div class="row g-3">
+                                <div class="col-md-7">
+                                    <label class="form-label-custom" for="Observacion">
+                                        <i class="bi bi-journal-text"></i> Observación
+                                    </label>
+                                    <textarea class="form-control-custom" id="Observacion" name="Observacion"
+                                              rows="2" placeholder="Escriba las observaciones contables..." autocomplete="on"></textarea>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Escriba sus observaciones.</div>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label-custom" for="EncargadoActivos">
+                                        <i class="bi bi-person-badge"></i> Encargado de Activos Fijos
+                                    </label>
+                                    <input type="text" class="form-control-custom" id="EncargadoActivos" name="EncargadoActivos"
+                                           placeholder="C.P. Juan Francisco Castañón Cortes" autocomplete="on">
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Indique el encargado de activos.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 5: Documentos e Imágenes -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-images me-2"></i>Documentos e Imágenes
+                        </h6>
+                        <div class="p-3 rounded border" style="background:#fff;">
+
+                            <!-- Upload área imágenes (sin cambios funcionales) -->
+                            <div class="mb-3">
+                                <div class="upload-area" id="uploadArea">
+                                    <div class="upload-icon">☁️</div>
+                                    <div class="upload-text">Arrastra y suelta tus imágenes aquí</div>
+                                    <div class="upload-hint">o haz clic para seleccionar archivos</div>
+                                    <input type="file" id="fileInput" accept="image/*" multiple>
+                                </div>
+                                <div class="progress-bar" id="progressBar">
+                                    <div class="progress-fill" id="progressFill"></div>
+                                </div>
+                                <div class="upload-info" id="uploadInfo">
+                                    Formatos soportados: JPG, PNG, GIF, WebP | Tamaño máximo: 5MB por imagen
+                                </div>
+                                <div class="preview-area" id="previewArea"></div>
+                                <button type="button" class="btn-clear-all" id="clearAll" style="display:none;">
+                                    🗑️ Limpiar todas las imágenes
+                                </button>
+                            </div>
+
+                            <!-- PDF Upload -->
+                            <div id="DocDel" class="pt-2 d-none border border-warning rounded p-3 bg-warning-subtle shadow-sm">
+                                <label class="form-label-custom fw-semibold" for="archivoPDF">
+                                    <i class="bi bi-file-earmark-pdf text-danger"></i>
+                                    Subir Documento PDF con firmas correspondientes <span class="text-danger">*</span>
+                                </label>
+
+                                <input type="file" class="form-control-custom" id="archivoPDF" name="archivoPDF"
+                                       accept=".pdf,application/pdf" required>
+
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione un archivo PDF.</div>
+
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Solo se permiten archivos PDF (máx. 5MB)
+                                </small>
+                            </div>
+
+                            <!-- PDF Preview -->
+                            <div id="DocDelPreview" class="pt-2 d-none">
+                                <div id="archivoInfo" class="modal-banner-info d-none mt-2 justify-content-between">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-file-earmark-pdf-fill" style="font-size:1.1rem;"></i>
+                                        <span id="nombreArchivo" class="fw-semibold"></span>
+                                        <span id="tamañoArchivo" style="opacity:0.7; font-size:0.78rem;"></span>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-danger" id="btnRemoverArchivo">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Alerta Container -->
+                            <div class="row pt-3 g-3">
+                                <div class="col-12">
+                                    <div id="alertSolicitudBajaContainer"></div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Sección 6: Notificaciones por Correo -->
+                    <div id="NotificacionesEmailContainer" class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-envelope-fill me-2"></i>Notificaciones por Correo
+                        </h6>
+                        <div class="p-3 rounded border" style="background:#fff;">
+
+                            <!-- Input para agregar correo -->
+                            <div class="d-flex gap-2 mb-3">
+                                <div class="flex-grow-1">
+                                    <input type="email" class="form-control-custom" id="inputCorreoNotificacion"
+                                           placeholder="ejemplo@empresa.com" autocomplete="off">
+                                    <div id="errorCorreo" class="modal-error-msg invalid-feedback" style="display:none;">
+                                        <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Ingrese un correo válido.
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-modal-guardar" id="btnAgregarCorreo" style="white-space:nowrap;">
+                                    <i class="bi bi-plus-circle-fill me-1"></i> Agregar
+                                </button>
+                            </div>
+
+                            <!-- Lista de correos -->
+                            <div id="listaCorreos" class="d-flex flex-wrap gap-2">
+                                <span id="sinCorreos" class="text-muted" style="font-size:0.82rem;">
+                                    <i class="bi bi-info-circle me-1"></i> No hay correos agregados aún.
+                                </span>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom justify-content-between">
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal" id="btnCancelarBaja">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn-modal-guardar" id="btnGuardarBaja">
+                            <i class="bi bi-floppy-fill me-1"></i> Guardar
+                        </button>
+                        <button type="button" class="btn-modal-guardar danger" id="btnExportPDF">
+                            <i class="bi bi-file-earmark-pdf-fill me-1"></i> Exportar PDF
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

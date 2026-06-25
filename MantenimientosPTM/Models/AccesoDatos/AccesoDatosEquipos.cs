@@ -140,11 +140,25 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarTipoEquipo\"";
             }
         }
+        public string GCInsertarArea
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarArea\"";
+            }
+        }
         public string GCEliminarTipoEquipo
         {
             get
             {
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarTipoEquipo\"";
+            }
+        }
+        public string GCEliminarArea
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarArea\"";
             }
         }
         #endregion
@@ -176,6 +190,29 @@ namespace MantenimientosPTM
             public bool Permanente { get; set; }
             public int PLANTA { get; set; }
             public string USUARIO { get; set; }
+        }
+
+        public class EliminarAreasRequest
+        {
+            public List<int> Areas { get; set; } = new List<int>();
+            public bool Permanente { get; set; }
+            public int PLANTA { get; set; }
+            public string USUARIO { get; set; }
+        }
+
+        public class Area
+        {
+            [JsonProperty("ID_AREA")]
+            public int P_ID_AREA { get; set; }
+
+            [JsonProperty("PLANTA")]
+            public int P_PLANTA { get; set; }
+
+            [JsonProperty("AREA")]
+            public string P_AREA { get; set; }
+
+            [JsonProperty("STATUS")]
+            public int P_STATUS { get; set; }
         }
 
         public class TipoEquipo

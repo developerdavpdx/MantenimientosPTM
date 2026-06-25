@@ -1,0 +1,82 @@
+﻿<!-- ══════════════════════════════════════════════
+     MODAL PAUSAR EQUIPO
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalPausarEquipo" tabindex="-1" aria-labelledby="modalPausarEquipoLabel" aria-hidden="true" data-bs-keyboard="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-pause-circle-fill"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom" id="modalPausarEquipoLabel">Pausar Equipo</div>
+                        <div class="modal-subtitle-custom">Indique el motivo de la pausa del equipo</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Body ── -->
+            <form id="formPausaEquipo" class="needs-validation" novalidate autocomplete="on">
+                <div class="modal-body-custom">
+
+                    <!-- Información del Equipo -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-info-circle-fill me-2"></i>Información del Equipo
+                        </h6>
+
+                        <!-- Banner equipo a pausar -->
+                        <div class="modal-banner-info">
+                            <i class="bi bi-gear-fill" style="font-size:1.2rem; flex-shrink:0;"></i>
+                            <div>
+                                <small class="d-block" style="opacity:0.75;">Equipo a pausar:</small>
+                                <strong id="nombreEquipoPausar" class="fs-6">-</strong>
+                            </div>
+                        </div>
+
+                        <!-- Razón de la Pausa -->
+                        <div class="col-12">
+                            <label class="form-label-custom" for="ComentariosPausa">
+                                <i class="bi bi-chat-square-text-fill"></i> Razón de la Pausa
+                            </label>
+                            <textarea id="ComentariosPausa" name="ComentariosPausa"
+                                      class="form-control-custom"
+                                      rows="4"
+                                      placeholder="Describe el motivo de la pausa del equipo..."
+                                      required autocomplete="off"></textarea>
+                            <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Describa el motivo de pausa.</div>
+                            <div class="mt-1" style="font-size:0.78rem; color: var(--modal-text-muted);">
+                                <i class="bi bi-lightbulb text-warning"></i> Ejemplo: Falla mecánica, mantenimiento preventivo, etc.
+                            </div>
+                        </div>
+
+                        <!-- Alerta Container -->
+                        <div class="row pt-3 g-3">
+                            <div class="col-12">
+                                <div id="alertPauseEquipoContainer"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn-modal-guardar danger" id="btnConfirmarPausa">
+                        <i class="bi bi-pause-circle-fill me-1"></i> Pausar Equipo
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

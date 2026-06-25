@@ -1,0 +1,109 @@
+﻿<!-- ══════════════════════════════════════════════
+     MODAL AGREGAR TIPO EQUIPO
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalAgregarTipoEquipo" tabindex="-1" aria-labelledby="modalAgregarTipoEquipoLabel" aria-hidden="true" data-bs-keyboard="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 720px;">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap success">
+                        <i class="bi bi-tools"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom" id="modalAgregarTipoEquipoLabel">
+                            Gestión de Tipos de Equipo
+                        </div>
+                        <div class="modal-subtitle-custom">
+                            Alta y listado de tipos de equipo
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Body con pestañas Alta / Listar ── -->
+            <div class="modal-body-custom">
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-alta-tipo" data-bs-toggle="tab" data-bs-target="#tabAltaTipo" type="button" role="tab">Nuevo</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-listar-tipo" data-bs-toggle="tab" data-bs-target="#tabListarTipo" type="button" role="tab">Listar / Eliminar</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tabAltaTipo" role="tabpanel" aria-labelledby="tab-alta-tipo">
+                        <form id="formAgregarTipoEquipo" class="needs-validation" novalidate autocomplete="off">
+                            <div class="mb-3">
+                                <div class="col-12 mb-3">
+                                    <label class="form-label-custom" for="NombreTipoEquipo">
+                                        <i class="bi bi-tag-fill"></i>
+                                        Nombre del Tipo de Equipo
+                                    </label>
+
+                                    <input type="text"
+                                           id="NombreTipoEquipo"
+                                           name="NombreTipoEquipo"
+                                           class="form-control-custom"
+                                           placeholder="Ejemplo: Extrusoras, Recibidores..."
+                                           required />
+
+                                    <div class="modal-error-msg invalid-feedback">
+                                        <img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Ingrese el tipo de equipo.
+                                    </div>
+
+                                    <div class="mt-1" style="font-size:0.78rem; color: var(--modal-text-muted);">
+                                        <i class="bi bi-lightbulb text-warning"></i>
+                                        Ejemplo: Extrusoras, Tanques, Impresoras, etc.
+                                    </div>
+                                </div>
+
+                                <div class="row pt-3 g-3">
+                                    <div class="col-12">
+                                        <div id="alertTipoEquipoContainer"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer-custom">
+                                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                                    <i class="bi bi-x-circle me-1"></i> Cancelar
+                                </button>
+
+                                <button type="submit" class="btn-modal-guardar" id="btnGuardarTipoEquipo">
+                                    <i class="bi bi-floppy-fill me-1"></i>
+                                    Guardar Tipo
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabListarTipo" role="tabpanel" aria-labelledby="tab-listar-tipo">
+                        <div class="mb-3 d-flex align-items-center justify-content-between gap-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="chkSeleccionarTodoTipos">
+                                <label class="form-check-label ms-2 text-black" for="chkSeleccionarTodoTipos">Seleccionar todo</label>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-sm btnEliminarLineas" id="btnEliminarSeleccionadasTipos" data-bs-toggle="tooltip" title="Eliminar seleccionadas">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="ListaTiposContainer">
+                            <div class="text-center text-muted">Cargando...</div>
+                        </div>
+
+                        <div id="ResultDeleteContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

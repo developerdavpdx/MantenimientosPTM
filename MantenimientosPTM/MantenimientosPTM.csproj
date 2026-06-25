@@ -2851,6 +2851,14 @@
     <Content Include="Views\Almacen\SolicitudRefacciones.cshtml" />
     <Content Include="Views\Almacen\ReporteStock.cshtml" />
     <Content Include="Views\Planeacion\CalendarioProduccion.cshtml" />
+    <Content Include="Views\Equipos\_ModalAgregarEditarEquipos.cshtml" />
+    <Content Include="Views\Equipos\_ModalPausarEquipo.cshtml" />
+    <Content Include="Views\Equipos\_ModalAgregarTipoEquipo.cshtml" />
+    <Content Include="Views\Equipos\_ModalSolicitudBajaEquipo.cshtml" />
+    <Content Include="Views\Equipos\_ModalRutinaMantenimiento.cshtml" />
+    <Content Include="Views\Equipos\_ModalVerImagenAmpliada.cshtml" />
+    <Content Include="Views\Equipos\_ModalGestionLineasProduccion.cshtml" />
+    <Content Include="Views\Equipos\_ModalGestionAreas.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

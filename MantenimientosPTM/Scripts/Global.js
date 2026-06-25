@@ -925,7 +925,7 @@ class GlobalUtil {
             loader.style.display = mostrar ? 'flex' : 'none';
         }
         const loaderDescription = document.getElementById('loading_description');
-        if (loaderDescription) {
+        if (loaderDescription && description !== "") {
             loaderDescription.textContent = description;
         }
     }
@@ -2012,6 +2012,57 @@ class EquiposUtil {
 
     }
 
+    static obtenerAreas(Planta) {
+
+        return new Promise((resolve, reject) => {
+
+            $.ajax({
+                url: `/${GlobalUtil.URLBaseEquipos}/GetProcesosPorPlanta`,
+                type: 'GET',
+                data: { "Planta": Planta },
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                success: (data) => {
+
+                    if (data.Status === 'OK') {
+
+                        let areasData = data.Data;
+
+                        if (typeof areasData === 'string') {
+                            try {
+                                areasData = JSON.parse(areasData);
+                            } catch (e) {
+                                console.warn('No se pudo parsear Data:', e);
+                            }
+                        }
+
+                        // 🔥 Solo devolver lista
+                        const lista = areasData.map(x => ({
+                            value: x.ID_AREA,
+                            label: x.AREA
+                        }));
+
+                        resolve(lista);
+
+                    } else {
+
+                        reject(data.Message);
+
+                    }
+
+                },
+                error: () => {
+
+                    reject("Error al obtener áreas");
+
+                }
+            });
+
+        });
+
+    }
+
     static llenarLineasCheckbox(Planta, Area, Produccion, FieldContainer) {
 
         $('#cardsPlaneacionGrid')
@@ -2330,6 +2381,42 @@ class EquiposUtil {
                         }
                     } catch (ex) {
                         console.warn('obtenerTipoEquipos: error procesando respuesta', ex);
+                    }
+                    resolve([]);
+                },
+                error: function () {
+                    resolve([]);
+                }
+            });
+        });
+    }
+
+    static obtenerAreas(Planta) {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: `/${GlobalUtil.URLBaseEquipos}/GetProcesosPorPlanta`,
+                type: 'GET',
+                data: { "Planta": Planta },
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                success: function (data) {
+                    try {
+                        if (data && data.Status === 'OK') {
+                            let areasData = data.Data || [];
+                            if (typeof areasData === 'string') {
+                                try {
+                                    areasData = JSON.parse(areasData);
+                                } catch (e) {
+                                    console.warn('No se pudo parsear Data:', e);
+                                }
+                            }
+                            const lista = (areasData || []).map(a => ({ value: a.ID_AREA, label: a.AREA }));
+                            resolve(lista);
+                            return;
+                        }
+                    } catch (ex) {
+                        console.warn('obtenerAreas: error procesando respuesta', ex);
                     }
                     resolve([]);
                 },
