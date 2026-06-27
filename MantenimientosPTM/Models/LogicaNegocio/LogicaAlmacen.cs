@@ -36,14 +36,14 @@ namespace MantenimientosPTM
         /// <summary>
         /// Crea una Purchase Request en SAP B1 via Service Layer
         /// </summary>
-        public async Task<GlobalCommands.SapResponse> CrearPurchaseRequestAsync(AccesoDatosAlmacen.RequisicionPayload payload)
+        public async Task<GlobalCommands.SapResponse> CrearPurchaseRequestAsync(List<AccesoDatosAlmacen.SolicitudCompraResume> Header, List<AccesoDatosAlmacen.SolicitudCompraDetalle> Detalle)
         {
             var responseAbx = new GlobalCommands.SapResponse { IsError = true };
 
             try
             {
                 log.Info($"🚀 ═══════════════════════════════════════════════════");
-                log.Info($"🚀 INICIO CrearPurchaseRequest — ID Solicitud: {payload.IdSolicitudCompra}");
+                log.Info($"🚀 INICIO CrearPurchaseRequest — ID Solicitud: {Header[0].IdSolicitudCompra}");
                 log.Info($"🚀 ═══════════════════════════════════════════════════");
 
                 // ✅ 1 — Login
@@ -60,18 +60,18 @@ namespace MantenimientosPTM
                 log.Info($"✅ Login exitoso — SessionId: {loginResult.SessionId}");
 
                 // ✅ 2 — Armar DocumentLines
-                log.Info($"📦 Armando DocumentLines — Total artículos: {payload.Articulos.Count}");
+                log.Info($"📦 Armando DocumentLines — Total artículos: {Detalle.Count}");
 
                 // ✅ DESPUÉS — una línea por artículo agrupado
-                var documentLines = payload.Articulos.Select(articulo => new
+                var documentLines = Detalle.Select(articulo => new
                 {
                     ItemCode = articulo.CodigoArticulo,
-                    Quantity = articulo.CantidadTotal,
+                    Quantity = articulo.CantidadEncargar,
                     LineVendor = articulo.CodigoProveedor,
-                    CostingCode = payload.Contabilizacion.Departamento,
-                    CostingCode2 = payload.Contabilizacion.Proceso,
-                    CostingCode3 = payload.Contabilizacion.Gastos,
-                    CostingCode4 = payload.Contabilizacion.Cedis
+                    CostingCode = Header[0].Departamento, //Departamento
+                    CostingCode2 = Header[0].Proceso,//Proceso
+                    CostingCode3 = Header[0].Gastos,//Gastos
+                    CostingCode4 = Header[0].Cedis//Cedis
                 }).ToList();
 
                 foreach (var line in documentLines)
@@ -154,7 +154,7 @@ namespace MantenimientosPTM
                     log.Info($"✅ Logout exitoso");
 
                 log.Info($"🏁 ═══════════════════════════════════════════════════");
-                log.Info($"🏁 FIN CrearPurchaseRequest — ID Solicitud: {payload.IdSolicitudCompra}");
+                log.Info($"🏁 FIN CrearPurchaseRequest — ID Solicitud: {Header[0].IdSolicitudCompra}");
                 log.Info($"🏁 ═══════════════════════════════════════════════════");
             }
 
@@ -355,14 +355,14 @@ namespace MantenimientosPTM
                         newLine["ItemCode"] = linea["REFACCION_SOLICITADA"].ToString();
                         //newLine["Quantity"] = Convert.ToDouble(linea["CANTIDAD"]);
                         newLine["Quantity"] = Convert.ToDouble(articulo.Cantidad);
-                        newLine["WarehouseCode"] = linea["DfltWH"].ToString();
+                        newLine["WarehouseCode"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["AlmacenP1"] : ConfigurationManager.AppSettings["AlmacenP2"]);
                         newLine["CostingCode"] = articulo.Departamento;
                         newLine["CostingCode2"] = articulo.Proceso;
                         newLine["CostingCode3"] = articulo.Gastos;
                         newLine["CostingCode4"] = articulo.Cedis;
-
-                        newLine["U_EMPLEADO"] = payload.NombreEmpleado;
-                        newLine["U_ALMACENISTA"] = payload.AlmacenistaEntrega;
+                        newLine["CostingCode5"] = payload.DataMovimiento.NumEmpleado;
+                        newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
+                        newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
 
 
                         // ✅ Cuenta contable si aplica
@@ -402,6 +402,7 @@ namespace MantenimientosPTM
                 dictGI["DocDueDate"] = DateTime.Now.ToString("yyyy-MM-dd");
                 dictGI["Comments"] = $"Salida de mercancía generada por interfaz PTM Mantenimientos — {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Para solicitud: {payload.Referencia} Orden Trabajo: {payload.OrdenTrabajo}";
                 dictGI["JournalMemo"] = $"Salida de mercancía para solicitud: {payload.Referencia} Orden Trabajo: {payload.OrdenTrabajo}";
+                dictGI["Reference2"] = payload.DataMovimiento.Recibe;
 
                 var serie = GetSerieByName(payload.Contabilizacion[0].Cedis);
 
@@ -508,9 +509,9 @@ namespace MantenimientosPTM
         public async Task<int> GetSerieByName(string Cedis)
         {
             var paramgs = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_SERIES_NAME",     (  Cedis ?? string.Empty, ParameterDirection.Input, HanaDbType.Integer) },
-                    };
+            {
+                { "P_SERIES_NAME",     (  Cedis ?? string.Empty, ParameterDirection.Input, HanaDbType.Integer) },
+            };
 
             var resultGS = GlobalCommands.ExecuteProcedureHanaAuto(
                 AD.GCGetSerieByName, paramgs
@@ -594,6 +595,9 @@ namespace MantenimientosPTM
                                 artInfo["CostingCode2"] = articulo.Proceso;
                                 artInfo["CostingCode3"] = articulo.Gastos;
                                 artInfo["CostingCode4"] = articulo.Cedis;
+                                artInfo["CostingCode5"] = payload.DataMovimiento.NumEmpleado;
+                                artInfo["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
+                                artInfo["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
                                 articulosData.Add(artInfo);
                             }
                         }
@@ -645,6 +649,7 @@ namespace MantenimientosPTM
                 dictGR["DocDueDate"] = DateTime.Now.ToString("yyyy-MM-dd");
                 dictGR["Comments"] = $"Devolución de refacciones — {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
                 dictGR["JournalMemo"] = $"Devolución interna solicitud: {payload.Referencia} orden trabajo: {payload.OrdenTrabajo}";
+                dictGR["Reference2"] = payload.DataMovimiento.Recibe;
                 dictGR["DocumentLines"] = new List<object>();
                 //FALTA SERIE = CEDIS
 
@@ -658,11 +663,14 @@ namespace MantenimientosPTM
 
                     newLine["ItemCode"] = linea["REFACCION_SOLICITADA"].ToString();
                     newLine["Quantity"] = Convert.ToDouble(linea["CANTIDAD"]);
-                    newLine["WarehouseCode"] = linea["DfltWH"].ToString();
+                    newLine["WarehouseCode"] = newLine["WarehouseCode"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["AlmacenP1"] : ConfigurationManager.AppSettings["AlmacenP2"]);
                     newLine["CostingCode"] = linea["CostingCode"];
                     newLine["CostingCode2"] = linea["CostingCode2"];
                     newLine["CostingCode3"] = linea["CostingCode3"];
                     newLine["CostingCode4"] = linea["CostingCode4"];
+                    newLine["CostingCode5"] = payload.DataMovimiento.NumEmpleado;
+                    newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
+                    newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
 
 
                     // Cuenta contable (opcional pero recomendable)

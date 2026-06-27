@@ -97,15 +97,15 @@
 
                         <!-- Estado -->
                         @*<div class="col-12 col-sm-6 col-md-3 col-xl-2">
-            <label class="filtro-label" for="FiltroEstadoParo">
-                <i class="bi bi-toggle-on"></i> Estado
-            </label>
-            <select class="filtro-input" id="FiltroEstadoParo" name="FiltroEstadoParo">
-                <option value="">Todos los estatus...</option>
-                <option value="Activo">Activos</option>
-                <option value="Resuelto">Resueltos</option>
-            </select>
-        </div>*@
+                                <label class="filtro-label" for="FiltroEstadoParo">
+                                    <i class="bi bi-toggle-on"></i> Estado
+                                </label>
+                                <select class="filtro-input" id="FiltroEstadoParo" name="FiltroEstadoParo">
+                                    <option value="">Todos los estatus...</option>
+                                    <option value="Activo">Activos</option>
+                                    <option value="Resuelto">Resueltos</option>
+                                </select>
+                            </div>*@
 
                         <!-- Fecha Inicio -->
                         <div class="col-12 col-sm-6 col-md-3 col-xl-2">
@@ -267,7 +267,7 @@
      MODAL REGISTRAR PARO DE PRODUCCIÓN
 ══════════════════════════════════════════════ -->
 <div class="modal fade" id="modalRegistrarParo" tabindex="-1" aria-labelledby="modalRegistrarParoLabel" aria-hidden="true" data-bs-keyboard="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:95%">
         <div class="modal-content">
 
             <!-- ── Header ── -->
@@ -342,6 +342,23 @@
                             </button>
                         </div>
                     </div>
+                    <div class="row mb-3">
+                        <div class="cards-grid d-none" id="cardsPlaneacionGrid">
+                            <div class="ai-loader">
+
+                                <div class="ai-core">
+                                    <div class="ai-ring"></div>
+                                    <div class="ai-ring delay"></div>
+                                    <div class="ai-ring delay2"></div>
+                                </div>
+
+                                <div class="ai-wave"></div>
+
+                                <p class="ai-text">CARGANDO LÍNEAS...</p>
+
+                            </div>
+                        </div>
+                    </div>
                     <div id="LineasProduccionContainer" class="row mb-3 d-none">
                         <div class="col-md-12">
                             <label class="form-label-custom">
@@ -354,8 +371,8 @@
                                     Seleccionar todas las líneas
                                 </label>
                             </div>
-
-                            <div id="contenedorLineasParo" class="checkbox-group-custom row"></div>
+                            <div id="contenedorLineasParo" class="checkbox-group-custom row">
+                            </div>
                         </div>
                     </div>
                     <div class="row mb-3">
@@ -447,7 +464,7 @@
                         <label class="filtro-label" for="inputNombreTipoParo">
                             <i class="bi bi-tag-fill"></i> Nombre de Categoría
                         </label>
-                        <input type="text" class="filtro-input" id="inputNombreTipoParo" 
+                        <input type="text" class="filtro-input" id="inputNombreTipoParo"
                                maxlength="50" placeholder="Ingrese el nombre de la categoría" required>
                         <div class="form-text">Máximo 50 caracteres</div>
                     </div>

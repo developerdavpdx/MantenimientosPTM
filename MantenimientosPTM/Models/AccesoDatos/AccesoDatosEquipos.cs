@@ -1,7 +1,9 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
+using System.Linq;
 
 namespace MantenimientosPTM
 {
@@ -15,6 +17,13 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertaEquipo\"";
             }
         }
+        public string GCInsertaPeriodicidadesEquipo
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarPeriodicidadEquipo\"";
+            }
+        }
         public string GCActualizaEquipo
         {
             get
@@ -22,6 +31,14 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOActualizaEquipo\"";
             }
         }
+        public string GCEliminarPeriodicidadesEquipo
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarPeriodicidadesEquipo\"";
+            }
+        }
+
         public string GCActualizaEstatusEquipo
         {
             get
@@ -108,12 +125,40 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarLinea\"";
             }
         }
+        public string GCEliminarLinea
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarLinea\"";
+            }
+        }
 
         public string GCInsertarTipoEquipo
         {
             get
             {
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarTipoEquipo\"";
+            }
+        }
+        public string GCInsertarArea
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarArea\"";
+            }
+        }
+        public string GCEliminarTipoEquipo
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarTipoEquipo\"";
+            }
+        }
+        public string GCEliminarArea
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarArea\"";
             }
         }
         #endregion
@@ -123,6 +168,51 @@ namespace MantenimientosPTM
         {
             public int Planta { get; set; }
             public string Linea { get; set; }
+            // Id del área asociada a la línea (opcional)
+            public int? Area { get; set; }
+        }
+        public class EliminarLineaProduccion
+        {
+            public int IdLinea { get; set; }
+        }
+
+        public class EliminarLineasRequest
+        {
+            public List<int> Lineas { get; set; }
+            public bool Permanente { get; set; }
+            public int PLANTA { get; set; }
+            public string USUARIO { get; set; }
+        }
+
+        public class EliminarTiposRequest
+        {
+            public List<int> Tipos { get; set; }
+            public bool Permanente { get; set; }
+            public int PLANTA { get; set; }
+            public string USUARIO { get; set; }
+        }
+
+        public class EliminarAreasRequest
+        {
+            public List<int> Areas { get; set; } = new List<int>();
+            public bool Permanente { get; set; }
+            public int PLANTA { get; set; }
+            public string USUARIO { get; set; }
+        }
+
+        public class Area
+        {
+            [JsonProperty("ID_AREA")]
+            public int P_ID_AREA { get; set; }
+
+            [JsonProperty("PLANTA")]
+            public int P_PLANTA { get; set; }
+
+            [JsonProperty("AREA")]
+            public string P_AREA { get; set; }
+
+            [JsonProperty("STATUS")]
+            public int P_STATUS { get; set; }
         }
 
         public class TipoEquipo
@@ -134,6 +224,19 @@ namespace MantenimientosPTM
             public string ESTATUS { get; set; }
 
             public DateTime? FECHA_CREACION { get; set; }
+        }
+
+        public class EliminarTipoEquipoRequest
+        {
+            public List<int> TiposEquipo { get; set; } = new List<int>();
+
+            public bool Permanente { get; set; }
+
+            public string USUARIO { get; set; }
+        }
+        public class EliminarTipoEquipo
+        {
+            public int IdTipoEquipo { get; set; }
         }
         public class PlantaSeleccionada
         {
@@ -194,7 +297,7 @@ namespace MantenimientosPTM
             // IdEquipo
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public int IdEquipo { get; set; }
+            public int? IdEquipo { get; set; }
             // Planta
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -238,7 +341,12 @@ namespace MantenimientosPTM
             // Periodicidad de mantenimiento
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public int PeriodicidadMantenimiento { get; set; }
+            public List<int> PeriodicidadesMantenimiento { get; set; }
+
+            public int PeriodicidadMantenimiento
+            {
+                get { return PeriodicidadesMantenimiento?.FirstOrDefault() ?? 0; }
+            }
 
             // Día de inicio de mantenimiento
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -276,6 +384,21 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(null)]
             public DateTime? FechaBaja { get; set; }
+        }
+        public class PeriodicidadEquipoMTTO
+        {
+            // IdEquipo
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public int? Id_Equipo { get; set; }
+            // IdPeriodicidad
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public int? Id_Periodicidad { get; set; }
+            // Usuario
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public string Usuario { get; set; }
         }
         public class EquipoMTTOLIST
         {
@@ -343,6 +466,11 @@ namespace MantenimientosPTM
             [JsonProperty("PERIODICIDAD_MANTENIMIENTO", DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string PeriodicidadMantenimiento { get; set; }
+
+            // Periodicidad de mantenimiento
+            [JsonProperty("ID_PERIODICIDAD_MANTENIMIENTO", DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string IdPeriodicidadMantenimiento { get; set; }
 
             // Día de inicio de mantenimiento
             [JsonProperty("DIA_INICIO_MANT", DefaultValueHandling = DefaultValueHandling.Populate)]

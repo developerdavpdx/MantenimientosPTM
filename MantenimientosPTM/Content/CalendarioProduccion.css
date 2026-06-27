@@ -1,0 +1,577 @@
+﻿/* ============================================================
+   CardsCalendario.css
+   Estilos específicos del Calendario de Producción.
+   No pisa las clases de CardsPlaneacion.css ni Bootstrap.
+   ============================================================ */
+
+/* ── Barra de navegación del calendario ──────────────────── */
+.cal-nav-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cal-titulo-mes {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0058a1;
+    min-width: 140px;
+}
+
+.btn-cal-nav {
+    background: #f0f4f8;
+    border: 1px solid #d0dce8;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #0058a1;
+    transition: background .15s;
+    padding: 0;
+}
+
+    .btn-cal-nav:hover {
+        background: #dbeafe;
+    }
+
+.btn-cal-hoy {
+    background: #fff;
+    border: 1px solid #0ea5d8;
+    border-radius: 6px;
+    padding: 3px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #0ea5d8;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+
+    .btn-cal-hoy:hover {
+        background: #0ea5d8;
+        color: #fff;
+    }
+
+/* ── Leyenda ────────────────────────────────────────────── */
+.cal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.cal-leyenda-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: #555;
+}
+
+.cal-leyenda-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ── Scroll wrapper ─────────────────────────────────────── */
+.cal-scroll-wrapper {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 72vh;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+/* ── Tabla base ─────────────────────────────────────────── */
+.cal-table {
+    /* Por defecto en vista semana usar ancho 100% para ajustar al contenedor.
+       La vista mes aplicará width: max-content para permitir scroll horizontal
+       y evitar compresión de columnas. */
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 100%;
+    table-layout: auto;
+}
+
+/* En vista mes dejamos que la tabla ocupe su ancho necesario (no comprimido) */
+.cal-table.vista-mes {
+    width: max-content;
+}
+
+    .cal-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #f8fafc;
+    }
+
+/* ── TH encabezados ─────────────────────────────────────── */
+.cal-th-linea {
+    width: 120px;
+    min-width: 100px;
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+}
+
+.cal-th-dia {
+    text-align: center;
+    padding: 6px 4px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #64748b;
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+    border-right: 1px solid #e9edf2;
+    white-space: nowrap;
+}
+
+.cal-th-hoy {
+    background: #eff6ff;
+}
+
+/* ── TD columna línea (sticky izquierda) ────────────────── */
+.cal-td-linea {
+    padding: 5px 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #334155;
+    background: #f8fafc;
+    border-bottom: 1px solid #e9edf2;
+    border-right: 1px solid #e2e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+}
+
+/* ── TD celdas de día ───────────────────────────────────── */
+.cal-td-dia {
+    padding: 5px 4px;
+    vertical-align: top;
+    border-bottom: 1px solid #e9edf2;
+    border-right: 1px solid #e9edf2;
+    /* altura auto para que crezca con el stack */
+    height: auto;
+    min-height: 44px;
+    min-width: 90px;
+}
+
+.cal-td-hoy {
+    background: color-mix(in srgb, #378add 5%, #fff);
+}
+
+/* ── Stack de píldoras apiladas ─────────────────────────── */
+/* Envuelve todos los eventos de una misma celda */
+.cal-pills-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 2px 0;
+}
+
+/* ── Píldoras base ──────────────────────────────────────── */
+.cal-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px; /* mayor altura para mostrar contenido completo */
+    min-height: 44px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    border-radius: 22px;
+    overflow: hidden;
+    white-space: nowrap;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: filter .15s;
+    width: 100%; /* ocupar todo el ancho de la celda */
+}
+
+    .cal-pill:hover {
+        filter: brightness(0.9);
+    }
+
+/* ── Forma Gantt: inicio / medio / fin / solo ───────────── */
+.cal-pill-start {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-right: -2px;
+}
+
+.cal-pill-mid {
+    border-radius: 0;
+    margin-left: -2px;
+    margin-right: -2px;
+}
+
+.cal-pill-end {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: -2px;
+}
+
+/* ── Diferenciador CREATE vs UPDATE ─────────────────────── */
+.cal-pill[data-accion="CREATE"] {
+    border-top: 2px solid rgba(255,255,255,0.30);
+}
+
+.cal-pill[data-accion="UPDATE"] {
+    border-top: 2px dashed rgba(255,255,255,0.60);
+}
+
+/* ── Ícono circular de proceso ──────────────────────────── */
+.cal-pill-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+/* ── Contenido texto ────────────────────────────────────── */
+.cal-pill-content {
+    overflow: hidden;
+    flex: 1;
+    min-width: 0;
+}
+
+.cal-pill-name {
+    font-size: 11px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cal-pill-stats {
+    font-size: 9.5px;
+    opacity: .85;
+}
+
+/* ══════════════════════════════════════════════════════════
+   VISTA SEMANA
+══════════════════════════════════════════════════════════ */
+.cal-table.vista-week .cal-td-dia {
+    min-width: 90px;
+    min-height: 44px;
+}
+
+.cal-table.vista-week .cal-pill {
+    height: 48px;
+    min-height: 48px;
+    min-width:100%;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 24px;
+}
+
+/* Evitar que en vista semana las columnas se compriman demasiado
+   estableciendo un min-width por día. Se permite scroll horizontal si
+   no caben en el contenedor. */
+.cal-table.vista-week .cal-th-dia,
+.cal-table.vista-week .cal-td-dia {
+    min-width: 160px; /* aumentar para mejorar espacio de las pills */
+}
+
+@media (max-width: 1200px) {
+    .cal-table.vista-week .cal-th-dia,
+    .cal-table.vista-week .cal-td-dia { min-width: 120px; }
+}
+
+@media (max-width: 768px) {
+    .cal-table.vista-week .cal-th-dia,
+    .cal-table.vista-week .cal-td-dia { min-width: 100px; }
+}
+
+/* Permitir que en vista semana la tabla pueda tener el ancho necesario
+   para respetar los min-width de las columnas y evitar que las pills se
+   compriman; el contenedor .cal-scroll-wrapper mostrará scroll horizontal */
+.cal-table.vista-week {
+    width: max-content;
+}
+
+.cal-table.vista-week .cal-pill-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 9px;
+}
+
+.cal-table.vista-week .cal-pill-stats {
+    display: block;
+}
+
+/* ══════════════════════════════════════════════════════════
+   VISTA MES
+══════════════════════════════════════════════════════════ */
+.cal-table.vista-mes .cal-th-dia {
+    font-size: 10px;
+    padding: 5px 2px;
+    /* mantener un ancho mínimo para que las pills no se compriman;
+       el usuario podrá desplazar horizontalmente el calendario */
+    min-width: 140px;
+    max-width: none;
+}
+
+.cal-table.vista-mes .cal-td-dia {
+    min-width: 140px;
+    max-width: none;
+    padding: 6px 6px;
+    min-height: 40px;
+}
+
+/* Stack con menos gap en mes */
+.cal-table.vista-mes .cal-pills-stack {
+    padding: 1px 0;
+}
+
+.cal-table.vista-mes .cal-pill {
+    /* Homologar tamaño con vista semana */
+    height: 48px;
+    min-height: 48px;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 24px;
+    gap: 8px;
+}
+
+.cal-table.vista-mes .cal-pill-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 10px;
+}
+
+.cal-table.vista-mes .cal-pill-name {
+    font-size: 11px;
+}
+
+/* Ocultar stats en mes — demasiado texto */
+.cal-table.vista-mes .cal-pill-stats {
+    display: none;
+}
+
+/* ── Estado vacío ───────────────────────────────────────── */
+.cal-empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #64748b;
+}
+
+/* ── Tooltip flotante ───────────────────────────────────── */
+.cal-tooltip-box {
+    position: fixed;
+    z-index: 9999;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0;
+    min-width: 260px;
+    max-width: 320px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.12);
+    pointer-events: none;
+}
+
+.cal-tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.cal-tooltip-body {
+    padding: 8px 14px 12px;
+}
+
+.cal-tt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11.5px;
+    margin-top: 4px;
+    color: #334155;
+}
+
+.cal-tt-label {
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.cal-tt-badge {
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.cal-tt-badge-sm {
+    background: #e2e8f0;
+    color: #475569;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 10.5px;
+}
+
+/* ── Ajustes para texto pequeño dentro de las píldoras ── */
+.cal-pill-theo {
+    margin-top: 2px;
+}
+
+    .cal-pill-theo small {
+        font-size: 0.62rem; /* más pequeño para que quepa mejor */
+        color: rgba(255,255,255,0.85);
+        display: block;
+        line-height: 1;
+        margin-top: 2px;
+    }
+
+.cal-pill-stats-small {
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.88);
+    margin-top: 2px;
+    line-height: 1;
+}
+
+.cal-pill-theo-small small {
+    font-size: 0.62rem;
+    color: rgba(255,255,255,0.82);
+    line-height: 1;
+}
+
+/* ============================================================
+   Responsive adjustments for calendar pills
+   ============================================================ */
+
+.cal-pills-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: flex-start;
+}
+
+.cal-more {
+    background: rgba(0,0,0,0.08);
+    color: #0a4f8a;
+    padding: 6px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+    cursor: pointer;
+    min-width: 44px;
+    text-align: center;
+}
+
+/* Limitar número de filas visibles en el stack */
+.cal-pills-stack.max-1 { overflow: hidden; position: relative; }
+.cal-pills-stack.max-2 { overflow: hidden; position: relative; }
+
+/* Posicionar .cal-more al final dentro del stack */
+.cal-more { position: absolute; right: 8px; bottom: 6px; z-index: 5; }
+
+.cal-pill {
+    display: flex;
+    align-items: center;
+    min-width: 140px; /* espacio mínimo para mostrar texto */
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+}
+
+    .cal-pill .cal-pill-content {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+/* Ajustes por breakpoints */
+@media (max-width: 1400px) {
+    .cal-pill {
+        min-width: 120px;
+        padding: 5px 7px;
+    }
+
+    .cal-event-chip .chip-title {
+        font-size: 0.78rem;
+    }
+
+    .cal-event-chip .chip-sub {
+        font-size: 0.66rem;
+    }
+
+    .cal-pill-theo small {
+        font-size: 0.58rem;
+    }
+}
+
+/* Ajustes por breakpoints */
+@media (max-width: 1285px) {
+    .cal-table {
+        min-width:1300px;
+    }
+}
+
+@media (max-width: 992px) {
+    /* En pantallas pequeñas, reducir aún más y permitir que los pills ocupen toda la fila */
+    .cal-pills-stack {
+        flex-direction: row;
+    }
+
+    .cal-pill {
+        min-width: 100px;
+        padding: 4px 6px;
+    }
+
+    .cal-event-chip .chip-title {
+        font-size: 0.72rem;
+    }
+
+    .cal-pill-theo small {
+        font-size: 0.54rem;
+    }
+}
+
+@media (max-width: 768px) {
+    /* En móviles, permitir scroll horizontal en la tabla y compactar aún más */
+    #calTabla {
+        overflow-x: auto;
+    }
+
+    .cal-pills-stack {
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .cal-pill {
+        min-width: 120px;
+        flex: 0 0 auto;
+        padding: 4px 6px;
+    }
+
+    .cal-event-chip .chip-title {
+        font-size: 0.68rem;
+    }
+
+    .cal-pill-theo small {
+        font-size: 0.5rem;
+        opacity: 0.95;
+    }
+}

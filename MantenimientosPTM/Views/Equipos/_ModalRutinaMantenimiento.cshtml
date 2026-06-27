@@ -1,0 +1,92 @@
+﻿<!-- ══════════════════════════════════════════════
+     MODAL RUTINA DE MANTENIMIENTO PREVENTIVO
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalRutinaOnline" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" style="min-width:95%">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-list-check"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Rutina de Mantenimiento Preventivo</div>
+                        <div class="modal-subtitle-custom">Registre las actividades de mantenimiento</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Info del Equipo ── -->
+            <div class="d-flex gap-4 px-4 py-3 border-bottom flex-wrap" style="background: var(--modal-bg-input);">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:34px; height:34px; background:rgba(0,88,161,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="bi bi-gear-fill" style="color: var(--modal-primary); font-size:1rem;"></i>
+                    </div>
+                    <div>
+                        <small class="d-block" style="font-size:0.72rem; color:var(--modal-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Equipo</small>
+                        <span id="rutinaNombreEquipo" class="fw-semibold" style="color:var(--modal-text-dark); font-size:0.9rem;">-</span>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:34px; height:34px; background:rgba(46,125,50,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="bi bi-diagram-3-fill" style="color:#2E7D32; font-size:1rem;"></i>
+                    </div>
+                    <div>
+                        <small class="d-block" style="font-size:0.72rem; color:var(--modal-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Proceso</small>
+                        <span id="rutinaProceso" class="fw-semibold" style="color:var(--modal-text-dark); font-size:0.9rem;">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Body (crece libremente) ── -->
+            <div class="modal-body-custom">
+
+                <div class="mb-3">
+                    <h6 class="mb-3 pb-2 border-bottom" style="color:var(--modal-primary); font-weight:700;">
+                        <i class="bi bi-clipboard-check-fill me-2"></i>Actividades de Mantenimiento
+                    </h6>
+                    <form id="formRutinaOnline">
+                        <!-- Aquí se carga dinámicamente el contenido -->
+                    </form>
+                </div>
+
+                <!-- Mensaje sin actividades -->
+                <div id="mensajeSinActividades" class="modal-banner-info d-none">
+                    <i class="bi bi-info-circle-fill" style="font-size:1rem; flex-shrink:0;"></i>
+                    <span>No hay actividades agregadas. Haz clic en <strong>"Agregar Actividad"</strong> para comenzar.</span>
+                </div>
+
+            </div>
+
+            <!-- ── Footer ── -->
+            <div class="modal-footer-custom justify-content-between">
+                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Cancelar
+                </button>
+                <div class="d-flex gap-2">
+                    <button class="btn-ptm btn-ptm-mid" id="btnAgregarNota">
+                        <i class="bi bi-sticky-fill me-1"></i> Agregar Nota
+                    </button>
+
+                    <button class="btn-ptm btn-ptm-light" id="btnAgregarActividad">
+                        <i class="bi bi-plus-circle-fill me-1"></i> Agregar Actividad
+                    </button>
+
+                    <button class="btn-ptm btn-ptm-secondary" id="btnAgregarImagenRutina">
+                        <i class="bi bi-image-fill me-1"></i> Agregar Imagen
+                    </button>
+
+                    <button class="btn-ptm btn-ptm-primary" id="btnGuardarRutina">
+                        <i class="bi bi-floppy-fill me-1"></i> Guardar Rutina
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

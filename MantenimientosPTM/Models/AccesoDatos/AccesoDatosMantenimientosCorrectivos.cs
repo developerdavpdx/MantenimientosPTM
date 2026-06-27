@@ -256,6 +256,10 @@ namespace MantenimientosPTM
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
+            public string IdPeriodicidad { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
             public string NombreEquipo { get; set; }
 
             // ✅ NUEVOS

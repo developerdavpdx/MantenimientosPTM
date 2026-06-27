@@ -30,4 +30,8 @@ namespace MantenimientosPTM.Models.Dto
         public int PLANTA { get; set; }
         public string USUARIO { get; set; }
     }
+    public class BitacoralanProduccionDeleteDto
+    {
+        public int IDBITACORA { get; set; }
+    }
 }

@@ -68,6 +68,7 @@ class GestionEventosApp {
             }
         });
     }
+
     //CALENDAR MANAGER
     configurarEventosCalendarManager() {
         $('#btnGuardarEvento').on('click', (e) => this.calendarManager.guardarPlan(e));
@@ -189,6 +190,22 @@ class GestionEventosApp {
             });
         });
 
+        $(document).on('click', '#cardsPlaneacionGrid .btn-act.delupdateplan', (e) => {
+            const btn = $(e.currentTarget);
+            this.calendarManager.eliminarActualizacionPlan({
+                id: btn.data('id'),
+                linea: btn.data('linea'),
+                mes: btn.data('mes'),
+                periodo: btn.data('periodo'),  // ✅
+                articulo: btn.data('articulo'),
+                teorica: btn.data('teorica'),
+                real: btn.data('real'),
+                comentarios: btn.data('comentarios'),
+                fechamov: btn.data('fechamov'),
+                usuario: btn.data('usuario')
+            });
+        });
+
         $("#PlanProceso")
             .off('change')
             .on('change', (e) => {
@@ -215,8 +232,13 @@ class GestionEventosApp {
                     Proceso,
                     1,
                     "FiltroLinea",
-                    null
+                    null,
+                    () => {
+
+                        this.calendarManager.llenarTablaPlanProduccion()
+                    }
                 );
+
             });
 
         $("#PlanLinea")
@@ -285,7 +307,7 @@ class PlaneacionManager {
 
         // ✅ NUEVO: estado interno de paginación de cards
         this._cardsPagina = 1;
-        this._cardsPorPagina = 6; // ajusta a tu gusto
+        this._cardsPorPagina = 12; // ajusta a tu gusto
         this._cardsTotal = 0;
 
         EquiposUtil.llenarLineas(this.PLANTA, "PlanLinea", "ParoLinea");
@@ -364,27 +386,27 @@ class PlaneacionManager {
     // ─────────────────────────────────────────────
     _renderCard(d, idx) {
 
-                const p = this._calcPct(
-                    d.PRODUCCION_TEORICA_PZS,
-                    d.PRODUCCION_REAL
-                );
+        const p = this._calcPct(
+            d.PRODUCCION_TEORICA_PZS,
+            d.PRODUCCION_REAL
+        );
 
-                const bw = Math.min(p, 100);
+        const bw = Math.min(p, 100);
 
-                const estatusC = `estatus-${d.ESTATUS || 'P'}`;
+        const estatusC = `estatus-${d.ESTATUS || 'P'}`;
 
-                const chipC = `chip-${d.ESTATUS || 'P'}`;
+        const chipC = `chip-${d.ESTATUS || 'P'}`;
 
-                const comentario = (d.COMENTARIOS && d.COMENTARIOS.trim())
-                    ? d.COMENTARIOS
-                    : '<em>Sin comentarios</em>';
+        const comentario = (d.COMENTARIOS && d.COMENTARIOS.trim())
+            ? d.COMENTARIOS
+            : '<em>Sin comentarios</em>';
 
-                // ── Paro activo ──────────────────────────
-                const tieneParoActivo =
-                    d.TIENE_PARO_ACTIVO === 1 ||
-                    d.TIENE_PARO_ACTIVO === '1';
+        // ── Paro activo ──────────────────────────
+        const tieneParoActivo =
+            d.TIENE_PARO_ACTIVO === 1 ||
+            d.TIENE_PARO_ACTIVO === '1';
 
-                const paroBanner = tieneParoActivo ? `
+        const paroBanner = tieneParoActivo ? `
             <div class="paro-banner">
                 <i class="bi bi-exclamation-octagon-fill"></i>
                 <span>
@@ -392,16 +414,16 @@ class PlaneacionManager {
                 </span>
             </div>` : '';
 
-                // ── Artículo truncado ────────────────────
-                const articulo = d.ARTICULO
-                    ? (
-                        d.ARTICULO.length > 45
-                            ? d.ARTICULO.substring(0, 45) + '…'
-                            : d.ARTICULO
-                    )
-                    : null;
+        // ── Artículo truncado ────────────────────
+        const articulo = d.ARTICULO
+            ? (
+                d.ARTICULO.length > 45
+                    ? d.ARTICULO.substring(0, 45) + '…'
+                    : d.ARTICULO
+            )
+            : null;
 
-                return `
+        return `
 
         <div class="prod-card ${estatusC} ${tieneParoActivo ? 'tiene-paro' : ''}"
              data-id="${d.ID_PLAN}"
@@ -650,7 +672,7 @@ class PlaneacionManager {
             </div>
 
             <!-- Historial -->
-            ${this._renderBitacora(d.BITACORA || [])}
+            ${this._renderBitacora(d.BITACORA || [], d)}
 
             <!-- FOOTER -->
             <div class="card-foot">
@@ -731,106 +753,106 @@ class PlaneacionManager {
         el.innerHTML = h;
     }
 
-    _renderBitacora(bitacora = []) {
+    _renderBitacora(bitacora = [], plan = {}) {
 
-                // Si no hay registros, no renderiza nada
-                if (!bitacora.length) return '';
+        // Si no hay registros, no renderiza nada
+        if (!bitacora.length) return '';
 
-                // Configuración visual según tipo de acción
-                const cfg = {
-                    CREATE: { icon: 'bi-plus-circle-fill', cls: 'bit-create', label: 'Plan creado' },
-                    UPDATE: { icon: 'bi-pencil-fill', cls: 'bit-update', label: 'Ajuste' },
-                    DELETE: { icon: 'bi-trash3-fill', cls: 'bit-delete', label: 'Eliminado' },
-                };
+        // Configuración visual según tipo de acción
+        const cfg = {
+            CREATE: { icon: 'bi-plus-circle-fill', cls: 'bit-create', label: 'Plan creado' },
+            UPDATE: { icon: 'bi-pencil-fill', cls: 'bit-update', label: 'Ajuste' },
+            DELETE: { icon: 'bi-trash3-fill', cls: 'bit-delete', label: 'Eliminado' },
+        };
 
-                // Recorrer bitácora (ya viene orden cronológico)
-                const items = bitacora.map((b, i) => {
+        // Recorrer bitácora (ya viene orden cronológico)
+        const items = bitacora.map((b, i) => {
 
-                    // Configuración visual del registro
-                    const c = cfg[b.BIT_ACCION] || cfg.UPDATE;
+            // Configuración visual del registro
+            const c = cfg[b.BIT_ACCION] || cfg.UPDATE;
 
-                    // Determinar si es el último (más reciente)
-                    const esUltimo = i === bitacora.length - 1;
+            // Determinar si es el último (más reciente)
+            const esUltimo = i === bitacora.length - 1;
 
-                    // Dibujar línea vertical solo si no es el último
-                    const esLinea = !esUltimo;
+            // Dibujar línea vertical solo si no es el último
+            const esLinea = !esUltimo;
 
-                    // Campos normales (grid compacto)
-                    const campos = [
+            // Campos normales (grid compacto)
+            const campos = [
 
-                        {
-                            icon: 'bi-gear-fill',
-                            label: 'Proceso',
-                            val: b.NVO_PROCESO
-                        },
+                {
+                    icon: 'bi-gear-fill',
+                    label: 'Proceso',
+                    val: b.NVO_PROCESO
+                },
 
-                        {
-                            icon: 'bi-box-seam-fill',
-                            label: 'Artículo',
-                            val: b.NVO_ARTICULO
-                        },
+                {
+                    icon: 'bi-box-seam-fill',
+                    label: 'Artículo',
+                    val: b.NVO_ARTICULO
+                },
 
-                        {
-                            icon: 'bi-box-seam-fill',
-                            label: 'Cap. Piezas',
-                            val: b.PZSXDIA
-                                ? `${this._fmtNum(b.PZSXDIA)} PZ/día`
-                                : `0 PZ/día`
-                        },
+                {
+                    icon: 'bi-box-seam-fill',
+                    label: 'Cap. Piezas',
+                    val: (b.NVO_PZSXDIA !== undefined ? b.NVO_PZSXDIA : b.PZSXDIA) != null
+                        ? `${this._fmtNum((b.NVO_PZSXDIA !== undefined ? b.NVO_PZSXDIA : b.PZSXDIA))} PZ/día`
+                        : null
+                },
 
-                        {
-                            icon: 'bi-speedometer2',
-                            label: 'Cap. Kilos',
-                            val: b.KGSXDIA
-                                ? `${this._fmtNum(b.KGSXDIA)} KG/día`
-                                : `0 KG/día`
-                        },
+                {
+                    icon: 'bi-speedometer2',
+                    label: 'Cap. Kilos',
+                    val: (b.NVO_KGSXDIA !== undefined ? b.NVO_KGSXDIA : b.KGSXDIA) != null
+                        ? `${this._fmtNum((b.NVO_KGSXDIA !== undefined ? b.NVO_KGSXDIA : b.KGSXDIA))} KG/día`
+                        : null
+                },
 
-                        {
-                            icon: 'bi-box-fill',
-                            label: 'Prod. Teórica PZ',
-                            val: b.PRODUCCION_TEORICA_PZS
-                                ? `${this._fmtNum(b.PRODUCCION_TEORICA_PZS)} PZ`
-                                : `0 PZ`
-                        },
+                {
+                    icon: 'bi-box-fill',
+                    label: 'Prod. Teórica PZ',
+                    val: (b.NVO_PRODUCCION_TEORICA_PZS !== undefined ? b.NVO_PRODUCCION_TEORICA_PZS : b.PRODUCCION_TEORICA_PZS) != null
+                        ? `${this._fmtNum((b.NVO_PRODUCCION_TEORICA_PZS !== undefined ? b.NVO_PRODUCCION_TEORICA_PZS : b.PRODUCCION_TEORICA_PZS))} PZ`
+                        : null
+                },
 
-                        {
-                            icon: 'bi-speedometer2',
-                            label: 'Prod. Teórica KG',
-                            val: b.PRODUCCION_TEORICA_KGS
-                                ? `${this._fmtNum(b.PRODUCCION_TEORICA_KGS)} KG`
-                                : `0 KG`
-                        }
+                {
+                    icon: 'bi-speedometer2',
+                    label: 'Prod. Teórica KG',
+                    val: (b.NVO_PRODUCCION_TEORICA_KGS !== undefined ? b.NVO_PRODUCCION_TEORICA_KGS : b.PRODUCCION_TEORICA_KGS) != null
+                        ? `${this._fmtNum((b.NVO_PRODUCCION_TEORICA_KGS !== undefined ? b.NVO_PRODUCCION_TEORICA_KGS : b.PRODUCCION_TEORICA_KGS))} KG`
+                        : null
+                }
 
-                    ]
-                        .filter(f => f.val && String(f.val).trim() !== '');
+            ]
+                .filter(f => f.val && String(f.val).trim() !== '');
 
 
-                    // Campos ancho completo (al final)
-                    const camposFull = [
-                        {
-                            icon: 'bi-graph-up-arrow',
-                            label: 'Prod. Real',
-                            val: b.NVO_PRODUCCION_REAL
-                                ? `${this._fmtNum(b.NVO_PRODUCCION_REAL)} PZ`
-                                : `0 PZ`
-                        },
-                        { icon: 'bi-card-text', label: 'Descripción', val: b.NVO_ARTICULO_DESC },
+            // Campos ancho completo (al final)
+            const camposFull = [
+                {
+                    icon: 'bi-graph-up-arrow',
+                    label: 'Prod. Real',
+                    val: b.NVO_PRODUCCION_REAL
+                        ? `${this._fmtNum(b.NVO_PRODUCCION_REAL)} PZ`
+                        : `0 PZ`
+                },
+                { icon: 'bi-card-text', label: 'Descripción', val: b.NVO_ARTICULO_DESC },
 
-                        {
-                            icon: 'bi-calendar-range',
-                            label: 'Período',
-                            val: (b.NVO_DIA_INICIO_MANT_STR && b.NVO_DIA_FIN_MANT_STR)
-                                ? `${b.NVO_DIA_INICIO_MANT_STR} — ${b.NVO_DIA_FIN_MANT_STR}`
-                                : null
-                        },
+                {
+                    icon: 'bi-calendar-range',
+                    label: 'Período',
+                    val: (b.NVO_DIA_INICIO_MANT_STR && b.NVO_DIA_FIN_MANT_STR)
+                        ? `${b.NVO_DIA_INICIO_MANT_STR} — ${b.NVO_DIA_FIN_MANT_STR}`
+                        : null
+                },
 
-                        { icon: 'bi-chat-left-text', label: 'Comentarios', val: b.NVO_COMENTARIOS },
+                { icon: 'bi-chat-left-text', label: 'Comentarios', val: b.NVO_COMENTARIOS },
 
-                    ].filter(f => f.val && String(f.val).trim() !== '');
+            ].filter(f => f.val && String(f.val).trim() !== '');
 
-                    // Renderizar campos dinámicamente
-                    const detalle = (campos.length || camposFull.length) ? `
+            // Renderizar campos dinámicamente
+            const detalle = (campos.length || camposFull.length) ? `
                     <div class="bit-fields">
                         ${campos.map(f => `
                         <div class="bit-field">
@@ -856,8 +878,8 @@ class PlaneacionManager {
 
                     </div>` : '';
 
-                    // Retornar estructura del timeline
-                    return `
+            // Retornar estructura del timeline
+            return `
             <div class="bit-item ${c.cls}">
 
                 <!-- Línea lateral -->
@@ -891,15 +913,39 @@ class PlaneacionManager {
                         </span>
                     </div>
 
-                    <!-- Detalle -->
+                <!-- Detalle -->
                     ${detalle}
+                    <!-- Acciones (para cualquier ajuste, excepto 'Plan creado') -->
+                    ${c.cls === 'bit-update' ? `
+                    <div class="bit-actions" style="display:flex;justify-content:flex-end;margin-top:12px;">
+
+                        <button class="btn-act delupdateplan"
+                                title="Eliminar actualización"
+                                data-id="${b.ID_BITACORA}"
+                                data-linea="${b.NVO_LINEA_PRODUCCION || plan.LINEA_PRODUCCION_DESC || 'N/A'}"
+                                data-mes="${this._getMesAnio(b.NVO_FECHA_PLAN || plan.FECHA_PLAN_STRING)}"
+                                data-periodo="${(b.NVO_DIA_INICIO_MANT_STR && b.NVO_DIA_FIN_MANT_STR) ? `Del ${b.NVO_DIA_INICIO_MANT_STR} — Al ${b.NVO_DIA_FIN_MANT_STR}` : (plan.DIA_INICIO_MANT_STR || plan.DIA_FIN_MANT_STR ? `Del ${plan.DIA_INICIO_MANT_STR || 0} — Al ${plan.DIA_FIN_MANT_STR || 0}` : '')}"
+                                data-articulo="${b.NVO_ARTICULO || (plan.ARTICULO ? plan.ARTICULO.substring(0, 45) : 'Sin artículo')}"
+                                data-teoricapzs="${(b.NVO_PRODUCCION_TEORICA_PZS !== undefined && b.NVO_PRODUCCION_TEORICA_PZS !== null) ? this._fmtNum(b.NVO_PRODUCCION_TEORICA_PZS) : this._fmtNum(plan.PRODUCCION_TEORICA_PZS || 0)}"
+                                data-teoricakgs="${(b.NVO_PRODUCCION_TEORICA_KGS !== undefined && b.NVO_PRODUCCION_TEORICA_KGS !== null) ? this._fmtNum(b.NVO_PRODUCCION_TEORICA_KGS) : this._fmtNum(plan.PRODUCCION_TEORICA_KGS || 0)}"
+                                data-real="${(b.NVO_PRODUCCION_REAL !== undefined && b.NVO_PRODUCCION_REAL !== null) ? this._fmtNum(b.NVO_PRODUCCION_REAL) : (plan.PRODUCCION_REAL ? this._fmtNum(plan.PRODUCCION_REAL) : '0')}"
+                                data-comentarios="${b.NVO_COMENTARIOS || ''}"
+                                data-fechamov="${b.BIT_FECHA_MOVIMIENTO || ''}"
+                                data-usuario="${b.BIT_USUARIO || ''}"
+                                style="background:#fef9c3;border:1px solid rgba(0,0,0,0.06);padding:6px;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#c62828;">
+
+                            <i class="bi bi-trash3-fill"></i>
+
+                        </button>
+
+                    </div>` : ''}
 
                 </div>
             </div>`;
-                });
+        });
 
-                // Contenedor general
-                return `
+        // Contenedor general
+        return `
         <div class="bitacora-wrap" data-open="false">
 
             <!-- Botón toggle -->
@@ -959,6 +1005,7 @@ class PlaneacionManager {
                 FiltroFechaFin: $("#FiltroFechaFin").val() || null,
                 FiltroMesAnio: $("#FiltroMesAnio").val() || null,
                 FiltroLinea: $("#FiltroLinea").val() || null,
+                FiltroProceso: $("#FiltroProceso").val() || null,
                 FiltroPlanta: this.PLANTA || null,
             },
             success: (json) => {
@@ -992,13 +1039,34 @@ class PlaneacionManager {
         ConfirmManager.mostrar({
             titulo: `¿Eliminar plan #${id}?`,
             mensaje: `
-            <div style="text-align:left; font-size:0.9rem; line-height:2;">
-                <div><i class="bi bi-diagram-3-fill me-2 text-primary"></i><strong>Línea:</strong> ${linea}</div>
-                <div><i class="bi bi-calendar3 me-2 text-primary"></i><strong>Mes:</strong> ${mes}</div>
-                <div><i class="bi bi-calendar-range me-2 text-primary"></i><strong>Período:</strong> ${periodo}</div>
-                <div><i class="bi bi-box-seam-fill me-2 text-primary"></i><strong>Artículo:</strong> ${articulo}</div>
-                <hr style="margin:8px 0;">
-                <span class="text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Esta acción no se puede deshacer.</span>
+            <div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-hash me-2 text-primary"></i><strong>ID:</strong> ${id}</div>
+                    <div style="min-width:180px;color:#e6f0ff;"><i class="bi bi-diagram-3-fill me-2 text-primary"></i><strong>Línea:</strong> ${linea}</div>
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-calendar3 me-2 text-primary"></i><strong>Mes:</strong> ${mes}</div>
+                    <div style="min-width:220px;color:#e6f0ff;"><i class="bi bi-calendar-range me-2 text-primary"></i><strong>Período:</strong> ${periodo}</div>
+                </div>
+
+                <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <div style="flex:1;min-width:260px;color:#e6f0ff;"><i class="bi bi-box-seam-fill me-2 text-primary"></i><strong>Artículo:</strong> ${articulo}</div>
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-box-fill me-2 text-primary"></i><strong>Prod. teórica:</strong> ${teorica || '0'}</div>
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-graph-up-arrow me-2 text-primary"></i><strong>Prod. real:</strong> ${real || '0'}</div>
+                </div>
+
+                <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:200px;color:#e6f0ff;"><i class="bi bi-building me-2 text-primary"></i><strong>Planta:</strong> ${this.datos_usuario && this.datos_usuario[0] ? this.datos_usuario[0].PLANTA : ''}</div>
+                    <div style="min-width:260px;color:#e6f0ff;"><i class="bi bi-person-circle me-2 text-primary"></i><strong>Usuario:</strong> ${this.datos_usuario && this.datos_usuario[0] ? this.datos_usuario[0].EMAIL : ''}</div>
+                </div>
+
+                <hr style="margin:10px 0;">
+
+                <div style="font-size:0.9rem;color:#fff7d6;">
+                    <strong>Importante:</strong> Al confirmar, se eliminará <strong>el plan completo</strong> #${id} incluyendo todas sus actualizaciones y bitácora asociada. Esta operación es <span style="color:#ff8a80;"><strong>irreversible</strong></span>.
+                </div>
+
+                <div style="margin-top:8px;color:#e6e6e6;font-size:0.88rem;">
+                    Si no estás seguro, cancela y revisa la bitácora o exporta los datos del plan. También puedes eliminar solo una actualización desde el historial si ese es el caso.
+                </div>
             </div>
         `,
             onConfirm: () => {
@@ -1011,6 +1079,71 @@ class PlaneacionManager {
                         ID_PLAN: id,
                         PLANTA: this.datos_usuario[0].PLANTA,
                         USUARIO: this.datos_usuario[0].EMAIL
+                    }),
+                    success: (response) => {
+                        if (response.Status === 'SI') {
+                            AlertManager.mostrar(`Plan #${id} de ${linea} eliminado correctamente`, 'success');
+                            this.cargarCards();
+                        } else {
+                            AlertManager.mostrar(`${response.Message || 'Error al eliminar'}`, 'warning');
+                        }
+                        GlobalUtil.mostrarLoader(false);
+                    },
+                    error: () => {
+                        AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+                        GlobalUtil.mostrarLoader(false);
+                    }
+                });
+            }
+        });
+    }
+
+    eliminarActualizacionPlan({ id, linea, mes, periodo, articulo, teorica, real, comentarios, fechamov, usuario }) {
+        ConfirmManager.mostrar({
+            titulo: `¿Eliminar actualización de plan?`,
+            mensaje: `
+            <div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:180px;color:#e6f0ff;"><i class="bi bi-diagram-3-fill me-2 text-primary"></i><strong>Línea:</strong> ${linea}</div>
+                    <div style="min-width:180px;color:#e6f0ff;"><i class="bi bi-calendar3 me-2 text-primary"></i><strong>Mes:</strong> ${mes}</div>
+                    <div style="min-width:220px;color:#e6f0ff;"><i class="bi bi-calendar-range me-2 text-primary"></i><strong>Período:</strong> ${periodo}</div>
+                </div>
+
+                <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <div style="flex:1;min-width:260px;color:#e6f0ff;"><i class="bi bi-box-seam-fill me-2 text-primary"></i><strong>Artículo:</strong> ${articulo}</div>
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-box-fill me-2 text-primary"></i><strong>Prod. teórica:</strong> ${teorica || '0'}</div>
+                    <div style="min-width:140px;color:#e6f0ff;"><i class="bi bi-graph-up-arrow me-2 text-primary"></i><strong>Prod. real:</strong> ${real || '0'}</div>
+                </div>
+
+                <div style="margin-top:8px;color:#e6f0ff;">
+                    <i class="bi bi-clock-history me-2 text-primary"></i><strong>Fecha movimiento:</strong> ${fechamov || ''}
+                </div>
+
+                ${comentarios ? `<div style="margin-top:8px;color:#e6f0ff;"><i class="bi bi-chat-left-text me-2 text-primary"></i><strong>Comentarios:</strong> ${String(comentarios).replace(/\n/g, '<br>')}</div>` : ''}
+
+                <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:200px;color:#e6f0ff;"><i class="bi bi-building me-2 text-primary"></i><strong>Planta:</strong> ${this.datos_usuario && this.datos_usuario[0] ? this.datos_usuario[0].PLANTA : ''}</div>
+                </div>
+
+                <hr style="margin:10px 0;">
+
+                <div style="font-size:0.9rem;color:#fff7d6;">
+                    <strong>Nota:</strong> Al confirmar, se eliminará la actualización plan. Esta operación es <span style="color:#ff8a80;"><strong>irreversible</strong></span>.
+                </div>
+
+                <div style="margin-top:8px;color:#e6e6e6;font-size:0.88rem;">
+                    Revisa cuidadosamente la información anterior antes de continuar.
+                </div>
+            </div>
+        `,
+            onConfirm: () => {
+                GlobalUtil.mostrarLoader(true);
+                $.ajax({
+                    url: `/${this.URLBase}/EliminarBitacoraPlanProduccion`,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        IDBITACORA: id
                     }),
                     success: (response) => {
                         if (response.Status === 'SI') {
@@ -1052,6 +1185,12 @@ class PlaneacionManager {
         const produccionTeorica = $('#ProduccionTeorica').val();
         const produccionReal = $('#ProduccionReal').val();
         const comentarios = $("#Comentarios").val();
+
+        // ❗ Validación: no permitir continuar si no hay código de artículo
+        if (!codigoarticulo || codigoarticulo.trim() === '') {
+            AlertManager.mostrar('Por favor, seleccione un código de artículo valido.', 'warning', 'alertPlanContainer');
+            return false;
+        }
 
         const fechaInicio = new Date(diaInicio);
         const fechaFin = new Date(diaFin);
@@ -1101,7 +1240,7 @@ class PlaneacionManager {
             dataType: 'json',
             success: (response) => {
                 if (response.Status === 'SI') {
-                    let message = idPlan != '' ? 'Plan actualizado correctamente' : 'Plan generado correctamente';
+                    let message = idPlan != '' ? ' Plan actualizado correctamente' : ' Plan generado correctamente';
                     $("#btnGuardarEvento").html(`<i class="bi bi-check-circle-fill me-2 text-white">${message}</i>`).prop("disabled", false);
 
                     // ✅ CAMBIO: refresca cards en vez de DataTable.ajax.reload()
@@ -1183,9 +1322,11 @@ class PlaneacionManager {
     abrirModalAgregarPlan(e) {
         e.preventDefault();
         this.llenarDiasDelMes();
+        ValidationManager.limpiarValidacion('#eventForm'); // AGREGAR ESTA LÍNEA
+        $('#eventForm')[0].reset();
         $('#PlanLinea').prop("disabled", false);
+        $('#PlanProceso').prop("disabled", false);
         $('#IdPlanEditar').val('');
-        $("#eventForm")[0].reset();
         $("#PlanCap").val(Math.floor(Math.random() * (50 - 10 + 1)) + 10);
         $('#addEventModal').modal('show');
     }
@@ -1231,8 +1372,8 @@ class PlaneacionManager {
                     ARTICULO: val(ultimaEdic.NVO_ARTICULO, plan.ARTICULO),
                     ARTICULO_DESC: ultimaEdic.NVO_ARTICULO_DESC, // no está en bitácora, se queda del plan
                     CAPACIDAD: val(ultimaEdic.NVO_CAPACIDAD, plan.CAPACIDAD),
-                    PZSXDIA: val(ultimaEdic.PZSXDIA),
-                    KGSXDIA: val(ultimaEdic.KGSXDIA),
+                    PZSXDIA: val(ultimaEdic.NVO_PZSXDIA),
+                    KGSXDIA: val(ultimaEdic.NVO_KGSXDIA),
                     DIA_INICIO_MANT: val(ultimaEdic.NVO_DIA_INICIO_MANT_STR, plan.DIA_INICIO_MANT_STR),
                     DIA_FIN_MANT: val(ultimaEdic.NVO_DIA_FIN_MANT_STR, plan.DIA_FIN_MANT_STR),
                     PRODUCCION_TEORICA_PZS: val(
@@ -1262,7 +1403,7 @@ class PlaneacionManager {
                 }
 
                 // ── Proceso ──────────────────────────────────────────────────────────
-                $('#PlanProceso').val(datos.ID_PROCESO);
+                $('#PlanProceso').val(datos.ID_PROCESO).prop('disabled', true);;
 
                 // ── Línea ────────────────────────────────────────────────────────────
                 EquiposUtil.llenarLineas(
@@ -1272,9 +1413,13 @@ class PlaneacionManager {
                     "PlanLinea",
                     null,
                     () => {
+                        $('#PlanLinea').val(datos.LINEA_PRODUCCION);
 
-                        $('#PlanLinea')
-                            .val(datos.LINEA_PRODUCCION);
+                        setTimeout(() => {
+                            $('#PlanLinea')
+                                .val(datos.LINEA_PRODUCCION)
+                                .prop('disabled', true);
+                        }, 500);
                     }
                 );
 
@@ -1474,7 +1619,7 @@ class PlaneacionManager {
             // Delegar la construcción y descarga del workbook a la utilidad global
             await GlobalUtil.exportPlanesAExcel(data, { fileName: null });
 
-            AlertManager.mostrar('📊 ¡Excel exportado con éxito! 🎉', 'success');
+            AlertManager.mostrar('¡Excel exportado con éxito!', 'success');
 
         } catch (error) {
             console.error('Error al exportar:', error);

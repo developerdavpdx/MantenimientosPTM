@@ -6,6 +6,7 @@ class SolicitudCompraApp {
         this.URLBase = "Almacen";
         this.datos_usuario = GlobalUtil.getDatosUsuario();
         this.compraManager = new CompraManager(this.URLBase, this.datos_usuario);
+        this.IdSolicitudCompra = 0;
         // ✅ Instanciar los 4 centros de costo — una vez al cargar
         this.centrosCosto = {
             departamento: new GestionCentrosCosto({
@@ -33,7 +34,6 @@ class SolicitudCompraApp {
                 dimCode: 4
             })
         };
-
         window.AppSolicitudCompra = this;
     }
 
@@ -142,14 +142,14 @@ class SolicitudCompraApp {
             Object.values(this.centrosCosto).forEach(g => g.limpiar());
 
             const btn = $(event.currentTarget);
-            const IdSolicitudCompra = btn.data('id');
+            this.IdSolicitudCompra = btn.data('id');
             const FolioCompra = btn.data('folio');
+            const OrdenCompra = btn.data('ot');
 
             $('#subtitleRequisicion').html(
                 `<i class="bi bi-cash-stack me-1"></i> Folio: <strong>${FolioCompra}</strong>`
             );
 
-            $('#formGenerarRequisicion').data('id-solicitud-compra', IdSolicitudCompra);
             $('#bodyRequisicionArticulos').empty();
             $('#formGenerarRequisicion')[0].reset();
             $('#formGenerarRequisicion').removeClass('was-validated');
@@ -158,13 +158,22 @@ class SolicitudCompraApp {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/GetDetallesSolicitudCompraMP`,
                     type: 'POST',
-                    data: { IdSolicitudCompra }
+                    data: { IdSolicitudCompra: this.IdSolicitudCompra }
                 });
 
                 if (!response || !response.data || response.data.length === 0) {
                     AlertManager.mostrar('No se encontraron artículos para esta solicitud.', 'warning');
                     return;
                 }
+
+                //Se realiza la peticion para obtener las facturas
+                const responseFacturas = await $.ajax({
+                    url: `/${this.URLBase}/ObtenerFacturasPTM`,
+                    type: 'GET',
+                    data: {
+                        oc: OrdenCompra
+                    }
+                });
 
                 // ✅ Agrupar por CodigoArticulo
                 const agrupados = Object.values(
@@ -192,25 +201,25 @@ class SolicitudCompraApp {
                         .join('');
 
                     $('#bodyRequisicionArticulos').append(`
-                <tr data-idsdetalle='${JSON.stringify(item.IdsDetalle)}'
-                    data-codigoarticulo="${item.CodigoArticulo}">
-                    <td class="text-left">${ordenesBadges}</td>
-                    <td class="text-center">
-                        <small class="fw-semibold text-muted">${item.CodigoArticulo || ''}</small>
-                    </td>
-                    <td>${item.NombreArticulo || 'N/A'}</td>
-                    <td class="text-center fw-semibold">${item.CantidadEncargar || 0}</td>
-                    <td>
-                        <div class="sol-buscar-proveedor-wrap">
-                            <input type="text" class="form-control-custom sol-buscar-proveedor"
-                                   id="BuscarProveedor_${i}" placeholder="Buscar proveedor..." autocomplete="off">
-                            <div id="sugerenciasProveedor_${i}" class="autocomplete-sugerencias"></div>
-                            <input type="hidden" id="CodigoProveedor_${i}" class="sol-codigo-proveedor">
-                            <input type="hidden" id="NombreProveedor_${i}" class="sol-nombre-proveedor">
-                        </div>
-                    </td>
-                </tr>
-            `);
+                        <tr data-idsdetalle='${JSON.stringify(item.IdsDetalle)}'
+                            data-codigoarticulo="${item.CodigoArticulo}">
+                            <td class="text-left">${ordenesBadges}</td>
+                            <td class="text-center">
+                                <small class="fw-semibold text-muted">${item.CodigoArticulo || ''}</small>
+                            </td>
+                            <td>${item.NombreArticulo || 'N/A'}</td>
+                            <td class="text-center fw-semibold"><span class="badge bg-blue-ptm badge-custom">${item.CantidadEncargar || 0}</span></td>
+                            <td>
+                                <div class="sol-buscar-proveedor-wrap">
+                                    <input type="text" class="form-control-custom sol-buscar-proveedor"
+                                           id="BuscarProveedor_${i}" placeholder="Buscar proveedor..." autocomplete="off">
+                                    <div id="sugerenciasProveedor_${i}" class="autocomplete-sugerencias-proveedores"></div>
+                                    <input type="hidden" id="CodigoProveedor_${i}" class="sol-codigo-proveedor">
+                                    <input type="hidden" id="NombreProveedor_${i}" class="sol-nombre-proveedor">
+                                </div>
+                            </td>
+                        </tr>
+                    `);
 
                     const gestion = new GestionProveedores({
                         inputBuscar: `#BuscarProveedor_${i}`,
@@ -236,6 +245,139 @@ class SolicitudCompraApp {
                             gestion.ocultarSugerencias();
                         }
                     });
+
+                    //Se comienzan a colocar las cards mostrando las facturas ligadas a OC
+                    //Parseamos la data obtenida
+                    const dataFacturas = JSON.parse(responseFacturas.Data);
+                    const facturas = dataFacturas.data.facturas; //Obtenemos las facturas
+                    let htmlFacturas = '';
+                    let badgeEstado = 'bg-success';
+
+                    facturas.forEach(f => {
+
+                        //Seleccion tipo de estado de factura
+                        switch (f.estado.toLowerCase()) {
+
+                            case 'registrada':
+                                badgeEstado = 'bg-success';
+                                break;
+
+                            case 'pendiente':
+                                badgeEstado = 'bg-warning text-dark';
+                                break;
+
+                            case 'rechazada':
+                                badgeEstado = 'bg-danger';
+                                break;
+                        }
+
+                        htmlFacturas += `
+                             <div class="col-12 col-md-6 col-xl-4">
+                                <div class="card cards-facturas border-0 rounded-4 factura-card h-100">
+                                    <!-- ENCABEZADO -->
+                                    <div class="card-header text-white border-0 py-3">
+                                        <div class="form-check contenedor-checkFactura">
+                                            
+                                            <div class="factura-id">
+                                                ID: ${f.id}
+                                            </div>
+                                            <input class="form-check-input mb-2 me-1 radio-factura"
+                                                    type="radio"
+                                                    name="facturaSeleccionada"
+
+                                                    data-id="${f.id}"
+                                                    data-factura="${f.uuid}"
+                                                    data-oc="${f.oc}"
+                                                    data-folio="${f.folio}"
+                                                    data-total="${f.total}"
+                                                    data-rfcEmisor="${f.rfcEmisor}"
+                                                    id="radioFactura_${f.folio}">
+
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            
+                                            <div>
+                                                <div class="factura-title mb-1">
+                                                    FACTURA ELECTRÓNICA
+                                                </div>
+
+                                                <small class="factura-Emisor">
+                                                    RFC Emisor: ${f.rfcEmisor}
+                                                </small>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="fw-bold">${f.folio}</div>
+
+                                                <span class="badge ${badgeEstado} rounded-pill mt-2 pb-2">
+                                                    ${f.estado}
+                                                </span>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+
+                                    <!-- BODY -->
+                                    <div class="card-body">
+
+                                        <div class="row g-3">
+
+                                            <!-- PROVEEDOR -->
+                                            <div class="col-12">
+                                                <small class="text-muted d-block">
+                                                    Proveedor:
+                                                </small>
+                                                <div class="fw-semibold">
+                                                   ${f.razon}
+                                                </div>
+                                            </div>
+                                            <!-- OC -->
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">
+                                                    Orden de Compra:
+                                                </small>
+                                                <div class="fw-semibold">
+                                                    ${f.oc}
+                                                </div>
+                                            </div>
+                                            <!-- FECHA -->
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">
+                                                    Fecha:
+                                                </small>
+                                                <div class="fw-semibold">
+                                                    ${f.fechaFactura}
+                                                </div>
+                                            </div>
+
+                                            <!-- MONEDA -->
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Moneda:</small>
+                                                <div class="fw-semibold">${f.moneda}</div>
+                                            </div>
+
+                                        </div>
+
+                                        <!-- TOTAL -->
+                                        <div class="factura-area-total p-3 mt-4">
+                                            <div class="text-muted small">TOTAL</div>
+                                            <div class="fs-3 fw-bold text-success ms-3">$${this.formatearImporte(f.total)}</div>
+                                        </div>
+
+                                    </div>
+
+                                    <!-- UUID -->
+                                    <div class="card-footer pb-3">
+                                        <div class="small text-muted fw-semibold">UUID:</div>
+                                        <small class="text-break factura-uuid ms-3">${f.uuid}</small>
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        `;
+                    });
+                    $('#contenedorFacturas').html(htmlFacturas);
+
                 });
 
                 $('#SolcitarModal').modal('show');
@@ -245,6 +387,9 @@ class SolicitudCompraApp {
                 console.error(error);
             }
         });
+
+
+
 
         //COMPLETAR SOLICITUD DE COMPRA
         $("#completeSolCompra").on("click", async () => {
@@ -266,7 +411,7 @@ class SolicitudCompraApp {
                 fila.find('.sol-buscar-proveedor').removeClass('is-invalid');
 
                 const nombreArticulo = fila.find('td:eq(2)').text().trim();
-                
+
                 articulos.push({
                     IdsDetalle: JSON.parse(fila.attr('data-idsdetalle')), // ✅ array de IDs
                     CodigoArticulo: fila.data('codigoarticulo'),
@@ -303,7 +448,7 @@ class SolicitudCompraApp {
 
             // ─── Payload final ─────────────────────────────────────────────────────
             const payload = {
-                IdSolicitudCompra: $('#formGenerarRequisicion').data('id-solicitud-compra'),
+                IdSolicitudCompra: this.IdSolicitudCompra,
                 Articulos: articulos,
                 Contabilizacion: contabilizacion
             };
@@ -321,18 +466,16 @@ class SolicitudCompraApp {
             .html('<i class="bi bi-hourglass-split me-1"></i> Guardando...');
 
         try {
-            // ✅ Paso 1: Crear solicitud de compra con estatus "Espera Autorizacion"
+            // ✅ Paso 1: Actualizar solicitud de compra con estatus "Espera Autorizacion"
             const responseInsert = await $.ajax({
-                url: `/${this.URLBase}/InsertarSolicitudOrdenCompraMP`,
+                url: `/${this.URLBase}/ActualizarSolicitudOrdenCompraMP`,
                 type: 'POST',
                 contentType: 'application/json; charset=utf-8',
                 data: JSON.stringify({
-                    Solicitudes: payload.Articulos.map(art => ({
-                        IdSolicitud: art.IdsDetalle[0], // Usar el primer ID de detalle
-                        CantidadEncargar: art.CantidadTotal
-                    })),
+                    Requisicion: payload,
                     Comentarios: "Solicitud enviada para autorización",
-                    UsuarioSolicita: this.datos_usuario[0].EMAIL
+                    UsuarioSolicita: this.datos_usuario[0].EMAIL,
+                    Planta: this.datos_usuario[0].PLANTA
                 }),
                 dataType: 'json'
             });
@@ -346,52 +489,67 @@ class SolicitudCompraApp {
 
             // ✅ Paso 2: Enviar correo de autorización
             btn.html('<i class="bi bi-envelope-paper me-1"></i> Enviando autorización...');
-            
-            const responseEnviar = await $.ajax({
-                url: `/${this.URLBase}/EnviarSolicitudCompraAutorizacion`,
-                type: 'POST',
-                contentType: 'application/json; charset=utf-8',
-data: JSON.stringify({ 
-                    idSolicitudCompra: parseInt(idSolicitudCompra),
-                    Articulos: payload.Articulos
-                }),
-                dataType: 'json'
-            });
 
-            if (responseEnviar.Status !== 'OK') {
-                throw new Exception(responseEnviar.Message || "Error al enviar el correo de autorización.");
-            }
+            //const responseEnviar = await $.ajax({
+            //    url: `/${this.URLBase}/EnviarSolicitudCompraAutorizacion`,
+            //    type: 'POST',
+            //    contentType: 'application/json; charset=utf-8',
+            //    data: JSON.stringify({
+            //        idSolicitudCompra: parseInt(idSolicitudCompra),
+            //        Articulos: payload.Articulos
+            //    }),
+            //    dataType: 'json'
+            //});
+
+            //if (responseEnviar.Status !== 'OK') {
+            //    throw new Exception(responseEnviar.Message || "Error al enviar el correo de autorización.");
+            //}
 
             // ✅ Paso 3: Actualizar cabecera con centros de costo (sin crear PR en SAP aún)
-            const payloadActualizar = {
-                IdSolicitudCompra: parseInt(idSolicitudCompra),
-                Articulos: payload.Articulos,
-                Contabilizacion: payload.Contabilizacion
-            };
+            //const payloadActualizar = {
+            //    IdSolicitudCompra: parseInt(idSolicitudCompra),
+            //    Articulos: payload.Articulos,
+            //    Contabilizacion: payload.Contabilizacion
+            //};
 
             // No llamamos a CreateSolicitudCompra aquí, solo guardamos los centros de costo
             // La creación del PR en SAP se hará cuando se autorice la solicitud
-            btn.html('<i class="bi bi-check-circle-fill me-1"></i> Solicitud enviada');
+            setTimeout(() => {
+                btn.html('<i class="bi bi-check-circle-fill me-1"></i> Solicitud enviada');
+            }, 1500);
+
 
             AlertManager.mostrar('Solicitud enviada para autorización correctamente. Se notificará cuando sea procesada.', 'success', 'alertSolicitudCompraContainer');
             // ✅ Recargar DataTable
             $('#tablaSolicitudesCompra').DataTable().ajax.reload(null, false);
 
             setTimeout(() => {
-                btn.prop('disabled', false)
-                    .html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
-                $('#SolcribirModal').modal('hide');
+                btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
+
+                setTimeout(() => {
+                    $('#SolcitarModal').modal('hide');
+                }, 2500);
+
             }, 2500);
+
+           
 
         } catch (error) {
             console.error('Error en createSolCompra:', error);
             btn.prop('disabled', false)
                 .html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
-            AlertManager.mostrar('Error al procesar la solicitud: ' + error.message || error, 'warning','alertSolicitudCompraContainer');
+            AlertManager.mostrar('Error al procesar la solicitud: ' + error.message || error, 'warning', 'alertSolicitudCompraContainer');
         }
     }
 
-       
+    formatearImporte(total) {
+        return Number(total).toLocaleString('es-MX', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+
     _recargarTabla() {
         if ($.fn.DataTable.isDataTable('#tablaSolicitudesCompra')) {
             $('#tablaSolicitudesCompra').DataTable().ajax.reload();
@@ -399,6 +557,8 @@ data: JSON.stringify({
             this.compraManager.llenarSolicitudesCompra();
         }
     }
+
+
 }
 
 // ========================================
@@ -435,19 +595,89 @@ class CompraManager {
 
     llenarSolicitudesCompra() {
         try {
+            // ✅ Limpiar evento resize anterior
+            $(window).off('resize.solicitudesCompra');
+
+            // ✅ Destruir instancia anterior
             if ($.fn.DataTable.isDataTable('#tablaSolicitudesCompra')) {
                 $('#tablaSolicitudesCompra').DataTable().destroy();
             }
 
-            function calcularHeaderOffset() {
+            // ✅ Función para offset responsivo
+            const calcularHeaderOffset = () => {
                 if (window.innerWidth < 541) return 200;
                 if (window.innerWidth < 640) return 156;
                 if (window.innerWidth < 992) return 158;
                 if (window.innerWidth < 1155) return 125;
-                else if (window.innerWidth < 1400) return 118;
-                else return 113;
-            }
+                if (window.innerWidth < 1400) return 118;
+                return 113;
+            };
 
+            // ✅ Renderer customizado para detalles responsivos
+            const renderDetallesResponsive = (columns) => {
+                const hiddenColumns = columns.filter(col => col.hidden);
+                if (hiddenColumns.length === 0) return false;
+
+                const normalizar = (texto) => {
+                    return texto.toUpperCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .trim();
+                };
+
+                const obtenerIcono = (titulo) => {
+                    const tituloNorm = normalizar(titulo);
+                    const iconos = {
+                        'FOLIO': 'bi bi-cash-stack',
+                        'FECHA SOLICITUD': 'bi bi-calendar-event',
+                        'ESTADO': 'bi bi-info-circle-fill',
+                        'USUARIO SOLICITA': 'bi bi-person-fill',
+                        'COMENTARIOS': 'bi bi-chat-left-text',
+                        'DOC. SAP': 'bi bi-file-earmark-check',
+                        'DOC. ENTRY': 'bi bi-file-earmark-number',
+                        'RESPUESTA SAP': 'bi bi-reply-fill'
+                    };
+                    return iconos[tituloNorm] || 'bi bi-circle-fill';
+                };
+
+                let detallesHtml = '';
+                $.each(hiddenColumns, function (i, col) {
+                    const title = col.title;
+                    const valueContent = col.data || '<em class="text-muted">Sin información</em>';
+                    const iconClass = obtenerIcono(title);
+
+                    detallesHtml += `
+                    <div class="row mb-3 py-2 border-bottom align-items-center">
+                        <div class="col-5">
+                            <i class="${iconClass} me-2" style="font-size: 1.3rem; color: #0D6EFD;"></i>
+                            <strong>${title}</strong>
+                        </div>
+                        <div class="col-7">
+                            <span class="badge px-3 py-2" style="background-color: #F2F2F2; color: #333;">
+                                ${valueContent}
+                            </span>
+                        </div>
+                    </div>`;
+                });
+
+                return `
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="bi bi-cash-stack me-2" style="color: #0D6EFD;"></i>
+                            Información adicional de la solicitud de compra
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        ${detallesHtml}
+                    </div>
+                    <div class="card-footer bg-light text-muted">
+                        <small>Última actualización: ${new Date().toLocaleDateString()}</small>
+                    </div>
+                </div>`;
+            };
+
+            // ✅ Instancia DataTable
             const table = $('#tablaSolicitudesCompra').DataTable({
                 processing: false,
                 serverSide: true,
@@ -463,60 +693,7 @@ class CompraManager {
                     details: {
                         type: 'column',
                         target: 0,
-                        renderer: function (api, rowIdx, columns) {
-                            var hiddenColumns = columns.filter(col => col.hidden);
-                            if (hiddenColumns.length === 0) return false;
-
-                            function normalizar(texto) {
-                                return texto.toUpperCase()
-                                    .normalize("NFD")
-                                    .replace(/[\u0300-\u036f]/g, "")
-                                    .trim();
-                            }
-
-                            function obtenerIcono(titulo) {
-                                var tituloNorm = normalizar(titulo);
-                                var iconos = {
-                                    'FOLIO': 'bi bi-cash-stack',
-                                    'FECHA SOLICITUD': 'bi bi-calendar-event',
-                                    'ESTADO': 'bi bi-info-circle-fill',
-                                    'USUARIO SOLICITA': 'bi bi-person-fill',
-                                    'COMENTARIOS': 'bi bi-chat-left-text'
-                                };
-                                return iconos[tituloNorm] || 'bi bi-circle-fill';
-                            }
-
-                            var detallesHtml = '';
-                            $.each(hiddenColumns, function (i, col) {
-                                var title = col.title;
-                                var valueContent = col.data || '<em class="text-muted">Sin información</em>';
-                                var iconClass = obtenerIcono(title);
-
-                                detallesHtml +=
-                                    '<div class="row mb-3 py-2 border-bottom align-items-center">' +
-                                    '  <div class="col-5">' +
-                                    '    <i class="' + iconClass + ' me-2" style="font-size: 1.3rem; color: #0D6EFD;"></i>' +
-                                    '    <strong>' + title + '</strong>' +
-                                    '  </div>' +
-                                    '  <div class="col-7">' +
-                                    '    <span class="badge px-3 py-2" style="background-color: #F2F2F2; color: #333;">' + valueContent + '</span>' +
-                                    '  </div>' +
-                                    '</div>';
-                            });
-
-                            return '<div class="card shadow-sm mt-3">' +
-                                '  <div class="card-header bg-light">' +
-                                '    <h5 class="mb-0">' +
-                                '      <i class="bi bi-cash-stack me-2" style="color: #0D6EFD;"></i>' +
-                                '      Información adicional de la solicitud de compra' +
-                                '    </h5>' +
-                                '  </div>' +
-                                '  <div class="card-body">' + detallesHtml + '  </div>' +
-                                '  <div class="card-footer bg-light text-muted">' +
-                                '    <small>Última actualización: ' + new Date().toLocaleDateString() + '</small>' +
-                                '  </div>' +
-                                '</div>';
-                        }
+                        renderer: (api, rowIdx, columns) => renderDetallesResponsive(columns)
                     }
                 },
                 ajax: {
@@ -529,13 +706,15 @@ class CompraManager {
                         return $.extend({}, d, {
                             "FiltroFechaInicio": $("#FiltroFechaInicio").val() || null,
                             "FiltroFechaFin": $("#FiltroFechaFin").val() || null,
-                            "FiltroFolio": $("#FiltroFolio").val() || null
+                            "FiltroFolio": $("#FiltroFolio").val() || null,
+                            "FiltroPlanta": this.datos_usuario[0].PLANTA || null
                         });
                     },
                     dataSrc: (json) => json.data
                 },
+                // ✅ COLUMNAS INLINE
                 columns: [
-                    // 🎯 Columna 0: Control Responsive (+/-)
+                    // Columna 0: Control Responsive
                     {
                         className: 'dtr-control text-center',
                         orderable: false,
@@ -543,77 +722,127 @@ class CompraManager {
                         defaultContent: '',
                         width: '30px'
                     },
-                    // ✅ Columna 1: Acciones
+                    // Columna 1: Acciones
                     {
                         data: null,
                         orderable: false,
                         className: 'all text-center',
-                        width: '80px',
+                        width: '100px',
                         render: function (data, type, row) {
-                            return `<button class="btn btn-sm btn-primary btn-ver-detalle"
+
+                            let btnDetalleSolicitudCompra = "";
+                            let btnReqCompra = "";
+
+                            switch (row.Estatus) {
+                                case "Pendiente":
+                                    btnDetalleSolicitudCompra = `<button class="btn btn-sm btn-ptm-edit btn-ver-detalle"
+                                        data-id="${row.IdSolicitudCompra}"
+                                        data-folio="${row.FolioCompra}"
+                                        title="Ver detalle">
+                                        <i class="bi bi-eye"></i>
+                                    </button>`;
+
+                                    btnReqCompra = `<button class="btn btn-sm btn-ptm-mid btn-aprobar"
                                     data-id="${row.IdSolicitudCompra}"
                                     data-folio="${row.FolioCompra}"
-                                    title="Ver detalle de solicitud">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-success btn-aprobar"
-                                    data-id="${row.IdSolicitudCompra}"
-                                    data-folio="${row.FolioCompra}"
+                                    data-OT="${row.OrdenTrabajo}"
                                     title="Generar Requisición">
-                                    <i class="bi bi-cart-plus"></i>
+                                    <i class="bi bi-cart-check"></i>
                                 </button>`;
+                                    break;
+                                case "Espera Autorizacion":
+                                    btnDetalleSolicitudCompra = `<button class="btn btn-sm btn-ptm-edit btn-ver-detalle"
+                                        data-id="${row.IdSolicitudCompra}"
+                                        data-folio="${row.FolioCompra}"
+                                        title="Ver detalle">
+                                        <i class="bi bi-eye"></i>
+                                    </button>`;
+
+                                    btnReqCompra = `<button class="btn btn-sm btn-ptm-mid btn-aprobar"
+                                    data-id="${row.IdSolicitudCompra}"
+                                    data-folio="${row.FolioCompra}"
+                                    data-OT="${row.OrdenTrabajo}"
+                                    title="Generar Requisición" disabled>
+                                    <i class="bi bi-cart-check"></i>
+                                </button>`;
+                                    break;
+                            }
+
+                            return `${btnDetalleSolicitudCompra}${btnReqCompra}`
                         }
                     },
-                    // ✅ Columna 2: Folio
+                    // Columna 2: Folio
                     {
                         data: "FolioCompra",
                         title: "Folio",
                         className: "text-center",
                         render: (data) => data
-                            ? `<span class="badge bg-primary badge-custom"><i class="bi bi-cash-stack me-1"></i>${data}</span>`
+                            ? `<span class="badge btn-ptm-mid badge-custom"><i class="bi bi-cash-stack me-1"></i>${data}</span>`
                             : '<em class="text-muted">Sin folio</em>'
                     },
-                    // ✅ Columna 3: Fecha Solicitud
+                    // Columna 3: OT
+                    {
+                        data: null,
+                        title: "OT(s)",
+                        className: "text-center",
+                        render: function (data, type, row) {
+                            if (!row.OrdenTrabajo)
+                                return '<em class="text-muted">Sin OT</em>';
+
+                            const folios = row.OrdenTrabajo
+                                .split(',')
+                                .map(f => f.trim())
+                                .filter(f => f.length > 0);
+
+                            const badgesHtml = folios
+                                .map(folio => `<span class="badge btn-ptm-mid badge-custom me-1 mb-1"><i class="bi bi-cash-stack me-1"></i>${folio}</span>`)
+                                .join('');
+
+                            return `<div class="d-flex flex-wrap justify-content-center" title="${row.OrdenTrabajo}">
+                                    ${badgesHtml}
+                                    </div>`;
+                        }
+                    },
+                    // Columna 3: Fecha Solicitud
                     {
                         data: "FechaSolicitud",
                         title: "Fecha Solicitud",
                         className: "text-center",
                         render: (data) => data || ''
                     },
-                    // ✅ Columna 4: Estado
+                    // Columna 4: Estado
                     {
                         data: "Estatus",
                         title: "Estado",
-                        className: "all text-center",
+                        className: "text-center",
                         render: (data) => {
-                            if (!data) return '';
-                            const map = {
-                                'Pendiente': { color: 'bg-warning text-dark', icon: 'clock' },
-                                'Aprobado': { color: 'bg-blue-ptm', icon: 'check2-circle' },
-                                'Rechazado': { color: 'bg-danger', icon: 'x-circle' },
-                                'Cancelado': { color: 'bg-secondary', icon: 'slash-circle' }
-                            };
-                            const cfg = map[data] || { color: 'bg-secondary', icon: 'circle' };
+                            if (!data) return '<em class="text-muted">—</em>';
+
+                            const cfg = data === "No Aprobado"
+                                ? { color: 'badge bg-danger text-white badge-custom', icon: 'x-circle' }
+                                : { color: 'badge btn-ptm-mid badge-custom', icon: 'check2-circle' };
+
                             return `<span class="badge ${cfg.color} badge-custom">
-                                    <i class="bi bi-${cfg.icon} me-1"></i>${data}
-                                </span>`;
+                            <i class="bi bi-${cfg.icon} me-1"></i>
+                            ${data}
+                        </span>`;
                         }
                     },
-                    // ✅ Columna 5: Usuario Solicita
+                    // Columna 5: Usuario Solicita
                     {
                         data: "UsuarioSolicita",
                         title: "Usuario Solicita",
                         render: (data) => data
-                            ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>`
+                            ? `<span class="badge btn-ptm-mid badge-custom">${data}</span>`
                             : 'N/A'
                     },
-                    // ✅ Columna 6: Comentarios
+                    // Columna 6: Comentarios
                     {
                         data: "Comentarios",
                         title: "Comentarios",
                         render: (data) => data || '<em class="text-muted">Sin comentarios</em>'
                     },
-                    // ✅ Columna 7: DocNum
+                    // Columna 7: DocNum
                     {
                         data: "DocNum",
                         title: "Doc. SAP",
@@ -622,42 +851,61 @@ class CompraManager {
                             ? `<span class="badge bg-blue-ptm badge-custom"><i class="bi bi-file-earmark-check me-1"></i>${data}</span>`
                             : '<em class="text-muted">—</em>'
                     },
-                    // ✅ Columna 8: DocEntry
+                    // Columna 8: DocEntry
                     {
                         data: "DocEntry",
                         title: "Doc. Entry",
                         className: "text-center",
                         render: (data) => data || '<em class="text-muted">—</em>'
                     },
-                    // ✅ Columna 9: ResponseSap
+                    // Columna 9: ResponseSap
                     {
                         data: "ResponseSap",
-                        title: "Respuesta SAP",
-                        render: (data) => {
-                            if (!data) return '<em class="text-muted">—</em>';
-                            const isError = data.toLowerCase().includes('warning');
-                            return `<span class="badge ${isError ? 'bg-danger' : 'bg-success'} badge-custom">
-                    <i class="bi bi-${isError ? 'x-circle' : 'check-circle'} me-1"></i>
-                    ${data.length > 40 ? data.substring(0, 40) + '...' : data}
-                </span>`;
+                        title: "SAP",
+                        className: "text-center",
+                        render: function (data) {
+
+                            if (!data)
+                                return '<em class="text-muted">—</em>';
+
+                            const texto = data.length > 40
+                                ? data.substring(0, 40) + '...'
+                                : data;
+
+                            const isError =
+                                data.toLowerCase().includes('error') ||
+                                data.toLowerCase().includes('warning');
+
+                            return `
+                            <span
+                                class="badge ${isError ? 'bg-danger' : 'bg-success'} badge-custom"
+                                title="${data}">
+                                <i class="bi bi-${isError ? 'x-circle' : 'check-circle'} me-1"></i>
+                                ${texto}
+                            </span>`;
                         }
+                    },
+                    // Columna 10: Comentarios Rechazo
+                    {
+                        data: "ComentariosRechazo",
+                        title: "Comentarios Rechazo",
+                        render: (data) => data || '<em class="text-muted">Sin comentarios</em>'
                     }
                 ],
+                // ✅ COLUMNDEFS INLINE
                 columnDefs: [
                     { className: "text-center", targets: '_all' },
                     { orderable: false, targets: [0, 1] },
-
-                    // Prioridades responsive
-                    { responsivePriority: 1, targets: 0 },  // Control +/-
-                    { responsivePriority: 2, targets: 1 },  // Acciones
-                    { responsivePriority: 3, targets: 2 },  // Folio
-                    { responsivePriority: 4, targets: 4 },  // Estado
-                    { responsivePriority: 5, targets: 3 },  // Fecha Solicitud
-                    { responsivePriority: 6, targets: 5 },  // Usuario Solicita
-                    { responsivePriority: 7, targets: 6 },  // Comentarios
-                    { responsivePriority: 8, targets: 7 },  // DocNum
-                    { responsivePriority: 9, targets: 8 },  // DocEntry
-                    { responsivePriority: 10, targets: 9 }  // ResponseSap
+                    { responsivePriority: 1, targets: 0 },
+                    { responsivePriority: 2, targets: 1 },
+                    { responsivePriority: 3, targets: 2 },
+                    { responsivePriority: 4, targets: 4 },
+                    { responsivePriority: 5, targets: 3 },
+                    { responsivePriority: 6, targets: 5 },
+                    { responsivePriority: 7, targets: 6 },
+                    { responsivePriority: 8, targets: 7 },
+                    { responsivePriority: 9, targets: 8 },
+                    { responsivePriority: 10, targets: 9 }
                 ],
                 ordering: false,
                 info: true,
@@ -670,16 +918,16 @@ class CompraManager {
                     info: "Registros del _START_ al _END_ de un total de _TOTAL_ registros",
                     infoEmpty: "Registros del 0 al 0 de un total de 0 registros",
                     infoFiltered: "(filtrado de un total de _MAX_ registros)",
-                    sSearch: "Buscar:",
                     oPaginate: {
                         sFirst: "Primero",
                         sLast: "Último",
                         sNext: "Siguiente",
                         sPrevious: "Anterior"
                     },
+                    sProcessing: "Cargando datos, por favor espere...",
                     emptyTable: "No hay solicitudes de compra disponibles"
                 },
-                createdRow: function (row, data) {
+                createdRow: (row, data) => {
                     $(row).attr('data-id-solicitud-compra', data.IdSolicitudCompra);
                     $(row).attr('data-folio', data.FolioCompra || '');
                     $(row).attr('data-estatus', data.Estatus || '');
@@ -692,17 +940,18 @@ class CompraManager {
                         estatus: data.Estatus,
                         usuarioSolicita: data.UsuarioSolicita,
                         comentarios: data.Comentarios,
-                        docNum: data.DocNum,      // ⬅️ nuevo
-                        docEntry: data.DocEntry,    // ⬅️ nuevo
-                        responseSap: data.ResponseSap  // ⬅️ nuevo
+                        docNum: data.DocNum,
+                        docEntry: data.DocEntry,
+                        responseSap: data.ResponseSap
                     });
                 },
-                drawCallback: function () {
+                drawCallback: () => {
                     table.columns.adjust();
                 }
             });
 
-            $(window).on('resize', function () {
+            // ✅ Manejo de resize con namespace
+            $(window).off('resize.solicitudesCompra').on('resize.solicitudesCompra', () => {
                 if ($.fn.DataTable.isDataTable('#tablaSolicitudesCompra')) {
                     const nuevoOffset = calcularHeaderOffset();
                     $('#tablaSolicitudesCompra').DataTable().fixedHeader.headerOffset(nuevoOffset);
@@ -766,6 +1015,11 @@ class CompraManager {
                                     'ARTICULO': 'bi bi-box-seam',
                                     'CANT. REQUERIDA': 'bi bi-123',
                                     'CANT. A ENCARGAR': 'bi bi-cart-plus',
+
+                                    'STOCK': 'bi bi-box-seam',
+                                    'MIN': 'bi bi-arrow-down-circle',
+                                    'MAX': 'bi bi-arrow-up-circle',
+
                                     'NIVEL URGENCIA': 'bi bi-exclamation-triangle-fill',
                                     'DESCRIPCION': 'bi bi-card-text',
                                     'FECHA SOLICITUD': 'bi bi-calendar-event',
@@ -817,7 +1071,6 @@ class CompraManager {
                     dataSrc: (json) => json.data
                 },
                 columns: [
-                    // 🎯 Columna 0: Control Responsive (+/-)
                     {
                         className: 'dtr-control',
                         orderable: false,
@@ -825,113 +1078,180 @@ class CompraManager {
                         defaultContent: '',
                         width: '30px'
                     },
-                    // ✅ Columna 1: Orden Trabajo
+
+                    // OT
                     {
                         data: "OrdenTrabajo",
                         className: "text-center",
                         render: (data) =>
-                            data ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>` : ''
+                            data
+                                ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>`
+                                : ''
                     },
-                    // ✅ Columna 2: Código Artículo
+
+                    // Código
                     {
                         data: "CodigoArticulo",
                         className: "text-center",
                         render: (data) =>
-                            data ? `<small class="text-muted fw-semibold">${data}</small>` : 'N/A'
+                            data
+                                ? `<small class="text-muted fw-semibold">${data}</small>`
+                                : 'N/A'
                     },
-                    // ✅ Columna 3: Nombre Artículo
+
+                    // Artículo
                     {
                         data: "NombreArticulo",
                         render: (data) => data || 'N/A'
                     },
-                    // ✅ Columna 4: Cantidad Requerida
+
+                    // Cantidad requerida
                     {
                         data: "CantidadRequerida",
                         className: "text-center fw-semibold",
                         render: (data) => data || 0
                     },
-                    // ✅ Columna 5: Cantidad a Encargar
+
+                    // Cantidad a encargar
                     {
                         data: "CantidadEncargar",
                         className: "text-center",
                         render: (data) =>
-                            `<span class="badge bg-primary badge-custom">${data || 0}</span>`
+                            `<span class="badge bg-primary badge-custom">
+                ${data || 0}
+            </span>`
                     },
-                    // ✅ Columna 6: Nivel Urgencia
+
+                    // Stock actual
+                    {
+                        data: "StockActual",
+                        className: "text-center fw-semibold",
+                        render: (data) =>
+                            `<i class="bi bi-box-seam text-info me-1"></i>
+             ${(data ?? 0).toLocaleString()}`
+                    },
+
+                    // Stock mínimo
+                    {
+                        data: "MinStock",
+                        className: "text-center fw-semibold",
+                        render: (data) =>
+                            `<i class="bi bi-arrow-down-circle text-warning me-1"></i>
+             ${(data ?? 0).toLocaleString()}`
+                    },
+
+                    // Stock máximo
+                    {
+                        data: "MaxStock",
+                        className: "text-center fw-semibold",
+                        render: (data) =>
+                            `<i class="bi bi-arrow-up-circle text-success me-1"></i>
+             ${(data ?? 0).toLocaleString()}`
+                    },
+
+                    // Nivel urgencia
                     {
                         data: "NivelUrgencia",
-                        className: "text-center",
+                        className: "text-center fw-semibold",
                         render: (data) => {
+
                             if (!data) return '';
+
                             switch (data) {
+
                                 case 'Normal':
-                                    return `<span class="badge bg-secondary badge-custom">
-                                    <i class="bi bi-circle-fill me-1"></i>Normal</span>`;
-                                case 'Urgente':
-                                    return `<span class="badge bg-warning text-dark badge-custom">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Urgente</span>`;
-                                case 'Crítico':
+                                    return `
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        Normal`;
+
+                                case 'Bajo':
+                                    return `
+                        <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                        Bajo`;
+
                                 case 'Critico':
-                                    return `<span class="badge bg-danger badge-custom">
-                                    <i class="bi bi-exclamation-octagon-fill me-1"></i>Crítico</span>`;
+                                case 'Crítico':
+                                    return `
+                        <i class="bi bi-exclamation-octagon-fill text-danger me-1"></i>
+                        Crítico`;
+
                                 default:
-                                    return `<span class="badge bg-secondary badge-custom">${data}</span>`;
+                                    return data;
                             }
                         }
                     },
-                    // ✅ Columna 7: Descripción Necesidad
+
+                    // Descripción
                     {
                         data: "DescripcionNecesidad",
                         render: (data) => data || 'N/A'
                     },
-                    // ✅ Columna 8: Fecha Solicitud
+
+                    // Fecha
                     {
                         data: "FechaSolicitud",
                         className: "text-center",
                         render: (data) => data || ''
                     },
-                    // ✅ Columna 9: Estatus
+
+                    // Estatus
                     {
                         data: "Estatus",
                         className: "all text-center",
                         render: (data) => {
+
                             if (!data) return '';
+
                             const map = {
                                 'Pendiente': { color: 'bg-warning text-dark', icon: 'clock' },
                                 'En Compra': { color: 'bg-primary', icon: 'cart-check' },
                                 'Atendido': { color: 'bg-success', icon: 'check-circle' },
                                 'Cancelado': { color: 'bg-danger', icon: 'x-circle' }
                             };
-                            const cfg = map[data] || { color: 'bg-secondary', icon: 'circle' };
-                            return `<span class="badge ${cfg.color} badge-custom">
-                                    <i class="bi bi-${cfg.icon}"></i> ${data}
-                                </span>`;
+
+                            const cfg = map[data] || {
+                                color: 'bg-secondary',
+                                icon: 'circle'
+                            };
+
+                            return `
+                <span class="badge ${cfg.color} badge-custom">
+                    <i class="bi bi-${cfg.icon}"></i> ${data}
+                </span>`;
                         }
                     },
-                    // ✅ Columna 10: Usuario Solicita
+
+                    // Usuario
                     {
                         data: "UsuarioSolicita",
                         render: (data) =>
-                            data ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>` : 'N/A'
+                            data
+                                ? `<span class="badge bg-blue-ptm badge-custom">${data}</span>`
+                                : 'N/A'
                     }
                 ],
                 columnDefs: [
                     { orderable: false, targets: [0] },
-                    { visible: false, targets: [2, 7, 9] },  // Código y Descripción ocultos por default
+
+                    // ocultar código y descripción
+                    { visible: false, targets: [2, 10] },
+
                     { className: "text-center", targets: '_all' },
 
-                    // 🎯 Prioridades Responsive
-                    { responsivePriority: 1, targets: 0 },  // Control +/-
-                    { responsivePriority: 2, targets: 9 },  // Estatus
-                    { responsivePriority: 3, targets: 1 },  // Orden Trabajo
-                    { responsivePriority: 4, targets: 3 },  // Artículo
-                    { responsivePriority: 5, targets: 5 },  // Cant. Encargar
-                    { responsivePriority: 6, targets: 4 },  // Cant. Requerida
-                    { responsivePriority: 7, targets: 6 },  // Nivel Urgencia
-                    { responsivePriority: 8, targets: 8 },  // Fecha Solicitud
-                    { responsivePriority: 9, targets: 10 },  // Usuario Solicita
-                    { responsivePriority: 10, targets: 7 },  // Descripción
-                    { responsivePriority: 11, targets: 2 },  // Código
+                    { responsivePriority: 1, targets: 0 },   // +
+                    { responsivePriority: 2, targets: 12 },  // Estatus
+                    { responsivePriority: 3, targets: 1 },   // OT
+                    { responsivePriority: 4, targets: 3 },   // Artículo
+                    { responsivePriority: 5, targets: 9 },   // Urgencia
+                    { responsivePriority: 6, targets: 6 },   // Stock
+                    { responsivePriority: 7, targets: 7 },   // Min
+                    { responsivePriority: 8, targets: 8 },   // Max
+                    { responsivePriority: 9, targets: 5 },   // Encargar
+                    { responsivePriority: 10, targets: 4 },  // Requerida
+                    { responsivePriority: 11, targets: 11 }, // Fecha
+                    { responsivePriority: 12, targets: 13 }, // Usuario
+                    { responsivePriority: 13, targets: 10 }, // Descripción
+                    { responsivePriority: 14, targets: 2 }   // Código
                 ],
                 ordering: false,
                 info: true,
@@ -954,10 +1274,21 @@ class CompraManager {
                     emptyTable: "No hay registros disponibles"
                 },
                 createdRow: function (row, data) {
+
                     $(row).attr('data-id-detalle', data.IdDetalle);
                     $(row).attr('data-id-solicitud-compra', data.IdSolicitudCompra);
                     $(row).attr('data-orden-trabajo', data.OrdenTrabajo);
                     $(row).attr('data-estatus', data.Estatus);
+
+                    if (data.NivelUrgencia === "Critico" ||
+                        data.NivelUrgencia === "Crítico") {
+
+                        $(row).addClass("table-danger");
+                    }
+                    else if (data.NivelUrgencia === "Bajo") {
+
+                        $(row).addClass("table-warning");
+                    }
                 },
                 drawCallback: function () {
                     table.columns.adjust();

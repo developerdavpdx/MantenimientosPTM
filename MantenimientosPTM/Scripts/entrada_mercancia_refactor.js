@@ -729,7 +729,7 @@ class EntradaMercanciaManager {
         $modal.find('#inputDivisa').val('USD');
 
         $modal.find('.list-group').empty().addClass('d-none');
-        $modal.find('.modal-error-msg').hide();
+        $modal.find('.modal-error-msg invalid-feedback').hide();
         $modal.find('.is-invalid, .is-valid').removeClass('is-invalid is-valid');
         $modal.find('table tbody').empty();
     }

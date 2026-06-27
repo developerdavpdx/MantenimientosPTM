@@ -18,8 +18,8 @@
     <UseIISExpress>true</UseIISExpress>
     <Use64BitIISExpress />
     <IISExpressSSLPort>44377</IISExpressSSLPort>
-    <IISExpressAnonymousAuthentication />
-    <IISExpressWindowsAuthentication />
+    <IISExpressAnonymousAuthentication>enabled</IISExpressAnonymousAuthentication>
+    <IISExpressWindowsAuthentication>disabled</IISExpressWindowsAuthentication>
     <IISExpressUseClassicPipelineMode />
     <UseGlobalApplicationHostFile />
     <NuGetPackageImportStamp>
@@ -135,6 +135,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\BundleConfig.cs" />
+    <Compile Include="App_Start\BundleConfig2.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\Startup.cs" />
@@ -160,12 +161,16 @@
     <Compile Include="Models\AccesoDatos\AccesoDatosMantenimientosCorrectivos.cs" />
     <Compile Include="Models\AccesoDatos\AccesoDatosMantenimientosPreventivos.cs" />
     <Compile Include="Models\AccesoDatos\AccesoDatosEquipos.cs" />
+    <Compile Include="Models\AccesoDatos\AccesoDatosPTM.cs" />
     <Compile Include="Models\AccesoDatos\LoginServiceLayer.cs" />
     <Compile Include="Models\Dto\PlanProduccionDto.cs" />
+    <Compile Include="Models\Dto\PTMRequestDTO.cs" />
+    <Compile Include="Models\Dto\PTMResponseDTO.cs" />
     <Compile Include="Models\GlobalCommands.cs" />
     <Compile Include="Models\LogicaNegocio\EmailNotificationService.cs" />
     <Compile Include="Models\LogicaNegocio\LogicaAlmacen.cs" />
     <Compile Include="Models\LogicaNegocio\LogicaMetricas.cs" />
+    <Compile Include="Models\LogicaNegocio\LogicaOCFacturacion.cs" />
     <Compile Include="Models\LogicaNegocio\LogicaPlaneacion.cs" />
     <Compile Include="Models\LogicaNegocio\LogicaProduccion.cs" />
     <Compile Include="Models\LogicaNegocio\LogicaMantenimientosCorrectivos.cs" />
@@ -196,9 +201,11 @@
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\bootstrap.rtl.css" />
     <Content Include="Content\bootstrap.rtl.min.css" />
+    <Content Include="Content\CalendarioProduccion.css" />
     <Content Include="Content\CalendarioPlaneacion.css" />
     <Content Include="Content\CalendarioMantenimientoPreventivo.css" />
     <Content Include="Content\chartist.min.css" />
+    <Content Include="Content\GestionEquipos.css" />
     <Content Include="Content\dataTables.dataTables.min.css" />
     <Content Include="Content\fixedColumns.dataTables.min.css" />
     <Content Include="Content\fixedHeader.dataTables.min.css" />
@@ -206,6 +213,7 @@
     <Content Include="Content\Images\adios.gif" />
     <Content Include="Content\Images\alerta.gif" />
     <Content Include="Content\Images\ok.gif" />
+    <Content Include="Content\Images\PAC.png" />
     <Content Include="Content\Images\user.png" />
     <Content Include="Content\ParosProduccion.css" />
     <Content Include="Content\Images\LogoPTMWhite.png" />
@@ -2302,6 +2310,7 @@
     <Content Include="Content\jquery-ui.css" />
     <Content Include="Content\Login.css" />
     <Content Include="Content\CustomTables.css" />
+    <Content Include="Content\select2.min.css" />
     <Content Include="Content\SolicitudRefacciones.css" />
     <Content Include="Content\TiemposMuertos.css" />
     <Content Include="Content\TopScrollTable.css" />
@@ -2319,6 +2328,7 @@
     <Content Include="Scripts\bootstrap.esm.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Scripts\calendario_produccion_refactor.js" />
     <Content Include="Scripts\calendario_planeacion_refactor.js" />
     <Content Include="Scripts\DatalistAutocomplete.js" />
     <Content Include="Scripts\dataTables.dataTables.min.js" />
@@ -2379,6 +2389,7 @@
     <Content Include="Scripts\main.js" />
     <Content Include="Scripts\mantenimientos_correctivos_refactor.js" />
     <Content Include="Scripts\reporte_stock_refactor.js" />
+    <Content Include="Scripts\select2.min.js" />
     <Content Include="Scripts\solicitud_mantenimiento_correctivo_refactor.js" />
     <Content Include="Scripts\popper.min.js" />
     <Content Include="Scripts\PROGMC.js" />
@@ -2839,14 +2850,25 @@
     <Content Include="Views\Almacen\SolicitudOC.cshtml" />
     <Content Include="Views\Almacen\SolicitudRefacciones.cshtml" />
     <Content Include="Views\Almacen\ReporteStock.cshtml" />
+    <Content Include="Views\Planeacion\CalendarioProduccion.cshtml" />
+    <Content Include="Views\Equipos\_ModalAgregarEditarEquipos.cshtml" />
+    <Content Include="Views\Equipos\_ModalPausarEquipo.cshtml" />
+    <Content Include="Views\Equipos\_ModalAgregarTipoEquipo.cshtml" />
+    <Content Include="Views\Equipos\_ModalSolicitudBajaEquipo.cshtml" />
+    <Content Include="Views\Equipos\_ModalRutinaMantenimiento.cshtml" />
+    <Content Include="Views\Equipos\_ModalVerImagenAmpliada.cshtml" />
+    <Content Include="Views\Equipos\_ModalGestionLineasProduccion.cshtml" />
+    <Content Include="Views\Equipos\_ModalGestionAreas.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
+    <Folder Include="Data\" />
     <Folder Include="EvidenciaRutinas\" />
     <Folder Include="FirmasOTCorrectivo\" />
     <Folder Include="FirmasOTPreventivo\" />
     <Folder Include="Models\Mapping\" />
     <Folder Include="SolicitudesBaja\" />
+    <Folder Include="Views\ObtencionFacturasPTM\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

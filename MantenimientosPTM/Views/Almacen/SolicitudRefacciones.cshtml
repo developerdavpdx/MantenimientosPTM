@@ -199,7 +199,7 @@
                                     <option value="OT-025">OT-025 - ROB-6AX</option>
                                     <option value="OT-028">OT-028 - EMP-345</option>
                                 </select>
-                                <div class="modal-error-msg">⚠️ Selecciona una orden de trabajo.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Selecciona una orden de trabajo.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label-custom" for="solicitudEquipo">
@@ -224,14 +224,14 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="refaccionNombre" required
                                        placeholder="Ej: Rodamiento axial 6008-2RS">
-                                <div class="modal-error-msg">⚠️ Ingresa el nombre de la refacción.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa el nombre de la refacción.</div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label-custom" for="refaccionCantidad">
                                     <i class="bi bi-123"></i> Cantidad <span class="text-danger">*</span>
                                 </label>
                                 <input type="number" class="form-control-custom" id="refaccionCantidad" min="1" required>
-                                <div class="modal-error-msg">⚠️ Ingresa la cantidad.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa la cantidad.</div>
                             </div>
                         </div>
                     </div>
@@ -254,7 +254,7 @@
                                     <option value="Urgente">Urgente</option>
                                     <option value="Crítico">Crítico</option>
                                 </select>
-                                <div class="modal-error-msg">⚠️ Selecciona el nivel de urgencia.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Selecciona el nivel de urgencia.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label-custom" for="refaccionEstatus">
@@ -267,7 +267,7 @@
                                     <option value="En tránsito">En tránsito</option>
                                     <option value="Entregado">Entregado</option>
                                 </select>
-                                <div class="modal-error-msg">⚠️ Selecciona el estatus.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Selecciona el estatus.</div>
                             </div>
                             <div class="col-12">
                                 <label class="form-label-custom" for="refaccionDescripcion">
@@ -340,8 +340,11 @@
                                         <input type="checkbox" id="chkSelectAllSC" title="Seleccionar todos">
                                     </th>
                                     <th>Orden de Trabajo</th>
-                                    <th>Código</th>
+                                    <th>Código Refacción</th>
                                     <th>Artículo</th>
+                                    <th class="text-end">Stock</th>
+                                    <th class="text-end">Min</th>
+                                    <th class="text-end">Max</th>
                                     <th>Cant. Requerida</th>
                                     <th>Cant. a Encargar <span class="text-danger">*</span></th>
                                 </tr>
@@ -358,7 +361,7 @@
                         </label>
                         <textarea class="form-control-custom" id="ComentariosSC" rows="3"
                                   placeholder="Comentarios adicionales..."></textarea>
-                        <div class="modal-error-msg">⚠️ Ingresa un comentario.</div>
+                        <div class="modal-error-msg invalid-feedback">⚠️ Ingresa un comentario.</div>
                     </div>
 
                     <div id="alertSolicitudCompraContainer" class="mt-2"></div>
@@ -384,7 +387,7 @@
      MODAL: DEVOLUCIÓN DE MERCANCÍA
 ═════════════════════════════════════════════ -->
 <div class="modal fade" id="devolucionMercancia" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-dialog modal-dialog-centered modal-xl" style="max-width:90%">
         <div class="modal-content">
 
             <!-- ── Header ── -->
@@ -414,21 +417,21 @@
                                 <i class="bi bi-person-circle"></i> Solicitante <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control-custom" id="devolucionSolicitante" required>
-                            <div class="modal-error-msg">⚠️ Ingrese el nombre del solicitante.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Ingrese el nombre del solicitante.</div>
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label-custom" for="devolucionNumEmpleado">
                                 <i class="bi bi-person-vcard-fill"></i> # de Empleado <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control-custom" id="devolucionNumEmpleado" required>
-                            <div class="modal-error-msg">⚠️ Ingrese el número de empleado.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Ingrese el número de empleado.</div>
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label-custom" for="devolucionArea">
                                 <i class="bi bi-columns-gap"></i> Área <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control-custom" id="devolucionArea" required>
-                            <div class="modal-error-msg">⚠️ Ingrese el área.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Ingrese el área.</div>
                         </div>
                     </div>
 
@@ -441,7 +444,7 @@
                             <select class="form-select-custom" id="devolucionEntrega" required>
                                 <option value="">Seleccionar...</option>
                             </select>
-                            <div class="modal-error-msg">⚠️ Seleccione quien entrega.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Seleccione quien entrega.</div>
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label-custom" for="devolucionRecibe">
@@ -450,7 +453,7 @@
                             <select class="form-select-custom" id="devolucionRecibe" required>
                                 <option value="">Seleccionar...</option>
                             </select>
-                            <div class="modal-error-msg">⚠️ Seleccione quien recibe.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Seleccione quien recibe.</div>
                         </div>
                     </div>
 
@@ -471,19 +474,35 @@
                             <table class="table table-striped table-sm CustomTableResponsive" id="tablaArticulosDevolucion">
                                 <thead class="table-light text-center position-sticky top-0" style="z-index: 1;">
                                     <tr>
+
                                         <th style="width: 40px;">#</th>
+
                                         <th style="width: 40px;">
                                             <input type="checkbox" id="chkAllDevolucion" disabled>
                                         </th>
+
                                         <th>Orden Trabajo</th>
+
                                         <th>Código</th>
+
                                         <th>Artículo</th>
+
+                                        <th style="width: 100px;">Cant. Solicitada</th>
+
                                         <th style="width: 100px;">Cant. Atendida</th>
-                                        <th style="width: 100px;">Cant. a Devolver <span class="text-danger">*</span></th>
+
+                                        <th style="width: 100px;">
+                                            Cant. a Devolver
+                                            <span class="text-danger">*</span>
+                                        </th>
+
                                         <th style="width: 100px;">DEPARTAMENTO</th>
-                                        <th style="width: 100px;">PROCESO </th>
-                                        <th style="width: 100px;">GASTOS </th>
-                                        <th style="width: 100px;">CEDIS </th>
+
+                                        <th style="width: 100px;">PROCESO</th>
+
+                                        <th style="width: 100px;">GASTOS</th>
+
+                                        <th style="width: 100px;">CEDIS</th>
 
                                     </tr>
                                 </thead>
@@ -503,13 +522,12 @@
 
                 <!-- ── Footer ── -->
                 <div class="modal-footer-custom">
-                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle me-1"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-danger btn-sm" id="btnRechazarDev">Rechazar</button>
-
                     <button type="button" class="btn-modal-guardar" id="btnGuardarDevolucion">
                         <i class="bi bi-floppy-fill me-1"></i> Guardar
+                    </button>
+                    <button type="button" class="btn-ptm btn-ptm-mid" id="btnRechazarDev">Rechazar</button>
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
                     </button>
                 </div>
             </form>
@@ -522,124 +540,107 @@
 <!-- ══════════════════════════════════════════════
      MODAL: SALIDA DE MATERIALES
 ══════════════════════════════════════════════ -->
-<div class="modal fade" id="salidaMercancia" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:90%">
+<div class="modal fade" id="salidaMercancia" tabindex="-1" aria-hidden="true" data-bs-keyboard="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:95%">
         <div class="modal-content">
 
-            <div class="modal-header text-white bg-bluePtm pb-1 border-0">
-                <div class="ms-2 text-start me-5">
-                    <small class="d-block">FOLIO</small>
-                    <h4 id="valeFolio" class="m-0 text-danger"># 00010</h4>
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom" id="titleSalidaMercancia">Salida de Materiales</div>
+                        <div class="modal-subtitle-custom">
+                            Folio: <strong id="valeFolio" class="text-white"># 00010</strong>
+                        </div>
+                    </div>
                 </div>
-                <h5 class="modal-title mx-auto" id="titleSalidaMercancia">Entrega de Materiales</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
 
-            <div class="modal-body">
-                <form id="frmVale">
-                    <!-- CABECERA: fecha y datos solicitante -->
-                    <div class="row g-2 mb-2">
-                        <div class="col-12 col-md-4">
-                            <label for="Fecha dia" class="form-label fw-semibold">
-                                <i class="bi bi-calendar2-range-fill me-1 text-muted"></i>Fecha
-                                <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group has-validation">
-                                <span class="input-group-text bg-light">
-                                    <i class="bi bi-calendar2-range-fill"></i>
-                                </span>
-                                <input type="date"
-                                       class="form-control"
-                                       id="fechaDia"
-                                       name="Fecha dia"
-                                       placeholder="Fecha"
-                                       required=""
-                                       readonly />
-                                <div class="invalid-feedback">⚠️ Por favor ingrese la fecha.</div>
+            <!-- ── Body ── -->
+            <form id="frmVale" class="needs-validation" novalidate autocomplete="on">
+                <div class="modal-body-custom">
+
+                    <!-- Sección 1: Datos de la Solicitud -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-file-earmark-text-fill me-2"></i>Datos de la Solicitud
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label-custom" for="fechaDia">
+                                    <i class="bi bi-calendar2-range-fill"></i> Fecha
+                                </label>
+                                <input type="date" class="form-control-custom" id="fechaDia"
+                                       name="Fecha dia" required readonly autocomplete="off">
+                                <div class="modal-error-msg invalid-feedback">
+                                    <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor ingrese la fecha.
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label-custom" for="numAjuste">
+                                    <i class="bi bi-list-ol"></i> Número de Ajuste
+                                </label>
+                                <input type="text" class="form-control-custom" id="numAjuste"
+                                       name="# de Ajuste" placeholder="# de Ajuste" required readonly autocomplete="off">
+                                <div class="modal-error-msg invalid-feedback">
+                                    <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor ingrese el número de ajuste.
+                                </div>
                             </div>
                         </div>
-
-                        <div class="col-12 col-md-8">
-                            <label for="solicitante" class="form-label fw-semibold">
-                                <i class="bi bi-person-circle me-1 text-muted"></i>Nombre del Solicitante
-                                <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group has-validation">
-                                <span class="input-group-text bg-light">
-                                    <i class="bi bi-person-circle"></i>
-                                </span>
-                                <input type="text"
-                                       class="form-control"
-                                       id="solicitante"
-                                       name="solicitante"
-                                       placeholder="Nombre del solicitante"
-                                       required="" />
-                                <div class="invalid-feedback">⚠️ Por favor ingrese el nombre del solicitante.</div>
-                            </div>
-                        </div>
-
-
-                        <div class="col-12 col-md-4">
-                            <label for="numEmpleado" class="form-label fw-semibold">
-                                <i class="bi bi-person-vcard-fill me-1 text-muted"></i> # de Empleado
-                                <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group has-validation">
-                                <span class="input-group-text bg-light">
-                                    <i class="bi bi-person-vcard-fill"></i>
-                                </span>
-                                <input type="text"
-                                       class="form-control"
-                                       id="numEmpleado"
-                                       name="Numero Empleado"
-                                       placeholder="Numero de Empleado"
-                                       required="" />
-                                <div class="invalid-feedback">⚠️ Por favor ingrese el numero del empleado.</div>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-md-4">
-                            <label for="area" class="form-label fw-semibold">
-                                <i class="bi bi-columns-gap me-1 text-muted"></i> Área
-                                <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group has-validation">
-                                <span class="input-group-text bg-light">
-                                    <i class="bi bi-columns-gap"></i>
-                                </span>
-                                <input type="text"
-                                       class="form-control"
-                                       id="area"
-                                       name="Área"
-                                       placeholder="Área"
-                                       required="" />
-                                <div class="invalid-feedback">⚠️ Por favor ingrese el área.</div>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-md-4">
-                            <label for="numAjuste" class="form-label fw-semibold">
-                                <i class="bi bi-list-ol me-1 text-muted"></i> Numero de Ajuste
-                                <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group has-validation">
-                                <span class="input-group-text bg-light">
-                                    <i class="bi bi-list-ol"></i>
-                                </span>
-                                <input type="text"
-                                       class="form-control"
-                                       id="numAjuste"
-                                       name="# de Ajuste"
-                                       placeholder="# de Ajuste"
-                                       required=""
-                                       readonly />
-                                <div class="invalid-feedback">⚠️ Por favor ingrese el número de ajuste.</div>
-                            </div>
-                        </div>
-
                     </div>
 
-                    <!-- SECCION: Artículos de la Solicitud (Salida de Materiales) -->
+                    <hr class="divider-custom">
+
+                    <!-- Sección 2: Datos del Solicitante -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-person-fill me-2"></i>Datos del Solicitante
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="solicitante">
+                                    <i class="bi bi-person-circle"></i> Nombre del Solicitante
+                                </label>
+                                <input type="text" class="form-control-custom" id="solicitante"
+                                       name="solicitante" placeholder="Nombre del solicitante"
+                                       required autocomplete="on">
+                                <div class="modal-error-msg invalid-feedback">
+                                    <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor ingrese el nombre del solicitante.
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label-custom" for="numEmpleado">
+                                    <i class="bi bi-person-vcard-fill"></i> # de Empleado
+                                </label>
+                                <input type="text" class="form-control-custom" id="numEmpleado"
+                                       name="Numero Empleado" placeholder="Número de empleado"
+                                       required autocomplete="on">
+                                <div class="modal-error-msg invalid-feedback">
+                                    <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor ingrese el número de empleado.
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label-custom" for="area">
+                                    <i class="bi bi-columns-gap"></i> Área
+                                </label>
+                                <input type="text" class="form-control-custom" id="area"
+                                       name="Área" placeholder="Área" required autocomplete="on">
+                                <div class="modal-error-msg invalid-feedback">
+                                    <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor ingrese el área.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 3: Artículos para Salida -->
                     <div class="mb-3">
                         <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
                             <i class="bi bi-box-seam me-2"></i>Artículos para Salida
@@ -648,106 +649,106 @@
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <div class="form-check">
                                 <input type="checkbox" class="form-check-input" id="chkSelAllArticulos">
-                                <label class="form-check-label small fw-semibold" for="chkSelAllArticulos">Seleccionar todos</label>
+                                <label class="form-check-label small fw-semibold" for="chkSelAllArticulos">
+                                    Seleccionar todos
+                                </label>
                             </div>
-                            <small class="text-muted">Artículos seleccionados: <strong id="contadorSeleccionados">0</strong></small>
+                            <small class="text-muted">
+                                Artículos seleccionados: <strong id="contadorSeleccionados">0</strong>
+                            </small>
                         </div>
-                        <div class="table-responsive" style="max-height: 320px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
-                            <table class="table table-sm table-hover mb-0 CustomTableResponsive" id="tablaArticulosSalida">
-                                <thead class="table-light text-center position-sticky top-0" style="z-index: 1;">
+                        <div class="table-responsive" style="max-height:320px; overflow-y:auto;
+                             border:1px solid #dee2e6; border-radius:8px;">
+                            <table class="table table-sm table-hover mb-0 CustomTableResponsive"
+                                   id="tablaArticulosSalida">
+                                <thead class="table-light text-center position-sticky top-0" style="z-index:1;">
                                     <tr>
-                                        <th style="width: 40px;">#</th>
-                                        <th style="width: 40px;">
+                                        <th style="width:40px;">#</th>
+                                        <th><i class="bi bi-file-earmark-text me-1"></i>Folio Salida</th>
+                                        <th style="width:40px;">
                                             <input type="checkbox" id="chkAllSelect" disabled>
                                         </th>
-                                        <th>Acciones</th>
-                                        <th>Código</th>
-                                        <th>Artículo</th>
-                                        <th style="width: 70px;">Cantidad</th>
-                                        <th style="width: 70px;">Stock</th>
-                                        <th style="width: 90px;">Urgencia</th>
-                                        <th style="width: 90px;">Estatus</th>
-                                        <th style="width: 90px;">Departamento</th>
-                                        <th style="width: 100px;">Proceso</th>
-                                        <th style="width: 80px;">Gastos</th>
-                                        <th style="width: 70px;">Cedis</th>
-                                        <th>Nombre Empleado</th>
+                                        <th><i class="bi bi-gear-fill me-1"></i>Acciones</th>
+                                        <th><i class="bi bi-upc-scan me-1"></i>Código</th>
+                                        <th><i class="bi bi-box-seam me-1"></i>Artículo</th>
+                                        <th style="width:70px;"><i class="bi bi-123 me-1"></i>Cantidad</th>
+                                        <th style="width:70px;"><i class="bi bi-box-seam me-1"></i>Stock</th>
+                                        <th style="width:70px;"><i class="bi bi-arrow-down-circle me-1"></i>Min</th>
+                                        <th style="width:70px;"><i class="bi bi-arrow-up-circle me-1"></i>Max</th>
+                                        <th style="width:90px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Urgencia</th>
+                                        <th style="width:90px;"><i class="bi bi-flag-fill me-1"></i>Estatus</th>
+                                        <th style="width:90px;"><i class="bi bi-building me-1"></i>Departamento</th>
+                                        <th style="width:100px;"><i class="bi bi-diagram-3 me-1"></i>Proceso</th>
+                                        <th style="width:80px;"><i class="bi bi-cash-coin me-1"></i>Gastos</th>
+                                        <th style="width:70px;"><i class="bi bi-geo-alt-fill me-1"></i>Cedis</th>
+                                        <th><i class="bi bi-person-fill me-1"></i>Nombre Empleado</th>
                                     </tr>
                                 </thead>
                                 <tbody id="bodyArticulosSalida">
                                     <tr>
-                                        <td colspan="12" class="text-center text-muted py-4">
-                                            <i class="bi bi-info-circle me-1"></i>Seleccione una solicitud para ver los artículos
+                                        <td colspan="16" class="text-center text-muted py-4">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Seleccione una solicitud para ver los artículos
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                    <!-- Firma / entrega -->
-                    <div class="row mt-2 gx-3">
-                        <div class="col-md-6 text-center">
-                            <div class="border-top pt-2">
-                                <div class="fw-bold">Nombre Almacenista</div>
-                                <label for="numAjuste" class="form-label fw-semibold">
-                                    <i class="bi bi-person-lines-fill me-1 text-muted"></i>
-                                    <span class="small text-muted">ENTREGA</span>
-                                    <span class="text-danger">*</span>
-                                </label>
-                                <div class="input-group has-validation">
-                                    <span class="input-group-text bg-light">
-                                        <i class="bi bi-person-lines-fill"></i>
-                                    </span>
-                                    <select class="form-select"
-                                            id="firmaAlmacen"
-                                            name="firmaAlmacen"
-                                            placeholder="Nombre Entrega"
-                                            required>
-                                    </select>
-                                    <div class="invalid-feedback">⚠️ Por favor ingrese el nombre de almacenista.</div>
-                                </div>
 
+                    <hr class="divider-custom">
+
+                    <!-- Sección 4: Firmas / Entrega -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-pen-fill me-2"></i>Firmas de Entrega
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="firmaAlmacen">
+                                    <i class="bi bi-person-lines-fill"></i> Almacenista (Entrega)
+                                </label>
+                                <select class="form-select-custom" id="firmaAlmacen"
+                                        name="firmaAlmacen" required>
+                                </select>
+                                <div class="modal-error-msg invalid-feedback">
+                                    <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor seleccione el nombre del almacenista.
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="col-md-6 text-center">
-                            <div class="border-top pt-2">
-                                <div class="fw-bold">Nombre Autorización</div>
-                                <label for="numAjuste" class="form-label fw-semibold">
-                                    <i class="bi bi-person-check-fill me-1 text-muted"></i>
-                                    <span class="small text-muted">RECIBE</span>
-                                    <span class="text-danger">*</span>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="firmaAutoriza">
+                                    <i class="bi bi-person-check-fill"></i> Autorización (Recibe)
                                 </label>
-                                <div class="input-group has-validation">
-                                    <span class="input-group-text bg-light">
-                                        <i class="bi bi-person-check-fill"></i>
-                                    </span>
-                                    <select class="form-select"
-                                            id="firmaAutoriza"
-                                            name="firmaAutoriza"
-                                            placeholder="Nombre Recibe"
-                                            required>
-                                    </select>
-                                    <div class="invalid-feedback">⚠️ Por favor ingrese el nombre de quien recibe.</div>
+                                <select class="form-select-custom" id="firmaAutoriza"
+                                        name="firmaAutoriza" required>
+                                </select>
+                                <div class="modal-error-msg invalid-feedback">
+                                    <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Por favor seleccione el nombre de quien recibe.
                                 </div>
-
                             </div>
                         </div>
                     </div>
 
+                    <!-- Alerta Container -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="alertValeContainer"></div>
+                        </div>
+                    </div>
 
-                </form>
-            </div>
-
-            <div class="modal-footer">
-                <div class="me-auto">
-                    <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btnLimpiarVale">Limpiar</button>
-                    @*<button type="button" class="btn btn-danger btn-sm" id="btnRechazarDev">Rechazar</button>*@
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="btnCerrarVale">Cerrar</button>
-                @*<button type="button" class="btn btn-primary btn-sm" id="btnImprimirVale"><i class="bi bi-printer me-1"></i>Imprimir</button>*@
-                <button type="button" class="btn btn-primary btn-sm" id="btnGuardarVale"><i class="bi bi-save me-1"></i>Guardar</button>
-            </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal" id="btnCerrarVale">
+                        <i class="bi bi-x-circle me-1"></i> Cerrar
+                    </button>
+                    <button type="submit" class="btn-modal-guardar" id="btnGuardarVale">
+                        <i class="bi bi-floppy-fill me-1"></i> Guardar Vale
+                    </button>
+                </div>
+
+            </form>
         </div>
     </div>
 </div>
@@ -792,7 +793,7 @@
                                 <option value="obsoleto">Obsoleto</option>
                                 <option value="no_coincide">La refacción no coincide</option>
                             </select>
-                            <div class="modal-error-msg">⚠️ Por favor selecciona el motivo de rechazo.</div>
+                            <div class="modal-error-msg invalid-feedback">⚠️ Por favor selecciona el motivo de rechazo.</div>
                         </div>
 
                         <!-- Comentarios -->
@@ -886,7 +887,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="nombreProv" name="Solicitante"
                                        placeholder="Nombre del proveedor" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese el nombre del proveedor.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese el nombre del proveedor.</div>
                                 <div class="list-group position-absolute col-12 col-md-4 d-none" id="acNombre"></div>
                             </div>
 
@@ -896,7 +897,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="codigoProv" name="Proveedor"
                                        placeholder="Código de proveedor" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese el código del proveedor.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese el código del proveedor.</div>
                             </div>
 
                             <div class="col-12 col-md-4 position-relative">
@@ -905,7 +906,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="ordenCompra" name="Orden Compra"
                                        placeholder="Orden de compra" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese la orden de compra.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese la orden de compra.</div>
                                 <div class="list-group position-absolute col-12 col-md-12 d-none" id="acOC"></div>
                             </div>
 
@@ -915,7 +916,7 @@
                                 </label>
                                 <input type="date" class="form-control-custom" id="FechaCount"
                                        name="Fecha contabilización" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese una fecha.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese una fecha.</div>
                             </div>
 
                             <div class="col-12 col-md-4">
@@ -924,7 +925,7 @@
                                 </label>
                                 <input type="date" class="form-control-custom" id="FechaV"
                                        name="Fecha vencimiento" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese la fecha de vencimiento.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese la fecha de vencimiento.</div>
                             </div>
 
                             <div class="col-12 col-md-4">
@@ -933,7 +934,7 @@
                                 </label>
                                 <input type="date" class="form-control-custom" id="FechaDoc"
                                        name="Fecha documento" required>
-                                <div class="modal-error-msg">⚠️ Por favor ingrese la fecha del documento.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Por favor ingrese la fecha del documento.</div>
                             </div>
 
                             <div class="col-12 col-md-4">
@@ -942,7 +943,7 @@
                                 </label>
                                 <input type="text" class="form-control-custom" id="NoEntrada"
                                        name="Número Entrada" readonly required value="231244">
-                                <div class="modal-error-msg">⚠️ Campo requerido.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Campo requerido.</div>
                             </div>
 
                             <div class="col-12 col-md-8">
@@ -1078,25 +1079,11 @@
     </div>
 </div>
 
-<!-- Container para alerts -->
-<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;"></div>
-
-<!-- Loader fullscreen -->
-<div id="calendarLoader" style="display: none;">
-    <div class="calendar-loader-overlay">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Cargando...</span>
-        </div>
-        <p class="mt-3 text-white fw-semibold">Cargando solicitudes, por favor espere...</p>
-    </div>
-</div>
-
-
 <!-- ══════════════════════════════════════════════
-     MODAL SOLICITAR REFACCIÓN PARA ORDEN DE TRABAJO
+     MODAL REEMPLAZAR REFACCIÓN PARA ORDEN DE TRABAJO
 ═══════════════════════════════════════════════════ -->
 <div class="modal fade" id="solicitarRefAlmModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width:80%">
         <div class="modal-content">
 
             <!-- ── Header ── -->
@@ -1127,6 +1114,12 @@
                         <div class="row g-3">
                             <div class="col-md-12">
                                 <div class="mb-3">
+                                    <!-- Alerta Container -->
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div id="alertCambioRefaccionContainer"></div>
+                                        </div>
+                                    </div>
                                     <!-- Buscador de artículos -->
                                     <div class="row g-3 mb-3">
                                         <div class="col-12">
@@ -1158,20 +1151,14 @@
                                             </thead>
                                             <tbody id="bodyArticulosRefaccionMP">
                                                 <tr id="filaSinArticulosMP">
-                                                    <td colspan="5" class="text-center text-muted py-3">
+                                                    <td colspan="6" class="text-center text-muted py-3">
                                                         <i class="bi bi-info-circle me-1"></i>Busque y seleccione un artículo para agregarlo
                                                     </td>
                                                 </tr>
                                             </tbody>
                                         </table>
                                     </div>
-                                    <!-- Alerta Container -->
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div id="alertCambioRefaccionContainer"></div>
-                                        </div>
-                                    </div>
-                                    <div class="modal-error-msg" id="errorArticulosMP" style="display: none;">
+                                    <div class="modal-error-msg invalid-feedback" id="errorArticulosMP" style="display: none;">
                                         <img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Agregue al menos un artículo a la solicitud.
                                     </div>
                                 </div>
@@ -1180,24 +1167,24 @@
                     </div>
 
                     <!-- Sección 3: Prioridad y Justificación -->
-                    <div class="mb-3">
-                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>Comentarios
-                        </h6>
-                        <div class="row g-3">
+                    @*<div class="mb-3">
+                            <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>Comentarios
+                            </h6>
+                            <div class="row g-3">
 
-                            <div class="col-12">
-                                <label class="form-label-custom" for="RdescripcionNecesidad">
-                                    <i class="bi bi-chat-left-text-fill"></i> Comentario
-                                </label>
-                                <textarea maximo="500" funcion_destino="darFormatoNumLet"
-                                          class="form-control-custom validacion" id="RdescripcionNecesidad"
-                                          rows="3" placeholder="Describa por qué necesita esta refacción..."
-                                          autocomplete="on"></textarea>
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa por qué necesita la refacción.</div>
+                                <div class="col-12">
+                                    <label class="form-label-custom" for="RdescripcionNecesidad">
+                                        <i class="bi bi-chat-left-text-fill"></i> Comentario
+                                    </label>
+                                    <textarea maximo="500" funcion_destino="darFormatoNumLet"
+                                              class="form-control-custom validacion" id="RdescripcionNecesidad"
+                                              rows="3" placeholder="Describa por qué necesita esta refacción..."
+                                              autocomplete="on"></textarea>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa por qué necesita la refacción.</div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        </div>*@
 
                     <!-- Alerta Container -->
                     <div class="row">
@@ -1222,6 +1209,22 @@
         </div>
     </div>
 </div>
+
+<!-- Container para alerts -->
+<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;"></div>
+
+<!-- Loader fullscreen -->
+<div id="calendarLoader" style="display: none;">
+    <div class="calendar-loader-overlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-3 text-white fw-semibold">Cargando solicitudes, por favor espere...</p>
+    </div>
+</div>
+
+
+
 
 
 <script src="~/Scripts/solicitud_refacciones_refactor.js?v1.0.4"></script>

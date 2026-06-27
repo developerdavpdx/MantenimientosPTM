@@ -1,0 +1,109 @@
+﻿<!-- ══════════════════════════════════════════════
+     MODAL GESTIONAR AREAS
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalAgregarArea" tabindex="-1" aria-labelledby="modalAgregarAreaLabel" aria-hidden="true" data-bs-keyboard="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 720px;">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap success">
+                        <i class="bi bi-diagram-3"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom" id="modalAgregarAreaLabel">
+                            Gestión de Áreas
+                        </div>
+                        <div class="modal-subtitle-custom">
+                            Alta y listado de áreas de producción
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Body con pestañas Alta / Listar ── -->
+            <div class="modal-body-custom">
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-alta-area" data-bs-toggle="tab" data-bs-target="#tabAltaArea" type="button" role="tab">Nuevo</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-listar-area" data-bs-toggle="tab" data-bs-target="#tabListarArea" type="button" role="tab">Listar / Eliminar</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tabAltaArea" role="tabpanel" aria-labelledby="tab-alta-area">
+                        <form id="formAgregarArea" class="needs-validation" novalidate autocomplete="off">
+                            <div class="mb-3">
+                                <div class="col-12 mb-3">
+                                    <label class="form-label-custom" for="NombreArea">
+                                        <i class="bi bi-diagram-3-fill"></i>
+                                        Nombre del Área
+                                    </label>
+
+                                    <input type="text"
+                                           id="NombreArea"
+                                           name="NombreArea"
+                                           class="form-control-custom"
+                                           placeholder="Ejemplo: Extrusión, Recepción..."
+                                           required />
+
+                                    <div class="modal-error-msg invalid-feedback">
+                                        <img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Ingrese el nombre del área.
+                                    </div>
+
+                                    <div class="mt-1" style="font-size:0.78rem; color: var(--modal-text-muted);">
+                                        <i class="bi bi-lightbulb text-warning"></i>
+                                        Ejemplo: Extrusión, Empaque, Calidad, etc.
+                                    </div>
+                                </div>
+
+                                <div class="row pt-3 g-3">
+                                    <div class="col-12">
+                                        <div id="alertAreaContainer"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer-custom">
+                                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                                    <i class="bi bi-x-circle me-1"></i> Cancelar
+                                </button>
+
+                                <button type="submit" class="btn-modal-guardar" id="btnGuardarArea">
+                                    <i class="bi bi-floppy-fill me-1"></i>
+                                    Guardar Área
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabListarArea" role="tabpanel" aria-labelledby="tab-listar-area">
+                        <div class="mb-3 d-flex align-items-center justify-content-between gap-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="chkSeleccionarTodoAreas">
+                                <label class="form-check-label ms-2 text-black" for="chkSeleccionarTodoAreas">Seleccionar todo</label>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-sm btnEliminarLineas" id="btnEliminarSeleccionadasAreas" data-bs-toggle="tooltip" title="Eliminar seleccionadas">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="ListaAreasContainer">
+                            <div class="text-center text-muted">Cargando...</div>
+                        </div>
+
+                        <div id="ResultDeleteAreaContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

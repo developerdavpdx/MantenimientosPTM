@@ -267,7 +267,7 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div class="modal-error-msg" id="errorArticulosMP" style="display: none;">
+                                    <div class="modal-error-msg invalid-feedback" id="errorArticulosMP" style="display: none;">
                                         <img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Agregue al menos un artículo a la solicitud.
                                     </div>
                                 </div>
@@ -289,7 +289,7 @@
                                           class="form-control-custom validacion" id="RdescripcionNecesidad"
                                           rows="3" placeholder="Describa por qué necesita esta refacción..."
                                           autocomplete="on"></textarea>
-                                <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa por qué necesita la refacción.</div>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa por qué necesita la refacción.</div>
                             </div>
                         </div>
                     </div>
@@ -552,14 +552,14 @@
                                         <i class="bi bi-clock-fill"></i> Hora Inicio <span class="text-danger">*</span>
                                     </label>
                                     <input type="time" class="form-control-custom" id="HoraInicio" name="HoraInicio" required autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de inicio.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de inicio.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="HoraFin">
                                         <i class="bi bi-clock-history"></i> Hora Fin <span class="text-danger">*</span>
                                     </label>
                                     <input type="time" class="form-control-custom" id="HoraFin" name="HoraFin" required autocomplete="off">
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de fin.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de fin.</div>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label-custom" for="TextoSecuencia">
@@ -567,7 +567,7 @@
                                     </label>
                                     <textarea class="form-control-custom" id="TextoSecuencia" name="TextoSecuencia"
                                               rows="3" required placeholder="Describa detalladamente la actividad realizada..." autocomplete="on"></textarea>
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa la actividad realizada.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Describa la actividad realizada.</div>
                                 </div>
 
                                 <!-- Búsqueda de técnicos -->
@@ -598,7 +598,7 @@
                                     </label>
                                     <input type="text" class="form-control-custom" id="DuracionHrs" name="DuracionHrs"
                                            placeholder="0.0" required autocomplete="off" readonly>
-                                    <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique la duración del trabajo.</div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique la duración del trabajo.</div>
                                 </div>
                             </div>
                         </div>
@@ -620,7 +620,7 @@
                                 <!-- Firma 1: Realizó -->
                                 <div class="col-md-4" id="firmaRealizoContainer">
                                     <div class="card border-primary shadow-sm h-100">
-                                        <div class="card-header bg-primary text-white">
+                                        <div class="card-header bg_universal_ptm text-white">
                                             <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i><span id="tecnico_mtto_sign">Técnico MTTO</span></h6>
                                         </div>
                                         <div class="card-body">
@@ -645,7 +645,7 @@
                                             <input type="text" class="form-control-custom" id="nombreRealizo" name="nombreRealizo"
                                                    placeholder="Nombre completo" readonly autocomplete="name">
                                             <input type="hidden" id="firmaRealizoData" name="firmaRealizoData">
-                                            <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
+                                            <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -653,7 +653,7 @@
                                 <!-- Firma 2: Supervisó -->
                                 <div class="col-md-4" id="firmaSupervisoContainer">
                                     <div class="card border-success shadow-sm h-100">
-                                        <div class="card-header bg-success text-white">
+                                        <div class="card-header bg_universal_ptm text-white">
                                             <h6 class="mb-0"><i class="bi bi-eye-fill me-2"></i><span id="supervisor_producción_sign">Supervisor Producción</span></h6>
                                         </div>
                                         <div class="card-body">
@@ -678,7 +678,7 @@
                                             <input type="text" class="form-control-custom" id="nombreSuperviso" name="nombreSuperviso"
                                                    placeholder="Nombre completo" autocomplete="name">
                                             <input type="hidden" id="firmaSupervisoData" name="firmaSupervisoData">
-                                            <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
+                                            <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -686,7 +686,7 @@
                                 <!-- Firma 3: Mantenimiento -->
                                 <div class="col-md-4" id="firmaMantenimientoContainer">
                                     <div class="card border-info shadow-sm h-100">
-                                        <div class="card-header bg-info text-white">
+                                        <div class="card-header bg_universal_ptm text-white">
                                             <h6 class="mb-0"><i class="bi bi-gear-fill me-2"></i><span id="supervisor_mantenimiento_sign">Supervisor Mantenimiento</span></h6>
                                         </div>
                                         <div class="card-body">
@@ -711,7 +711,7 @@
                                             <input type="text" class="form-control-custom" id="nombreMantenimiento" name="nombreMantenimiento"
                                                    placeholder="Nombre completo" autocomplete="name">
                                             <input type="hidden" id="firmaMantenimientoData" name="firmaMantenimientoData">
-                                            <div class="modal-error-msg"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
+                                            <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Escriba el nombre de quien realiza la firma.</div>
                                         </div>
                                     </div>
                                 </div>

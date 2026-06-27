@@ -1,0 +1,227 @@
+﻿<!-- ══════════════════════════════════════════════
+     MODAL AGREGAR / EDITAR EQUIPO
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="equipoModal" tabindex="-1" aria-hidden="true" data-bs-keyboard="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width:95%">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-gear-fill"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom" id="modalEquipoTitulo">Agregar Nuevo Equipo</div>
+                        <div class="modal-subtitle-custom">Complete los datos para registrar el equipo</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Body ── -->
+            <form id="formEquipo" class="needs-validation" novalidate autocomplete="on">
+                <div class="modal-body-custom">
+                    <input type="hidden" id="IdEquipo" name="IdEquipo" autocomplete="off">
+
+                    <!-- Sección 1: Información General -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-info-circle-fill me-2"></i>Información General
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="Planta">
+                                    <i class="bi bi-building"></i> Planta
+                                </label>
+                                <input type="text" class="form-control-custom" id="Planta" name="Planta" readonly autocomplete="off">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="TipoEquipo">
+                                    <i class="bi bi-tools"></i> Tipo Equipo
+                                </label>
+                                <select class="form-select-custom" id="TipoEquipo" name="TipoEquipo" required autocomplete="off">
+                                    <option value="">Seleccionar tipo...</option>
+                                </select>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione un tipo de equipo.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 2: Detalles del Equipo -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-card-text me-2"></i>Detalles del Equipo
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="NombreEquipo">
+                                    <i class="bi bi-tag"></i> Nombre de Equipo
+                                </label>
+                                <input type="text" class="form-control-custom" id="NombreEquipo" name="NombreEquipo"
+                                       placeholder="Ingrese nombre de equipo" required autocomplete="on">
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El nombre del equipo es obligatorio.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="DescripcionEquipo">
+                                    <i class="bi bi-card-heading"></i> Descripción de Equipo
+                                </label>
+                                <input type="text" class="form-control-custom" id="DescripcionEquipo" name="DescripcionEquipo"
+                                       placeholder="Ingrese la descripción de equipo" required autocomplete="on">
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  La descripción del equipo es obligatoria.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 3: Ubicación y Organización -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-geo-alt-fill me-2"></i>Ubicación y Organización
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="Area">
+                                    <i class="bi bi-diagram-3"></i> Área
+                                </label>
+                                <select class="form-select-custom" id="Area" name="Area" required autocomplete="off">
+                                    <option value="">Seleccionar área...</option>
+                                </select>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione un área.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="LineaProduccion">
+                                    <i class="bi bi-arrow-repeat"></i> Línea de Producción
+                                </label>
+                                <div class="select-wrapper">
+                                    <select class="filtro-input" id="LineaProduccion" name="LineaProduccion" required disabled autocomplete="off">
+                                        <option value="">Todas las líneas...</option>
+                                    </select>
+                                    <div class="select-loader d-none" id="loader_LineaProduccion">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </div>
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione una línea de producción.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 4: Información Administrativa -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-file-text-fill me-2"></i>Información Administrativa
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="CentroCostos">
+                                    <i class="bi bi-cash-coin"></i> Centro de Costos
+                                </label>
+                                <input type="text" class="form-control-custom" id="CentroCostos" name="CentroCostos"
+                                       placeholder="Ingrese centro de costos" required autocomplete="on">
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El centro de costos es obligatorio.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="NumeroDocPmCalidad">
+                                    <i class="bi bi-file-earmark-check"></i> Número de Doc PM Calidad
+                                </label>
+                                <input type="text" class="form-control-custom" id="NumeroDocPmCalidad" name="NumeroDocPmCalidad"
+                                       placeholder="Número de doc pm.calidad" required autocomplete="on">
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  El número de documento es obligatorio.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 5: Configuración de Mantenimiento -->
+                    <div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-calendar-check-fill me-2"></i>Configuración de Mantenimiento
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="PeriodicidadMantenimiento">
+                                    <i class="bi bi-arrow-clockwise"></i> Periodicidad de Mantenimiento
+                                </label>
+                                <select class="form-select-custom select2" id="PeriodicidadesMantenimiento" name="PeriodicidadesMantenimiento" required autocomplete="off" multiple>
+                                    @*<option value="mensual">Mensual</option>
+                                        <option value="bimestral">Bimestral</option>
+                                        <option value="trimestral">Trimestral</option>
+                                        <option value="cuatrimestral">Cuatrimestral</option>
+                                        <option value="quinquemestre">Quinquemestre</option>
+                                        <option value="semestral">Semestral</option>
+                                        <option value="anual">Anual</option>*@
+                                </select>
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Por favor seleccione la periodicidad.</div>
+                            </div>
+
+                            <div class="col-md-6" id="divRangoMantenimiento">
+                                <label class="form-label-custom">
+                                    <i class="bi bi-calendar-range"></i> Rango de Días para Mantenimiento
+                                </label>
+                                <div class="d-flex gap-2">
+                                    <div class="flex-fill">
+                                        <select class="form-select-custom" id="DiaInicioMant" name="DiaInicioMant" required autocomplete="off">
+                                            <option value="">Día inicio</option>
+                                        </select>
+                                        <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Seleccione día inicial.</div>
+                                    </div>
+                                    <div class="flex-fill">
+                                        <select class="form-select-custom" id="DiaFinMant" name="DiaFinMant" required autocomplete="off">
+                                            <option value="">Día fin</option>
+                                        </select>
+                                        <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Seleccione día final.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-6" id="divFechaInicioMantenimiento">
+                                <label class="form-label-custom" for="FechaInicioMant">
+                                    <i class="bi bi-calendar-plus"></i> Fecha Inicio Mantenimiento
+                                </label>
+                                <input type="date" class="form-control-custom" id="FechaInicioMant" name="FechaInicioMant" required autocomplete="off">
+                                <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3">  Seleccione la fecha de inicio del mantenimiento.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerta Container -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="alertEquipoContainer"></div>
+                        </div>
+                    </div>
+
+                    <!-- Campos ocultos -->
+                    <div class="col-12 d-none">
+                        <input type="text" class="form-control-custom" id="Estatus" name="Estatus" value="1" readonly autocomplete="off">
+                    </div>
+                    <div class="col-12 d-none">
+                        <textarea class="form-control-custom" id="Comentarios" name="Comentarios" rows="2" readonly autocomplete="off"></textarea>
+                    </div>
+
+                </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn-modal-guardar" id="btnGuardarEquipo">
+                        <i class="bi bi-floppy-fill me-1"></i> Guardar Equipo
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

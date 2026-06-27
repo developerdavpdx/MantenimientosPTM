@@ -1,5 +1,7 @@
 using log4net;
 using MantenimientosPTM.Hubs;
+using MantenimientosPTM.Models.Dto;
+using MantenimientosPTM.Models.LogicaNegocio;
 using MantenimientosPTM.Service.Email.Implementations;
 using MantenimientosPTM.Service.Email.Models;
 using Microsoft.AspNet.SignalR;
@@ -12,19 +14,22 @@ using System.Configuration;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.UI.WebControls;
 using static MantenimientosPTM.AccesoDatosAlmacen;
+using static MantenimientosPTM.AccesoDatosPlaneacion;
 
 namespace MantenimientosPTM.Controllers
 {
     public class AlmacenController : Controller
     {
         readonly LogicaAlmacen Logic = new LogicaAlmacen();
-
+        readonly LogicaMantenimientosPreventivos LogicMP = new LogicaMantenimientosPreventivos();
+        readonly LogicaMantenimientosCorrectivos LogicMC = new LogicaMantenimientosCorrectivos();
         private static readonly ILog log = LogManager.GetLogger("AlmacenSolicitudCompra");
 
 
@@ -42,16 +47,13 @@ namespace MantenimientosPTM.Controllers
         {
             return View();
         }
-
         public ActionResult ReporteStock()
         {
             return View();
         }
-
         #endregion
 
         #region Endpoints
-
         [HttpGet]
         public JsonResult BuscarProveedor(string query, string Usuario)
         {
@@ -297,6 +299,7 @@ namespace MantenimientosPTM.Controllers
                 string FiltroFolio = Request.Form["FiltroFolio"];
                 string FiltroFechaInicio = Request.Form["FiltroFechaInicio"];
                 string FiltroFechaFin = Request.Form["FiltroFechaFin"];
+                string FiltroPlanta = Request.Form["FiltroPlanta"];
 
                 // ✅ Si no vienen fechas, usar mes actual
                 DateTime dtFechaInicio;
@@ -318,7 +321,8 @@ namespace MantenimientosPTM.Controllers
                 {
                     { "P_FILTRO_FOLIO",       (string.IsNullOrEmpty(FiltroFolio) ? (object)null : FiltroFolio, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_FECHA_INICIO", (dtFechaInicio,ParameterDirection.Input, HanaDbType.Date)},
-                    { "P_FILTRO_FECHA_FIN",    (dtFechaFin,ParameterDirection.Input, HanaDbType.Date)}
+                    { "P_FILTRO_FECHA_FIN",    (dtFechaFin,ParameterDirection.Input, HanaDbType.Date)},
+                    { "P_PLANTA",    (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta,ParameterDirection.Input, HanaDbType.NVarChar)}
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -571,7 +575,8 @@ namespace MantenimientosPTM.Controllers
                 var paramsEncabezado = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
                     { "P_COMENTARIOS",     (RequestData.Comentarios,     ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_USUARIOSOLICITA", (RequestData.UsuarioSolicita, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_USUARIOSOLICITA", (RequestData.UsuarioSolicita, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA", (RequestData.Planta, ParameterDirection.Input, HanaDbType.Integer) }
                 };
 
                 var resultEncabezado = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -626,22 +631,32 @@ namespace MantenimientosPTM.Controllers
                 else
                 {
                     // ✅ Actualizar estatus a "Espera Autorizacion" en lugar de aprobado
-                    var paramsEstatus = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_ESTATUS", ("Espera Autorizacion", ParameterDirection.Input, HanaDbType.NVarChar) }
-                    };
+                    //var paramsEstatus = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                    //{
+                    //    { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
 
-                    var resultEstatus = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCActualizarCabeceraSolicitudCompraMP, paramsEstatus
-                    );
+                    //    { "P_CENTRO_COSTO_1", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //    { "P_CENTRO_COSTO_2", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //    { "P_CENTRO_COSTO_3", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //    { "P_CENTRO_COSTO_4", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
 
-                    if (resultEstatus.JsonResult.Contains("ERROR"))
-                    {
-                        jsonResponse.Status = "ERROR";
-                        jsonResponse.Message = "Error al actualizar el estatus de la solicitud.";
-                        return Json(jsonResponse);
-                    }
+                    //    { "P_ESTATUS", ("Espera Autorizacion", ParameterDirection.Input, HanaDbType.NVarChar) },
+
+                    //    { "P_DOC_NUM", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //    { "P_DOC_ENTRY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //    { "P_RESPONSE_SAP", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    //};
+
+                    //var resultEstatus = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    //    Logic.AD.GCActualizarCabeceraSolicitudCompraMP, paramsEstatus
+                    //);
+
+                    //if (resultEstatus.JsonResult.Contains("ERROR"))
+                    //{
+                    //    jsonResponse.Status = "ERROR";
+                    //    jsonResponse.Message = "Error al actualizar el estatus de la solicitud.";
+                    //    return Json(jsonResponse);
+                    //}
 
                     jsonResponse.Status = "SI";
                     jsonResponse.Message = $"Solicitud de compra #{idSolicitudCompra} generada con {insertados} línea(s). En espera de autorización.";
@@ -659,10 +674,10 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
-        [HttpPost]
-        public async Task<JsonResult> EnviarSolicitudCompraAutorizacion()
+        public async Task<JsonResult> ActualizarSolicitudOrdenCompraMP()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            UpdatePurchaseRequest RequestData;
             try
             {
                 Request.InputStream.Position = 0;
@@ -671,130 +686,335 @@ namespace MantenimientosPTM.Controllers
                     string jsonData = reader.ReadToEnd();
                     if (string.IsNullOrEmpty(jsonData))
                         throw new Exception("No se recibió información.");
+                    RequestData = JsonConvert.DeserializeObject<UpdatePurchaseRequest>(jsonData);
+                }
 
-                    var data = JsonConvert.DeserializeObject<dynamic>(jsonData);
-                    int idSolicitudCompra = data.idSolicitudCompra;
-                    string folio = data.Folio?.ToString() ?? idSolicitudCompra.ToString();
-                    var articulos = data.Articulos;
-                    string baseUrl = Request.Url.GetLeftPart(UriPartial.Authority) + Url.Content("~");
+                if (RequestData?.Requisicion == null)
+                    throw new Exception("No se recibió la información de la requisición.");
 
-                    // ✅ Preparar parámetros para el SP
-                    var parametersEmail = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_PLANTA", (data.Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_TIPO", ("A", ParameterDirection.Input, HanaDbType.NVarChar) }
-                    };
+                var idSolicitudCompra = RequestData.Requisicion.IdSolicitudCompra;
+                var Planta = RequestData.Planta;
+                var contabilizacion = RequestData.Requisicion.Contabilizacion;
+                var articulos = RequestData.Requisicion.Articulos ?? new List<ArticuloRequisicionModel>();
 
-                    // Ejecutar stored procedure de actualización
-                    var resultEmails = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCGetUsuariosXPlanta,
-                        parametersEmail
-                    );
+                // ───────────────────────────────────────────
+                // 1️⃣ Actualizar CABECERA
+                // ───────────────────────────────────────────
+                var paramsEstatus = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+            {
+                { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
+                { "P_CENTRO_COSTO_1", ((object)contabilizacion?.Departamento ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_CENTRO_COSTO_2", ((object)contabilizacion?.Proceso ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_CENTRO_COSTO_3", ((object)contabilizacion?.Gastos ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_CENTRO_COSTO_4", ((object)contabilizacion?.Cedis ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_ESTATUS", ("Espera Autorizacion", ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_DOC_NUM", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_DOC_ENTRY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_RESPONSE_SAP", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) }
+            };
 
-                    //Correos para notificaciones por cambio de plan
-                    //JArray ListaEmails = JArray.Parse(resultHanaEmails.JsonResult);
-                    List<string> emails = new List<string>();
+                var resultEstatus = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCActualizarCabeceraSolicitudCompraMP, paramsEstatus
+                );
 
-                    //List<string> emails = new List<string>();
-                    if (!resultEmails.JsonResult.ToString().Contains("ERROR") && resultEmails.JsonResult.ToString() != "[]")
-                    {
-                        var emailsData = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultEmails.JsonResult.ToString());
-                        emails = emailsData.Select(e => e["Email"].ToString()).ToList();
-                    }
-
-                    if (emails.Count == 0)
-                        throw new Exception("No se encontraron destinatarios para el correo.");
-
-                    // ✅ 2. Codificar parámetros para URL
-                    string idEncoded = HttpUtility.UrlEncode(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(idSolicitudCompra.ToString())));
-                    string tokenAutorizar = HttpUtility.UrlEncode(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("Autorizar")));
-                    string tokenRechazar = HttpUtility.UrlEncode(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("NoAutorizar")));
-
-                    string urlAutorizar = $"{baseUrl}Almacen/AprobarSolicitudCompra?id={idEncoded}&token={tokenAutorizar}";
-                    string urlRechazar = $"{baseUrl}Almacen/AprobarSolicitudCompra?id={idEncoded}&token={tokenRechazar}";
-
-                    // ✅ 3. Construir tabla de artículos
-                    var tablaArticulos = "<table style='border-collapse: collapse; width: 100%; margin: 20px 0; border: 1px solid #ddd;'>";
-                    tablaArticulos += "<tr style='background-color: #f8f9fa;'>";
-                    tablaArticulos += "<th style='padding: 10px; border: 1px solid #ddd; text-align: left;'>Código</th>";
-                    tablaArticulos += "<th style='padding: 10px; border: 1px solid #ddd; text-align: left;'>Artículo</th>";
-                    tablaArticulos += "<th style='padding: 10px; border: 1px solid #ddd; text-align: center;'>Cantidad</th>";
-                    tablaArticulos += "<th style='padding: 10px; border: 1px solid #ddd; text-align: left;'>Proveedor</th>";
-                    tablaArticulos += "</tr>";
-
-                    foreach (var articulo in articulos)
-                    {
-                        string codigo = articulo.CodigoArticulo?.ToString() ?? "N/A";
-                        string nombre = articulo.NombreArticulo?.ToString() ?? "N/A";
-                        string cantidad = articulo.CantidadTotal?.ToString() ?? "0";
-                        string proveedor = articulo.nombreProveedor?.ToString() ?? "N/A";
-
-                        tablaArticulos += "<tr>";
-                        tablaArticulos += $"<td style='padding: 8px; border: 1px solid #ddd;'>{codigo}</td>";
-                        tablaArticulos += $"<td style='padding: 8px; border: 1px solid #ddd;'>{nombre}</td>";
-                        tablaArticulos += $"<td style='padding: 8px; border: 1px solid #ddd; text-align: center;'>{cantidad}</td>";
-                        tablaArticulos += $"<td style='padding: 8px; border: 1px solid #ddd;'>{proveedor}</td>";
-                        tablaArticulos += "</tr>";
-                    }
-                    tablaArticulos += "</table>";
-
-                    // ✅ 4. Construir HTML del cuerpo del correo
-                    var cuerpoHtml = $@"
-                        <div style='font-family: Arial, sans-serif; color: #444444;'>
-                            <p>Se ha generado una solicitud de compra que requiere su autorización.</p>
-                            <table style='border-collapse: collapse; width: 100%; margin: 20px 0;'>
-                                <tr>
-                                    <td style='padding: 8px; border: 1px solid #ddd;'><strong>Folio:</strong></td>
-                                    <td style='padding: 8px; border: 1px solid #ddd;'>{folio}</td>
-                                </tr>
-                            </table>
-                            <h4 style='margin-top: 20px; margin-bottom: 10px;'>Artículos:</h4>
-                            {tablaArticulos}
-                            <p style='margin-top: 20px;'>Por favor seleccione una opción:</p>
-                            <div style='margin-top: 15px;'>
-                                <a href='{urlAutorizar}' style='background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin-right: 10px; font-weight: bold;'>Autorizar</a>
-                                <a href='{urlRechazar}' style='background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;'>No Autorizar</a>
-                            </div>
-                        </div>";
-
-                    // ✅ 5. Leer plantilla de correo
-                    string plantilla = System.IO.File.ReadAllText(Server.MapPath("~/Service/Email/Templates/CorreoBase.html"));
-                    string htmlFinal = plantilla
-                        .Replace("{{TITLE}}", "Solicitud de Compra - Autorización")
-                        .Replace("{{BODY}}", cuerpoHtml)
-                        .Replace("{{LINK}}", baseUrl + "/Almacen/SolicitudOC")
-                        .Replace("{{TEXT_FOOTER}}", DateTime.Now.Year.ToString());
-
-                    // ✅ 6. Enviar correo
-                    var emailService = new EmailService();
-                    var emailMessage = new EmailMessage
-                    {
-                        To = emails,
-                        Subject = $"Solicitud de Compra #{folio} - Autorización Requerida",
-                        Body = htmlFinal,
-                        Alias = "PTM - Sistema de Mantenimientos",
-                        ImagePath = "~/Content/Images/LogoPTM.png"
-                    };
-
-                    bool enviado = await emailService.SendAsync(emailMessage);
-
-                    if (!enviado)
-                        throw new Exception("Error al enviar el correo de autorización.");
-
-                    jsonResponse.Status = "OK";
-                    jsonResponse.Message = "Solicitud enviada para autorización correctamente.";
-                    jsonResponse.Data = idSolicitudCompra.ToString();
+                if (resultEstatus.JsonResult.Contains("ERROR"))
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "Error al actualizar el estatus de la solicitud.";
                     return Json(jsonResponse);
                 }
+                JArray CabeceraCompra = JArray.Parse(resultEstatus.JsonResult);
+                string FolioCompra = CabeceraCompra[0]["FOLIO_COMPRA"].ToString();
+                // ───────────────────────────────────────────
+                // 2️⃣ Actualizar DETALLE — recorrer artículos y sus IdsDetalle
+                // ───────────────────────────────────────────
+                foreach (var articulo in articulos)
+                {
+                    if (articulo.IdsDetalle == null || !articulo.IdsDetalle.Any())
+                        continue;
+
+                    foreach (var idDetalle in articulo.IdsDetalle)
+                    {
+                        var paramsDetalle = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                    {
+                        { "P_ID_DETALLE", (idDetalle, ParameterDirection.Input, HanaDbType.Integer) },
+                        { "P_CARD_CODE", ((object)articulo.CodigoProveedor ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    };
+
+                        var resultDetalle = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                            Logic.AD.GCActualizarSolicitudCompraDetalleMP, paramsDetalle
+                        );
+
+                        if (resultDetalle.JsonResult.Contains("ERROR"))
+                        {
+                            jsonResponse.Status = "ERROR";
+                            jsonResponse.Message = $"Error al actualizar el detalle ID_DETALLE={idDetalle} (artículo {articulo.CodigoArticulo}).";
+                            return Json(jsonResponse);
+                        }
+                    }
+                }
+
+                //Enviar notificacion de autorizacion
+                bool notificacion = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString());
+
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = $"Solicitud de autorización para requisición de compra #{idSolicitudCompra} generada correctamente. En espera de autorización.";
+                jsonResponse.Data = idSolicitudCompra.ToString();
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible procesar la solicitud: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult ActualizarRefaccionOT()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            CambioRefaccion RequestData;
+
+            try
+            {
+                // Leer el cuerpo de la solicitud JSON
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    // Deserializar JSON al modelo con múltiples artículos
+                    RequestData = JsonConvert.DeserializeObject<CambioRefaccion>(jsonData);
+                }
+
+                // Convertir modelo a parámetros HANA
+                var parameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
+
+                // Ejecutar stored procedure para insertar artículo
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaSolicitudRefaccion, parameters);
+
+                if (resultHana.JsonResult.Contains("ERROR"))
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "No es posible actualizar la solicitud de refacción: " + resultHana.JsonResult;
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+                //Solo si ya estan eliminadas todas las refacciones de la solicitud
+                JArray EstatusRefaccion = JArray.Parse(resultHana.JsonResult);
+
+                if (EstatusRefaccion[0]["ESTATUS_OT"].ToString() == "COMPLETADA")
+                {
+                    var parametrosFinOT = new
+                    {
+                        ID_MANTENIMIENTO = (int?)null,
+                        ORDENTRABAJO = RequestData.OrdenTrabajo,
+                        ESTATUS = 2,
+                        USUARIOACTUALIZA = RequestData.UsuarioAtiende
+                    };
+
+                    switch (RequestData.OrdenTrabajo)
+                    {
+                        case string ot when ot.Contains("MP"):
+                            var OTMPparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, true, null);
+                            var ActualizaOTMP = Logic.GlobalCommands.ExecuteProcedureHanaAuto(LogicMP.AD.GCActualizaMP, OTMPparameters);
+
+                            if (ActualizaOTMP.JsonResult.Contains("ERROR") || ActualizaOTMP.JsonResult.Contains("Error"))
+                            {
+                                jsonResponse.Status = "ERROR";
+                                jsonResponse.Message = "No es posible actualizar la solicitud de refacción: " + ActualizaOTMP.JsonResult;
+                                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                            }
+
+                            //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                            string rolQueCambioMP = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                            var contextMP = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                            contextMP.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambioMP);
+                            break;
+
+                        case string ot when ot.Contains("MC"):
+                            var OTMCparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, true, null);
+                            var ActualizaOTMC = Logic.GlobalCommands.ExecuteProcedureHanaAuto(LogicMC.AD.GCActualizaMC, OTMCparameters);
+
+                            if (ActualizaOTMC.JsonResult.Contains("ERROR") || ActualizaOTMC.JsonResult.Contains("Error"))
+                            {
+                                jsonResponse.Status = "ERROR";
+                                jsonResponse.Message = "No es posible actualizar la solicitud de refacción: " + ActualizaOTMC.JsonResult;
+                                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                            }
+
+                            //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                            string rolQueCambioMC = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                            var contextMC = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                            contextMC.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambioMC);
+                            break;
+                    }
+
+                }
+
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = "Refaccción actualizada con exito";
+                jsonResponse.Data = resultHana.JsonResult;
+
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible actualizar la refacción: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public async Task<bool> EnviarSolicitudCompraAutorizacion(int idSolicitudCompra, string folio, List<ArticuloRequisicionModel> articulos, string Planta)
+        {
+            try
+            {
+                string baseUrl = Request.Url.GetLeftPart(UriPartial.Authority) + Url.Content("~");
+
+                // ✅ Preparar parámetros para el SP
+                var parametersEmail = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+            {
+                { "P_PLANTA", (Planta, ParameterDirection.Input, HanaDbType.Integer) },
+                { "P_TIPO", (ConfigurationManager.AppSettings["Email.ReqCom"], ParameterDirection.Input, HanaDbType.NVarChar) }
+            };
+
+                // Ejecutar stored procedure de actualización
+                var resultEmails = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetUsuariosXPlanta,
+                    parametersEmail
+                );
+
+                //Correos para notificaciones por cambio de plan
+                List<string> emails = new List<string>();
+
+                if (!resultEmails.JsonResult.ToString().Contains("ERROR") && resultEmails.JsonResult.ToString() != "[]")
+                {
+                    var emailsData = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultEmails.JsonResult.ToString());
+                    emails = emailsData.Select(e => e["Email"].ToString()).ToList();
+                }
+
+                //Si no hay emails retornar respuesta exitosa
+                if (emails.Count == 0)
+                {
+                    return false;
+                }
+
+                // ✅ 2. Codificar parámetros para URL
+                string idEncoded = HttpUtility.UrlEncode(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(idSolicitudCompra.ToString())));
+                string tokenAutorizar = HttpUtility.UrlEncode(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("Autorizar")));
+                string tokenRechazar = HttpUtility.UrlEncode(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("NoAutorizar")));
+
+                string urlAutorizar = $"{baseUrl}Almacen/AprobarSolicitudCompra?id={idEncoded}&token={tokenAutorizar}";
+                string urlRechazar = $"{baseUrl}Almacen/AprobarSolicitudCompra?id={idEncoded}&token={tokenRechazar}";
+
+                // ✅ 3. Paleta de colores basada en el logo PTM
+                string colorPrimario = "#0B4A8A"; // azul oscuro (texto/headers)
+                string colorSecundario = "#29ABE2"; // azul claro (acentos/bordes)
+                string colorFondoHead = "#EAF4FC"; // azul muy claro (fondo encabezados)
+
+                // ✅ 4. Construir tabla de artículos (compatible con Outlook/Gmail/Apple Mail)
+                var tablaArticulos = $@"
+                    <table cellpadding='0' cellspacing='0' border='0' width='100%' style='border-collapse: collapse; width: 100%; margin: 20px 0; border: 1px solid {colorSecundario};'>
+                        <tr style='background-color: {colorFondoHead};'>
+                            <th style='padding: 10px; border: 1px solid {colorSecundario}; text-align: left; color: {colorPrimario}; font-family: Arial, sans-serif; font-size: 13px;'>Código</th>
+                            <th style='padding: 10px; border: 1px solid {colorSecundario}; text-align: left; color: {colorPrimario}; font-family: Arial, sans-serif; font-size: 13px;'>Artículo</th>
+                            <th style='padding: 10px; border: 1px solid {colorSecundario}; text-align: center; color: {colorPrimario}; font-family: Arial, sans-serif; font-size: 13px;'>Cantidad</th>
+                            <th style='padding: 10px; border: 1px solid {colorSecundario}; text-align: left; color: {colorPrimario}; font-family: Arial, sans-serif; font-size: 13px;'>Proveedor</th>
+                        </tr>";
+
+                bool alterno = false;
+                foreach (var articulo in articulos)
+                {
+                    string codigo = articulo.CodigoArticulo.ToString() ?? "N/A";
+                    string nombre = articulo.NombreArticulo?.ToString() ?? "N/A";
+                    string cantidad = articulo.CantidadTotal.ToString() ?? "0";
+                    string proveedor = articulo.NombreProveedor.ToString() ?? "N/A";
+                    string bgFila = alterno ? "#F7FBFE" : "#FFFFFF";
+
+                    tablaArticulos += $@"
+                    <tr style='background-color: {bgFila};'>
+                        <td style='padding: 8px; border: 1px solid #ddd; font-family: Arial, sans-serif; font-size: 13px; color: #444;'>{codigo}</td>
+                        <td style='padding: 8px; border: 1px solid #ddd; font-family: Arial, sans-serif; font-size: 13px; color: #444;'>{nombre}</td>
+                        <td style='padding: 8px; border: 1px solid #ddd; text-align: center; font-family: Arial, sans-serif; font-size: 13px; color: #444;'>{cantidad}</td>
+                        <td style='padding: 8px; border: 1px solid #ddd; font-family: Arial, sans-serif; font-size: 13px; color: #444;'>{proveedor}</td>
+                    </tr>";
+                    alterno = !alterno;
+                }
+                tablaArticulos += "</table>";
+
+                // ✅ 5. Construir HTML del cuerpo del correo
+                var cuerpoHtml = $@"
+                <table cellpadding='0' cellspacing='0' border='0' width='100%'>
+                <tr><td style='font-family: Arial, sans-serif; color: #444444; font-size: 14px; padding: 0 0 10px 0;'>
+                    Se ha generado una solicitud de compra que requiere su autorización.
+                </td></tr>
+                <tr><td>
+                    <table cellpadding='0' cellspacing='0' border='0' width='100%' style='border-collapse: collapse; margin: 10px 0 20px 0;'>
+                        <tr>
+                            <td style='padding: 10px; border: 1px solid {colorSecundario}; background-color: {colorFondoHead}; font-family: Arial, sans-serif; font-size: 13px; color: {colorPrimario}; font-weight: bold; width: 100px;'>Folio</td>
+                            <td style='padding: 10px; border: 1px solid {colorSecundario}; font-family: Arial, sans-serif; font-size: 13px; color: #444;'>{folio}</td>
+                        </tr>
+                    </table>
+                </td></tr>
+                <tr><td style='font-family: Arial, sans-serif; font-size: 14px; color: {colorPrimario}; font-weight: bold; padding: 10px 0;'>
+                    Artículos:
+                </td></tr>
+                <tr><td>{tablaArticulos}</td></tr>
+                <tr><td style='font-family: Arial, sans-serif; font-size: 14px; color: #444; padding: 20px 0 10px 0;'>
+                    Por favor seleccione una opción:
+                <tr><td>
+                        <table cellpadding='0' cellspacing='0' border='0' width='100%'>
+                        <tr>
+                            <td align='left' padding: 0;'>
+                                <a href='{urlAutorizar}' style='display: inline-block; padding: 12px 24px; font-family: Arial, sans-serif; font-size: 14px; color: #FFFFFF; text-decoration: none; font-weight: bold;border-radius: 5px; background-color: #28a745;'>Autorizar</a>
+                            </td>
+                            <td width='16'>&nbsp;</td>
+                            <td align='right' style='padding: 0;'>
+                                <a href='{urlRechazar}' style='border-radius: 5px; background-color: #dc3545;display: inline-block; padding: 12px 24px; font-family: Arial, sans-serif; font-size: 14px; color: #FFFFFF; text-decoration: none; font-weight: bold;'>No Autorizar</a>
+                            </td>
+                        </tr>
+                        </table>
+                    </td></tr>
+                </table>";
+
+                // ✅ 6. Leer plantilla de correo
+                string plantilla = System.IO.File.ReadAllText(Server.MapPath("~/Service/Email/Templates/CorreoBase.html"));
+                string htmlFinal = plantilla
+                    .Replace("{{TITLE}}", "Solicitud de Compra - Autorización")
+                    .Replace("{{BODY}}", cuerpoHtml)
+                    .Replace("{{LINK}}", baseUrl + "/Almacen/SolicitudOC")
+                    .Replace("{{TEXT_FOOTER}}", DateTime.Now.Year.ToString());
+
+                // ✅ 7. Enviar correo
+                var emailService = new EmailService();
+                var emailMessage = new EmailMessage
+                {
+                    To = emails,
+                    Subject = $"Solicitud de Compra #{folio} - Autorización Requerida",
+                    Body = htmlFinal,
+                    Alias = "PTM - Sistema de Mantenimientos",
+                    ImagePath = "~/Content/Images/LogoPTM.png"
+                };
+
+                bool enviado = await emailService.SendAsync(emailMessage);
+
+                if (!enviado)
+                    throw new Exception("Error al enviar el correo de autorización.");
+
+                return true;
             }
             catch (Exception ex)
             {
                 string MethodName = MethodBase.GetCurrentMethod().Name;
                 string ControllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
-                log.Error($"Error en {ControllerName}.{MethodName}: {ex.Message}");
-                jsonResponse.Status = "ERROR";
-                jsonResponse.Message = "Error al enviar la solicitud para autorización: " + ex.Message;
-                return Json(jsonResponse);
+                return false;
             }
         }
 
@@ -854,37 +1074,34 @@ namespace MantenimientosPTM.Controllers
                 // ✅ 3. Procesar según acción
                 if (accion == "Autorizar")
                 {
-                    // Actualizar estatus a Aprobado
-                    var paramsUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+
+                    // ✅ 4. Si fue autorizada, crear PR en SAP
+
+                    bool SC = await GenerarSolicitudCompra(idSolicitudCompra, folio);
+
+                    if (SC) {
+                        // Actualizar estatus a Aprobado
+                        var paramsUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
                         { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
                         { "P_ESTATUS", ("Aprobado", ParameterDirection.Input, HanaDbType.NVarChar) }
                     };
 
-                    var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCUpdateEstatusAuthSC, paramsUpdate
-                    );
+                        var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                            Logic.AD.GCUpdateEstatusAuthSC, paramsUpdate
+                        );
 
-                    if (resultUpdate.JsonResult.Contains("ERROR"))
-                        throw new Exception("Error al actualizar el estatus de la solicitud.");
+                        if (resultUpdate.JsonResult.Contains("ERROR"))
+                            throw new Exception("Error al actualizar el estatus de la solicitud.");
+                    }
 
-                    // ✅ 4. Si fue autorizada, crear PR en SAP
-                    var paramsDatos = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) }
-                    };
-                    var resultDatos = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCGetDetallesSolicitudCompraMP, paramsDatos
-                    );
-
-                    JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultDatos.JsonResult.ToString());
-                    log.Info($"Solicitud {idSolicitudCompra} autorizada y lista para crear PR en SAP");
 
                     // ✅ 5. Mostrar vista con resultado
                     ViewBag.Estado = "Aprobado";
                     ViewBag.Folio = folio;
                     ViewBag.Mensaje = "La solicitud de compra ha sido autorizada correctamente.";
                     return View("AprobacionSolicitud");
+
                 }
                 else if (accion == "NoAutorizar")
                 {
@@ -910,7 +1127,7 @@ namespace MantenimientosPTM.Controllers
                 return View("AprobacionSolicitud");
             }
         }
-
+        //SE UTILIZA UTILIZA PARE RECHAZAR LA SOLICITUD
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult AprobarSolicitudCompra(string id, string token, string comentario)
@@ -1094,73 +1311,54 @@ namespace MantenimientosPTM.Controllers
         //}
 
         [HttpPost]
-        public async Task<JsonResult> CreateSolicitudCompra()
+        public async Task<GlobalCommands.SapResponse> GenerarSolicitudCompra(int IdSolicitudCompra, string Folio)
         {
-            var jsonResponse = new GlobalCommands.JsonResponseMtto();
             try
             {
-                // ✅ Leer body JSON
-                string body = await new System.IO.StreamReader(Request.InputStream).ReadToEndAsync();
-                var payload = JsonConvert.DeserializeObject<RequisicionPayload>(body);
-
-                if (payload == null)
+                // ✅ 1 — Enviar a SAP
+                // ✅ Parameters — ajustados al nuevo stored (sin P_FILTRO_URGENCIA)
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    jsonResponse.Status = "ERROR";
-                    jsonResponse.Message = "Payload inválido.";
-                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
-                }
-
-                // ✅ 1 — Actualizar cabecera con centros de costo
-                var paramsCabecera = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                {
-                    { "P_ID_SOLICITUD_COMPRA", (payload.IdSolicitudCompra,              ParameterDirection.Input, HanaDbType.Integer)  },
-                    { "P_CENTRO_COSTO_1",      (payload.Contabilizacion.Departamento,   ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_2",      (payload.Contabilizacion.Proceso,        ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_3",      (payload.Contabilizacion.Gastos,         ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_4",      (payload.Contabilizacion.Cedis,          ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FILTRO_FOLIO",       (Folio, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_FILTRO_FECHA_INICIO", ((object)null,ParameterDirection.Input, HanaDbType.Date)},
+                    { "P_FILTRO_FECHA_FIN",    ((object)null,ParameterDirection.Input, HanaDbType.Date)},
+                    { "P_PLANTA",    ((object)null,ParameterDirection.Input, HanaDbType.NVarChar)}
                 };
 
-                var resultCabecera = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCActualizarCabeceraSolicitudCompraMP,
-                    paramsCabecera
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetSolicitudesCompraAgrupadoMP,
+                    parameters
                 );
 
-                if (resultCabecera.JsonResult.Contains("ERROR"))
+                // ✅ Deserializar resultado con el modelo correcto
+                List<SolicitudCompraResume> SolicitudCompraHeader = new List<SolicitudCompraResume>();
+                if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
                 {
-                    jsonResponse.Status = "ERROR";
-                    jsonResponse.Message = "Error al actualizar la cabecera de la solicitud.";
-                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                    SolicitudCompraHeader = JsonConvert.DeserializeObject<List<SolicitudCompraResume>>(resultHana.JsonResult);
                 }
 
-                // ✅ 2 — Iterar detalles y actualizar CardCode por cada ID
-                foreach (var articulo in payload.Articulos)
+                // ✅ Parameters
+                var parametersDetails = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    foreach (var idDetalle in articulo.IdsDetalle)
-                    {
-                        var paramsDetalle = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                        {
-                            { "P_ID_DETALLE", (idDetalle,               ParameterDirection.Input, HanaDbType.Integer)  },
-                            { "P_CARD_CODE",  (articulo.CodigoProveedor, ParameterDirection.Input, HanaDbType.NVarChar) }
-                        };
+                    { "P_ID_SOLICITUD_COMPRA", (IdSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) }
+                };
 
-                        var resultDetalle = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                            Logic.AD.GCSActualizarSolicitudCompraDetalleMP,
-                            paramsDetalle
-                        );
+                resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetDetallesSolicitudCompraMP,
+                    parametersDetails
+                );
 
-                        if (resultDetalle.JsonResult.Contains("ERROR"))
-                        {
-                            jsonResponse.Status = "ERROR";
-                            jsonResponse.Message = $"Error al actualizar detalle ID {idDetalle}.";
-                            return Json(jsonResponse, JsonRequestBehavior.AllowGet);
-                        }
-                    }
+                // ✅ Deserializar resultado
+                List<SolicitudCompraDetalle> SolicitudCompraDetalle = new List<SolicitudCompraDetalle>();
+
+                if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
+                {
+                    SolicitudCompraDetalle = JsonConvert.DeserializeObject<List<SolicitudCompraDetalle>>(resultHana.JsonResult);
                 }
 
 
-                // ✅ 3 — Enviar a SAP
                 var logicaAlmacen = new LogicaAlmacen();
-                var sapResult = await logicaAlmacen.CrearPurchaseRequestAsync(payload);
+                var sapResult = await logicaAlmacen.CrearPurchaseRequestAsync(SolicitudCompraHeader, SolicitudCompraDetalle);
                 // Al guardar el error en la cabecera
                 var responseSap = sapResult.Message?.Length > 1000
                     ? sapResult.Message.Substring(0, 1000)
@@ -1172,12 +1370,12 @@ namespace MantenimientosPTM.Controllers
                     // ⚠️ Guardar el error en la cabecera pero no bloquear
                     var paramsError = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
-                        { "P_ID_SOLICITUD_COMPRA", (payload.IdSolicitudCompra,            ParameterDirection.Input, HanaDbType.Integer)  },
-                        { "P_CENTRO_COSTO_1",      (payload.Contabilizacion.Departamento, ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_CENTRO_COSTO_2",      (payload.Contabilizacion.Proceso,      ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_CENTRO_COSTO_3",      (payload.Contabilizacion.Gastos,       ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_CENTRO_COSTO_4",      (payload.Contabilizacion.Cedis,        ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_ESTATUS",             ("Pendiente",                          ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_ID_SOLICITUD_COMPRA", (SolicitudCompraHeader[0].IdSolicitudCompra,            ParameterDirection.Input, HanaDbType.Integer)  },
+                        { "P_CENTRO_COSTO_1",      (SolicitudCompraHeader[0].Departamento, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CENTRO_COSTO_2",      (SolicitudCompraHeader[0].Proceso,      ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CENTRO_COSTO_3",      (SolicitudCompraHeader[0].Gastos,       ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CENTRO_COSTO_4",      (SolicitudCompraHeader[0].Cedis,        ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_ESTATUS",             ("Espera Autorizacion",                          ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_DOC_NUM",             (string.Empty,                         ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_DOC_ENTRY",           (string.Empty,                         ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_RESPONSE_SAP",        (responseSap,                          ParameterDirection.Input, HanaDbType.NVarChar) }
@@ -1190,25 +1388,21 @@ namespace MantenimientosPTM.Controllers
 
                     if (resultCabeceraSap.JsonResult.Contains("ERROR"))
                     {
-                        jsonResponse.Status = "ERROR";
-                        jsonResponse.Message = "Error al actualizar la cabecera de la solicitud.";
-                        return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                        return false;
                     }
 
-                    jsonResponse.Status = "ERROR";
-                    jsonResponse.Message = "No fue posible generar la solicitud de compra en sap: " + sapResult.Message;
-                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                    return false;
                 }
 
                 // ✅ 4 — Actualizar cabecera con DocNum, DocEntry y estatus Aprobado
                 var paramsOk = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_ID_SOLICITUD_COMPRA", (payload.IdSolicitudCompra,        ParameterDirection.Input, HanaDbType.Integer)  },
-                    { "P_CENTRO_COSTO_1",      (payload.Contabilizacion.Departamento, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_2",      (payload.Contabilizacion.Proceso,      ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_3",      (payload.Contabilizacion.Gastos,       ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_4",      (payload.Contabilizacion.Cedis,        ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_ESTATUS",             ("Aprobado",                           ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_ID_SOLICITUD_COMPRA", (SolicitudCompraHeader[0].IdSolicitudCompra,            ParameterDirection.Input, HanaDbType.Integer)  },
+                    { "P_CENTRO_COSTO_1",      (SolicitudCompraHeader[0].Departamento, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CENTRO_COSTO_2",      (SolicitudCompraHeader[0].Proceso,      ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CENTRO_COSTO_3",      (SolicitudCompraHeader[0].Gastos,       ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CENTRO_COSTO_4",      (SolicitudCompraHeader[0].Cedis,        ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_ESTATUS",             ("Completado",                           ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_DOC_NUM",             (sapResult.DocNum,                     ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_DOC_ENTRY",           (sapResult.DocEntry,                   ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_RESPONSE_SAP",        (sapResult.Message,                    ParameterDirection.Input, HanaDbType.NVarChar) }
@@ -1221,16 +1415,11 @@ namespace MantenimientosPTM.Controllers
 
                 if (resultCabeceraSapOK.JsonResult.Contains("ERROR"))
                 {
-                    jsonResponse.Status = "ERROR";
-                    jsonResponse.Message = "Error al actualizar la cabecera de la solicitud.";
-                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                    return false;
                 }
 
                 // ✅ Todo OK
-                jsonResponse.Status = "OK";
-                jsonResponse.Message = "Requisición generada y enviada a SAP correctamente.";
-                jsonResponse.Data = string.Empty;
-                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                return true;
 
             }
             catch (Exception ex)
@@ -1238,10 +1427,7 @@ namespace MantenimientosPTM.Controllers
                 string MethodName = MethodBase.GetCurrentMethod().Name;
                 string ControllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
                 string msg = $"Error en {MethodName} de {ControllerName}: {ex.Message}";
-                jsonResponse.Status = "ERROR";
-                jsonResponse.Message = "Error al generar la requisición: " + ex.Message;
-                jsonResponse.Data = string.Empty;
-                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                return false;
             }
         }
         [HttpPost]
@@ -1306,7 +1492,7 @@ namespace MantenimientosPTM.Controllers
             try
             {
                 // ✅ Leer body JSON
-                string body = await new System.IO.StreamReader(Request.InputStream).ReadToEndAsync();
+                string body = await new StreamReader(Request.InputStream).ReadToEndAsync();
                 var payload = JsonConvert.DeserializeObject<AccesoDatosAlmacen.SalidasMercanciaRequest>(body);
 
                 if (payload == null)
@@ -1331,25 +1517,13 @@ namespace MantenimientosPTM.Controllers
                     return Json(jsonResponse, JsonRequestBehavior.AllowGet);
                 }
 
-
                 var data = new
                 {
-                    DocNum = sapResult.DocNum,
-                    DocEntry = sapResult.DocEntry
+                    sapResult.DocNum,
+                    sapResult.DocEntry
                 };
 
-                //VALIDAR SI LA CANTIDAD ESTA COMPLETA
-                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_ORDEN_TRABAJO", (payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
-                    };
-
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCGetBalanceOT,
-                    parameters
-                );
-
-                JArray balance = JArray.Parse(resultHana.JsonResult);
+                JArray balance = new JArray();
 
                 foreach (var articulo in payload.Contabilizacion)
                 {
@@ -1382,8 +1556,6 @@ namespace MantenimientosPTM.Controllers
 
 
 
-                    var error = "";
-                    var IdGenerado = -1;
 
                     var parametros = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
@@ -1399,8 +1571,8 @@ namespace MantenimientosPTM.Controllers
                         { "P_PROCESO",     (articulo.Proceso, ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_GASTOS",     (articulo.Gastos, ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_CEDIS",     (articulo.Cedis, ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_ID_GENERADO",     (IdGenerado, ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_ERROR",     (error, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CANTIDAD_REAL",     (articulo.Cantidad, ParameterDirection.Input, HanaDbType.Decimal) },
+                        { "P_ESTATUS",     (1, ParameterDirection.Input, HanaDbType.Integer) }
 
                     };
 
@@ -1410,81 +1582,100 @@ namespace MantenimientosPTM.Controllers
                     );
 
 
-                    string resultadoEnc = resultInsert.JsonResult.ToString();
-                    if (resultadoEnc.Contains("ERROR"))
-                        throw new Exception("Error al insertar el movimiento en el sistema: " + resultadoEnc);
-
-
-
-
-                    // Buscar con validación
-                    var objetoEncontrado = balance
-                        .Where(obj => obj is JObject)
-                        .Cast<JObject>()
-                        .FirstOrDefault(obj => obj.ContainsKey("ItemCode") &&
-                                              obj["ItemCode"]?.ToString() == articulo.ItemCode);
-
-                    string Estatus = "Pendiente";
-
-                    if (objetoEncontrado != null)
+                    if (resultInsert.JsonResult.Contains("ERROR") || resultInsert.JsonResult.Contains("Error"))
                     {
-                        if (objetoEncontrado["Diferencia"]?.ToObject<int>() == 0)
+                        log.Info($"🚀 ═══════════════════════════════════════════════════");
+                        log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                        log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                        log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} , pero no fue posible registrar el movimiento en la bitácora con la siguiente estructura: " + parametros.ToString() + resultInsert.JsonResult);
+                    }
+                    else
+                    {
+                        var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                         {
-                            Estatus = "Atendida";
+                            { "P_ID_SOLICITUD",     ( articulo.IdSolicitud, ParameterDirection.Input, HanaDbType.Integer) },
+                            { "P_ESTATUS", ("Atendida", ParameterDirection.Input, HanaDbType.NVarChar) },
+                        };
+
+                        var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                            Logic.AD.GCUpdateEstatusSolicitud, paramUpdate
+                        );
+
+                        if (resultUpdate.JsonResult.Contains("ERROR") || resultUpdate.JsonResult.Contains("Error"))
+                        {
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
+                            log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                            log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar el estatus de la refacción: " + resultUpdate.JsonResult);
                         }
                     }
-
-                    //FALTA COMPARAR CANTIDADES PARA SABER SI EN VERDAD YA QUEDO ATENDIDA
-                    var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_ID_SOLICITUD",     ( articulo.IdSolicitud, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_ESTATUS", (Estatus, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    };
-
-                    var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCUpdateEstatusSolicitud, paramUpdate
-                    );
-
-
-                    string resultadoUpdateEst = resultUpdate.JsonResult.ToString();
-                    if (resultadoUpdateEst.Contains("ERROR") || resultadoUpdateEst.Contains("Error"))
-                        throw new Exception("Error al actualizar el estatus de la solicitud: " + resultadoUpdateEst);
                 }
 
                 //Enviar Correo Autorizacion Salida Mercancia
                 var resultEmtail = EnviarAutorizacionSalida(payload);
 
 
-                //TE FALTA ACTUALIZAR LA ORDEN DE TRABAJO
-
                 // Validar que TODOS tengan Diferencia = 0
-                bool todosCero = balance
-                    .OfType<JObject>()
-                    .All(obj => obj["Diferencia"]?.ToObject<int>() == 0);
 
-                if (todosCero)
-                { //Los balances con 0s todas las salidas ok
-                    var paramUpdateOT = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_ORDEN_TRABAJO", (payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                var resultBalance = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetBalanceOT,
+                    parameters
+                );
+
+
+                if (resultBalance.JsonResult.Contains("ERROR") || resultBalance.JsonResult.Contains("Error"))
+                {
+                    log.Info($"🚀 ═══════════════════════════════════════════════════");
+                    log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                    log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                    log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible validar el balance de el estatus de la refacción: " + resultBalance.JsonResult);
+                }
+
+                else
+                {
+                    balance = JArray.Parse(resultBalance.JsonResult);
+
+
+                    bool todosCompletos = balance
+                        .OfType<JObject>()
+                        .All(obj => obj["ESTATUS_SURTIDO"]?.ToObject<string>() == "COMPLETA");
+
+                    if (todosCompletos)
+                    { //Los balances con 0s todas las salidas ok
+                        var paramUpdateOT = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
                         { "P_OT",     ( payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.Integer) },
                         { "P_ESTATUS", (2, ParameterDirection.Input, HanaDbType.NVarChar) },
                     };
 
-                    var resultUpdateOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCUpdateStatusOT, paramUpdateOT
-                    );
+                        var resultUpdateOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                            Logic.AD.GCUpdateStatusOT, paramUpdateOT
+                        );
 
-                    if (resultUpdateOT.JsonResult.Contains("Error"))
-                    {
+                        if (resultUpdateOT.JsonResult.Contains("Error") || resultUpdateOT.JsonResult.Contains("ERROR"))
+                        {
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
+                            log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                            log.Info($"🚀 ═══════════════════════════════════════════════════");
 
+                            log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar el estatus de la OT, " + resultBalance.JsonResult);
+                        }
                     }
                 }
 
                 //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
                 string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
                 var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
-                if(payload.OrdenTrabajo.Contains("MP"))
-                context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+                if (payload.OrdenTrabajo.Contains("MP"))
+                    context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
                 else
                     context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
 
@@ -1661,8 +1852,8 @@ namespace MantenimientosPTM.Controllers
             try
             {
                 // ✅ Leer body JSON
-                string body = await new System.IO.StreamReader(Request.InputStream).ReadToEndAsync();
-                var payload = JsonConvert.DeserializeObject<AccesoDatosAlmacen.DevolucionMercanciaRequest>(body);
+                string body = await new StreamReader(Request.InputStream).ReadToEndAsync();
+                var payload = JsonConvert.DeserializeObject<DevolucionMercanciaRequest>(body);
 
                 if (payload == null || payload.Articulos == null || payload.Articulos.Count == 0)
                 {
@@ -1679,18 +1870,18 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 // ✅ Convertir DevolucionMercanciaRequest a SalidasMercanciaRequest para compatibilidad con la lógica existente
-                var salidaRequest = new AccesoDatosAlmacen.SalidasMercanciaRequest
+                var salidaRequest = new SalidasMercanciaRequest
                 {
                     Referencia = payload.Referencia,
                     OrdenTrabajo = payload.OrdenTrabajo,
                     DataMovimiento = payload.DataMovimiento,
-                    Contabilizacion = new List<AccesoDatosAlmacen.Contabilizacion>()
+                    Contabilizacion = new List<Contabilizacion>()
                 };
 
                 // Por cada artículo, crear una entrada en Contabilizacion
                 foreach (var articulo in payload.Articulos)
                 {
-                    salidaRequest.Contabilizacion.Add(new AccesoDatosAlmacen.Contabilizacion
+                    salidaRequest.Contabilizacion.Add(new Contabilizacion
                     {
                         IdSolicitud = articulo.IdSolicitud,
                         ItemCode = articulo.Codigo,
@@ -1719,87 +1910,91 @@ namespace MantenimientosPTM.Controllers
 
                 var data = new
                 {
-                    DocNum = sapResult.DocNum,
-                    DocEntry = sapResult.DocEntry
+                    sapResult.DocNum,
+                    sapResult.DocEntry
                 };
 
                 // ✅ Obtener las dimensiones (Departamentos, Procesos, etc.) de las OTs
                 // Usar la primera OT para obtener las dimensiones (asumiendo que todas las devoluciones son de la misma OT o similar)
-                var primeraOT = payload.Articulos.FirstOrDefault()?.IdSolicitud;
-                if (primeraOT > 0)
-                {
-                    // Obtener la información de la salida para las dimensiones
-                    var paramSalida = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_ID_SOLICITUD", (primeraOT, ParameterDirection.Input, HanaDbType.NVarChar) }
-                    };
-                    var resultSalida = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCSGetLastMovimientoSalida, paramSalida);
+                //var primeraOT = payload.Articulos.FirstOrDefault()?.IdSolicitud;
 
-                    if (!resultSalida.JsonResult.ToString().Contains("ERROR") && resultSalida.JsonResult.ToString() != "[]")
-                    {
-                        //var salidas = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(
-                        //    resultSalida.JsonResult.ToString().Replace("[", "").Replace("]", ""));
+                //if (primeraOT > 0)
+                //{
+                //    // Obtener la información de la salida para las dimensiones
+                //    var paramSalida = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                //    {
+                //        { "P_ID_SOLICITUD", (primeraOT, ParameterDirection.Input, HanaDbType.NVarChar) }
+                //    };
+                //    var resultSalida = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCSGetLastMovimientoSalida, paramSalida);
 
-                        dynamic salidas = JsonConvert.DeserializeObject(resultSalida.JsonResult);
-                        //int idSol = result[0].IdSol;
+                //    if (!resultSalida.JsonResult.ToString().Contains("ERROR") && resultSalida.JsonResult.ToString() != "[]")
+                //    {
+                //        //var salidas = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(
+                //        //    resultSalida.JsonResult.ToString().Replace("[", "").Replace("]", ""));
 
-                        if (salidas.Count > 0)
-                        {
-                            //var salidaInfo = salidas[0];
-                            foreach (var salidaInfo in salidas)
-                            {
-                                // ✅ Registrar movimiento en sistema interno
-                                var error = "";
-                                var IdGenerado = -1;
+                //        dynamic salidas = JsonConvert.DeserializeObject(resultSalida.JsonResult);
+                //        //int idSol = result[0].IdSol;
 
-                                var parametros = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                            {
-                                { "P_ID_SOLICITUD", (salidaInfo.ContainsKey("ID_SOLICITUD") ?  salidaInfo["ID_SOLICITUD"].ToString() : "", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_TIPO", ("DEVOLUCION", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_SOLICITANTE", (payload.DataMovimiento.Solicitante, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_NUM_EMPLEADO", (payload.DataMovimiento.NumEmpleado, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_AREA", (payload.DataMovimiento.Area, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_DOCENTRY", (data.DocEntry, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_ENTREGA", (payload.DataMovimiento.Entrega, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_RECIBE", (payload.DataMovimiento.Recibe, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_DEPT", (salidaInfo.ContainsKey("DEPT") ? salidaInfo["DEPT"].ToString() : "", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_PROCESO", (salidaInfo.ContainsKey("PROCESO") ? salidaInfo["PROCESO"].ToString() : "", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_GASTOS", (salidaInfo.ContainsKey("GASTOS") ? salidaInfo["GASTOS"].ToString() : "", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_CEDIS", (salidaInfo.ContainsKey("CEDIS") ? salidaInfo["CEDIS"].ToString() : "", ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_ID_GENERADO", (IdGenerado, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                { "P_ERROR", (error, ParameterDirection.Input, HanaDbType.NVarChar) },
-                            };
+                //        if (salidas.Count > 0)
+                //        {
 
-                                var resultInsert = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                                    Logic.AD.GCInsertarMovimientoAlm, parametros
-                                );
-
-                                string resultadoEnc = resultInsert.JsonResult.ToString();
-                                if (resultadoEnc.Contains("ERROR"))
-                                    throw new Exception("Error al insertar la devolución en el sistema: " + resultadoEnc);
-                            }
-
-
-                        }
-                    }
-                }
+                //        }
+                //    }
+                //}
 
                 // ✅ Actualizar estatus de cada artículo a "Devuelto"
                 foreach (var articulo in payload.Articulos)
                 {
-                    var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+
+                    var parametros = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
                         { "P_ID_SOLICITUD", (articulo.IdSolicitud, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_ESTATUS", ("Devuelto", ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_TIPO", ("DEVOLUCION", ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_SOLICITANTE", (payload.DataMovimiento.Solicitante, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_NUM_EMPLEADO", (payload.DataMovimiento.NumEmpleado, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_AREA", (payload.DataMovimiento.Area, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_DOCENTRY", (data.DocEntry, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_ENTREGA", (payload.DataMovimiento.Entrega, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_RECIBE", (payload.DataMovimiento.Recibe, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_DEPT", (articulo.Departamento, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_PROCESO", (articulo.Proceso, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_GASTOS", (articulo.Gastos, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CEDIS", (articulo.Cedis, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CANTIDAD_REAL",     (articulo.CantidadDevolver, ParameterDirection.Input, HanaDbType.Decimal) },
+                        { "P_ESTATUS",(1, ParameterDirection.Input, HanaDbType.Integer) }
                     };
 
-                    var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCUpdateEstatusSolicitud, paramUpdate
+                    var resultInsert = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCInsertarMovimientoAlm, parametros
                     );
 
-                    string resultadoUpdateEst = resultUpdate.JsonResult.ToString();
-                    if (resultadoUpdateEst.Contains("ERROR") || resultadoUpdateEst.Contains("Error"))
-                        log.Warn($"⚠️ Error al actualizar el estatus de la solicitud {articulo.IdSolicitud}: {resultadoUpdateEst}");
+                    if (resultInsert.JsonResult.Contains("Error") || resultInsert.JsonResult.Contains("ERROR"))
+                    {
+                        log.Info($"🚀 ═══════════════════════════════════════════════════");
+                        log.Info($"🚀 Error CrearDevoluciónMercancia — OT: {payload.Referencia}");
+                        log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                        log.Error($"❌ Se registró la devolución de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible registrar el movimiento en almacén, " + resultInsert.JsonResult);
+                    }
+
+                    //var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                    //{
+                    //    { "P_ID_SOLICITUD", (articulo.IdSolicitud, ParameterDirection.Input, HanaDbType.Integer) },
+                    //    { "P_ESTATUS", ("Devuelto", ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //};
+
+                    //var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    //    Logic.AD.GCUpdateEstatusSolicitud, paramUpdate
+                    //);
+
+                    //if (resultUpdate.JsonResult.Contains("Error") || resultUpdate.JsonResult.Contains("ERROR"))
+                    //{
+                    //    log.Info($"🚀 ═══════════════════════════════════════════════════");
+                    //    log.Info($"🚀 Error CrearDevoluciónMercancia — OT: {payload.Referencia}");
+                    //    log.Info($"🚀 ═══════════════════════════════════════════════════");
+
+                    //    log.Error($"❌ Se registró la devolución de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar la solicitud de refacción, " + resultUpdate.JsonResult);
+                    //}
                 }
 
                 //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
@@ -2141,8 +2336,7 @@ namespace MantenimientosPTM.Controllers
 
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FILTRO_ORDEN", (ordenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_ALMACEN", (codPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FILTRO_ORDEN", (ordenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -2355,7 +2549,59 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        [HttpGet]
+        public JsonResult ObtenerFacturasPTM(string oc)
+        {
+            var response = new GlobalCommands.JsonResponseMtto();
 
+            try
+            {
+                var resultado = new LogicaOCFacturacion().ObtenerFacturasPorOC(oc);
+
+                response.Status = "OK";
+                response.Message = "Consulta exitosa";
+
+                //Datos temporales para la carga de facturas 
+                resultado.data.facturas.Add(new PTMFacturaDto
+                {
+                    id = "1501",
+                    oc = "OC-12345",
+                    folio = "FAC-001",
+                    uuid = "2A4B6C8D-0001",
+                    rfcEmisor = "AAA010101AAA",
+                    razon = "Proveedor Demo SA de CV",
+                    total = "15000.0000",
+                    moneda = "MXN",
+                    fechaFactura = "2026-04-20 00:00:00.000",
+                    estado = "Registrada"
+                });
+
+                resultado.data.facturas.Add(new PTMFacturaDto
+                {
+                    id = "1502",
+                    oc = "OC-12345",
+                    folio = "FAC-002",
+                    uuid = "2A4B6C8D-0002",
+                    rfcEmisor = "AAA010101AAA",
+                    razon = "Proveedor Demo SA de CV",
+                    total = "8200.0000",
+                    moneda = "MXN",
+                    fechaFactura = "2026-04-21 00:00:00.000",
+                    estado = "Pendiente"
+                });
+
+                response.Data = JsonConvert.SerializeObject(resultado);
+            }
+            catch (Exception ex)
+            {
+                response.Status = "ERROR";
+                response.Message = ex.Message;
+                response.Data = "";
+            }
+
+            return Json(response, JsonRequestBehavior.AllowGet);
+
+        }
 
 
         #endregion

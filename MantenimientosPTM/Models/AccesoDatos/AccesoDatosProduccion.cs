@@ -140,7 +140,7 @@ namespace MantenimientosPTM
             [DefaultValue("")]
             public string USUARIO { get; set; }
 
-            // USUARIO
+            // PLANTA
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string PLANTA { get; set; }
@@ -335,12 +335,21 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string USUARIO { get; set; }
+
+            // PLANTA
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string PLANTA { get; set; }
         }
 
         public class TiemposMuertosProduccionCorrugado
         {
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public int? ID_REGISTRO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string MES { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public DateTime? FECHA { get; set; }
@@ -365,7 +374,9 @@ namespace MantenimientosPTM
             [DefaultValue("")]
             public string GRUPO { get; set; }
 
-            // Producción
+            // ========================================
+            // PRODUCCIÓN
+            // ========================================
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -379,7 +390,9 @@ namespace MantenimientosPTM
             [DefaultValue(0)]
             public decimal HORAS_PROGRAMADAS { get; set; }
 
-            // Tiempo No Disponible
+            // ========================================
+            // TIEMPO NO DISPONIBLE
+            // ========================================
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -407,13 +420,11 @@ namespace MantenimientosPTM
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public decimal TIEMPO_EXTRUSION { get; set; }
+            public decimal TIEMPO_MTTO_CORRECTIVOS_ARRANQUE { get; set; }
 
-            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue(0)]
-            public decimal COMO_DEJAR_CORRUGADOR { get; set; }
-
-            // Tiempo No Productivo
+            // ========================================
+            // TIEMPO NO PRODUCTIVO
+            // ========================================
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -421,7 +432,7 @@ namespace MantenimientosPTM
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public decimal CAMBIO_MINUTE { get; set; }
+            public decimal CAMBIO_MOLDE_SETUP_EXCESOS { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -431,7 +442,9 @@ namespace MantenimientosPTM
             [DefaultValue(0)]
             public decimal TIEMPO_MUERTO_PROCESO { get; set; }
 
-            // Totales
+            // ========================================
+            // KPIs
+            // ========================================
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -441,15 +454,32 @@ namespace MantenimientosPTM
             [DefaultValue(0)]
             public decimal TIEMPO_PRODUCTIVO { get; set; }
 
+            // ========================================
+            // AUDITORÍA
+            // ========================================
+
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string USUARIO { get; set; }
+
+            // PLANTA
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string PLANTA { get; set; }
         }
 
         public class TiemposMuertosProduccionPeadLiso
         {
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public int? ID_REGISTRO { get; set; }
+
+            // ============================================
+            // GENERALES
+            // ============================================
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string MES { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public DateTime? FECHA { get; set; }
@@ -470,7 +500,13 @@ namespace MantenimientosPTM
             [DefaultValue("")]
             public string GRUPO { get; set; }
 
-            // Producción
+            // ============================================
+            // PRODUCCIÓN
+            // ============================================
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? PESO_MINIMO { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -482,9 +518,31 @@ namespace MantenimientosPTM
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
+            public decimal? PESO_ESTANDAR { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? PORCENTAJE_SOBREPESO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? TOTAL_SCRAP { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? PORCENTAJE_TOTAL_SCRAP { get; set; }
+
+            // ============================================
+            // DISPONIBILIDAD
+            // ============================================
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
             public decimal? HORAS_PROGRAMADAS { get; set; }
 
-            // Tiempo No Disponible
+            // ============================================
+            // TIEMPO NO DISPONIBLE
+            // ============================================
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -496,37 +554,31 @@ namespace MantenimientosPTM
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public decimal? FALTA_ENERGIA { get; set; }
+            public decimal? FALTA_ENERGIA_ELECTRICA { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public decimal? FALTA_MATERIA_PRIMA { get; set; }
+            public decimal? FALTA_MATERIA_PRIMA_INSUMOS { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public decimal? TIEMPO_CALENTAMIENTO { get; set; }
+            public decimal? TIEMPO_CALENTAMIENTO_CI { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public decimal? PREPARACION_LINEA { get; set; }
+            public decimal? PREPARACION_LINEA_CAMBIO_HERRAMENTAL { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public decimal? TIEMPO_CALENTAMIENTO_HERRAMIENTA { get; set; }
+            public decimal? TIEMPO_CALENTAMIENTO_HERRAMENTAL { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public decimal? ARRANQUE_ESTABILIZACION { get; set; }
+            public decimal? ARRANQUE_ESTABILIZACION_LINEA { get; set; }
 
-            // Tiempo No Productivo
-
-            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue(0)]
-            public decimal? TIEMPO_MUERTO_LOGISTICA { get; set; }
-
-            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue(0)]
-            public decimal? TIEMPO_MUERTO_REPARACION { get; set; }
+            // ============================================
+            // TIEMPO NO PRODUCTIVO
+            // ============================================
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -534,7 +586,11 @@ namespace MantenimientosPTM
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public decimal? CAMBIO_MOLDE { get; set; }
+            public decimal? TIEMPO_MUERTO_HERRAMENTALES { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? CAMBIO_MOLDE_SETUP_EXCESOS { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -542,25 +598,31 @@ namespace MantenimientosPTM
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public decimal? MUERTO_PROCESO { get; set; }
+            public decimal? TIEMPO_MUERTO_PROCESO { get; set; }
 
-            // Totales
-
-            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue(0)]
-            public decimal? TIEMPO_NO_DISPONIBLE { get; set; }
+            // ============================================
+            // KPI
+            // ============================================
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
-            public decimal? TIEMPO_NO_PRODUCTIVO { get; set; }
+            public decimal? TIEMPO_DISPONIBLE { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
             public decimal? TIEMPO_PRODUCTIVO { get; set; }
 
+            // ============================================
+            // AUDITORÍA
+            // ============================================
+
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string USUARIO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string PLANTA { get; set; }
         }
 
         #endregion

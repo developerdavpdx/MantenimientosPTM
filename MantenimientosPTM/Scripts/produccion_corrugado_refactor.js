@@ -40,183 +40,57 @@ $(document).ready(function () {
     app.inicializar();
 });
 
-class ArticuloAutocompleteEditor {
-
-    init(params) {
-
-        this.params = params;
-
-        this.eContainer = document.createElement('div');
-        this.eContainer.style.position = 'relative';
-
-        this.eInput = document.createElement('input');
-        this.eInput.className = 'form-control';
-        this.eInput.value = params.value || '';
-
-        this.eDropdown = document.createElement('div');
-        this.eDropdown.className = 'autocomplete-dropdown';
-
-        this.eContainer.appendChild(this.eInput);
-        this.eContainer.appendChild(this.eDropdown);
-
-        this.gestionArticulos = params.context.gestionArticulos;
-        this.datos_usuario = params.context.datos_usuario;
-        this.URLBase = params.context.URLBase;
-
-        $(this.eInput).on('input', async (e) => {
-
-            const query = e.target.value;
-
-            if (query.length >= 2) {
-
-                const articulos = await this.gestionArticulos.obtenerArticulos(
-                    query,
-                    this.datos_usuario[0].EMAIL,
-                    0
-                );
-
-                this.mostrarSugerencias(articulos);
-
-            } else {
-
-                this.eDropdown.innerHTML = '';
-
-            }
-
-        });
-
-    }
-
-    mostrarSugerencias(articulos) {
-
-        this.eDropdown.innerHTML = '';
-
-        const rect = this.eInput.getBoundingClientRect();
-
-        this.eDropdown.style.top = rect.bottom + 'px';
-        this.eDropdown.style.left = rect.left + 'px';
-        this.eDropdown.style.width = Math.max(rect.width, 450) + 'px';
-
-        articulos.forEach(articulo => {
-
-            const item = document.createElement('div');
-            item.className = 'autocomplete-item';
-
-            item.innerHTML = `
-            <strong>${articulo.CodigoArticulo}</strong><br>
-            <small>${articulo.DescripcionArticulo}</small>
-        `;
-
-            item.addEventListener('click', () => {
-
-                this.eInput.value = articulo.CodigoArticulo;
-
-                this.eDropdown.innerHTML = '';
-
-                this.params.stopEditing(); // 🔥 cerrar editor automáticamente
-
-            });
-
-            this.eDropdown.appendChild(item);
-
-        });
-
-    }
-
-    getGui() {
-        return this.eContainer;
-    }
-
-    afterGuiAttached() {
-        this.eInput.focus();
-        this.eInput.select();
-        this.eInput.value = ''; // 🔥 limpiar input
-    }
-
-    getValue() {
-        return this.eInput.value;
-    }
-
-    destroy() { }
-
-    isPopup() {
-        return true;
-    }
-}
-
 // ========================================
 // APLICACIÓN PRINCIPAL - GESTIÓN PRODUCCIÓN CORRUGADO
 // ========================================
-class GestionProduccionCorrugado {
+class GestionProduccionCorrugado extends GestionProduccionBase {
     constructor(datos_usuario, URLBase) {
-        this.URLBase = URLBase;
-        this.datos_usuario = datos_usuario;
-        this.gridApi = null;
-        this.gridColumnApi = null;
-        this.datosOriginales = [];
-        this.cambiosPendientes = [];
-        this.columnDefs = null;
-        this.listaLineas = [];
-
-        this.gestionArticulos = new GestionArticulos(this.datos_usuario, 0);
+        super(datos_usuario, URLBase, 110);
     }
 
     async inicializar() {
-
-        await this.cargarLineas();
-
-        this.configurarEventos();
-
-        this.cargarDatosIniciales();
-
-        this.inicializarTooltips();
-
-        this.configurarMenuContextual();
-
+        await this.inicializarCommon();
         // 🔥 CONSULTAR DATOS
         this.consultarDatos(null, null, null);
-
         console.log('✅ Sistema Corrugado inicializado');
     }
 
-    cargarDatosIniciales() {
-
-        this.datosOriginales = [
-            {
-                id: 1,
-
-                Fecha: null,
-                Linea: null,
-                Corrugador: null,
-                Producto: null,
-                Turno: null,
-                Grupo: null,
-
-                TRLiberados: null,
-                ProduccionNeta: null,
-                HorasProgramadas: null,
-
-                MantenimientoPreventivo: null,
-                ControlInventarios: null,
-                FaltaEnergia: null,
-                FaltaMateriaPrima: null,
-                PreparacionCambio: null,
-                ArranqueEstabilizacion: null,
-                TiempoExtrusion: null,
-                ComoDejarCorrugador: null,
-
-                TiempoMuertoCorrectivos: null,
-                CambioMinute: null,
-                TiempoMuertoArrancar: null,
-                TiempoMuertoProceso: null,
-
-                TiempoDisponible: null,
-                TiempoProductivo: null
-            }
-        ];
-
-        this.inicializarGrid();
-
+    crearTotalesTemplate() {
+        return {
+            Mes: null,
+            Fecha: null,
+            Linea: null,
+            Corrugador: null,
+            Producto: null,
+            Turno: null,
+            Grupo: null,
+            PesoMinimo: 0,
+            TRLiberados: 0,
+            ProduccionNeta: 0,
+            PesoEstandar: 0,
+            PorcentajeSobrepeso: 0,
+            ScrapSinCorteSierra: 0,
+            ScrapCorteSierra: 0,
+            ScrapTotal: 0,
+            PorcentajeScrapSinCorte: 0,
+            PorcentajeScrapCorte: 0,
+            KgReproceso: 0,
+            Carbonato: 0,
+            HorasProgramadas: 0,
+            MantenimientoPreventivo: 0,
+            ControlInventarios: 0,
+            FaltaEnergia: 0,
+            FaltaMateriaPrima: 0,
+            PreparacionCambio: 0,
+            ArranqueEstabilizacion: 0,
+            TiempoMttoCorrectivosArranque: 0,
+            TiempoMuertoCorrectivos: 0,
+            CambioMoldeSetupExcesos: 0,
+            TiempoMuertoArrancar: 0,
+            TiempoMuertoProceso: 0,
+            TiempoDisponible: 0,
+            TiempoProductivo: 0
+        };
     }
 
     inicializarGrid() {
@@ -228,13 +102,32 @@ class GestionProduccionCorrugado {
         const columnDefs = [
             // COLUMNAS BÁSICAS (AZUL CLARO)
             {
-                headerName: '',
+                headerName: 'DATOS GENERALES',
+                headerClass: 'header-grupo-morado',
                 children: [
+
+                    {
+                        field: 'Mes',
+                        headerName: 'Mes',
+                        editable: false,
+                        width: 110,
+                        pinned: 'left',
+                        cellClass: 'celda-gris',
+                        valueFormatter: params => {
+
+                            if (params.data?.id === 'TOTALES') {
+                                return '';
+                            }
+
+                            return params.value || '';
+                        }
+                    },
+
                     {
                         field: 'Fecha',
                         headerName: 'Fecha',
                         editable: true,
-                        width: 110,
+                        width: 120,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'agDateCellEditor',
@@ -244,166 +137,313 @@ class GestionProduccionCorrugado {
                             max: '2035-12-31'
                         },
                         valueFormatter: params => {
+
                             if (!params.value) return '';
-                            return new Date(params.value).toLocaleDateString('es-MX');
+
+                            return new Date(
+                                params.value
+                            ).toLocaleDateString('es-MX');
                         }
                     },
+
                     {
                         field: 'Linea',
                         headerName: 'Línea',
                         editable: true,
-                        width: 135,
+                        width: 130,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'agSelectCellEditor',
                         cellEditorParams: () => {
                             return {
-                                values: this.listaLineas.map(x => x.label)
+                                values:
+                                    this.listaLineas.map(
+                                        x => x.label
+                                    )
                             };
                         },
                         valueFormatter: params => {
-                            if (params.data && params.data.id === 'TOTALES') return '';
+
+                            if (params.data?.id === 'TOTALES') {
+                                return '';
+                            }
+
                             return params.value || '';
                         }
                     },
+
                     {
                         field: 'Corrugador',
                         headerName: 'Corrugador',
                         editable: true,
-                        width: 135,
+                        width: 120,
                         cellClass: 'celda-azul',
+                        pinned: 'left',
                         cellEditor: 'agSelectCellEditor',
                         cellEditorParams: {
-                            values: ['60-30', '08-30']
+                            values: [
+                                '60-30',
+                                '08-30'
+                            ]
                         },
-                        pinned: 'left',
                         valueFormatter: params => {
-                            if (params.data && params.data.id === 'TOTALES') return '';
+
+                            if (params.data?.id === 'TOTALES') {
+                                return '';
+                            }
+
                             return params.value || '';
                         }
                     },
+
                     {
                         field: 'Producto',
                         headerName: 'Producto',
                         editable: true,
-                        width: 140,
+                        width: 160,
                         cellClass: 'celda-azul',
                         pinned: 'left',
-                        cellEditor: 'articuloAutocompleteEditor',
+                        cellEditor:
+                            'articuloAutocompleteEditor',
                         valueFormatter: params => {
-                            if (params.data && params.data.id === 'TOTALES') return '';
+
+                            if (params.data?.id === 'TOTALES') {
+                                return '';
+                            }
+
                             return params.value || '';
                         }
                     },
+
                     {
                         field: 'Turno',
                         headerName: 'Turno',
                         editable: true,
-                        width: 80,
+                        width: 90,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         valueFormatter: params => {
-                            if (params.data && params.data.id === 'TOTALES') return '';
+
+                            if (params.data?.id === 'TOTALES') {
+                                return '';
+                            }
+
                             return params.value || '';
                         }
                     },
+
                     {
                         field: 'Grupo',
                         headerName: 'Grupo',
                         editable: true,
-                        width: 80,
+                        width: 90,
                         cellClass: 'celda-azul',
+                        pinned: 'left',
                         cellEditor: 'agSelectCellEditor',
                         cellEditorParams: {
-                            values: ['A', 'B', 'C', 'D']
+                            values: [
+                                'A',
+                                'B',
+                                'C',
+                                'D'
+                            ]
                         },
-                        pinned: 'left',
                         valueFormatter: params => {
-                            if (params.data && params.data.id === 'TOTALES') return '';
+
+                            if (params.data?.id === 'TOTALES') {
+                                return '';
+                            }
+
                             return params.value || '';
                         }
                     }
+
                 ]
             },
 
             // COLUMNAS AZUL CLARO (Producción)
             {
-                headerName: '',
+                headerName: 'PRODUCCIÓN',
+                headerClass: 'header-grupo-amarillo',
                 children: [
+
+                    {
+                        field: 'PesoMinimo',
+                        headerName: 'PESO MÍNIMO',
+                        editable: false,
+                        width: 120,
+                        cellClass: 'celda-gris',
+                        valueFormatter: params =>
+                            this.formatearNumero(params.value)
+                    },
+
                     {
                         field: 'TRLiberados',
                         headerName: 'TR LIBERADOS',
-                        width: 135,
+                        width: 120,
                         ...this.getColumnaNumerica('celda-azul')
                     },
+
                     {
                         field: 'ProduccionNeta',
-                        headerName: 'Producción Neta',
+                        headerName: 'PRODUCCIÓN NETA',
+                        width: 140,
+                        ...this.getColumnaNumerica('celda-azul')
+                    },
+
+                    {
+                        field: 'PesoEstandar',
+                        headerName: 'PESO ESTÁNDAR',
+                        editable: false,
+                        width: 140,
+                        cellClass: 'celda-verde-formula',
+                        valueFormatter: params =>
+                            this.formatearNumero(params.value)
+                    },
+
+                    {
+                        field: 'PorcentajeSobrepeso',
+                        headerName: '% SOBREPESO',
+                        editable: false,
+                        width: 120,
+                        cellClass: 'celda-verde-formula',
+                        valueFormatter: params =>
+                            this.formatearNumero(params.value)
+                    },
+
+                    {
+                        field: 'ScrapSinCorteSierra',
+                        headerName: 'SCRAP S/CORTES SIERRA',
+                        width: 150,
+                        ...this.getColumnaNumerica('celda-azul')
+                    },
+
+                    {
+                        field: 'ScrapCorteSierra',
+                        headerName: 'SCRAP CORTES SIERRA',
+                        width: 150,
+                        ...this.getColumnaNumerica('celda-azul')
+                    },
+
+                    {
+                        field: 'ScrapTotal',
+                        headerName: 'SCRAP TOTAL',
+                        editable: false,
+                        width: 130,
+                        cellClass: 'celda-verde-formula',
+                        valueFormatter: params =>
+                            this.formatearNumero(params.value)
+                    },
+
+                    {
+                        field: 'PorcentajeScrapSinCorte',
+                        headerName: '% SCRAP S/CORTE',
+                        editable: false,
+                        width: 130,
+                        cellClass: 'celda-verde-formula',
+                        valueFormatter: params =>
+                            this.formatearNumero(params.value)
+                    },
+
+                    {
+                        field: 'PorcentajeScrapCorte',
+                        headerName: '% SCRAP CORTE',
+                        editable: false,
+                        width: 130,
+                        cellClass: 'celda-verde-formula',
+                        valueFormatter: params =>
+                            this.formatearNumero(params.value)
+                    },
+
+                    {
+                        field: 'KgReproceso',
+                        headerName: 'KG REPROCESO',
                         width: 130,
                         ...this.getColumnaNumerica('celda-azul')
                     },
+
+                    {
+                        field: 'Carbonato',
+                        headerName: 'CARBONATO',
+                        width: 120,
+                        ...this.getColumnaNumerica('celda-azul')
+                    }
+
+                ]
+            },
+
+            // ========================================
+            // DISPONIBILIDAD
+            // ========================================
+            {
+                headerName: 'DISPONIBILIDAD',
+                headerClass: 'header-grupo-azul',
+                children: [
                     {
                         field: 'HorasProgramadas',
-                        headerName: 'Horas Programadas de Máquina',
-                        width: 110,
+                        headerName: 'HORAS PROGRAMADAS',
+                        width: 140,
                         ...this.getColumnaNumerica('celda-azul')
                     }
                 ]
             },
-
-            // GRUPO: TIEMPO NO DISPONIBLE (ROSA)
+            // ========================================
+            // TIEMPO NO DISPONIBLE
+            // ========================================
             {
                 headerName: 'TIEMPO NO DISPONIBLE',
                 headerClass: 'header-grupo-rosa',
                 children: [
+
                     {
                         field: 'MantenimientoPreventivo',
                         headerName: 'MANTENIMIENTO PREVENTIVO',
-                        width: 110,
+                        width: 140,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
                         field: 'ControlInventarios',
-                        headerName: 'CONTROL DE INVENTARIOS',
-                        width: 110,
+                        headerName: 'CONTROL INVENTARIOS',
+                        width: 140,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
                         field: 'FaltaEnergia',
-                        headerName: 'FALTA DE ENERGIA ELECTRICA',
-                        width: 110,
+                        headerName: 'FALTA ENERGÍA ELÉCTRICA',
+                        width: 140,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
                         field: 'FaltaMateriaPrima',
-                        headerName: 'FALTA DE MATERIA PRIMA E INSUMOS',
-                        width: 110,
+                        headerName: 'FALTA MATERIA PRIMA E INSUMOS',
+                        width: 170,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
                         field: 'PreparacionCambio',
-                        headerName: 'PREPARACION (CAMBIO DE LINEA Y CAMBIO DE FORMATO)',
-                        width: 110,
+                        headerName: 'PREPARACIÓN DE LÍNEA',
+                        width: 150,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
                         field: 'ArranqueEstabilizacion',
-                        headerName: 'ARRANQUE Y ESTABILIZACION DE LINEA',
-                        width: 110,
+                        headerName: 'ARRANQUE Y ESTABILIZACIÓN',
+                        width: 150,
                         ...this.getColumnaNumerica('celda-rosa')
                     },
+
                     {
-                        field: 'TiempoExtrusion',
-                        headerName: 'TIEMPO DE EXTRUSIÓN',
-                        width: 110,
-                        ...this.getColumnaNumerica('celda-rosa')
-                    },
-                    {
-                        field: 'ComoDejarCorrugador',
-                        headerName: 'COMO DEJAR EL CORRUGADOR',
-                        width: 110,
+                        field: 'TiempoMttoCorrectivosArranque',
+                        headerName: 'MTTO CORRECTIVOS ARRANQUE',
+                        width: 170,
                         ...this.getColumnaNumerica('celda-rosa')
                     }
+
                 ]
             },
 
@@ -419,9 +459,9 @@ class GestionProduccionCorrugado {
                         ...this.getColumnaNumerica('celda-verde-claro')
                     },
                     {
-                        field: 'CambioMinute',
-                        headerName: 'CAMBIO DE MINUTE (SETUP) Y EXCESOS DE PRODUCCIÓN',
-                        width: 110,
+                        field: 'CambioMoldeSetupExcesos',
+                        headerName: 'CAMBIO DE MOLDE (SETUP) EXCESOS',
+                        width: 170,
                         ...this.getColumnaNumerica('celda-verde-claro')
                     },
                     {
@@ -439,9 +479,10 @@ class GestionProduccionCorrugado {
                 ]
             },
 
-            // COLUMNAS FINALES
+            // KPIS
             {
-                headerName: '',
+                headerName: 'KPIs',
+                headerClass: 'header-grupo-verde',
                 children: [
                     {
                         field: 'TiempoDisponible',
@@ -482,10 +523,39 @@ class GestionProduccionCorrugado {
                 filter: true,
                 resizable: true,
                 editable: (params) => {
-                    if (params.data && params.data.id === 'TOTALES') {
+
+                    if (params.data?.id === 'TOTALES') {
                         return false;
                     }
-                    return true;
+
+                    const readonlyFields = [
+
+                        // PRODUCCIÓN
+
+                        'PesoMinimo',
+
+                        'PesoEstandar',
+
+                        'PorcentajeSobrepeso',
+
+                        'ScrapTotal',
+
+                        'PorcentajeScrapSinCorte',
+
+                        'PorcentajeScrapCorte',
+
+                        // KPIS
+
+                        'TiempoDisponible',
+
+                        'TiempoProductivo'
+
+                    ];
+
+                    return !readonlyFields.includes(
+                        params.colDef.field
+                    );
+
                 },
                 wrapHeaderText: true,
                 autoHeaderHeight: true
@@ -519,54 +589,138 @@ class GestionProduccionCorrugado {
     }
 
     agregarFilaTotales() {
+
         const totales = {
+
             id: 'TOTALES',
+
+            // ========================================
+            // DATOS GENERALES
+            // ========================================
+
+            Mes: null,
             Fecha: null,
             Linea: null,
             Corrugador: null,
             Producto: null,
             Turno: null,
             Grupo: null,
+
+            // ========================================
+            // PRODUCCIÓN
+            // ========================================
+
+            PesoMinimo: 0,
+
             TRLiberados: 0,
             ProduccionNeta: 0,
+
+            PesoEstandar: 0,
+            PorcentajeSobrepeso: 0,
+
+            ScrapSinCorteSierra: 0,
+            ScrapCorteSierra: 0,
+
+            ScrapTotal: 0,
+
+            PorcentajeScrapSinCorte: 0,
+            PorcentajeScrapCorte: 0,
+
+            KgReproceso: 0,
+            Carbonato: 0,
+
+            // ========================================
+            // DISPONIBILIDAD
+            // ========================================
+
             HorasProgramadas: 0,
+
+            // ========================================
+            // TIEMPO NO DISPONIBLE
+            // ========================================
+
             MantenimientoPreventivo: 0,
             ControlInventarios: 0,
             FaltaEnergia: 0,
             FaltaMateriaPrima: 0,
             PreparacionCambio: 0,
             ArranqueEstabilizacion: 0,
-            TiempoExtrusion: 0,
-            ComoDejarCorrugador: 0,
+
+            TiempoMttoCorrectivosArranque: 0,
+
+            // ========================================
+            // TIEMPO NO PRODUCTIVO
+            // ========================================
+
             TiempoMuertoCorrectivos: 0,
-            CambioMinute: 0,
+            CambioMoldeSetupExcesos: 0,
             TiempoMuertoArrancar: 0,
             TiempoMuertoProceso: 0,
+
+            // ========================================
+            // KPIS
+            // ========================================
+
             TiempoDisponible: 0,
             TiempoProductivo: 0
+
         };
 
-        this.datosOriginales.forEach(row => {
-            totales.TRLiberados += parseFloat(row.TRLiberados || 0);
-            totales.ProduccionNeta += parseFloat(row.ProduccionNeta || 0);
-            totales.HorasProgramadas += parseFloat(row.HorasProgramadas || 0);
-            totales.MantenimientoPreventivo += parseFloat(row.MantenimientoPreventivo || 0);
-            totales.ControlInventarios += parseFloat(row.ControlInventarios || 0);
-            totales.FaltaEnergia += parseFloat(row.FaltaEnergia || 0);
-            totales.FaltaMateriaPrima += parseFloat(row.FaltaMateriaPrima || 0);
-            totales.PreparacionCambio += parseFloat(row.PreparacionCambio || 0);
-            totales.ArranqueEstabilizacion += parseFloat(row.ArranqueEstabilizacion || 0);
-            totales.TiempoExtrusion += parseFloat(row.TiempoExtrusion || 0);
-            totales.ComoDejarCorrugador += parseFloat(row.ComoDejarCorrugador || 0);
-            totales.TiempoMuertoCorrectivos += parseFloat(row.TiempoMuertoCorrectivos || 0);
-            totales.CambioMinute += parseFloat(row.CambioMinute || 0);
-            totales.TiempoMuertoArrancar += parseFloat(row.TiempoMuertoArrancar || 0);
-            totales.TiempoMuertoProceso += parseFloat(row.TiempoMuertoProceso || 0);
-            totales.TiempoDisponible += parseFloat(row.TiempoDisponible || 0);
-            totales.TiempoProductivo += parseFloat(row.TiempoProductivo || 0);
+        this.gridApi.forEachNode((node) => {
+
+            if (node.data.id === 'TOTALES') {
+                return;
+            }
+
+            totales.TRLiberados += parseFloat(node.data.TRLiberados || 0);
+            totales.ProduccionNeta += parseFloat(node.data.ProduccionNeta || 0);
+
+            totales.PesoEstandar += parseFloat(node.data.PesoEstandar || 0);
+
+            totales.ScrapSinCorteSierra += parseFloat(node.data.ScrapSinCorteSierra || 0);
+            totales.ScrapCorteSierra += parseFloat(node.data.ScrapCorteSierra || 0);
+
+            totales.ScrapTotal += parseFloat(node.data.ScrapTotal || 0);
+
+            totales.KgReproceso += parseFloat(node.data.KgReproceso || 0);
+            totales.Carbonato += parseFloat(node.data.Carbonato || 0);
+
+            totales.HorasProgramadas += parseFloat(node.data.HorasProgramadas || 0);
+
+            totales.MantenimientoPreventivo += parseFloat(node.data.MantenimientoPreventivo || 0);
+            totales.ControlInventarios += parseFloat(node.data.ControlInventarios || 0);
+            totales.FaltaEnergia += parseFloat(node.data.FaltaEnergia || 0);
+            totales.FaltaMateriaPrima += parseFloat(node.data.FaltaMateriaPrima || 0);
+            totales.PreparacionCambio += parseFloat(node.data.PreparacionCambio || 0);
+            totales.ArranqueEstabilizacion += parseFloat(node.data.ArranqueEstabilizacion || 0);
+
+            totales.TiempoMttoCorrectivosArranque +=
+                parseFloat(node.data.TiempoMttoCorrectivosArranque || 0);
+
+            totales.TiempoMuertoCorrectivos +=
+                parseFloat(node.data.TiempoMuertoCorrectivos || 0);
+
+            totales.CambioMoldeSetupExcesos +=
+                parseFloat(node.data.CambioMoldeSetupExcesos || 0);
+
+            totales.TiempoMuertoArrancar +=
+                parseFloat(node.data.TiempoMuertoArrancar || 0);
+
+            totales.TiempoMuertoProceso +=
+                parseFloat(node.data.TiempoMuertoProceso || 0);
+
+            totales.TiempoDisponible +=
+                parseFloat(node.data.TiempoDisponible || 0);
+
+            totales.TiempoProductivo +=
+                parseFloat(node.data.TiempoProductivo || 0);
+
         });
 
-        this.gridApi.applyTransaction({ add: [totales] });
+        this.gridApi.applyTransaction({
+            add: [totales]
+        });
+
     }
 
     ajustarAlturaGrid() {
@@ -594,65 +748,427 @@ class GestionProduccionCorrugado {
     onCellChanged(event) {
 
         if (event.data.id === 'TOTALES') {
+
             event.api.undoCellEditing();
+
             return;
         }
 
-        this.recalcularFila(event.data);
+        const row = event.data;
+
+        // ========================================
+        // MES AUTOMÁTICO
+        // ========================================
+
+        if (row.Fecha) {
+
+            const fecha = new Date(row.Fecha);
+
+            const meses = [
+                'ENERO',
+                'FEBRERO',
+                'MARZO',
+                'ABRIL',
+                'MAYO',
+                'JUNIO',
+                'JULIO',
+                'AGOSTO',
+                'SEPTIEMBRE',
+                'OCTUBRE',
+                'NOVIEMBRE',
+                'DICIEMBRE'
+            ];
+
+            row.Mes = meses[fecha.getMonth()];
+        }
+
+        // ========================================
+        // PESO ESTÁNDAR
+        // ========================================
+
+        row.PesoEstandar =
+            this.calcularPesoEstandar(row);
+
+        // ========================================
+        // SOBREPESO
+        // ========================================
+
+        row.PorcentajeSobrepeso =
+            this.calcularSobrepeso(row);
+
+        // ========================================
+        // SCRAP
+        // ========================================
+
+        row.ScrapTotal =
+            this.calcularScrapTotal(row);
+
+        row.PorcentajeScrapSinCorte =
+            this.calcularScrapSinCorte(row);
+
+        row.PorcentajeScrapCorte =
+            this.calcularScrapCorte(row);
+
+        // ========================================
+        // DISPONIBILIDAD
+        // ========================================
+
+        row.TiempoDisponible =
+            this.calcularTiempoDisponible(row);
+
+        // ========================================
+        // PRODUCTIVIDAD
+        // ========================================
+
+        row.TiempoProductivo =
+            this.calcularTiempoProductivo(row);
+
+        // ========================================
+        // AUDITORÍA
+        // ========================================
 
         const cambio = {
-            id: event.data.id,
+
+            id: row.id,
+
             campo: event.colDef.field,
+
             valorAnterior: event.oldValue,
+
             valorNuevo: event.newValue
+
         };
 
         this.cambiosPendientes.push(cambio);
 
+        // ========================================
+        // REFRESH VISUAL PVC V2
+        // ========================================
+
+        this.gridApi.refreshCells({
+            force: true
+        });
+
+        this.gridApi.redrawRows();
+
+        // ========================================
+        // TOTALES
+        // ========================================
+
         this.recalcularTotales();
+
     }
 
     recalcularTotales() {
+
         const filaTotales = {
+
             id: 'TOTALES',
-            Fecha: null, Linea: null, Corrugador: null, Producto: null, Turno: null, Grupo: null,
-            TRLiberados: 0, ProduccionNeta: 0, HorasProgramadas: 0,
-            MantenimientoPreventivo: 0, ControlInventarios: 0, FaltaEnergia: 0,
-            FaltaMateriaPrima: 0, PreparacionCambio: 0, ArranqueEstabilizacion: 0,
-            TiempoExtrusion: 0, ComoDejarCorrugador: 0, TiempoMuertoCorrectivos: 0,
-            CambioMinute: 0, TiempoMuertoArrancar: 0, TiempoMuertoProceso: 0,
-            TiempoDisponible: 0, TiempoProductivo: 0
+
+            // DATOS GENERALES
+            Mes: null,
+            Fecha: null,
+            Linea: null,
+            Corrugador: null,
+            Producto: null,
+            Turno: null,
+            Grupo: null,
+
+            // PRODUCCIÓN
+            PesoMinimo: 0,
+
+            TRLiberados: 0,
+            ProduccionNeta: 0,
+
+            PesoEstandar: 0,
+            PorcentajeSobrepeso: 0,
+
+            ScrapSinCorteSierra: 0,
+            ScrapCorteSierra: 0,
+
+            ScrapTotal: 0,
+
+            PorcentajeScrapSinCorte: 0,
+            PorcentajeScrapCorte: 0,
+
+            KgReproceso: 0,
+            Carbonato: 0,
+
+            // DISPONIBILIDAD
+            HorasProgramadas: 0,
+
+            // TIEMPO NO DISPONIBLE
+            MantenimientoPreventivo: 0,
+            ControlInventarios: 0,
+            FaltaEnergia: 0,
+            FaltaMateriaPrima: 0,
+            PreparacionCambio: 0,
+            ArranqueEstabilizacion: 0,
+
+            TiempoMttoCorrectivosArranque: 0,
+
+            // TIEMPO NO PRODUCTIVO
+            TiempoMuertoCorrectivos: 0,
+            CambioMoldeSetupExcesos: 0,
+            TiempoMuertoArrancar: 0,
+            TiempoMuertoProceso: 0,
+
+            // KPIS
+            TiempoDisponible: 0,
+            TiempoProductivo: 0
         };
 
         this.gridApi.forEachNode((node) => {
-            if (node.data.id !== 'TOTALES') {
-                filaTotales.TRLiberados += parseFloat(node.data.TRLiberados || 0);
-                filaTotales.ProduccionNeta += parseFloat(node.data.ProduccionNeta || 0);
-                filaTotales.HorasProgramadas += parseFloat(node.data.HorasProgramadas || 0);
-                filaTotales.MantenimientoPreventivo += parseFloat(node.data.MantenimientoPreventivo || 0);
-                filaTotales.ControlInventarios += parseFloat(node.data.ControlInventarios || 0);
-                filaTotales.FaltaEnergia += parseFloat(node.data.FaltaEnergia || 0);
-                filaTotales.FaltaMateriaPrima += parseFloat(node.data.FaltaMateriaPrima || 0);
-                filaTotales.PreparacionCambio += parseFloat(node.data.PreparacionCambio || 0);
-                filaTotales.ArranqueEstabilizacion += parseFloat(node.data.ArranqueEstabilizacion || 0);
-                filaTotales.TiempoExtrusion += parseFloat(node.data.TiempoExtrusion || 0);
-                filaTotales.ComoDejarCorrugador += parseFloat(node.data.ComoDejarCorrugador || 0);
-                filaTotales.TiempoMuertoCorrectivos += parseFloat(node.data.TiempoMuertoCorrectivos || 0);
-                filaTotales.CambioMinute += parseFloat(node.data.CambioMinute || 0);
-                filaTotales.TiempoMuertoArrancar += parseFloat(node.data.TiempoMuertoArrancar || 0);
-                filaTotales.TiempoMuertoProceso += parseFloat(node.data.TiempoMuertoProceso || 0);
-                filaTotales.TiempoDisponible += parseFloat(node.data.TiempoDisponible || 0);
-                filaTotales.TiempoProductivo += parseFloat(node.data.TiempoProductivo || 0);
+
+            if (node.data.id === 'TOTALES') {
+                return;
             }
+
+            filaTotales.TRLiberados += parseFloat(node.data.TRLiberados || 0);
+            filaTotales.ProduccionNeta += parseFloat(node.data.ProduccionNeta || 0);
+
+            filaTotales.PesoEstandar += parseFloat(node.data.PesoEstandar || 0);
+
+            filaTotales.ScrapSinCorteSierra +=
+                parseFloat(node.data.ScrapSinCorteSierra || 0);
+
+            filaTotales.ScrapCorteSierra +=
+                parseFloat(node.data.ScrapCorteSierra || 0);
+
+            filaTotales.ScrapTotal +=
+                parseFloat(node.data.ScrapTotal || 0);
+
+            filaTotales.KgReproceso +=
+                parseFloat(node.data.KgReproceso || 0);
+
+            filaTotales.Carbonato +=
+                parseFloat(node.data.Carbonato || 0);
+
+            filaTotales.HorasProgramadas +=
+                parseFloat(node.data.HorasProgramadas || 0);
+
+            filaTotales.MantenimientoPreventivo +=
+                parseFloat(node.data.MantenimientoPreventivo || 0);
+
+            filaTotales.ControlInventarios +=
+                parseFloat(node.data.ControlInventarios || 0);
+
+            filaTotales.FaltaEnergia +=
+                parseFloat(node.data.FaltaEnergia || 0);
+
+            filaTotales.FaltaMateriaPrima +=
+                parseFloat(node.data.FaltaMateriaPrima || 0);
+
+            filaTotales.PreparacionCambio +=
+                parseFloat(node.data.PreparacionCambio || 0);
+
+            filaTotales.ArranqueEstabilizacion +=
+                parseFloat(node.data.ArranqueEstabilizacion || 0);
+
+            filaTotales.TiempoMttoCorrectivosArranque +=
+                parseFloat(node.data.TiempoMttoCorrectivosArranque || 0);
+
+            filaTotales.TiempoMuertoCorrectivos +=
+                parseFloat(node.data.TiempoMuertoCorrectivos || 0);
+
+            filaTotales.CambioMoldeSetupExcesos +=
+                parseFloat(node.data.CambioMoldeSetupExcesos || 0);
+
+            filaTotales.TiempoMuertoArrancar +=
+                parseFloat(node.data.TiempoMuertoArrancar || 0);
+
+            filaTotales.TiempoMuertoProceso +=
+                parseFloat(node.data.TiempoMuertoProceso || 0);
+
+            filaTotales.TiempoDisponible +=
+                parseFloat(node.data.TiempoDisponible || 0);
+
+            filaTotales.TiempoProductivo +=
+                parseFloat(node.data.TiempoProductivo || 0);
+
         });
+
+        // ========================================
+        // PORCENTAJES TOTALES
+        // ========================================
+
+        if (filaTotales.PesoEstandar > 0) {
+
+            filaTotales.PorcentajeSobrepeso =
+                ((filaTotales.ProduccionNeta /
+                    filaTotales.PesoEstandar) - 1) * 100;
+
+        }
+
+        if (filaTotales.ProduccionNeta > 0) {
+
+            filaTotales.PorcentajeScrapSinCorte =
+                (filaTotales.ScrapSinCorteSierra /
+                    filaTotales.ProduccionNeta) * 100;
+
+            filaTotales.PorcentajeScrapCorte =
+                (filaTotales.ScrapCorteSierra /
+                    filaTotales.ProduccionNeta) * 100;
+
+        }
 
         this.gridApi.forEachNode((node) => {
+
             if (node.data.id === 'TOTALES') {
+
                 node.setData(filaTotales);
+
             }
+
         });
 
-        //this.ajustarAlturaGrid();
+        this.gridApi.refreshCells({
+            force: true
+        });
+
+        this.gridApi.redrawRows();
+
+    }
+
+    calcularPesoEstandar(row) {
+
+        const pesoMinimo =
+            parseFloat(row.PesoMinimo) || 0;
+
+        const trLiberados =
+            parseFloat(row.TRLiberados) || 0;
+
+        return pesoMinimo * trLiberados;
+    }
+
+    calcularSobrepeso(row) {
+
+        const produccion =
+            parseFloat(row.ProduccionNeta) || 0;
+
+        const pesoEstandar =
+            parseFloat(row.PesoEstandar) || 0;
+
+        if (pesoEstandar <= 0) {
+            return 0;
+        }
+
+        return (
+            ((produccion / pesoEstandar) - 1)
+            * 100
+        );
+    }
+
+    calcularScrapTotal(row) {
+
+        return (
+
+            (parseFloat(row.ScrapSinCorteSierra) || 0)
+
+            +
+
+            (parseFloat(row.ScrapCorteSierra) || 0)
+
+        );
+
+    }
+
+    calcularScrapSinCorte(row) {
+
+        const scrap =
+            parseFloat(row.ScrapSinCorteSierra) || 0;
+
+        const produccion =
+            parseFloat(row.ProduccionNeta) || 0;
+
+        if (produccion <= 0) {
+            return 0;
+        }
+
+        return (scrap / produccion) * 100;
+    }
+
+    calcularScrapCorte(row) {
+
+        const scrap =
+            parseFloat(row.ScrapCorteSierra) || 0;
+
+        const produccion =
+            parseFloat(row.ProduccionNeta) || 0;
+
+        if (produccion <= 0) {
+            return 0;
+        }
+
+        return (scrap / produccion) * 100;
+    }
+
+    calcularTiempoProductivo(row) {
+
+        const disponible =
+            parseFloat(row.TiempoDisponible) || 0;
+
+        const tiempoNoProductivo =
+
+            (parseFloat(row.TiempoMuertoCorrectivos) || 0)
+
+            +
+
+            (parseFloat(row.CambioMoldeSetupExcesos) || 0)
+
+            +
+
+            (parseFloat(row.TiempoMuertoArrancar) || 0)
+
+            +
+
+            (parseFloat(row.TiempoMuertoProceso) || 0);
+
+        return Math.max(
+            disponible - tiempoNoProductivo,
+            0
+        );
+
+    }
+
+    calcularTiempoDisponible(row) {
+
+        const horas =
+            parseFloat(row.HorasProgramadas) || 0;
+
+        const tiempoNoDisponible =
+
+            (parseFloat(row.MantenimientoPreventivo) || 0)
+
+            +
+
+            (parseFloat(row.ControlInventarios) || 0)
+
+            +
+
+            (parseFloat(row.FaltaEnergia) || 0)
+
+            +
+
+            (parseFloat(row.FaltaMateriaPrima) || 0)
+
+            +
+
+            (parseFloat(row.PreparacionCambio) || 0)
+
+            +
+
+            (parseFloat(row.ArranqueEstabilizacion) || 0)
+
+            +
+
+            (parseFloat(row.TiempoMttoCorrectivosArranque) || 0);
+
+        return Math.max(
+            horas - tiempoNoDisponible,
+            0
+        );
+
     }
 
     configurarEventos() {
@@ -758,23 +1274,22 @@ class GestionProduccionCorrugado {
             "FALTA_MATERIA_PRIMA",
             "PREPARACION_CAMBIO",
             "ARRANQUE_ESTABILIZACION",
-            "TIEMPO_EXTRUSION",
-            "COMO_DEJAR_CORRUGADOR"
+            "TIEMPO_MTTO_CORRECTIVOS_ARRANQUE"
         ];
 
         const existeTiempo = datos.some(fila =>
             camposTiempo.some(campo => Number(fila[campo]) > 0)
         );
 
-        if (!existeTiempo) {
+        // if (!existeTiempo) {
 
-            AlertManager.mostrar(
-                "Debe capturar al menos un TIEMPO NO DISPONIBLE",
-                "warning"
-            );
+        //     AlertManager.mostrar(
+        //         "Debe capturar al menos un TIEMPO NO DISPONIBLE",
+        //         "warning"
+        //     );
 
-            return;
-        }
+        //     return;
+        // }
 
         // ========================================
         // BOTÓN LOADING
@@ -847,19 +1362,99 @@ class GestionProduccionCorrugado {
         tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
     }
 
+    cargarDatosIniciales() {
+
+        this.datosOriginales = [
+            {
+                id: 1,
+
+                // ========================================
+                // DATOS GENERALES
+                // ========================================
+
+                Mes: null,
+                Fecha: null,
+                Linea: null,
+                Corrugador: null,
+                Producto: null,
+                Turno: null,
+                Grupo: null,
+
+                // ========================================
+                // PRODUCCIÓN
+                // ========================================
+
+                PesoMinimo: 3,
+
+                TRLiberados: null,
+                ProduccionNeta: null,
+
+                PesoEstandar: 0,
+                PorcentajeSobrepeso: 0,
+
+                ScrapSinCorteSierra: null,
+                ScrapCorteSierra: null,
+
+                ScrapTotal: 0,
+
+                PorcentajeScrapSinCorte: 0,
+                PorcentajeScrapCorte: 0,
+
+                KgReproceso: null,
+                Carbonato: null,
+
+                // ========================================
+                // DISPONIBILIDAD
+                // ========================================
+
+                HorasProgramadas: null,
+
+                // ========================================
+                // TIEMPO NO DISPONIBLE
+                // ========================================
+
+                MantenimientoPreventivo: null,
+                ControlInventarios: null,
+                FaltaEnergia: null,
+                FaltaMateriaPrima: null,
+                PreparacionCambio: null,
+                ArranqueEstabilizacion: null,
+
+                TiempoMttoCorrectivosArranque: null,
+
+                // ========================================
+                // TIEMPO NO PRODUCTIVO
+                // ========================================
+
+                TiempoMuertoCorrectivos: null,
+
+                CambioMoldeSetupExcesos: null,
+
+                TiempoMuertoArrancar: null,
+                TiempoMuertoProceso: null,
+
+                // ========================================
+                // KPIs
+                // ========================================
+
+                TiempoDisponible: 0,
+                TiempoProductivo: 0
+            }
+        ];
+
+        this.inicializarGrid();
+
+        setTimeout(() => {
+            $("#tablaProduccion").removeClass("d-none");
+        }, 1000);
+    }
+
     async consultarDatos(fechaInicio, fechaFin, linea) {
 
         try {
 
             $("#tablaProduccion").addClass("d-none");
-
-            $("#cardsPlaneacionGrid")
-                .empty()
-                .append(
-                    Array(5)
-                        .fill('<div class="skeleton-card"></div>')
-                        .join('')
-                );
+            GlobalUtil.mostrarLoader(true);
 
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetTiemposMuertosCorrugado`,
@@ -877,6 +1472,10 @@ class GestionProduccionCorrugado {
 
                 this.cargarDatosGrid(datos);
 
+                setTimeout(() => {
+                    GlobalUtil.mostrarLoader(false);
+                }, 1000);
+
             } else {
 
                 AlertManager.mostrar(
@@ -885,6 +1484,10 @@ class GestionProduccionCorrugado {
                 );
 
                 this.cargarDatosGrid(null);
+
+                setTimeout(() => {
+                    GlobalUtil.mostrarLoader(false);
+                }, 1000);
             }
 
         } catch (error) {
@@ -899,12 +1502,8 @@ class GestionProduccionCorrugado {
         } finally {
 
             setTimeout(() => {
-
-                $('#cardsPlaneacionGrid').html('');
-
-                $("#tablaProduccion")
-                    .removeClass("d-none");
-
+                GlobalUtil.mostrarLoader(false);
+                $("#tablaProduccion").removeClass("d-none");
             }, 1000);
 
         }
@@ -921,6 +1520,12 @@ class GestionProduccionCorrugado {
 
                 ID_REGISTRO: item.ID_REGISTRO,
 
+                // ========================================
+                // DATOS GENERALES
+                // ========================================
+
+                Mes: item.MES,
+
                 Fecha: item.FECHA,
                 Linea: item.LINEA,
                 Corrugador: item.CORRUGADOR,
@@ -928,26 +1533,103 @@ class GestionProduccionCorrugado {
                 Turno: item.TURNO,
                 Grupo: item.GRUPO,
 
-                TRLiberados: item.TRLIBERADOS,
-                ProduccionNeta: item.PRODUCCION_NETA,
-                HorasProgramadas: item.HORAS_PROGRAMADAS,
+                // ========================================
+                // PRODUCCIÓN
+                // ========================================
 
-                MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
-                ControlInventarios: item.CONTROL_INVENTARIOS,
-                FaltaEnergia: item.FALTA_ENERGIA,
-                FaltaMateriaPrima: item.FALTA_MATERIA_PRIMA,
-                PreparacionCambio: item.PREPARACION_CAMBIO,
-                ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION,
-                TiempoExtrusion: item.TIEMPO_EXTRUSION,
-                ComoDejarCorrugador: item.COMO_DEJAR_CORRUGADOR,
+                PesoMinimo:
+                    item.PESO_MINIMO ?? 3,
 
-                TiempoMuertoCorrectivos: item.TIEMPO_MUERTO_CORRECTIVOS,
-                CambioMinute: item.CAMBIO_MINUTE,
-                TiempoMuertoArrancar: item.TIEMPO_MUERTO_ARRANCAR,
-                TiempoMuertoProceso: item.TIEMPO_MUERTO_PROCESO,
+                TRLiberados:
+                    item.TRLIBERADOS,
 
-                TiempoDisponible: item.TIEMPO_DISPONIBLE,
-                TiempoProductivo: item.TIEMPO_PRODUCTIVO
+                ProduccionNeta:
+                    item.PRODUCCION_NETA,
+
+                PesoEstandar:
+                    item.PESO_ESTANDAR,
+
+                PorcentajeSobrepeso:
+                    item.PORCENTAJE_SOBREPESO,
+
+                ScrapSinCorteSierra:
+                    item.SCRAP_SIN_CORTE_SIERRA,
+
+                ScrapCorteSierra:
+                    item.SCRAP_CORTE_SIERRA,
+
+                ScrapTotal:
+                    item.SCRAP_TOTAL,
+
+                PorcentajeScrapSinCorte:
+                    item.PORCENTAJE_SCRAP_SIN_CORTE,
+
+                PorcentajeScrapCorte:
+                    item.PORCENTAJE_SCRAP_CORTE,
+
+                KgReproceso:
+                    item.KG_REPROCESO,
+
+                Carbonato:
+                    item.CARBONATO,
+
+                // ========================================
+                // DISPONIBILIDAD
+                // ========================================
+
+                HorasProgramadas:
+                    item.HORAS_PROGRAMADAS,
+
+                // ========================================
+                // TIEMPO NO DISPONIBLE
+                // ========================================
+
+                MantenimientoPreventivo:
+                    item.MANTENIMIENTO_PREVENTIVO,
+
+                ControlInventarios:
+                    item.CONTROL_INVENTARIOS,
+
+                FaltaEnergia:
+                    item.FALTA_ENERGIA,
+
+                FaltaMateriaPrima:
+                    item.FALTA_MATERIA_PRIMA,
+
+                PreparacionCambio:
+                    item.PREPARACION_CAMBIO,
+
+                ArranqueEstabilizacion:
+                    item.ARRANQUE_ESTABILIZACION,
+
+                TiempoMttoCorrectivosArranque:
+                    item.TIEMPO_MTTO_CORRECTIVOS_ARRANQUE,
+
+                // ========================================
+                // TIEMPO NO PRODUCTIVO
+                // ========================================
+
+                TiempoMuertoCorrectivos:
+                    item.TIEMPO_MUERTO_CORRECTIVOS,
+
+                CambioMoldeSetupExcesos:
+                    item.CAMBIO_MOLDE_SETUP_EXCESOS,
+
+                TiempoMuertoArrancar:
+                    item.TIEMPO_MUERTO_ARRANCAR,
+
+                TiempoMuertoProceso:
+                    item.TIEMPO_MUERTO_PROCESO,
+
+                // ========================================
+                // KPIS
+                // ========================================
+
+                TiempoDisponible:
+                    item.TIEMPO_DISPONIBLE,
+
+                TiempoProductivo:
+                    item.TIEMPO_PRODUCTIVO
 
             }));
 
@@ -976,7 +1658,7 @@ class GestionProduccionCorrugado {
 
             const lineas =
                 await EquiposUtil.obtenerLineas(
-                    this.datos_usuario[0].PLANTA
+                    this.datos_usuario[0].PLANTA, null, 1
                 );
 
             this.listaLineas = lineas;
@@ -1078,6 +1760,11 @@ class GestionProduccionCorrugado {
 
             id: Date.now(),
 
+            // ========================================
+            // DATOS GENERALES
+            // ========================================
+
+            Mes: null,
             Fecha: null,
             Linea: null,
             Corrugador: null,
@@ -1085,9 +1772,38 @@ class GestionProduccionCorrugado {
             Turno: null,
             Grupo: null,
 
+            // ========================================
+            // PRODUCCIÓN
+            // ========================================
+
+            PesoMinimo: 3,
+
             TRLiberados: null,
             ProduccionNeta: null,
+
+            PesoEstandar: 0,
+            PorcentajeSobrepeso: 0,
+
+            ScrapSinCorteSierra: null,
+            ScrapCorteSierra: null,
+
+            ScrapTotal: 0,
+
+            PorcentajeScrapSinCorte: 0,
+            PorcentajeScrapCorte: 0,
+
+            KgReproceso: null,
+            Carbonato: null,
+
+            // ========================================
+            // DISPONIBILIDAD
+            // ========================================
+
             HorasProgramadas: null,
+
+            // ========================================
+            // TIEMPO NO DISPONIBLE
+            // ========================================
 
             MantenimientoPreventivo: null,
             ControlInventarios: null,
@@ -1095,16 +1811,24 @@ class GestionProduccionCorrugado {
             FaltaMateriaPrima: null,
             PreparacionCambio: null,
             ArranqueEstabilizacion: null,
-            TiempoExtrusion: null,
-            ComoDejarCorrugador: null,
+
+            TiempoMttoCorrectivosArranque: null,
+
+            // ========================================
+            // TIEMPO NO PRODUCTIVO
+            // ========================================
 
             TiempoMuertoCorrectivos: null,
-            CambioMinute: null,
+            CambioMoldeSetupExcesos: null,
             TiempoMuertoArrancar: null,
             TiempoMuertoProceso: null,
 
-            TiempoDisponible: null,
-            TiempoProductivo: null
+            // ========================================
+            // KPIs
+            // ========================================
+
+            TiempoDisponible: 0,
+            TiempoProductivo: 0
 
         };
 
@@ -1113,28 +1837,105 @@ class GestionProduccionCorrugado {
             addIndex: params.node.rowIndex + 1
         });
 
+        this.recalcularTotales();
+
+        this.gridApi.refreshCells({
+            force: true
+        });
+
+        this.gridApi.redrawRows();
+
     }
 
     copiarFilaAnterior(params) {
 
         const filaActual = params.node.data;
 
-        const nuevaFila = JSON.parse(
-            JSON.stringify(filaActual)
-        );
+        if (!filaActual || filaActual.id === 'TOTALES') {
+            return;
+        }
+
+        const nuevaFila =
+            JSON.parse(JSON.stringify(filaActual));
+
+        // ========================================
+        // NUEVO REGISTRO
+        // ========================================
 
         nuevaFila.id = Date.now();
-        nuevaFila.ID_REGISTRO = null; // 🔥 IMPORTANTE
+
+        nuevaFila.ID_REGISTRO = null;
+
+        // ========================================
+        // RECALCULAR MES
+        // ========================================
+
+        if (nuevaFila.Fecha) {
+
+            const fecha = new Date(nuevaFila.Fecha);
+
+            const meses = [
+                'ENERO',
+                'FEBRERO',
+                'MARZO',
+                'ABRIL',
+                'MAYO',
+                'JUNIO',
+                'JULIO',
+                'AGOSTO',
+                'SEPTIEMBRE',
+                'OCTUBRE',
+                'NOVIEMBRE',
+                'DICIEMBRE'
+            ];
+
+            nuevaFila.Mes =
+                meses[fecha.getMonth()];
+
+        }
+
+        // ========================================
+        // RECALCULAR KPIs
+        // ========================================
+
+        nuevaFila.PesoEstandar =
+            this.calcularPesoEstandar(nuevaFila);
+
+        nuevaFila.PorcentajeSobrepeso =
+            this.calcularSobrepeso(nuevaFila);
+
+        nuevaFila.ScrapTotal =
+            this.calcularScrapTotal(nuevaFila);
+
+        nuevaFila.PorcentajeScrapSinCorte =
+            this.calcularScrapSinCorte(nuevaFila);
+
+        nuevaFila.PorcentajeScrapCorte =
+            this.calcularScrapCorte(nuevaFila);
+
+        nuevaFila.TiempoDisponible =
+            this.calcularTiempoDisponible(nuevaFila);
+
+        nuevaFila.TiempoProductivo =
+            this.calcularTiempoProductivo(nuevaFila);
 
         this.gridApi.applyTransaction({
 
             add: [nuevaFila],
 
-            addIndex: params.node.rowIndex + 1
+            addIndex:
+                params.node.rowIndex + 1
 
         });
 
         this.recalcularTotales();
+
+        this.gridApi.refreshCells({
+            force: true
+        });
+
+        this.gridApi.redrawRows();
+
     }
 
     eliminarFila(params) {
@@ -1157,40 +1958,13 @@ class GestionProduccionCorrugado {
 
         });
 
-    }
+        this.recalcularTotales();
 
-    recalcularFila(data) {
+        this.gridApi.refreshCells({
+            force: true
+        });
 
-        const horasProgramadas =
-            parseFloat(data.HorasProgramadas) || 0;
-
-        const tiempoNoDisponible =
-            (parseFloat(data.MantenimientoPreventivo) || 0) +
-            (parseFloat(data.ControlInventarios) || 0) +
-            (parseFloat(data.FaltaEnergia) || 0) +
-            (parseFloat(data.FaltaMateriaPrima) || 0) +
-            (parseFloat(data.PreparacionCambio) || 0) +
-            (parseFloat(data.ArranqueEstabilizacion) || 0) +
-            (parseFloat(data.TiempoExtrusion) || 0) +
-            (parseFloat(data.ComoDejarCorrugador) || 0);
-
-        const tiempoNoProductivo =
-            (parseFloat(data.TiempoMuertoCorrectivos) || 0) +
-            (parseFloat(data.CambioMinute) || 0) +
-            (parseFloat(data.TiempoMuertoArrancar) || 0) +
-            (parseFloat(data.TiempoMuertoProceso) || 0);
-
-        const tiempoDisponible =
-            horasProgramadas - tiempoNoDisponible;
-
-        const tiempoProductivo =
-            tiempoDisponible - tiempoNoProductivo;
-
-        data.TiempoDisponible =
-            tiempoDisponible < 0 ? 0 : tiempoDisponible;
-
-        data.TiempoProductivo =
-            tiempoProductivo < 0 ? 0 : tiempoProductivo;
+        this.gridApi.redrawRows();
 
     }
 
@@ -1204,40 +1978,143 @@ class GestionProduccionCorrugado {
 
                 datos.push({
 
-                    ID_REGISTRO: node.data.ID_REGISTRO || null,
+                    ID_REGISTRO:
+                        node.data.ID_REGISTRO || null,
 
-                    FECHA: node.data.Fecha,
-                    LINEA: node.data.Linea,
-                    CORRUGADOR: node.data.Corrugador,
-                    PRODUCTO: node.data.Producto,
-                    TURNO: node.data.Turno,
-                    GRUPO: node.data.Grupo,
+                    // ========================================
+                    // DATOS GENERALES
+                    // ========================================
 
-                    TRLIBERADOS: node.data.TRLiberados || 0,
-                    PRODUCCION_NETA: node.data.ProduccionNeta || 0,
-                    HORAS_PROGRAMADAS: node.data.HorasProgramadas || 0,
+                    MES:
+                        node.data.Mes,
 
-                    MANTENIMIENTO_PREVENTIVO: node.data.MantenimientoPreventivo || 0,
-                    CONTROL_INVENTARIOS: node.data.ControlInventarios || 0,
-                    FALTA_ENERGIA: node.data.FaltaEnergia || 0,
-                    FALTA_MATERIA_PRIMA: node.data.FaltaMateriaPrima || 0,
-                    PREPARACION_CAMBIO: node.data.PreparacionCambio || 0,
-                    ARRANQUE_ESTABILIZACION: node.data.ArranqueEstabilizacion || 0,
-                    TIEMPO_EXTRUSION: node.data.TiempoExtrusion || 0,
-                    COMO_DEJAR_CORRUGADOR: node.data.ComoDejarCorrugador || 0,
+                    FECHA:
+                        node.data.Fecha,
 
-                    TIEMPO_MUERTO_CORRECTIVOS: node.data.TiempoMuertoCorrectivos || 0,
-                    CAMBIO_MINUTE: node.data.CambioMinute || 0,
-                    TIEMPO_MUERTO_ARRANCAR: node.data.TiempoMuertoArrancar || 0,
-                    TIEMPO_MUERTO_PROCESO: node.data.TiempoMuertoProceso || 0,
+                    LINEA:
+                        node.data.Linea,
 
-                    TIEMPO_DISPONIBLE: node.data.TiempoDisponible || 0,
-                    TIEMPO_PRODUCTIVO: node.data.TiempoProductivo || 0,
+                    CORRUGADOR:
+                        node.data.Corrugador,
 
-                    USUARIO: this.datos_usuario[0].EMAIL
+                    PRODUCTO:
+                        node.data.Producto,
+
+                    TURNO:
+                        node.data.Turno,
+
+                    GRUPO:
+                        node.data.Grupo,
+
+                    // ========================================
+                    // PRODUCCIÓN
+                    // ========================================
+
+                    PESO_MINIMO:
+                        node.data.PesoMinimo || 0,
+
+                    TRLIBERADOS:
+                        node.data.TRLiberados || 0,
+
+                    PRODUCCION_NETA:
+                        node.data.ProduccionNeta || 0,
+
+                    PESO_ESTANDAR:
+                        node.data.PesoEstandar || 0,
+
+                    PORCENTAJE_SOBREPESO:
+                        node.data.PorcentajeSobrepeso || 0,
+
+                    SCRAP_SIN_CORTE_SIERRA:
+                        node.data.ScrapSinCorteSierra || 0,
+
+                    SCRAP_CORTE_SIERRA:
+                        node.data.ScrapCorteSierra || 0,
+
+                    SCRAP_TOTAL:
+                        node.data.ScrapTotal || 0,
+
+                    PORCENTAJE_SCRAP_SIN_CORTE:
+                        node.data.PorcentajeScrapSinCorte || 0,
+
+                    PORCENTAJE_SCRAP_CORTE:
+                        node.data.PorcentajeScrapCorte || 0,
+
+                    KG_REPROCESO:
+                        node.data.KgReproceso || 0,
+
+                    CARBONATO:
+                        node.data.Carbonato || 0,
+
+                    // ========================================
+                    // DISPONIBILIDAD
+                    // ========================================
+
+                    HORAS_PROGRAMADAS:
+                        node.data.HorasProgramadas || 0,
+
+                    // ========================================
+                    // TIEMPO NO DISPONIBLE
+                    // ========================================
+
+                    MANTENIMIENTO_PREVENTIVO:
+                        node.data.MantenimientoPreventivo || 0,
+
+                    CONTROL_INVENTARIOS:
+                        node.data.ControlInventarios || 0,
+
+                    FALTA_ENERGIA:
+                        node.data.FaltaEnergia || 0,
+
+                    FALTA_MATERIA_PRIMA:
+                        node.data.FaltaMateriaPrima || 0,
+
+                    PREPARACION_CAMBIO:
+                        node.data.PreparacionCambio || 0,
+
+                    ARRANQUE_ESTABILIZACION:
+                        node.data.ArranqueEstabilizacion || 0,
+
+                    TIEMPO_MTTO_CORRECTIVOS_ARRANQUE:
+                        node.data.TiempoMttoCorrectivosArranque || 0,
+
+                    // ========================================
+                    // TIEMPO NO PRODUCTIVO
+                    // ========================================
+
+                    TIEMPO_MUERTO_CORRECTIVOS:
+                        node.data.TiempoMuertoCorrectivos || 0,
+
+                    CAMBIO_MOLDE_SETUP_EXCESOS:
+                        node.data.CambioMoldeSetupExcesos || 0,
+
+                    TIEMPO_MUERTO_ARRANCAR:
+                        node.data.TiempoMuertoArrancar || 0,
+
+                    TIEMPO_MUERTO_PROCESO:
+                        node.data.TiempoMuertoProceso || 0,
+
+                    // ========================================
+                    // KPIS
+                    // ========================================
+
+                    TIEMPO_DISPONIBLE:
+                        node.data.TiempoDisponible || 0,
+
+                    TIEMPO_PRODUCTIVO:
+                        node.data.TiempoProductivo || 0,
+
+                    // ========================================
+                    // AUDITORÍA
+                    // ========================================
+
+                    USUARIO:
+                        this.datos_usuario[0].EMAIL,
+
+                    PLANTA:
+                        this.datos_usuario[0].PLANTA
 
                 });
-
             }
 
         });
@@ -1262,58 +2139,127 @@ class GestionProduccionCorrugado {
     }
 }
 
+class ArticuloAutocompleteEditor {
+
+    init(params) {
+
+        this.params = params;
+
+        this.eContainer = document.createElement('div');
+        this.eContainer.style.position = 'relative';
+
+        this.eInput = document.createElement('input');
+        this.eInput.className = 'form-control';
+        this.eInput.value = params.value || '';
+
+        this.eDropdown = document.createElement('div');
+        this.eDropdown.className = 'autocomplete-dropdown';
+
+        this.eContainer.appendChild(this.eInput);
+        this.eContainer.appendChild(this.eDropdown);
+
+        this.gestionArticulos = params.context.gestionArticulos;
+        this.datos_usuario = params.context.datos_usuario;
+        this.URLBase = params.context.URLBase;
+
+        $(this.eInput).on('input', async (e) => {
+
+            const query = e.target.value;
+
+            if (query.length >= 2) {
+
+                const articulos = await this.gestionArticulos.obtenerArticulos(
+                    query,
+                    this.datos_usuario[0].EMAIL,
+                    0
+                );
+
+                this.mostrarSugerencias(articulos);
+
+            } else {
+
+                this.eDropdown.innerHTML = '';
+
+            }
+
+        });
+
+    }
+
+    mostrarSugerencias(articulos) {
+
+        this.eDropdown.innerHTML = '';
+
+        const rect = this.eInput.getBoundingClientRect();
+
+        this.eDropdown.style.top = rect.bottom + 'px';
+        this.eDropdown.style.left = rect.left + 'px';
+        this.eDropdown.style.width = Math.max(rect.width, 450) + 'px';
+
+        articulos.forEach(articulo => {
+
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+
+            item.innerHTML = `
+            <strong>${articulo.CodigoArticulo}</strong><br>
+            <small>${articulo.DescripcionArticulo}</small>
+        `;
+
+            item.addEventListener('click', () => {
+
+                this.eInput.value = articulo.CodigoArticulo;
+
+                this.eDropdown.innerHTML = '';
+
+                this.params.stopEditing(); // 🔥 cerrar editor automáticamente
+
+            });
+
+            this.eDropdown.appendChild(item);
+
+        });
+
+    }
+
+    getGui() {
+        return this.eContainer;
+    }
+
+    afterGuiAttached() {
+        this.eInput.focus();
+        this.eInput.select();
+        this.eInput.value = ''; // 🔥 limpiar input
+    }
+
+    getValue() {
+        return this.eInput.value;
+    }
+
+    destroy() { }
+
+    isPopup() {
+        return true;
+    }
+}
+
+
 // ========================================
 // EXPORTADOR EXCEL PARA CORRUGADO
 // ========================================
-class ExcelExporterCorrugado {
+class ExcelExporterCorrugado extends ExcelExporterBase {
     constructor(gridApi, columnDefs) {
-        this.gridApi = gridApi;
-        this.columnDefs = columnDefs;
+        super(gridApi, columnDefs);
     }
 
+    getSheetName() { return 'Causas Tiempos Muertos Corrugado'; }
+    getFileNamePrefix() { return 'Produccion_Corrugado'; }
+    getTextFields() { return ['Mes','Fecha','Linea','Corrugador','Producto','Turno','Grupo']; }
+
+    getTotalsFontColor() { return 'FF0058A1'; }
+    getTotalsBorderColor() { return 'FF0058A1'; }
     async exportarConFormato() {
-        if (typeof ExcelJS === 'undefined') {
-            console.error('❌ ExcelJS no cargado');
-            alert('Error: Librería de Excel no disponible');
-            return;
-        }
-
-        try {
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet('Causas Tiempos Muertos Corrugado');
-
-            const estructura = this.analizarEstructuraColumnas();
-
-            this.agregarFilaGrupos(worksheet, estructura);
-            this.agregarFilaHeaders(worksheet, estructura);
-            this.agregarFilasDatos(worksheet, estructura);
-            this.aplicarEstilos(worksheet, estructura);
-            this.ajustarAnchos(worksheet);
-
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            });
-
-            const fecha = new Date().toISOString().split('T')[0];
-            const nombreArchivo = `Produccion_Corrugado_${fecha}.xlsx`;
-
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = nombreArchivo;
-            link.click();
-
-            URL.revokeObjectURL(link.href);
-
-            console.log('✅ Excel Corrugado exportado correctamente');
-            if (typeof AlertManager !== 'undefined') {
-                AlertManager.mostrar('✅ Excel exportado correctamente', 'success');
-            }
-
-        } catch (error) {
-            console.error('Error al exportar:', error);
-            alert('Error al exportar Excel: ' + error.message);
-        }
+        return super.exportarConFormato();
     }
 
     analizarEstructuraColumnas() {
@@ -1369,13 +2315,29 @@ class ExcelExporterCorrugado {
                     let valor = node.data[col.field];
 
                     if (valor !== null && valor !== undefined && valor !== '' &&
-                        !['Fecha', 'Linea', 'Corrugador', 'Producto', 'Turno', 'Grupo'].includes(col.field)) {
+                        ![
+                            'Mes',
+                            'Fecha',
+                            'Linea',
+                            'Corrugador',
+                            'Producto',
+                            'Turno',
+                            'Grupo'
+                        ].includes(col.field)) {
 
                         valor = parseFloat(valor);
                     }
 
                     if (node.data.id === 'TOTALES' &&
-                        ['Fecha', 'Linea', 'Corrugador', 'Producto', 'Turno', 'Grupo'].includes(col.field)) {
+                        [
+                            'Mes',
+                            'Fecha',
+                            'Linea',
+                            'Corrugador',
+                            'Producto',
+                            'Turno',
+                            'Grupo'
+                        ].includes(col.field)) {
                         valor = '';
                     }
 
@@ -1399,11 +2361,52 @@ class ExcelExporterCorrugado {
                 let colorFondo = '0058A1';
                 let colorTexto = 'FFFFFF';
 
-                if (grupo.nombre === 'TIEMPO NO DISPONIBLE') {
+                // DATOS GENERALES
+                if (grupo.nombre === 'DATOS GENERALES') {
+
+                    colorFondo = 'B4A7D6';
+                    colorTexto = '000000';
+
+                }
+
+                // PRODUCCIÓN
+                else if (grupo.nombre === 'PRODUCCIÓN') {
+
+                    colorFondo = 'F1C232';
+                    colorTexto = '000000';
+
+                }
+
+                // DISPONIBILIDAD
+                else if (grupo.nombre === 'DISPONIBILIDAD') {
+
+                    colorFondo = '9FC5E8';
+                    colorTexto = '000000';
+
+                }
+
+                // TIEMPO NO DISPONIBLE
+                else if (grupo.nombre === 'TIEMPO NO DISPONIBLE') {
+
                     colorFondo = 'FF69B4';
-                } else if (grupo.nombre === 'TIEMPO NO PRODUCTIVO') {
+                    colorTexto = 'FFFFFF';
+
+                }
+
+                // TIEMPO NO PRODUCTIVO
+                else if (grupo.nombre === 'TIEMPO NO PRODUCTIVO') {
+
                     colorFondo = '90EE90';
                     colorTexto = '333333';
+
+                }
+
+                // KPIs
+                else if (grupo.nombre === 'KPIs') {
+
+                    colorFondo = '6AA84F';
+                    colorTexto = 'FFFFFF';
+
                 }
 
                 celda.fill = {
@@ -1504,7 +2507,15 @@ class ExcelExporterCorrugado {
                             right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
                         };
 
-                        if (!['Fecha', 'Linea', 'Corrugador', 'Producto', 'Turno', 'Grupo'].includes(col.field)) {
+                        if (![
+                            'Mes',
+                            'Fecha',
+                            'Linea',
+                            'Corrugador',
+                            'Producto',
+                            'Turno',
+                            'Grupo'
+                        ].includes(col.field)) {
                             celda.numFmt = '0.00';
                         }
                     }
@@ -1516,6 +2527,9 @@ class ExcelExporterCorrugado {
                 });
             });
         }
+
+        worksheet.getRow(1).height = 30;
+        worksheet.getRow(2).height = 60;
     }
 
     obtenerColorCelda(cellClass) {
@@ -1525,7 +2539,8 @@ class ExcelExporterCorrugado {
             'celda-rosa': 'FFF8D7DA',
             'celda-verde-claro': 'FFD4EDDA',
             'celda-azul-claro': 'FFE7F3FF',
-            'celda-verde-fuerte': 'FFA8D5BA'
+            'celda-verde-fuerte': 'FFA8D5BA',
+            'celda-gris': 'FFD3D3D3'
         };
         return colores[cellClass] || 'FFFFFFFF';
     }
@@ -1540,9 +2555,12 @@ class ExcelExporterCorrugado {
 
                     let ancho = 15;
                     if (col.field === 'Fecha') ancho = 12;
+                    else if (col.field === 'Mes') ancho = 12;
+                    else if (col.field === 'HorasProgramadas') ancho = 22;
+                    else if (col.field === 'Planta') ancho = 10;
                     else if (col.field === 'Linea' || col.field === 'Turno' || col.field === 'Grupo') ancho = 8;
-                    else if (col.field === 'Corrugador') ancho = 12;
-                    else if (col.field === 'Producto') ancho = 14;
+                    else if (col.field === 'Corrugador') ancho = 14;
+                    else if (col.field === 'Producto') ancho = 18;
                     else if (col.headerName && col.headerName.length > 20) ancho = 20;
 
                     worksheet.getColumn(colIdx).width = ancho;

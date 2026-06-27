@@ -170,6 +170,11 @@
         transition: all 0.2s ease;
     }
 
+.salida_completada {
+    background-color: #d1e7dd;
+    box-shadow: 0 2px 4px rgba(21, 105, 173, 0.1);
+    transition: all 0.2s ease;
+}
 /* ============================================
    DATATABLES RESPONSIVE - Control con Bootstrap Icons
    ============================================ */

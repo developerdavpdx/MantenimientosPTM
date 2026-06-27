@@ -89,16 +89,20 @@
                                     <th></th>
                                     <th>Acciones</th>
                                     <th>Folio</th>
+                                    <th>OT(s)</th>
                                     <th>Fecha Solicitud</th>
                                     <th>Estado</th>
                                     <th>Usuario Solicita</th>
                                     <th>Comentarios</th>
+                                    <th>Doc. SAP</th>
+                                    <th>Doc. Entry</th>
+                                    <th>SAP</th>
+                                    <th>Comentarios Rechazo</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
                     </div>
-
                 </div>
             </div>
 
@@ -238,17 +242,72 @@
                     <table class="table table-striped table-sm CustomTableResponsive" id="tablaSolicitudesRefacciones">
                         <thead class="table-light text-center">
                             <tr>
-                                <th></th>                        <!-- 0: Control +/- -->
-                                <th>Orden Trabajo</th>           <!-- 1: OrdenTrabajo -->
-                                <th>Código</th>                  <!-- 2: CodigoArticulo -->
-                                <th>Artículo</th>                <!-- 3: NombreArticulo -->
-                                <th>Cant. Requerida</th>         <!-- 4: CantidadRequerida -->
-                                <th>Cant. a Encargar</th>        <!-- 5: CantidadEncargar -->
-                                <th>Nivel Urgencia</th>          <!-- 6: NivelUrgencia -->
-                                <th>Descripción</th>             <!-- 7: DescripcionNecesidad -->
-                                <th>Fecha Solicitud</th>         <!-- 8: FechaSolicitud -->
-                                <th>Estatus</th>                 <!-- 9: Estatus -->
-                                <th>Usuario Solicita</th>        <!-- 10: UsuarioSolicita -->
+                                <th></th>
+
+                                <th>
+                                    <i class="bi bi-tools me-1"></i>
+                                    OT
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-upc-scan me-1"></i>
+                                    Código
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-box-seam me-1"></i>
+                                    Artículo
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-sort-numeric-up me-1"></i>
+                                    Requerida
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-cart-plus me-1"></i>
+                                    Encargar
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-box-seam me-1"></i>
+                                    Stock
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-arrow-down-circle me-1"></i>
+                                    Min
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-arrow-up-circle me-1"></i>
+                                    Max
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    Urgencia
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-card-text me-1"></i>
+                                    Descripción
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-calendar-event me-1"></i>
+                                    Fecha
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-flag-fill me-1"></i>
+                                    Estatus
+                                </th>
+
+                                <th>
+                                    <i class="bi bi-person-fill me-1"></i>
+                                    Usuario
+                                </th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -336,7 +395,7 @@
                                        autocomplete="off">
                                 <div id="sugerenciasDep" class="autocomplete-centrocostos"></div>
                                 <input type="hidden" id="SolDepCodigo" name="SolDepCodigo">
-                                <div class="modal-error-msg">⚠️ Ingresa el departamento.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa el departamento.</div>
                             </div>
 
                             <!-- Proceso -->
@@ -350,7 +409,7 @@
                                        autocomplete="off">
                                 <div id="sugerenciasProceso" class="autocomplete-centrocostos"></div>
                                 <input type="hidden" id="SolProcesoCodigo" name="SolProcesoCodigo">
-                                <div class="modal-error-msg">⚠️ Ingresa el proceso.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa el proceso.</div>
                             </div>
 
                             <!-- Gastos -->
@@ -364,7 +423,7 @@
                                        autocomplete="off">
                                 <div id="sugerenciasGastos" class="autocomplete-centrocostos"></div>
                                 <input type="hidden" id="SolGastosCodigo" name="SolGastosCodigo">
-                                <div class="modal-error-msg">⚠️ Ingresa gastos.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa gastos.</div>
                             </div>
 
                             <!-- Cedis -->
@@ -378,10 +437,22 @@
                                        autocomplete="off">
                                 <div id="sugerenciasCedis" class="autocomplete-centrocostos"></div>
                                 <input type="hidden" id="SolCedisCodigo" name="SolCedisCodigo">
-                                <div class="modal-error-msg">⚠️ Ingresa el cedis.</div>
+                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa el cedis.</div>
                             </div>
                         </div>
                     </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección: Facturas -->
+                    <!--<div class="mb-3">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-file-earmark-text me-2"></i>Facturas
+                        </h6>
+                        <div class="row" id="contenedorFacturas">-->
+                            <!--Se colocan los cards de facturas de manera dinamica-->
+                        <!--</div>
+                    </div>-->
 
                     <!-- Alerta Container -->
                     <div class="row">

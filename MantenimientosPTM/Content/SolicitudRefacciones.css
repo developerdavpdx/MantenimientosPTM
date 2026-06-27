@@ -105,3 +105,94 @@
     vertical-align: middle;
     text-align:center;
 }
+
+/*Estilos card factura*/
+
+.cards-facturas {
+    box-shadow: 1px 1px 10px 0px #c7c7c7 !important;
+}
+
+.factura-card {
+    position: relative;
+    overflow: hidden;
+}
+
+factura-card .card-header {
+    background: #065fad;
+}
+
+.factura-card::after {
+    content: '';
+    position: absolute;
+    width: 77px;
+    height: 132px;
+    right: 18px;
+    bottom: 230px;
+    background-image: url(Images/PAC.png);
+    background-repeat: no-repeat;
+    background-size: contain;
+    opacity: .08;
+    pointer-events: none;
+}
+
+.factura-card:hover {
+    transform: translateY(-2px);
+}
+
+.factura-card .card-header {
+    background: #0a63b4;
+        
+}
+
+.factura-card .card-footer {
+    border-top: 1px dashed #000000;
+    background-color: #ffba262b;
+}
+
+.factura-title {
+    font-weight: 700 !important;
+    font-size: 17px;
+}
+
+.factura-Emisor {
+    color: #ffffff85 !important;
+    font-size: 13px;
+}
+
+.factura-area-total {
+    background-color: #f5f5f5;
+    border-radius: 10px;
+    border: 1px solid #cecece;
+}
+
+.factura-uuid {
+    font-size: 14px;
+    color: #787878;
+}
+
+.factura-id {
+    color: #ffffff85 !important;
+}
+
+.contenedor-checkFactura {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    padding-left: 0px;
+}
+
+.radio-factura {
+    width: 20px;
+    height: 20px;
+}
+
+.radio-factura:hover {
+    cursor:pointer;
+}
+
+.radio-factura:checked {
+    background-color: #9f9f9f !important;
+    border-color: #a2a2a2;
+    box-shadow: 0px 0px 5px 1px #9a9a9a;
+}
+
