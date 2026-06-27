@@ -474,7 +474,8 @@ class SolicitudCompraApp {
                 data: JSON.stringify({
                     Requisicion: payload,
                     Comentarios: "Solicitud enviada para autorización",
-                    UsuarioSolicita: this.datos_usuario[0].EMAIL
+                    UsuarioSolicita: this.datos_usuario[0].EMAIL,
+                    Planta: this.datos_usuario[0].PLANTA
                 }),
                 dataType: 'json'
             });
@@ -489,41 +490,49 @@ class SolicitudCompraApp {
             // ✅ Paso 2: Enviar correo de autorización
             btn.html('<i class="bi bi-envelope-paper me-1"></i> Enviando autorización...');
 
-            const responseEnviar = await $.ajax({
-                url: `/${this.URLBase}/EnviarSolicitudCompraAutorizacion`,
-                type: 'POST',
-                contentType: 'application/json; charset=utf-8',
-                data: JSON.stringify({
-                    idSolicitudCompra: parseInt(idSolicitudCompra),
-                    Articulos: payload.Articulos
-                }),
-                dataType: 'json'
-            });
+            //const responseEnviar = await $.ajax({
+            //    url: `/${this.URLBase}/EnviarSolicitudCompraAutorizacion`,
+            //    type: 'POST',
+            //    contentType: 'application/json; charset=utf-8',
+            //    data: JSON.stringify({
+            //        idSolicitudCompra: parseInt(idSolicitudCompra),
+            //        Articulos: payload.Articulos
+            //    }),
+            //    dataType: 'json'
+            //});
 
-            if (responseEnviar.Status !== 'OK') {
-                throw new Exception(responseEnviar.Message || "Error al enviar el correo de autorización.");
-            }
+            //if (responseEnviar.Status !== 'OK') {
+            //    throw new Exception(responseEnviar.Message || "Error al enviar el correo de autorización.");
+            //}
 
             // ✅ Paso 3: Actualizar cabecera con centros de costo (sin crear PR en SAP aún)
-            const payloadActualizar = {
-                IdSolicitudCompra: parseInt(idSolicitudCompra),
-                Articulos: payload.Articulos,
-                Contabilizacion: payload.Contabilizacion
-            };
+            //const payloadActualizar = {
+            //    IdSolicitudCompra: parseInt(idSolicitudCompra),
+            //    Articulos: payload.Articulos,
+            //    Contabilizacion: payload.Contabilizacion
+            //};
 
             // No llamamos a CreateSolicitudCompra aquí, solo guardamos los centros de costo
             // La creación del PR en SAP se hará cuando se autorice la solicitud
-            btn.html('<i class="bi bi-check-circle-fill me-1"></i> Solicitud enviada');
+            setTimeout(() => {
+                btn.html('<i class="bi bi-check-circle-fill me-1"></i> Solicitud enviada');
+            }, 1500);
+
 
             AlertManager.mostrar('Solicitud enviada para autorización correctamente. Se notificará cuando sea procesada.', 'success', 'alertSolicitudCompraContainer');
             // ✅ Recargar DataTable
             $('#tablaSolicitudesCompra').DataTable().ajax.reload(null, false);
 
             setTimeout(() => {
-                btn.prop('disabled', false)
-                    .html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
-                $('#SolcribirModal').modal('hide');
+                btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
+
+                setTimeout(() => {
+                    $('#SolcitarModal').modal('hide');
+                }, 2500);
+
             }, 2500);
+
+           
 
         } catch (error) {
             console.error('Error en createSolCompra:', error);
@@ -697,7 +706,8 @@ class CompraManager {
                         return $.extend({}, d, {
                             "FiltroFechaInicio": $("#FiltroFechaInicio").val() || null,
                             "FiltroFechaFin": $("#FiltroFechaFin").val() || null,
-                            "FiltroFolio": $("#FiltroFolio").val() || null
+                            "FiltroFolio": $("#FiltroFolio").val() || null,
+                            "FiltroPlanta": this.datos_usuario[0].PLANTA || null
                         });
                     },
                     dataSrc: (json) => json.data
@@ -719,19 +729,46 @@ class CompraManager {
                         className: 'all text-center',
                         width: '100px',
                         render: function (data, type, row) {
-                            return `<button class="btn btn-sm btn-ptm-edit btn-ver-detalle"
-                            data-id="${row.IdSolicitudCompra}"
-                            data-folio="${row.FolioCompra}"
-                            title="Ver detalle">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-ptm-mid btn-aprobar"
-                            data-id="${row.IdSolicitudCompra}"
-                            data-folio="${row.FolioCompra}"
-                            data-OT="${row.OrdenTrabajo}"
-                            title="Generar Requisición">
-                            <i class="bi bi-cart-check"></i>
-                        </button>`;
+
+                            let btnDetalleSolicitudCompra = "";
+                            let btnReqCompra = "";
+
+                            switch (row.Estatus) {
+                                case "Pendiente":
+                                    btnDetalleSolicitudCompra = `<button class="btn btn-sm btn-ptm-edit btn-ver-detalle"
+                                        data-id="${row.IdSolicitudCompra}"
+                                        data-folio="${row.FolioCompra}"
+                                        title="Ver detalle">
+                                        <i class="bi bi-eye"></i>
+                                    </button>`;
+
+                                    btnReqCompra = `<button class="btn btn-sm btn-ptm-mid btn-aprobar"
+                                    data-id="${row.IdSolicitudCompra}"
+                                    data-folio="${row.FolioCompra}"
+                                    data-OT="${row.OrdenTrabajo}"
+                                    title="Generar Requisición">
+                                    <i class="bi bi-cart-check"></i>
+                                </button>`;
+                                    break;
+                                case "Espera Autorizacion":
+                                    btnDetalleSolicitudCompra = `<button class="btn btn-sm btn-ptm-edit btn-ver-detalle"
+                                        data-id="${row.IdSolicitudCompra}"
+                                        data-folio="${row.FolioCompra}"
+                                        title="Ver detalle">
+                                        <i class="bi bi-eye"></i>
+                                    </button>`;
+
+                                    btnReqCompra = `<button class="btn btn-sm btn-ptm-mid btn-aprobar"
+                                    data-id="${row.IdSolicitudCompra}"
+                                    data-folio="${row.FolioCompra}"
+                                    data-OT="${row.OrdenTrabajo}"
+                                    title="Generar Requisición" disabled>
+                                    <i class="bi bi-cart-check"></i>
+                                </button>`;
+                                    break;
+                            }
+
+                            return `${btnDetalleSolicitudCompra}${btnReqCompra}`
                         }
                     },
                     // Columna 2: Folio
@@ -781,15 +818,14 @@ class CompraManager {
                         render: (data) => {
                             if (!data) return '<em class="text-muted">—</em>';
 
-                            const cfg = {
-                                color: 'badge btn-ptm-mid badge-custom',
-                                icon: 'check2-circle'
-                            };
+                            const cfg = data === "No Aprobado"
+                                ? { color: 'badge bg-danger text-white badge-custom', icon: 'x-circle' }
+                                : { color: 'badge btn-ptm-mid badge-custom', icon: 'check2-circle' };
 
                             return `<span class="badge ${cfg.color} badge-custom">
-                                                <i class="bi bi-${cfg.icon} me-1"></i>
-                                                ${data}
-                                            </span>`;
+                            <i class="bi bi-${cfg.icon} me-1"></i>
+                            ${data}
+                        </span>`;
                         }
                     },
                     // Columna 5: Usuario Solicita
@@ -849,6 +885,12 @@ class CompraManager {
                             </span>`;
                         }
                     },
+                    // Columna 10: Comentarios Rechazo
+                    {
+                        data: "ComentariosRechazo",
+                        title: "Comentarios Rechazo",
+                        render: (data) => data || '<em class="text-muted">Sin comentarios</em>'
+                    }
                 ],
                 // ✅ COLUMNDEFS INLINE
                 columnDefs: [

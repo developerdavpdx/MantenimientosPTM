@@ -36,14 +36,14 @@ namespace MantenimientosPTM
         /// <summary>
         /// Crea una Purchase Request en SAP B1 via Service Layer
         /// </summary>
-        public async Task<GlobalCommands.SapResponse> CrearPurchaseRequestAsync(AccesoDatosAlmacen.RequisicionPayload payload)
+        public async Task<GlobalCommands.SapResponse> CrearPurchaseRequestAsync(List<AccesoDatosAlmacen.SolicitudCompraResume> Header, List<AccesoDatosAlmacen.SolicitudCompraDetalle> Detalle)
         {
             var responseAbx = new GlobalCommands.SapResponse { IsError = true };
 
             try
             {
                 log.Info($"🚀 ═══════════════════════════════════════════════════");
-                log.Info($"🚀 INICIO CrearPurchaseRequest — ID Solicitud: {payload.IdSolicitudCompra}");
+                log.Info($"🚀 INICIO CrearPurchaseRequest — ID Solicitud: {Header[0].IdSolicitudCompra}");
                 log.Info($"🚀 ═══════════════════════════════════════════════════");
 
                 // ✅ 1 — Login
@@ -60,18 +60,18 @@ namespace MantenimientosPTM
                 log.Info($"✅ Login exitoso — SessionId: {loginResult.SessionId}");
 
                 // ✅ 2 — Armar DocumentLines
-                log.Info($"📦 Armando DocumentLines — Total artículos: {payload.Articulos.Count}");
+                log.Info($"📦 Armando DocumentLines — Total artículos: {Detalle.Count}");
 
                 // ✅ DESPUÉS — una línea por artículo agrupado
-                var documentLines = payload.Articulos.Select(articulo => new
+                var documentLines = Detalle.Select(articulo => new
                 {
                     ItemCode = articulo.CodigoArticulo,
-                    Quantity = articulo.CantidadTotal,
+                    Quantity = articulo.CantidadEncargar,
                     LineVendor = articulo.CodigoProveedor,
-                    CostingCode = payload.Contabilizacion.Departamento,
-                    CostingCode2 = payload.Contabilizacion.Proceso,
-                    CostingCode3 = payload.Contabilizacion.Gastos,
-                    CostingCode4 = payload.Contabilizacion.Cedis
+                    CostingCode = Header[0].Departamento, //Departamento
+                    CostingCode2 = Header[0].Proceso,//Proceso
+                    CostingCode3 = Header[0].Gastos,//Gastos
+                    CostingCode4 = Header[0].Cedis//Cedis
                 }).ToList();
 
                 foreach (var line in documentLines)
@@ -154,7 +154,7 @@ namespace MantenimientosPTM
                     log.Info($"✅ Logout exitoso");
 
                 log.Info($"🏁 ═══════════════════════════════════════════════════");
-                log.Info($"🏁 FIN CrearPurchaseRequest — ID Solicitud: {payload.IdSolicitudCompra}");
+                log.Info($"🏁 FIN CrearPurchaseRequest — ID Solicitud: {Header[0].IdSolicitudCompra}");
                 log.Info($"🏁 ═══════════════════════════════════════════════════");
             }
 

@@ -13,54 +13,74 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="~/Content/SolicitudRefacciones.css" rel="stylesheet" />
     <style>
+        :root {
+            --ptm-azul-oscuro: #0B4A8A;
+            --ptm-azul-claro: #29ABE2;
+            --ptm-azul-fondo: #EAF4FC;
+        }
+
         body {
-            background-color: #f8f9fa;
+            background-color: #f0f6fb;
             min-height: 100vh;
         }
+
         .aprobacion-container {
             max-width: 600px;
             margin: 50px auto;
         }
+
         .aprobacion-card {
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 24px rgba(11, 74, 138, 0.12);
             overflow: hidden;
+            border: 1px solid #e3eef8;
         }
+
         .aprobacion-header {
             padding: 30px;
             text-align: center;
         }
-        .aprobacion-header.success {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        }
-        .aprobacion-header.danger {
-            background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
-        }
-        .aprobacion-header.warning {
-            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-        }
-        .aprobacion-header.error {
-            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-        }
+
+            .aprobacion-header.success {
+                background: linear-gradient(135deg, var(--ptm-azul-oscuro) 0%, var(--ptm-azul-claro) 100%);
+            }
+
+            .aprobacion-header.danger {
+                background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+            }
+
+            .aprobacion-header.warning {
+                background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            }
+
+            .aprobacion-header.error {
+                background: linear-gradient(135deg, var(--ptm-azul-oscuro) 0%, #495057 100%);
+            }
+
         .aprobacion-icon {
             font-size: 60px;
             color: white;
         }
+
         .aprobacion-body {
             padding: 40px;
             text-align: center;
+            border-top: 4px solid var(--ptm-azul-claro);
         }
+
         .aprobacion-title {
             font-size: 24px;
             font-weight: bold;
-            color: #333;
+            color: var(--ptm-azul-oscuro);
             margin-bottom: 15px;
         }
+
         .aprobacion-message {
             font-size: 16px;
             color: #666;
             line-height: 1.6;
         }
+
         .aprobacion-badge {
             display: inline-block;
             padding: 8px 20px;
@@ -68,49 +88,178 @@
             font-weight: bold;
             margin-top: 20px;
         }
+
         .badge-aprobado {
             background-color: #d4edda;
             color: #155724;
         }
+
         .badge-no-aprobado {
             background-color: #f8d7da;
             color: #721c24;
         }
+
         .badge-pendiente {
             background-color: #fff3cd;
             color: #856404;
         }
+
         .badge-error {
-            background-color: #e2e3e5;
-            color: #383d41;
+            background-color: var(--ptm-azul-fondo);
+            color: var(--ptm-azul-oscuro);
         }
+
+        .folio-chip {
+            display: inline-block;
+            padding: 6px 16px;
+            background-color: var(--ptm-azul-fondo);
+            color: var(--ptm-azul-oscuro);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
         .btn-ptm {
             display: inline-block;
             padding: 12px 30px;
-            background-color: #1976D2;
+            background-color: var(--ptm-azul-oscuro);
             color: white;
             text-decoration: none;
             border-radius: 6px;
             margin-top: 25px;
             font-weight: bold;
+            box-shadow: 0 4px 14px rgba(11, 74, 138, 0.25);
+            transition: background-color 0.15s ease-in-out;
         }
-        .btn-ptm:hover {
-            background-color: #1565C0;
+
+            .btn-ptm:hover {
+                background-color: var(--ptm-azul-claro);
+                color: white;
+            }
+
+        .comentario-form {
+            text-align: left;
+            margin-top: 10px;
+        }
+
+        .comentario-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--ptm-azul-oscuro);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .comentario-textarea {
+            width: 100%;
+            border: 1px solid #c9dceb;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            resize: vertical;
+            min-height: 90px;
+            color: #444;
+            box-sizing: border-box;
+        }
+
+            .comentario-textarea:focus {
+                outline: none;
+                border-color: var(--ptm-azul-claro);
+                box-shadow: 0 0 0 3px rgba(41, 171, 226, 0.15);
+            }
+
+            .comentario-textarea.is-invalid {
+                border-color: #dc3545;
+                box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12);
+            }
+
+        .comentario-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            margin-bottom: 8px;
+        }
+
+        .comentario-contador {
+            font-size: 12px;
+            color: #888;
+        }
+
+            .comentario-contador.is-invalid {
+                color: #dc3545;
+                font-weight: bold;
+            }
+
+        .comentario-error {
+            font-size: 13px;
+            color: #dc3545;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .comentario-acciones {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .btn-rechazar-confirmar {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #dc3545;
             color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.15s ease-in-out;
         }
+
+            .btn-rechazar-confirmar:hover {
+                background-color: #c82333;
+            }
+
+            .btn-rechazar-confirmar:disabled {
+                background-color: #e7a2ab;
+                cursor: not-allowed;
+            }
+
+        .btn-cancelar {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #f0f0f0;
+            color: #555;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+            .btn-cancelar:hover {
+                background-color: #e2e2e2;
+                color: #555;
+            }
     </style>
 </head>
 <body data-require-auth="false">
     <div class="container-fluid pt-4">
         <div class="aprobacion-container">
             <div class="card aprobacion-card">
-                
+
                 @{
                     string headerClass = "";
                     string iconClass = "";
                     string badgeClass = "";
-                    
-                    if (ViewBag.Estado == "Aprobado")
+
+                    if (ViewBag.RequiereComentario == true)
+                    {
+                        headerClass = "warning";
+                        iconClass = "bi-chat-square-text-fill";
+                    }
+                    else if (ViewBag.Estado == "Aprobado")
                     {
                         headerClass = "success";
                         iconClass = "bi-check-circle-fill";
@@ -135,38 +284,127 @@
                         badgeClass = "badge-error";
                     }
                 }
-                
+
                 <div class="aprobacion-header @headerClass">
                     <i class="bi @iconClass aprobacion-icon"></i>
                 </div>
-                
+
                 <div class="aprobacion-body">
                     <div class="aprobacion-title">
                         @(ViewBag.Mensaje ?? "Resultado de la solicitud")
                     </div>
-                    
+
                     @if (!string.IsNullOrEmpty(ViewBag.Folio))
                     {
-                        <p class="text-muted mb-3">
-                            <strong>Folio:</strong> @ViewBag.Folio
+                        <p class="mb-3">
+                            <span class="folio-chip"><strong>Folio:</strong> @ViewBag.Folio</span>
                         </p>
                     }
-                    
-                    <span class="aprobacion-badge @badgeClass">
-                        @ViewBag.Estado
-                    </span>
-                    
-                    <div>
-                        <a href="@Url.Action("SolicitudOC", "Almacen")" class="btn-ptm">
-                            <i class="bi bi-arrow-left me-2"></i>Ir a Solicitudes de Compra
-                        </a>
-                    </div>
+
+                    @if (ViewBag.RequiereComentario == true)
+                    {
+                        <form id="formRechazo" class="comentario-form" method="post" action="@Url.Action("AprobarSolicitudCompra", "Almacen")" novalidate>
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@ViewBag.EncodedId" />
+                            <input type="hidden" name="token" value="@ViewBag.EncodedToken" />
+
+                            <label class="comentario-label" for="comentario">Razón del rechazo</label>
+                            <textarea id="comentario" name="comentario" class="comentario-textarea" maxlength="100" placeholder="Describe brevemente el motivo del rechazo..."></textarea>
+
+                            <div class="comentario-footer">
+                                <span id="comentarioError" class="comentario-error">Ingresa la razón del rechazo.</span>
+                                <span id="comentarioContador" class="comentario-contador">0 / 100</span>
+                            </div>
+
+                            <div class="comentario-acciones">
+                                <a href="@Url.Action("SolicitudOC", "Almacen")" class="btn-cancelar">Cancelar</a>
+                                <button type="submit" id="btnConfirmarRechazo" class="btn-rechazar-confirmar">
+                                    <i class="bi bi-x-circle me-2"></i>Confirmar rechazo
+                                </button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <span class="aprobacion-badge @badgeClass">
+                            @ViewBag.Estado
+                        </span>
+
+                        <div>
+                            <a href="@Url.Action("SolicitudOC", "Almacen")" class="btn-ptm">
+                                <i class="bi bi-arrow-left me-2"></i>Ir a Solicitudes de Compra
+                            </a>
+                        </div>
+                    }
                 </div>
-                
+
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    @if (ViewBag.RequiereComentario == true)
+    {
+        <script>
+            (function () {
+                var textarea = document.getElementById('comentario');
+                var contador = document.getElementById('comentarioContador');
+                var error = document.getElementById('comentarioError');
+                var form = document.getElementById('formRechazo');
+                var maxLen = 100;
+
+                function actualizarContador() {
+                    var len = textarea.value.length;
+                    contador.textContent = len + ' / ' + maxLen;
+                    if (len > maxLen) {
+                        contador.classList.add('is-invalid');
+                    } else {
+                        contador.classList.remove('is-invalid');
+                    }
+                }
+
+                function limpiarError() {
+                    textarea.classList.remove('is-invalid');
+                    error.style.display = 'none';
+                }
+
+                function mostrarError(mensaje) {
+                    textarea.classList.add('is-invalid');
+                    error.textContent = mensaje;
+                    error.style.display = 'block';
+                }
+
+                textarea.addEventListener('input', function () {
+                    actualizarContador();
+                    limpiarError();
+                });
+
+                form.addEventListener('submit', function (e) {
+                    var valor = textarea.value.trim();
+
+                    if (valor.length === 0) {
+                        e.preventDefault();
+                        mostrarError('Ingresa la razón del rechazo.');
+                        textarea.focus();
+                        return;
+                    }
+
+                    if (valor.length > maxLen) {
+                        e.preventDefault();
+                        mostrarError('El comentario no puede exceder ' + maxLen + ' caracteres.');
+                        textarea.focus();
+                        return;
+                    }
+
+                    var btn = document.getElementById('btnConfirmarRechazo');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Procesando...';
+                });
+
+                actualizarContador();
+            })();
+        </script>
+    }
 </body>
 </html>

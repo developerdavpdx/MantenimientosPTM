@@ -531,6 +531,8 @@ namespace MantenimientosPTM
 
             [JsonProperty("UsuarioSolicita")]
             public string UsuarioSolicita { get; set; }
+            [JsonProperty("Planta")]
+            public int? Planta { get; set; }
         }
 
         // Modelo principal que recibe el JS
@@ -544,6 +546,8 @@ namespace MantenimientosPTM
 
             [JsonProperty("UsuarioSolicita")]
             public string UsuarioSolicita { get; set; }
+            [JsonProperty("Planta")]
+            public int? Planta { get; set; }
         }
 
         public class RequisicionModel
@@ -646,6 +650,8 @@ namespace MantenimientosPTM
 
             [JsonProperty("USUARIO_SOLICITA")]
             public string UsuarioSolicita { get; set; }
+            [JsonProperty("CODIGO_PROVEEDOR")]
+            public string CodigoProveedor { get; set; }
         }
 
         //Resumen de solicitudes de compra.
@@ -675,6 +681,18 @@ namespace MantenimientosPTM
             [JsonProperty("USUARIO_SOLICITA")]
             public string UsuarioSolicita { get; set; }
 
+            [JsonProperty("DEPARTAMENTO")]
+            public string Departamento { get; set; }
+
+            [JsonProperty("PROCESO")]
+            public string Proceso { get; set; }
+
+            [JsonProperty("GASTOS")]
+            public string Gastos { get; set; }
+
+            [JsonProperty("CEDIS")]
+            public string Cedis { get; set; }
+
             [JsonProperty("DOC_NUM")]
             public string DocNum { get; set; }
 
@@ -683,6 +701,8 @@ namespace MantenimientosPTM
 
             [JsonProperty("RESPONSE_SAP")]
             public string ResponseSap { get; set; }
+            [JsonProperty("COMENTARIOS_RECHAZO")]
+            public string ComentariosRechazo { get; set; }
         }
 
         public class OrdenCompraDTO

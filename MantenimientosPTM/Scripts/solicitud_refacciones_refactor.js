@@ -738,6 +738,108 @@ class SolicitudManager {
     }
 
     // ========================================
+    // DATATABLE - SOLICITUDES REFACCIONES
+    // ========================================
+
+    llenarSolicitudesRefacciones() {
+        try {
+            $('#filaVacia').remove();
+
+            if ($.fn.DataTable.isDataTable('#tablaSolicitudesRefacciones')) {
+                $('#tablaSolicitudesRefacciones').DataTable().destroy();
+            }
+
+            const calcularHeaderOffset = () => {
+                if (window.innerWidth < 768) return 160;
+                if (window.innerWidth < 1400) return 150;
+                return 113;
+            };
+
+            const table = $('#tablaSolicitudesRefacciones').DataTable({
+                processing: false,
+                serverSide: true,
+                bDestroy: true,
+                searching: false,
+                autoWidth: false,
+                colReorder: true,
+                fixedHeader: {
+                    header: true,
+                    headerOffset: calcularHeaderOffset()
+                },
+                responsive: {
+                    details: {
+                        type: 'column',
+                        target: 0,
+                        renderer: (api, rowIdx, columns) => this._renderDetallesResponsive(columns)
+                    }
+                },
+                ajax: {
+                    url: `/${this.URLBase}/GetSolicitudesRefacciones`,
+                    type: "POST",
+                    dataType: "json",
+                    beforeSend: () => GlobalUtil.mostrarLoader(true),
+                    complete: () => GlobalUtil.mostrarLoader(false),
+                    data: (d) => {
+                        return $.extend({}, d, {
+                            "FiltroFechaInicio": $("#FiltroFechaInicio").val() || null,
+                            "FiltroFechaFin": $("#FiltroFechaFin").val() || null,
+                            "FiltroOrdenTrabajo": $("#FiltroOrdenTrabajo").val() || null,
+                            "FiltroPlanta": $("#FiltroPlanta").val() || null,
+                            "FiltroNivelUrgencia": $("#FiltroNivelUrgencia").val() || null,
+                        });
+                    },
+                    dataSrc: (json) => json.data
+                },
+                columns: this._getColumnDefs(),
+                columnDefs: this._getColumnDefsConfig(),
+                ordering: false,
+                info: true,
+                bPaginate: true,
+                pageLength: 50,
+                lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+                language: {
+                    lengthMenu: "Mostrar _MENU_ registros",
+                    zeroRecords: "No se encontraron solicitudes",
+                    info: "Registros del _START_ al _END_ de un total de _TOTAL_ registros",
+                    infoEmpty: "Registros del 0 al 0 de un total de 0 registros",
+                    infoFiltered: "(filtrado de un total de _MAX_ registros)",
+                    oPaginate: {
+                        sFirst: "Primero",
+                        sLast: "Último",
+                        sNext: "Siguiente",
+                        sPrevious: "Anterior"
+                    },
+                    sProcessing: "Cargando datos, por favor espere...",
+                    emptyTable: "No hay solicitudes disponibles"
+                },
+                createdRow: (row, data) => {
+                    $(row).attr('data-orden-trabajo', data.OrdenTrabajo);
+                    $(row).attr('data-estatus', data.Estatus);
+                },
+                drawCallback: () => {
+                    table.columns.adjust();
+                    this._configurarEventosDataTable();
+                }
+            });
+
+            // ✅ Manejar resize de ventana
+            $(window).off('resize.solicitudes').on('resize.solicitudes', () => {
+                if ($.fn.DataTable.isDataTable('#tablaSolicitudesRefacciones')) {
+                    const nuevoOffset = calcularHeaderOffset();
+                    $('#tablaSolicitudesRefacciones').DataTable().fixedHeader.headerOffset(nuevoOffset);
+                    $('#tablaSolicitudesRefacciones').DataTable().fixedHeader.adjust();
+                }
+            });
+
+            return table;
+
+        } catch (error) {
+            AlertManager.mostrar('No es posible mostrar las solicitudes: ' + error, 'warning');
+            console.error('Error en llenarSolicitudesRefacciones:', error);
+        }
+    }
+
+    // ========================================
     // CONFIGURACIÓN DE AUTOCOMPLETADOS
     // ========================================
 
@@ -1940,7 +2042,8 @@ class SolicitudManager {
         const datos = {
             Solicitudes: lineas,
             Comentarios: comentario,
-            UsuarioSolicita: this.datos_usuario[0].EMAIL
+            UsuarioSolicita: this.datos_usuario[0].EMAIL,
+            Planta: this.datos_usuario[0].PLANTA
         };
 
         const $btn = $("#btnGuardarSC");
@@ -1995,108 +2098,6 @@ class SolicitudManager {
             $btn.html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
             $("#solicitudCompra").modal('hide');
         }, 2000);
-    }
-
-    // ========================================
-    // DATATABLE - SOLICITUDES REFACCIONES
-    // ========================================
-
-    llenarSolicitudesRefacciones() {
-        try {
-            $('#filaVacia').remove();
-
-            if ($.fn.DataTable.isDataTable('#tablaSolicitudesRefacciones')) {
-                $('#tablaSolicitudesRefacciones').DataTable().destroy();
-            }
-
-            const calcularHeaderOffset = () => {
-                if (window.innerWidth < 768) return 160;
-                if (window.innerWidth < 1400) return 150;
-                return 113;
-            };
-
-            const table = $('#tablaSolicitudesRefacciones').DataTable({
-                processing: false,
-                serverSide: true,
-                bDestroy: true,
-                searching: false,
-                autoWidth: false,
-                colReorder: true,
-                fixedHeader: {
-                    header: true,
-                    headerOffset: calcularHeaderOffset()
-                },
-                responsive: {
-                    details: {
-                        type: 'column',
-                        target: 0,
-                        renderer: (api, rowIdx, columns) => this._renderDetallesResponsive(columns)
-                    }
-                },
-                ajax: {
-                    url: `/${this.URLBase}/GetSolicitudesRefacciones`,
-                    type: "POST",
-                    dataType: "json",
-                    beforeSend: () => GlobalUtil.mostrarLoader(true),
-                    complete: () => GlobalUtil.mostrarLoader(false),
-                    data: (d) => {
-                        return $.extend({}, d, {
-                            "FiltroFechaInicio": $("#FiltroFechaInicio").val() || null,
-                            "FiltroFechaFin": $("#FiltroFechaFin").val() || null,
-                            "FiltroOrdenTrabajo": $("#FiltroOrdenTrabajo").val() || null,
-                            "FiltroPlanta": $("#FiltroPlanta").val() || null,
-                            "FiltroNivelUrgencia": $("#FiltroNivelUrgencia").val() || null,
-                        });
-                    },
-                    dataSrc: (json) => json.data
-                },
-                columns: this._getColumnDefs(),
-                columnDefs: this._getColumnDefsConfig(),
-                ordering: false,
-                info: true,
-                bPaginate: true,
-                pageLength: 50,
-                lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
-                language: {
-                    lengthMenu: "Mostrar _MENU_ registros",
-                    zeroRecords: "No se encontraron solicitudes",
-                    info: "Registros del _START_ al _END_ de un total de _TOTAL_ registros",
-                    infoEmpty: "Registros del 0 al 0 de un total de 0 registros",
-                    infoFiltered: "(filtrado de un total de _MAX_ registros)",
-                    oPaginate: {
-                        sFirst: "Primero",
-                        sLast: "Último",
-                        sNext: "Siguiente",
-                        sPrevious: "Anterior"
-                    },
-                    sProcessing: "Cargando datos, por favor espere...",
-                    emptyTable: "No hay solicitudes disponibles"
-                },
-                createdRow: (row, data) => {
-                    $(row).attr('data-orden-trabajo', data.OrdenTrabajo);
-                    $(row).attr('data-estatus', data.Estatus);
-                },
-                drawCallback: () => {
-                    table.columns.adjust();
-                    this._configurarEventosDataTable();
-                }
-            });
-
-            // ✅ Manejar resize de ventana
-            $(window).off('resize.solicitudes').on('resize.solicitudes', () => {
-                if ($.fn.DataTable.isDataTable('#tablaSolicitudesRefacciones')) {
-                    const nuevoOffset = calcularHeaderOffset();
-                    $('#tablaSolicitudesRefacciones').DataTable().fixedHeader.headerOffset(nuevoOffset);
-                    $('#tablaSolicitudesRefacciones').DataTable().fixedHeader.adjust();
-                }
-            });
-
-            return table;
-
-        } catch (error) {
-            AlertManager.mostrar('No es posible mostrar las solicitudes: ' + error, 'warning');
-            console.error('Error en llenarSolicitudesRefacciones:', error);
-        }
     }
 
     _renderDetallesResponsive(columns) {
