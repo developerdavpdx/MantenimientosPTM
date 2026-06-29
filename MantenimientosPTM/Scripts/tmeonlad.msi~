@@ -61,7 +61,6 @@ class MantenimientosPreventivoApp {
         this.URLBase = "MantenimientosPreventivos";
         this.URLBaseCorrectivos = "MantenimientosCorrectivos";
         this.URLBaseRutinas = "Rutinas";
-        this.URLBaseAlmacen = "Almacen";
         this.gestionTecnicos = new GestionTecnicos(this.URLBase);
         this.gestionFirmas = new GestionFirmas();
         this.datos_usuario = GlobalUtil.getDatosUsuario();
@@ -840,9 +839,9 @@ class MantenimientoManager {
 
                                 // 🔧 LISTADO DE REFACCIÓNES
                                 if (tieneRefacciones === "SI") {
-                                    listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Historial de Refacciones', dataAttrs);
+                                    listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Solicitar Refacción', dataAttrs);
                                 } else {
-                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
+                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Solicitar Refacción');
                                 }
 
                                 return `${refaccionBtn}${caratulaBtn}${impresionBtn}${listRefBtn}`;

@@ -14,14 +14,12 @@ using System.Configuration;
 using System.Data;
 using System.IO;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.UI.WebControls;
 using static MantenimientosPTM.AccesoDatosAlmacen;
-using static MantenimientosPTM.AccesoDatosPlaneacion;
 
 namespace MantenimientosPTM.Controllers
 {

@@ -235,6 +235,8 @@ namespace MantenimientosPTM
 
             [JsonProperty("NOMBRE_MANTENIMIENTO")]
             public string NombreMantenimiento { get; set; }
+            [JsonProperty("TIENE_REFACCIONES")]
+            public string TieneRefacciones { get; set; }
             // Usuario
             [JsonProperty("USUARIO")]
             public string UsuarioGenero { get; set; }

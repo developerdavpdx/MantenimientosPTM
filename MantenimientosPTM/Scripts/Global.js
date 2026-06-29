@@ -2783,7 +2783,7 @@ class SessionManager {
         }
 
         //ALMACEN
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen") {
+        if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen" || datos_usuario[0].TIPOUSUARIO == "Almacen") {
             $("#MantenimientosMainContainer").addClass("d-none"); //MANTENIMIENTOS 
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
@@ -2791,7 +2791,7 @@ class SessionManager {
         }
 
         //PLANEACION
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion") {
+        if (datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion" || datos_usuario[0].TIPOUSUARIO == "Planeacion") {
             $("#MantenimientosMainContainer").addClass("d-none"); //MANTENIMIENTOS 
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
@@ -2799,7 +2799,7 @@ class SessionManager {
         }
 
         //PRODUCCION
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion") {
+        if (datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion" || datos_usuario[0].TIPOUSUARIO == "Produccion") {
             $("#GestionEquiposURL").addClass("d-none"); //GESTION EQUIPOS
             $("#MCProgramarURL").addClass("d-none"); //GESTION EQUIPOS
             $("#CalendarioManttoURL").addClass("d-none"); //GESTION EQUIPOS
