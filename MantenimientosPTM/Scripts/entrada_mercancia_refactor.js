@@ -59,7 +59,7 @@ class EntradaMercanciaApp {
 
         // Botón Limpiar
         $('#btnLimpiarFiltros').on('click', () => {
-            $('#FiltroOrdenTrabajo, #FiltroFechaInicio, #FiltroFechaFin, #FiltroPlanta, #FiltroNivelUrgencia').val('');
+            $('#FiltroOC, #FiltroCN, #FiltroFechaInicio, #FiltroFechaFin, #FiltroPlanta').val('');
             this._recargarTabla();
         });
     }
@@ -370,7 +370,7 @@ class EntradaMercanciaManager {
     }
 
     // ============================
-    // TABLA DE ÓRDENES DE COMPRA
+    // TABLA DE ÓRDENES DE COMPRA - VERSIÓN MEJORADA
     // ============================
     llenarOrdenesCompra() {
         try {
@@ -385,6 +385,74 @@ class EntradaMercanciaManager {
                 else if (window.innerWidth < 1400) return 150;
                 else return 113;
             }
+
+            // ✅ Renderer customizado para detalles responsivos
+            const renderDetallesResponsive = (columns) => {
+                const hiddenColumns = columns.filter(col => col.hidden);
+                if (hiddenColumns.length === 0) return false;
+
+                const normalizar = (texto) => {
+                    return texto.toUpperCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .trim();
+                };
+
+                const obtenerIcono = (titulo) => {
+                    const tituloNorm = normalizar(titulo);
+                    const iconos = {
+                        'N° OC': 'bi bi-hash',
+                        'PROVEEDOR': 'bi bi-building',
+                        'CODIGO PROVEEDOR': 'bi bi-upc',
+                        'CARDCODE': 'bi bi-upc',
+                        'CARDNAME': 'bi bi-building',
+                        'FECHA DOCUMENTO': 'bi bi-calendar-event',
+                        'DOCDATE': 'bi bi-calendar-event',
+                        'FECHA VENCIMIENTO': 'bi bi-calendar-x',
+                        'DOCDUEDATE': 'bi bi-calendar-x',
+                        'COMENTARIOS': 'bi bi-chat-left-text',
+                        'COMMENTS': 'bi bi-chat-left-text',
+                        'ACCIONES': 'bi bi-lightning-fill'
+                    };
+                    return iconos[tituloNorm] || 'bi bi-circle-fill';
+                };
+
+                let detallesHtml = '';
+                $.each(hiddenColumns, function (i, col) {
+                    const title = col.title;
+                    const valueContent = col.data || '<em class="text-muted">Sin información</em>';
+                    const iconClass = obtenerIcono(title);
+
+                    detallesHtml += `
+                <div class="row mb-3 py-2 border-bottom align-items-center">
+                    <div class="col-5">
+                        <i class="${iconClass} me-2" style="font-size: 1.3rem; color: #0D6EFD;"></i>
+                        <strong>${title}</strong>
+                    </div>
+                    <div class="col-7">
+                        <span class="badge px-3 py-2" style="background-color: #F2F2F2; color: #333;">
+                            ${valueContent}
+                        </span>
+                    </div>
+                </div>`;
+                });
+
+                return `
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-text me-2" style="color: #0D6EFD;"></i>
+                        Detalle de Orden de Compra
+                    </h5>
+                </div>
+                <div class="card-body">
+                    ${detallesHtml}
+                </div>
+                <div class="card-footer bg-light text-muted">
+                    <small>Última actualización: ${new Date().toLocaleDateString()}</small>
+                </div>
+            </div>`;
+            };
 
             const table = $('#tablaOrdenesCompra').DataTable({
                 processing: false,
@@ -401,56 +469,7 @@ class EntradaMercanciaManager {
                     details: {
                         type: 'column',
                         target: 0,
-                        renderer: function (api, rowIdx, columns) {
-                            const hiddenColumns = columns.filter(col => col.hidden);
-                            if (hiddenColumns.length === 0) return false;
-
-                            function normalizar(texto) {
-                                return texto.toUpperCase()
-                                    .normalize("NFD")
-                                    .replace(/[\u0300-\u036f]/g, "")
-                                    .trim();
-                            }
-
-                            function obtenerIcono(titulo) {
-                                const iconos = {
-                                    'N° OC': 'bi bi-hash',
-                                    'PROVEEDOR': 'bi bi-building',
-                                    'CÓDIGO PROVEEDOR': 'bi bi-upc',
-                                    'FECHA DOCUMENTO': 'bi bi-calendar-event',
-                                    'FECHA VENCIMIENTO': 'bi bi-calendar-x',
-                                    'COMENTARIOS': 'bi bi-chat-left-text',
-                                    'ACCIONES': 'bi bi-lightning-fill'
-                                };
-                                return iconos[normalizar(titulo)] || 'bi bi-circle-fill';
-                            }
-
-                            let detallesHtml = '';
-                            $.each(hiddenColumns, function (i, col) {
-                                const iconClass = obtenerIcono(col.title);
-                                const valueContent = col.data || '<em class="text-muted">Sin información</em>';
-                                detallesHtml +=
-                                    '<div class="row mb-3 py-2 border-bottom align-items-center">' +
-                                    '  <div class="col-5">' +
-                                    `    <i class="${iconClass} me-2" style="font-size:1.3rem; color:#0D6EFD;"></i>` +
-                                    `    <strong>${col.title}</strong>` +
-                                    '  </div>' +
-                                    '  <div class="col-7">' +
-                                    `    <span class="badge px-3 py-2" style="background-color:#F2F2F2; color:#333;">${valueContent}</span>` +
-                                    '  </div>' +
-                                    '</div>';
-                            });
-
-                            return '<div class="card shadow-sm mt-3">' +
-                                '  <div class="card-header bg-light">' +
-                                '    <h5 class="mb-0"><i class="bi bi-file-earmark-text me-2" style="color:#0D6EFD;"></i>Detalle de Orden de Compra</h5>' +
-                                '  </div>' +
-                                `  <div class="card-body">${detallesHtml}</div>` +
-                                '  <div class="card-footer bg-light text-muted">' +
-                                `    <small>Última actualización: ${new Date().toLocaleDateString()}</small>` +
-                                '  </div>' +
-                                '</div>';
-                        }
+                        renderer: (api, rowIdx, columns) => renderDetallesResponsive(columns)
                     }
                 },
                 ajax: {
@@ -461,6 +480,7 @@ class EntradaMercanciaManager {
                     complete: () => GlobalUtil.mostrarLoader(false),
                     data: (d) => $.extend({}, d, {
                         "FiltroOC": $("#FiltroOC").val() || null,
+                        "FiltroCN": $("#FiltroCN").val() || null,
                         "FiltroFechaInicio": $("#FiltroFechaInicio").val() || null,
                         "FiltroFechaFin": $("#FiltroFechaFin").val() || null,
                         "FiltroPlanta": $("#FiltroPlanta").val() || null,
@@ -469,10 +489,11 @@ class EntradaMercanciaManager {
                         return json.data;
                     }
                 },
+                // ✅ COLUMNAS CON ESTILOS MEJORADOS
                 columns: [
-                    // Columna 0: Control Responsive (+/-)
+                    // Columna 0: Control Responsive
                     {
-                        className: 'dtr-control',
+                        className: 'dtr-control text-center',
                         orderable: false,
                         data: null,
                         defaultContent: '',
@@ -483,6 +504,7 @@ class EntradaMercanciaManager {
                         data: null,
                         orderable: false,
                         className: 'all text-center',
+                        width: '100px',
                         render: (data, type, row) => {
                             const tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
                             const esAdmin = tipoUsuario === "AdminMtto" || tipoUsuario === "Administrador";
@@ -490,66 +512,86 @@ class EntradaMercanciaManager {
                             if (!esAdmin) return '';
 
                             const dataAttrs = `
-                            data-docentry="${row.DocEntry || ''}"
-                            data-docnum="${row.DocNum || ''}"
-                            data-cardcode="${row.CardCode || ''}"
-                            data-cardname="${row.CardName || ''}"`;
+                        data-docentry="${row.DocEntry || ''}"
+                        data-docnum="${row.DocNum || ''}"
+                        data-cardcode="${row.CardCode || ''}"
+                        data-cardname="${row.CardName || ''}"`;
 
-                            return `<button class="btn btn-sm btn-success btn-entrada-mercancia"
-                            data-bs-toggle="tooltip" title="Generar Entrada de Mercancía" ${dataAttrs}>
-                            <i class="bi bi-box-arrow-in-down"></i>
-                        </button>`;
+                            return `<button class="btn btn-sm btn-ptm-mid btn-entrada-mercancia"  // Azul ✅ 
+                                data-bs-toggle="tooltip" title="Generar Entrada de Mercancía" 
+                                ${dataAttrs}>
+                                <i class="bi bi-box-arrow-in-down"></i>
+                            </button>`;
                         }
                     },
                     // Columna 2: N° OC
                     {
                         data: "DocNum",
+                        title: "N° OC",
                         className: "text-center",
                         render: (data) => data
                             ? `<span class="badge bg-blue-ptm badge-custom"><i class="bi bi-hash me-1"></i>${data}</span>`
-                            : ''
+                            : '<em class="text-muted">—</em>'
                     },
-                    // Columna 3: Código Proveedor
+                    // Columna 3: Código Proveedor (oculto)
                     {
                         data: "CardCode",
+                        title: "Código Proveedor",
                         className: "text-center",
                         render: (data) => data
-                            ? `<span class="badge bg-secondary badge-custom">${data}</span>`
-                            : 'N/A'
+                            ? `<span class="badge bg-secondary badge-custom"><i class="bi bi-upc me-1"></i>${data}</span>`
+                            : '<em class="text-muted">N/A</em>'
                     },
                     // Columna 4: Proveedor
                     {
                         data: "CardName",
-                        render: (data) => data || 'N/A'
+                        title: "Proveedor",
+                        className: "text-start",
+                        render: (data) => data
+                            ? `<span class="badge bg-light text-dark badge-custom" style="border-left: 3px solid #0D6EFD;">
+                             <i class="bi bi-building me-1" style="color: #0D6EFD;"></i>${data}
+                           </span>`
+                            : '<em class="text-muted">N/A</em>'
                     },
                     // Columna 5: Fecha Documento
                     {
                         data: "DocDate",
+                        title: "Fecha Documento",
                         className: "text-center",
                         render: (data) => data
-                            ? `<span><i class="bi bi-calendar-event me-1 text-muted"></i>${data}</span>`
-                            : ''
+                            ? `<span class="badge btn-ptm-mid badge-custom"><i class="bi bi-calendar-event me-1"></i>${data}</span>`
+                            : '<em class="text-muted">—</em>'
                     },
                     // Columna 6: Fecha Vencimiento
                     {
                         data: "DocDueDate",
+                        title: "Fecha Vencimiento",
                         className: "text-center",
                         render: (data) => data
-                            ? `<span><i class="bi bi-calendar-x me-1 text-muted"></i>${data}</span>`
-                            : ''
+                            ? `<span class="badge bg-warning text-dark badge-custom"><i class="bi bi-calendar-x me-1"></i>${data}</span>`
+                            : '<em class="text-muted">—</em>'
                     },
                     // Columna 7: Comentarios
                     {
                         data: "Comments",
-                        render: (data) => data
-                            ? `<span class="text-truncate d-inline-block" style="max-width:200px;" title="${data}">${data}</span>`
-                            : '<em class="text-muted">Sin comentarios</em>'
+                        title: "Comentarios",
+                        className: "text-start",
+                        render: (data) => {
+                            if (!data) return '<em class="text-muted">Sin comentarios</em>';
+                            const texto = data.length > 50 ? data.substring(0, 50) + '...' : data;
+                            return `<span class="text-truncate d-inline-block" 
+                                style="max-width:200px;" 
+                                title="${data}">
+                                <i class="bi bi-chat-left-text me-1" style="color: #0D6EFD;"></i>
+                                ${texto}
+                            </span>`;
+                        }
                     }
                 ],
+                // ✅ COLUMNDEFS
                 columnDefs: [
                     { orderable: false, targets: [0, 1] },
-                    { visible: false, targets: [3] },           // Código proveedor oculto por defecto
-                    { className: "text-center", targets: [0, 1, 2, 5, 6] },
+                    { visible: false, targets: [3] },  // Código proveedor oculto por defecto
 
                     // Prioridades Responsive
                     { responsivePriority: 1, targets: 0 },    // Control +/-
@@ -585,13 +627,24 @@ class EntradaMercanciaManager {
                     $(row).attr('data-doc-entry', data.DocEntry);
                     $(row).attr('data-doc-num', data.DocNum);
                     $(row).attr('data-card-code', data.CardCode);
+
+                    $(row).data('oc-completa', {
+                        docEntry: data.DocEntry,
+                        docNum: data.DocNum,
+                        cardCode: data.CardCode,
+                        cardName: data.CardName,
+                        docDate: data.DocDate,
+                        docDueDate: data.DocDueDate,
+                        comments: data.Comments
+                    });
                 },
                 drawCallback: function () {
                     table.columns.adjust();
                 }
             });
 
-            $(window).on('resize', function () {
+            // ✅ Manejo de resize con namespace
+            $(window).off('resize.ordenesCompra').on('resize.ordenesCompra', () => {
                 if ($.fn.DataTable.isDataTable('#tablaOrdenesCompra')) {
                     const nuevoOffset = calcularHeaderOffset();
                     $('#tablaOrdenesCompra').DataTable().fixedHeader.headerOffset(nuevoOffset);
