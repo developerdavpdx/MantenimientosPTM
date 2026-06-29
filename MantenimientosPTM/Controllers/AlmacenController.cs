@@ -755,7 +755,11 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 //Enviar notificacion de autorizacion
-                bool notificacion = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString());
+                var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString());
+                if (notificacionEmail == null || notificacionEmail.Status != "OK")
+                {
+                    log.Warn($"Notificación de autorización no enviada o con error: {notificacionEmail?.Message ?? "Sin respuesta"}");
+                }
 
                 jsonResponse.Status = "SI";
                 jsonResponse.Message = $"Solicitud de autorización para requisición de compra #{idSolicitudCompra} generada correctamente. En espera de autorización.";
@@ -872,8 +876,9 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpPost]
-        public async Task<bool> EnviarSolicitudCompraAutorizacion(int idSolicitudCompra, string folio, List<ArticuloRequisicionModel> articulos, string Planta)
+        public async Task<GlobalCommands.JsonResponseMtto> EnviarSolicitudCompraAutorizacion(int idSolicitudCompra, string folio, List<ArticuloRequisicionModel> articulos, string Planta)
         {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
             try
             {
                 string baseUrl = Request.Url.GetLeftPart(UriPartial.Authority) + Url.Content("~");
@@ -900,10 +905,13 @@ namespace MantenimientosPTM.Controllers
                     emails = emailsData.Select(e => e["Email"].ToString()).ToList();
                 }
 
-                //Si no hay emails retornar respuesta exitosa
+                //Si no hay emails retornar respuesta OK (sin destinatarios)
                 if (emails.Count == 0)
                 {
-                    return false;
+                    jsonResponse.Status = "OK";
+                    jsonResponse.Message = "No hay destinatarios configurados para esta planta.";
+                    jsonResponse.Data = string.Empty;
+                    return jsonResponse;
                 }
 
                 // ✅ 2. Codificar parámetros para URL
@@ -1008,13 +1016,20 @@ namespace MantenimientosPTM.Controllers
                 if (!enviado)
                     throw new Exception("Error al enviar el correo de autorización.");
 
-                return true;
+                jsonResponse.Status = "OK";
+                jsonResponse.Message = "Correo de autorización enviado correctamente.";
+                jsonResponse.Data = idSolicitudCompra.ToString();
+                return jsonResponse;
             }
             catch (Exception ex)
             {
                 string MethodName = MethodBase.GetCurrentMethod().Name;
                 string ControllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
-                return false;
+                log.Error($"Error en {ControllerName}.{MethodName}: {ex.Message}");
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = ex.Message;
+                jsonResponse.Data = string.Empty;
+                return jsonResponse;
             }
         }
 
@@ -1077,9 +1092,10 @@ namespace MantenimientosPTM.Controllers
 
                     // ✅ 4. Si fue autorizada, crear PR en SAP
 
-                    bool SC = await GenerarSolicitudCompra(idSolicitudCompra, folio);
+                    var sapResp = await GenerarSolicitudCompra(idSolicitudCompra, folio);
 
-                    if (SC) {
+                    if (sapResp != null && !sapResp.IsError)
+                    {
                         // Actualizar estatus a Aprobado
                         var paramsUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
@@ -1388,10 +1404,10 @@ namespace MantenimientosPTM.Controllers
 
                     if (resultCabeceraSap.JsonResult.Contains("ERROR"))
                     {
-                        return false;
+                        return new GlobalCommands.SapResponse { IsError = true, Message = resultCabeceraSap.JsonResult.ToString() };
                     }
 
-                    return false;
+                    return sapResult;
                 }
 
                 // ✅ 4 — Actualizar cabecera con DocNum, DocEntry y estatus Aprobado
@@ -1415,11 +1431,11 @@ namespace MantenimientosPTM.Controllers
 
                 if (resultCabeceraSapOK.JsonResult.Contains("ERROR"))
                 {
-                    return false;
+                    return new GlobalCommands.SapResponse { IsError = true, Message = resultCabeceraSapOK.JsonResult.ToString() };
                 }
 
                 // ✅ Todo OK
-                return true;
+                return sapResult;
 
             }
             catch (Exception ex)
@@ -1427,7 +1443,7 @@ namespace MantenimientosPTM.Controllers
                 string MethodName = MethodBase.GetCurrentMethod().Name;
                 string ControllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
                 string msg = $"Error en {MethodName} de {ControllerName}: {ex.Message}";
-                return false;
+                return new GlobalCommands.SapResponse { IsError = true, Message = msg };
             }
         }
         [HttpPost]
