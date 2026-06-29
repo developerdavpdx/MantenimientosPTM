@@ -1075,6 +1075,10 @@ namespace MantenimientosPTM.Controllers
                     ? estadoActual["FOLIO_COMPRA"].ToString()
                     : idSolicitudCompra.ToString();
 
+                string planta = estadoActual != null && estadoActual.ContainsKey("PLANTA")
+                   ? estadoActual["PLANTA"].ToString()
+                   : string.Empty;
+
                 // Si ya fue procesada, mostrar vista con estado actual
                 if (currentStatus == "Aprobado" || currentStatus == "No Aprobado")
                 {
@@ -1110,6 +1114,10 @@ namespace MantenimientosPTM.Controllers
                         if (resultUpdate.JsonResult.Contains("ERROR"))
                             throw new Exception("Error al actualizar el estatus de la solicitud.");
                     }
+
+                    // ✅ NOTIFICAR A TODOS LOS CLIENTES
+                    var contextSC = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                    contextSC.Clients.All.actualizarTablaSolicitudCompra(planta);
 
 
                     // ✅ 5. Mostrar vista con resultado
@@ -1190,6 +1198,10 @@ namespace MantenimientosPTM.Controllers
                     ? estadoActual["FOLIO_COMPRA"].ToString()
                     : idSolicitudCompra.ToString();
 
+                string planta = estadoActual != null && estadoActual.ContainsKey("PLANTA")
+                    ? estadoActual["PLANTA"].ToString()
+                    : string.Empty;
+
                 // Si ya fue procesada, mostrar vista con estado actual
                 if (currentStatus == "Aprobado" || currentStatus == "No Aprobado")
                 {
@@ -1215,6 +1227,11 @@ namespace MantenimientosPTM.Controllers
 
                 if (resultUpdate.JsonResult.Contains("ERROR"))
                     throw new Exception("Error al actualizar el estatus de la solicitud.");
+
+
+                // ✅ NOTIFICAR A TODOS LOS CLIENTES
+                var contextSC = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                contextSC.Clients.All.actualizarTablaSolicitudCompra(planta);
 
                 // ✅ 5. Mostrar vista con resultado
                 ViewBag.Estado = "No Aprobado";

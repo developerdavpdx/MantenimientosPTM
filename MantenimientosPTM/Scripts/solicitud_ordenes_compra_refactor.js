@@ -43,6 +43,7 @@ class SolicitudCompraApp {
         this.configurarEventosFiltros();
         this.configurarEventos();
         this.configurarAutoCompletes();
+        this.initHubSolicitudCompra();
         console.log('✅ Sistema de Solicitud de Compra inicializado correctamente');
     }
 
@@ -532,7 +533,7 @@ class SolicitudCompraApp {
 
             }, 2500);
 
-           
+
 
         } catch (error) {
             console.error('Error en createSolCompra:', error);
@@ -549,12 +550,111 @@ class SolicitudCompraApp {
         });
     }
 
+    // ========================================
+    // SIGNALR MANAGER — SOLICITUDES DE COMPRA
+    // ========================================
+    initHubSolicitudCompra() {
+        const self = this;
+        const hub = $.connection.mantenimientoHub;
+        let reconnectDelay = 5000;
+        let isReloadingSolicitudCompra = false;
+
+        const miPlanta = this.datos_usuario[0]?.PLANTA || '';
+        // Reemplaza la función debeRecibirAviso por esta versión más robusta
+        const debeRecibirAviso = (planta) => {
+            const mi = String(miPlanta || '').trim();
+            const pl = String(planta || '').trim();
+            return mi !== '' && mi === pl;
+        };
+
+        let modalActualizacion = null;
+        const $modalEl = document.getElementById('actualizacionRefaccionesModal');
+
+        // ✅ Inicializar modal de actualización
+        if ($modalEl) {
+            modalActualizacion = new bootstrap.Modal($modalEl, {
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            const btnConfirmar = document.getElementById('btnConfirmarActualizacion');
+            if (btnConfirmar) {
+                btnConfirmar.addEventListener('click', () => {
+                    modalActualizacion.hide();
+                    self._recargarTabla();
+                });
+            }
+        }
+
+        // ✅ Método que se ejecuta cuando se recibe notificación
+        hub.client.actualizarTablaSolicitudCompra = function (planta) {
+            console.warn("📡 Actualización Solicitud Compra recibida");
+
+            if (!debeRecibirAviso(planta)) {
+                console.info("🔕 Aviso ignorado — no corresponde a esta planta:", miPlanta);
+                return;
+            }
+            // Validaciones para no recargar innecesariamente
+            if ($modalEl && $modalEl.classList.contains('show')) {
+                console.info("🔕 Modal de actualización ya está abierto");
+                return;
+            }
+
+            if (isReloadingSolicitudCompra) {
+                console.info("🔄 Recarga ya en progreso");
+                return;
+            }
+
+            // Mostrar modal de actualización
+            if (modalActualizacion) {
+                console.info("✅ Mostrando modal de actualización");
+                modalActualizacion.show();
+            } else {
+                // Fallback: recargar directo si no hay modal
+                self._recargarTabla();
+            }
+        };
+
+        // ✅ Iniciar conexión SignalR
+        $.connection.hub.start({
+            transport: ['webSockets', 'longPolling']
+        }).done(function () {
+            console.log("✅ SignalR Solicitud Compra conectado");
+        }).fail(function (error) {
+            console.error("❌ Error al conectar SignalR Solicitud Compra:", error);
+        });
+
+        // ✅ Eventos de reconexión
+        $.connection.hub.reconnecting(function () {
+            console.warn("🔄 SignalR Solicitud Compra reconectando...");
+        });
+
+        $.connection.hub.reconnected(function () {
+            console.info("✅ SignalR Solicitud Compra reconectado");
+            reconnectDelay = 5000;
+        });
+
+        $.connection.hub.disconnected(function () {
+            console.error("❌ SignalR Solicitud Compra desconectado");
+            setTimeout(function () {
+                console.warn(`🔁 Reintentando conexión en ${reconnectDelay / 1000}s...`);
+                $.connection.hub.start();
+                reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+            }, reconnectDelay);
+        });
+    }
 
     _recargarTabla() {
+        let isReloadingSolicitudCompra = true;
+
         if ($.fn.DataTable.isDataTable('#tablaSolicitudesCompra')) {
-            $('#tablaSolicitudesCompra').DataTable().ajax.reload();
+            $('#tablaSolicitudesCompra').DataTable().ajax.reload(() => {
+                isReloadingSolicitudCompra = false;
+                console.info("✅ Tabla recargada correctamente");
+            }, false);
         } else {
             this.compraManager.llenarSolicitudesCompra();
+            isReloadingSolicitudCompra = false;
         }
     }
 
