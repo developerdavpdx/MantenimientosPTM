@@ -26,7 +26,8 @@ namespace MantenimientosPTM
         }
 
         public HanaProcedureResult ExecuteProcedureHanaAuto(
-            string commandText, Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)> parameters)
+        string commandText,
+        Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)> parameters)
         {
             HanaProcedureResult result = new HanaProcedureResult();
             string ConnectionString = ConfigurationManager.ConnectionStrings["HANAConnection"].ConnectionString;
@@ -49,19 +50,26 @@ namespace MantenimientosPTM
                             {
                                 HanaDbType type;
 
-                                // Determinar tipo según valor o el tipo predefinido
                                 if (param.Value.value == null)
                                 {
-                                    type = param.Value.type; // se respeta el tipo definido para OUT
+                                    type = param.Value.type;
                                 }
                                 else if (param.Value.value is int || param.Value.value is int?)
+                                {
                                     type = HanaDbType.Integer;
+                                }
                                 else if (param.Value.value is decimal || param.Value.value is decimal?)
+                                {
                                     type = HanaDbType.Decimal;
+                                }
                                 else if (param.Value.value is DateTime || param.Value.value is DateTime?)
+                                {
                                     type = HanaDbType.TimeStamp;
+                                }
                                 else
+                                {
                                     type = HanaDbType.NVarChar;
+                                }
 
                                 var hanaParam = new HanaParameter(param.Key, type)
                                 {
@@ -69,7 +77,6 @@ namespace MantenimientosPTM
                                     Value = param.Value.value ?? DBNull.Value
                                 };
 
-                                // ✅ Asignar Size para NVarChar y evitar truncado
                                 if (type == HanaDbType.NVarChar && param.Value.value is string strVal)
                                 {
                                     hanaParam.Size = Math.Max(strVal.Length, 1);
@@ -79,22 +86,38 @@ namespace MantenimientosPTM
                             }
                         }
 
-
                         using (HanaDataReader reader = cmd.ExecuteReader())
                         {
-                            DataTable dt = new DataTable();
-                            dt.Load(reader);
-                            Console.WriteLine($"Número de filas cargadas: {dt.Rows.Count}");
+                            var rows = new List<Dictionary<string, object>>();
 
-                            using (StringWriter sw = new StringWriter())
-                            using (JsonTextWriter jsonWriter = new JsonTextWriter(sw))
+                            while (reader.Read())
                             {
-                                JsonSerializer serializer = new JsonSerializer();
-                                serializer.Serialize(jsonWriter, dt);
-                                Console.WriteLine("JSON Result: " + sw.ToString());
-                                result.JsonResult = sw.ToString();
+                                var row = new Dictionary<string, object>();
+
+                                for (int i = 0; i < reader.FieldCount; i++)
+                                {
+                                    object value = reader.IsDBNull(i)
+                                        ? null
+                                        : reader.GetValue(i);
+
+                                    row.Add(reader.GetName(i), value);
+                                }
+
+                                rows.Add(row);
                             }
 
+                            Console.WriteLine($"Número de filas leídas: {rows.Count}");
+
+                            result.JsonResult = JsonConvert.SerializeObject(
+                                rows,
+                                Formatting.None,
+                                new JsonSerializerSettings
+                                {
+                                    DateFormatString = "yyyy-MM-ddTHH:mm:ss.fff",
+                                    NullValueHandling = NullValueHandling.Include
+                                });
+
+                            Console.WriteLine("JSON Result: " + result.JsonResult);
                         }
                     }
                 }
@@ -106,6 +129,82 @@ namespace MantenimientosPTM
 
             return result;
         }
+        //public HanaProcedureResult ExecuteProcedureHanaAuto(
+        //    string commandText, Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)> parameters)
+        //{
+        //    HanaProcedureResult result = new HanaProcedureResult();
+        //    string ConnectionString = ConfigurationManager.ConnectionStrings["HANAConnection"].ConnectionString;
+
+        //    using (HanaConnection myConnection = new HanaConnection(ConnectionString))
+        //    {
+        //        try
+        //        {
+        //            myConnection.Open();
+
+        //            using (HanaCommand cmd = new HanaCommand(commandText, myConnection))
+        //            {
+        //                cmd.CommandTimeout = 60;
+        //                cmd.CommandType = CommandType.StoredProcedure;
+
+        //                // Agregar parámetros
+        //                if (parameters != null)
+        //                {
+        //                    foreach (var param in parameters)
+        //                    {
+        //                        HanaDbType type;
+
+        //                        // Determinar tipo según valor o el tipo predefinido
+        //                        if (param.Value.value == null)
+        //                        {
+        //                            type = param.Value.type; // se respeta el tipo definido para OUT
+        //                        }
+        //                        else if (param.Value.value is int || param.Value.value is int?)
+        //                            type = HanaDbType.Integer;
+        //                        else if (param.Value.value is decimal || param.Value.value is decimal?)
+        //                            type = HanaDbType.Decimal;
+        //                        else if (param.Value.value is DateTime || param.Value.value is DateTime?)
+        //                            type = HanaDbType.TimeStamp;
+        //                        else
+        //                            type = HanaDbType.NVarChar;
+
+        //                        var hanaParam = new HanaParameter(param.Key, type)
+        //                        {
+        //                            Direction = param.Value.direction,
+        //                            Value = param.Value.value ?? DBNull.Value
+        //                        };
+
+        //                        // ✅ Asignar Size para NVarChar y evitar truncado
+        //                        if (type == HanaDbType.NVarChar && param.Value.value is string strVal)
+        //                        {
+        //                            hanaParam.Size = Math.Max(strVal.Length, 1);
+        //                        }
+
+        //                        cmd.Parameters.Add(hanaParam);
+        //                    }
+        //                }
+
+
+        //                using (HanaDataReader reader = cmd.ExecuteReader()) { 
+        //                    DataTable dt = new DataTable(); dt.Load(reader); 
+        //                    Console.WriteLine($"Número de filas cargadas: {dt.Rows.Count}"); 
+        //                    using (StringWriter sw = new StringWriter()) 
+        //                    using (JsonTextWriter jsonWriter = new JsonTextWriter(sw)) 
+        //                    { JsonSerializer serializer = new JsonSerializer(); 
+        //                        serializer.Serialize(jsonWriter, dt); 
+        //                        Console.WriteLine("JSON Result: " + sw.ToString()); 
+        //                        result.JsonResult = sw.ToString(); 
+        //                    } 
+        //                }
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            result.JsonResult = $"Error: {ex.Message} | Inner: {ex.InnerException?.Message}";
+        //        }
+        //    }
+
+        //    return result;
+        //}
 
         //Ejecutar query de resultado multiple en formato JSONSTRING
         public string ExecuteProcedure(string commandText, Dictionary<string, string> parameters)

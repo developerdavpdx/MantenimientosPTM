@@ -24,6 +24,13 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarPeriodicidadEquipo\"";
             }
         }
+        public string GCDesactivarPeriodicidadEquipo
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTODesactivarPeriodicidadEquipo\"";
+            }
+        }
         public string GCActualizaEquipo
         {
             get
@@ -159,6 +166,13 @@ namespace MantenimientosPTM
             get
             {
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarArea\"";
+            }
+        }
+        public string GCConsultarPeriodicidadesEquipo
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOConsultarPeriodicidadesXEquipo\"";
             }
         }
         #endregion
@@ -387,18 +401,34 @@ namespace MantenimientosPTM
         }
         public class PeriodicidadEquipoMTTO
         {
+            // IdEquipoPeriodicidad
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public int? Id_Equipo_Periodicidad { get; set; }
+
             // IdEquipo
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
             public int? Id_Equipo { get; set; }
+
             // IdPeriodicidad
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
             public int? Id_Periodicidad { get; set; }
-            // Usuario
+
+            // Estatus
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
+            public int? Estatus { get; set; }
+
+            // Usuario
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
             public string Usuario { get; set; }
+
+            // FechaCreacion
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public DateTime? Fecha_Creacion { get; set; }
         }
         public class EquipoMTTOLIST
         {

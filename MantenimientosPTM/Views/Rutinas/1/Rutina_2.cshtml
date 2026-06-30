@@ -1,0 +1,362 @@
+﻿@{
+                    Layout = null;
+                }
+                <div id="rutinaChecklist">
+
+    <!-- seccion-duracion -->
+    <div id="seccion-duracion" class="nota-seccion position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-nota position-absolute top-0 end-0 m-1 fs-4" title="Eliminar" style="display:none;">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label w-100">
+            <span class="text-justify texto-actividad">MP_EXTRUSOR FRECUENCIA TRIMESTRAL DURACIÓN 9 HRS</span>
+        </label>
+    </div>
+
+    <!-- seccion-descripcion -->
+    <div id="seccion-descripcion" class="nota-seccion position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-nota position-absolute top-0 end-0 m-1 fs-4" title="Eliminar" style="display:none;">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label w-100">
+            <span class="text-justify texto-actividad">TODO EL MATERIAL QUE SEA UTILIZADO PARA RELIZAR AJUSTES, PRUEBAS O LIBERACION DEL EQUIPO, DEBE SER IDENTIFICADO O COLOCADO EN EL CONTENEDOR DE SCRAP DE LA ESTACION. O ENTREGADO AL DEPTO. DE CALIDAD O PRODUCCION PARA SU EVALUACION.</span>
+        </label>
+    </div>
+
+    <!-- seccion-nota-inicial -->
+    <div id="seccion-nota-inicial" class="nota-seccion position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-nota position-absolute top-0 end-0 m-1 fs-4" title="Eliminar" style="display:none;">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label w-100">
+            <span class="text-justify texto-actividad">Nota Inicial: Revisar, reportar y corregir toda reparación provisional/temporal para sujetar partes y conexiones eléctricas, mecánicas y/o neumáticas que se encuentren al realizar mantenimiento.</span>
+        </label>
+    </div>
+
+
+    <!-- Seccion 1 -->
+    <div id="seccion-1" class="mb-3 position-relative seccion-actividad p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-nota position-absolute top-0 end-0 m-1 fs-4" title="Eliminar" style="display:none;">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="texto-actividad">Alimentador:</span>
+        </label>
+    </div>
+
+    <!-- Actividad 1 -->
+    <div id="actividad-1" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">1.</span>
+            <span class="texto-actividad">Revise motor eléctrico, cableado y conexiones.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Actividad 2 -->
+    <div id="actividad-2" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">2.</span>
+            <span class="texto-actividad">Revise estado reductor, corrija posibles fugas, rellene o cambie aceite.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Actividad 3 -->
+    <div id="actividad-3" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">3.</span>
+            <span class="texto-actividad">Revise estado de acoplamiento (flecha, cuña, retén...)</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Actividad 4 -->
+    <div id="actividad-4" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">4.</span>
+            <span class="texto-actividad">Revise flecha, extensiones y barras de agitador, así como usillo alimentador.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Seccion 2 -->
+    <div id="seccion-2" class="mb-3 position-relative seccion-actividad p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-nota position-absolute top-0 end-0 m-1 fs-4" title="Eliminar" style="display:none;">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="texto-actividad">Transmisión potencia:</span>
+        </label>
+    </div>
+
+    <!-- Actividad 5 -->
+    <div id="actividad-5" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">5.</span>
+            <span class="texto-actividad">Revise juego excesivo en caja de engranes principal</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Actividad 6 -->
+    <div id="actividad-6" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">6.</span>
+            <span class="texto-actividad">Revise estado y nivel de aceite reductor principal de extrusor.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Actividad 7 -->
+    <div id="actividad-7" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">7.</span>
+            <span class="texto-actividad">Revise tubería, válvulas y conexiones de todo el circuito de aceite y agua.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Actividad 8 -->
+    <div id="actividad-8" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">8.</span>
+            <span class="texto-actividad">Revise y/o lubrique rodamientos de motor principal.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Actividad 9 -->
+    <div id="actividad-9" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">9.</span>
+            <span class="texto-actividad">Revise el estado y tensión bandas y poleas.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Seccion 3 -->
+    <div id="seccion-3" class="mb-3 position-relative seccion-actividad p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-nota position-absolute top-0 end-0 m-1 fs-4" title="Eliminar" style="display:none;">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="texto-actividad">Enfto. Barril</span>
+        </label>
+    </div>
+
+    <!-- Actividad 10 -->
+    <div id="actividad-10" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">10.</span>
+            <span class="texto-actividad">Revise bomba, conexiones, válvulas, mangueras y tubería. Corrija posibles fugas.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Actividad 11 -->
+    <div id="actividad-11" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">11.</span>
+            <span class="texto-actividad">Limpie electro-válvulas, asegure su funcionamiento.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Actividad 12 -->
+    <div id="actividad-12" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">12.</span>
+            <span class="texto-actividad">Revise estado de agua, rellene o cambie si es necesario, revise mirilla.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Seccion 4 -->
+    <div id="seccion-4" class="mb-3 position-relative seccion-actividad p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-nota position-absolute top-0 end-0 m-1 fs-4" title="Eliminar" style="display:none;">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="texto-actividad">Sistema de vacío:</span>
+        </label>
+    </div>
+
+    <!-- Actividad 13 -->
+    <div id="actividad-13" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">13.</span>
+            <span class="texto-actividad">Revise conexiones, válvulas, mangueras y tubería. Corrija posibles fugas.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Actividad 14 -->
+    <div id="actividad-14" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">14.</span>
+            <span class="texto-actividad">Limpie electro-válvula, lubrique sistema de accionamiento.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+    <!-- Actividad 15 -->
+    <div id="actividad-15" class="mb-3 actividad position-relative p-2" draggable="true">
+        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
+            <i class="bi bi-x-circle"></i>
+        </button>
+        <label class="form-label fw-semibold input-edicion-actividad">
+            <span class="numero-actividad">15.</span>
+            <span class="texto-actividad">Checar alarma audible y visible de perdida de vacio.</span>
+        </label>
+        <div class="d-flex gap-4 mt-2">
+            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
+            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- NOTA FINAL -->
+<div id="seccion-nota-final" class="nota-seccion position-relative p-2" draggable="true">
+    <button type="button" class="btn btn-sm btn-danger btn-eliminar-nota position-absolute top-0 end-0 m-1 fs-4" title="Eliminar" style="display:none;">
+        <i class="bi bi-x-circle"></i>
+    </button>
+    <label class="form-label w-100">
+        <span class="text-justify texto-actividad">NOTA:1.- En caso de generación de residuos por estas actividades aplicar la “PRH-64018” Manejo de residuos” para el manejo y disposición de los mismos.</span>
+        <br><br>
+        <span class="text-justify texto-actividad">2.- Para la utilización de sustancias químicas o materiales peligrosos, aplicar lo indicado en la “PRH-64017” Manejo de sustancias químicas y materiales peligrosos</span>
+        <br><br>
+        <span class="text-justify texto-actividad">LINK REF: MasterWeb http://ptmsvr_mw/masterweb/webdocs.asp?sesion=202509171308448791§or=U0c6IEVIUw</span>
+        <br><br>
+    </label>
+</div>
+
+<!-- COMENTARIOS GLOBALES -->
+
+        <div id="seccion-upload-imagenes" class="nota-seccion p-3 mb-3" style="">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 style="color:var(--modal-primary); font-weight:700; margin:0;">
+                    <i class="bi bi-plus-circle me-2"></i>Agregar más imágenes
+                </h6>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCerrarUpload">
+                    <i class="bi bi-x"></i> Cerrar
+                </button>
+            </div>
+            <div class="upload-area mb-2" id="uploadAreaRutina">
+                <div class="upload-icon">📷</div>
+                <div class="upload-text">Arrastra y suelta imágenes aquí</div>
+                <div class="upload-hint">o haz clic para seleccionar archivos</div>
+                <input type="file" id="fileInputRutina" accept="image/*" multiple="" style="display:none;">
+            </div>
+            <div class="progress-bar" id="progressBarRutina" style="display:none;">
+                <div class="progress-fill" id="progressFillRutina"></div>
+            </div>
+            <div class="upload-info">
+                Formatos: JPG, PNG, GIF, WebP | Tamaño máximo: 5MB por imagen
+            </div>
+            <div class="preview-area" id="previewAreaRutina"><div class="preview-item" data-index="0">
+                    
+                    <div class="preview-overlay">
+                        <div class="file-name">fondo-moderno-con-lineas.jpg</div>
+                        <div class="file-size">682.81 KB</div>
+                        <button class="delete-btn" data-index="0">🗑️</button>
+                    </div>
+                </div></div>
+            <button type="button" class="btn-clear-all" id="clearAllRutina" style="">
+                🗑️ Limpiar todas las imágenes
+            </button>
+        </div>
+        <div id="seccion-comentarios" class="nota-seccion position-relative p-2" draggable="true">
+    <button type="button" class="btn btn-sm btn-danger btn-eliminar-nota position-absolute top-0 end-0 m-1 fs-4" title="Eliminar" style="display:none;">
+        <i class="bi bi-x-circle"></i>
+    </button>
+    <div class="mb-3">
+        <label for="Comentarios" class="form-label">Comentarios</label>
+        <textarea class="form-control" id="Comentarios" rows="3" required=""></textarea>
+    </div>
+</div>
