@@ -416,6 +416,12 @@ namespace MantenimientosPTM
             [DefaultValue(0)]
             public int? Id_Periodicidad { get; set; }
 
+            // Usuario
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string Descripcion_Periodicidad { get; set; }
+            
+
             // Estatus
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]

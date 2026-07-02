@@ -943,10 +943,21 @@ namespace MantenimientosPTM.Controllers
                                         null
                                     );
 
+                                excludedParams = new[] {
+                                    "P_ID_EQUIPO_PERIODICIDAD",
+                                    "P_DESCRIPCION_PERIODICIDAD",
+                                    "P_ESTATUS",
+                                    "P_FECHA_CREACION"
+                                };
+
+                                var parametersperiodicidad = paramPeriodicidad
+                                .Where(p => !excludedParams.Contains(p.Key))
+                                .ToDictionary(p => p.Key, p => p.Value);
+
                                 var resultPeriodicidad =
                                     Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                                         Logic.AD.GCInsertaPeriodicidadesEquipo,
-                                        paramPeriodicidad
+                                        parametersperiodicidad
                                     );
 
                                 if (resultPeriodicidad.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)

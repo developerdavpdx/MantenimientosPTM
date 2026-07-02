@@ -2,11 +2,17 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Web.Mvc;
+using Newtonsoft.Json;
+using System.Collections.Generic;
+using Sap.Data.Hana;
+using System.Data;
 
 namespace MantenimientosPTM.Controllers
 {
     public class RutinasController : Controller
     {
+        readonly LogicaEquipos Logic = new LogicaEquipos();
+
         // GET: Rutinas/Default?idEquipo=123
         public ActionResult Default(int? idEquipo, string Planta)
         {
@@ -47,9 +53,15 @@ namespace MantenimientosPTM.Controllers
 
                 // ✅ VALIDACIÓN 2: Sanitizar nombres para evitar inyección de path
                 string plantaSanitizada = SanitizarNombreDirectorio(modelo.Planta);
-                string idEquipoSanitizado = SanitizarNombreArchivo(modelo.IdEquipo.ToString());
 
-                // Construir el nombre del archivo
+                // Determinar id a usar (puede ser periodicidad)
+                int idParaArchivo = modelo.IdEquipoPeriodicidad.HasValue && modelo.IdEquipoPeriodicidad.Value > 0
+                    ? modelo.IdEquipoPeriodicidad.Value
+                    : modelo.IdEquipo;
+
+                string idEquipoSanitizado = SanitizarNombreArchivo(idParaArchivo.ToString());
+
+                // Construir el nombre del archivo usando el idParaArchivo
                 string nombreArchivo = $"Rutina_{idEquipoSanitizado}.cshtml";
                 string rutaDirectorio = Server.MapPath($"~/Views/Rutinas/{plantaSanitizada}");
                 string rutaCompleta = Path.Combine(rutaDirectorio, nombreArchivo);
@@ -198,12 +210,16 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpPost]
-        public JsonResult GuardarImagenes(int idEquipo, string planta)
+        public JsonResult GuardarImagenes(int idEquipo, string planta, int? idEquipoPeriodicidad = null)
         {
             try
             {
                 string plantaSanitizada = SanitizarNombreDirectorio(planta);
-                string rutaCarpeta = Server.MapPath($"~/ImagenesRutinas/{plantaSanitizada}/Rutina_{idEquipo}");
+                int idParaRutina = idEquipoPeriodicidad.HasValue && idEquipoPeriodicidad.Value > 0
+                    ? idEquipoPeriodicidad.Value
+                    : idEquipo;
+
+                string rutaCarpeta = Server.MapPath($"~/ImagenesRutinas/{plantaSanitizada}/Rutina_{idParaRutina}");
 
                 if (!Directory.Exists(rutaCarpeta))
                 {
@@ -226,7 +242,7 @@ namespace MantenimientosPTM.Controllers
                                 string rutaCompleta = Path.Combine(rutaCarpeta, nombreArchivo);
                                 archivo.SaveAs(rutaCompleta);
 
-                                string url = $"/ImagenesRutinas/{plantaSanitizada}/Rutina_{idEquipo}/{nombreArchivo}";
+                                string url = $"/ImagenesRutinas/{plantaSanitizada}/Rutina_{idParaRutina}/{nombreArchivo}";
                                 imagenesGuardadas.Add(url);
                             }
                         }
@@ -257,6 +273,7 @@ namespace MantenimientosPTM.Controllers
             {
                 string nombreArchivo = Request.Form["nombreArchivo"];
                 string idEquipoStr = Request.Form["idEquipo"];
+                string idEquipoPeriodicidadStr = Request.Form["idEquipoPeriodicidad"];
                 string planta = Request.Form["planta"];
 
                 if (string.IsNullOrEmpty(nombreArchivo) || string.IsNullOrEmpty(idEquipoStr) || string.IsNullOrEmpty(planta))
@@ -265,8 +282,14 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 int idEquipo = int.Parse(idEquipoStr);
+                int? idEquipoPeriodicidad = null;
+                if (!string.IsNullOrEmpty(idEquipoPeriodicidadStr))
+                {
+                    if (int.TryParse(idEquipoPeriodicidadStr, out int tmp)) idEquipoPeriodicidad = tmp;
+                }
                 string plantaSanitizada = SanitizarNombreDirectorio(planta);
-                string rutaArchivo = Server.MapPath($"~/ImagenesRutinas/{plantaSanitizada}/Rutina_{idEquipo}/{nombreArchivo}");
+                int idParaRutina = idEquipoPeriodicidad.HasValue && idEquipoPeriodicidad.Value > 0 ? idEquipoPeriodicidad.Value : idEquipo;
+                string rutaArchivo = Server.MapPath($"~/ImagenesRutinas/{plantaSanitizada}/Rutina_{idParaRutina}/{nombreArchivo}");
 
                 if (System.IO.File.Exists(rutaArchivo))
                 {
@@ -297,16 +320,22 @@ namespace MantenimientosPTM.Controllers
         // ============================================================
 
         [HttpGet]
-        public JsonResult ObtenerRutinaCompleta(int idEquipo, string planta)
+        public JsonResult ObtenerRutinaCompleta(int idEquipo, string planta, int? idEquipoPeriodicidad = null)
         {
             try
             {
                 string plantaSanitizada = SanitizarNombreDirectorio(planta);
 
+                // Determinar identificador a usar para el archivo de rutina
+                int idParaRutina = idEquipoPeriodicidad.HasValue && idEquipoPeriodicidad.Value > 0
+                    ? idEquipoPeriodicidad.Value
+                    : idEquipo;
+
                 // HTML
-                string rutaHtml = Server.MapPath($"~/Views/Rutinas/{plantaSanitizada}/Rutina_{idEquipo}.cshtml");
+                string rutaHtml = Server.MapPath($"~/Views/Rutinas/{plantaSanitizada}/Rutina_{idParaRutina}.cshtml");
 
                 string html = "<div>No existe rutina</div>";
+                bool usedDefault = false;
 
                 if (System.IO.File.Exists(rutaHtml))
                 {
@@ -319,9 +348,25 @@ namespace MantenimientosPTM.Controllers
                         html = html.Substring(index);
                     }
                 }
+                else
+                {
+                    // Si no existe rutina para el id especificado, usar la plantilla Default.cshtml
+                    string rutaDefault = Server.MapPath("~/Views/Rutinas/Default.cshtml");
+                    if (System.IO.File.Exists(rutaDefault))
+                    {
+                        html = System.IO.File.ReadAllText(rutaDefault);
+                        int index2 = html.IndexOf("<div id=\"rutinaChecklist\"");
+                        if (index2 >= 0)
+                        {
+                            html = html.Substring(index2);
+                        }
+
+                        usedDefault = true;
+                    }
+                }
 
                 // IMÁGENES
-                string rutaCarpeta = Server.MapPath($"~/ImagenesRutinas/{plantaSanitizada}/Rutina_{idEquipo}");
+                string rutaCarpeta = Server.MapPath($"~/ImagenesRutinas/{plantaSanitizada}/Rutina_{idParaRutina}");
                 var imagenes = new System.Collections.Generic.List<string>();
 
                 if (Directory.Exists(rutaCarpeta))
@@ -335,18 +380,22 @@ namespace MantenimientosPTM.Controllers
                         if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" }.Contains(ext))
                         {
                             string nombre = Path.GetFileName(archivo);
-                            string url = $"/ImagenesRutinas/{plantaSanitizada}/Rutina_{idEquipo}/{nombre}";
+                            string url = $"/ImagenesRutinas/{plantaSanitizada}/Rutina_{idParaRutina}/{nombre}";
                             imagenes.Add(url);
                         }
                     }
                 }
 
-                return Json(new
+                var responseObj = new
                 {
                     Status = "OK",
                     Html = html,
-                    Imagenes = imagenes
-                }, JsonRequestBehavior.AllowGet);
+                    Imagenes = imagenes,
+                    Message = usedDefault ? "No se encontró rutina asignada para este equipo en la periodicidad seleccionada, se mostrará la plantilla por default" : string.Empty,
+                    UsedDefault = usedDefault
+                };
+
+                return Json(responseObj, JsonRequestBehavior.AllowGet);
             }
             catch (Exception ex)
             {
@@ -355,6 +404,39 @@ namespace MantenimientosPTM.Controllers
                     Status = "ERROR",
                     Message = ex.Message
                 }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        //Obtener Periodicidades
+
+        [HttpGet]
+        public JsonResult ObtenerPeriodicidadesEquipo(int idEquipo)
+        {
+            try
+            {
+                var parametrosConsulta = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_IDEQUIPO", (idEquipo, ParameterDirection.Input, HanaDbType.Integer) }
+                };
+
+                var resultConsulta = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCConsultarPeriodicidadesEquipo,
+                    parametrosConsulta
+                );
+
+                List<AccesoDatosEquipos.PeriodicidadEquipoMTTO> periodicidades =
+                    new List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>();
+
+                if (!string.IsNullOrEmpty(resultConsulta.JsonResult) && resultConsulta.JsonResult != "[]")
+                {
+                    periodicidades = JsonConvert.DeserializeObject<List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>>(resultConsulta.JsonResult);
+                }
+
+                return Json(new { Status = "OK", Periodicidades = periodicidades }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { Status = "ERROR", Message = ex.Message }, JsonRequestBehavior.AllowGet);
             }
         }
 
@@ -511,6 +593,7 @@ namespace MantenimientosPTM.Controllers
     public class RutinaModel
     {
         public int IdEquipo { get; set; }
+        public int? IdEquipoPeriodicidad { get; set; }
         public string Planta { get; set; }
         public string ContenidoHTML { get; set; }
     }

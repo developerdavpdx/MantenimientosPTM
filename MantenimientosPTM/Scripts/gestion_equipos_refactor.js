@@ -3072,19 +3072,125 @@ class MantenimientoManager {
 
         // Guardar los datos del equipo
         this.EquipoAasignarRutina = id;
+        // Limpia selección previa de periodicidad
+        this.EquipoPeriodicidadSeleccionada = null;
+        this.EquipoPeriodicidadSeleccionadaDescripcion = null;
         $('#rutinaNombreEquipo').text(fila.find('td:eq(3)').text() + ' ' + fila.find('td:eq(6)').text());
         $('#rutinaProceso').text(fila.find('td:eq(1)').text());
 
         // Limpiar variable global de imágenes
         window.imagenesRutina = [];
 
-        // CARGAR LA VISTA DESDE EL SERVIDOR
+        // Primero obtener las periodicidades del equipo y pedir al usuario que seleccione una
+        $.ajax({
+            url: '/Rutinas/ObtenerPeriodicidadesEquipo',
+            type: 'GET',
+            data: { idEquipo: id },
+            dataType: 'json',
+            success: (res) => {
+                // Si no hay periodicidades, cargar la rutina por equipo como antes
+                if (!res || res.Status !== 'OK' || !res.Periodicidades || res.Periodicidades.length === 0) {
+                    // Cargar rutina con idEquipo
+                    this._cargarRutinaPorIdEquipo(id, null);
+                    return;
+                }
+
+                // Construir modal de selección usando estilo del proyecto
+                const modalId = 'modalSeleccionPeriodicidad';
+                let $modal = $(`#${modalId}`);
+                if ($modal.length === 0) {
+                    const html = `
+                    <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+                      <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+                        <div class="modal-content">
+                          <div class="modal-header-custom d-flex align-items-center">
+                            <div class="modal-icon-wrap primary me-2"><i class="bi bi-calendar3"></i></div>
+                            <div>
+                              <div class="modal-title-custom">Seleccionar periodicidad</div>
+                              <div class="modal-subtitle-custom">Elige la periodicidad para cargar la rutina correspondiente</div>
+                            </div>
+                            <button type="button" class="btn-close-custom ms-auto" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                          </div>
+                          <div class="modal-body-custom">
+                            <div class="list-group" id="listaPeriodicidades"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>`;
+
+                    $('body').append(html);
+                    $modal = $(`#${modalId}`);
+
+                    // Añadir estilos de animación una sola vez
+                    if (!$('#style-periodicidad-modal').length) {
+                        $('head').append(`
+                            <style id="style-periodicidad-modal">
+                                .periodicidad-item { transition: transform .28s ease, box-shadow .28s ease, opacity .28s ease; transform: translateY(8px); opacity: 0; }
+                                .periodicidad-item.enter { transform: translateY(0); opacity: 1; }
+                                .periodicidad-item:hover { transform: scale(1.02); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+                                .periodicidad-icon { font-size: 1.45rem; color: var(--bs-primary); margin-right: 0.6rem; }
+                                .periodicidad-meta { font-size: 0.85rem; color: #6c757d; }
+                            </style>
+                        `);
+                    }
+                }
+
+                const $lista = $modal.find('#listaPeriodicidades').empty();
+
+                res.Periodicidades.forEach((p) => {
+                    // Usar el modelo PeriodicidadEquipoMTTO: Descripcion_Periodicidad e Id_Equipo_Periodicidad
+                    const label = p.Descripcion_Periodicidad || p.Descripcion_periodicidad || p.DESCRIPCION_PERIODICIDAD || p.Descripcion || 'Periodicidad';
+                    const idPeriodo = p.Id_Equipo_Periodicidad || p.ID_EQUIPO_PERIODICIDAD || p.Id_Equipo_Periodicidad || p.ID_EQUIPO_PERIODICIDAD || p.Id_EQUIPO_PERIODICIDAD || p.Id_Equipo_Periodicidad;
+
+                    // Elemento con estilo y pequeño icono
+                    const $item = $(`
+                        <button type="button" class="list-group-item list-group-item-action periodicidad-item d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-clock periodicidad-icon"></i>
+                                <div>
+                                    <div class="fw-semibold">${label}</div>
+                                    <div class="periodicidad-meta">ID: ${idPeriodo || '-'}</div>
+                                </div>
+                            </div>
+                            <div class="ms-3 text-muted"><i class="bi bi-chevron-right"></i></div>
+                        </button>
+                    `);
+
+                    $item.data('id-periodicidad', idPeriodo);
+                    $item.on('click', () => {
+                        const seleccionado = $item.data('id-periodicidad');
+                        // Guardar selección para uso al guardar la rutina e imágenes
+                        this.EquipoPeriodicidadSeleccionada = seleccionado;
+                        this.EquipoPeriodicidadSeleccionadaDescripcion = label;
+                        $modal.modal('hide');
+                        this._cargarRutinaPorIdEquipo(id, seleccionado);
+                    });
+
+                    $lista.append($item);
+
+                    // Animación de entrada (staggered)
+                    setTimeout(() => { $item.addClass('enter'); }, 40 * $lista.children().length);
+                });
+
+                $modal.modal('show');
+
+                $modal.modal('show');
+            },
+            error: () => {
+                // En caso de error, cargar rutina normal
+                this._cargarRutinaPorIdEquipo(id, null);
+            }
+        });
+    }
+
+    // Carga la rutina desde servidor usando idEquipo o idEquipoPeriodicidad si se proporciona
+    _cargarRutinaPorIdEquipo(idEquipo, idEquipoPeriodicidad) {
         const startTime = Date.now();
 
         $.ajax({
             url: '/Rutinas/ObtenerRutinaCompleta',
             type: 'GET',
-            data: { idEquipo: id, planta: this.datos_usuario[0].PLANTA },
+            data: { idEquipo: idEquipo, idEquipoPeriodicidad: idEquipoPeriodicidad, planta: this.datos_usuario[0].PLANTA },
             dataType: 'json',
 
             beforeSend: function () {
@@ -3105,6 +3211,28 @@ class MantenimientoManager {
             `);
 
                 $('#modalRutinaOnline').modal('show');
+                // Deshabilitar botones del modal de rutina mientras se carga
+                try {
+                    $('#btnAgregarNota,#btnAgregarActividad,#btnAgregarImagenRutina,#btnGuardarRutina').prop('disabled', true).addClass('disabled');
+                } catch (e) { }
+                // Mostrar en el título un badge con la periodicidad seleccionada (si existe)
+                try {
+                    var $title = $('#modalRutinaOnline').find('.modal-title-custom');
+                    if ($title.length) {
+                        if (!$title.data('orig-title')) $title.data('orig-title', $title.text());
+                        // eliminar badge anterior si existe
+                        $title.find('.periodicidad-badge').remove();
+                        var desc = (this && this.EquipoPeriodicidadSeleccionadaDescripcion) || window.gestionEquiposApp?.mantenimientoManager?.EquipoPeriodicidadSeleccionadaDescripcion || null;
+                        if (desc) {
+                            // añadir badge estilizado junto al título
+                            var $badge = $(`<span class="badge bg-primary ms-2 periodicidad-badge">${desc}</span>`);
+                            $title.text($title.data('orig-title'));
+                            $title.append($badge);
+                        } else {
+                            $title.text($title.data('orig-title'));
+                        }
+                    }
+                } catch (e) { }
             },
 
             success: (response) => {
@@ -3117,12 +3245,27 @@ class MantenimientoManager {
                         const $c = $('#formRutinaOnline');
 
                         $c.fadeOut(400, () => {  // 👈 arrow function aquí también
+                            // Si el servidor devolvió Message junto con OK (por ejemplo uso de plantilla por defecto), mostrar alerta
+                            if (response.Message) {
+                                try {
+                                    AlertManager.mostrar(response.Message, 'info');
+                                } catch (err) {
+                                    // Fallback: insertar alerta dentro del contenedor si AlertManager no está disponible
+                                    $c.prepend(`<div class="alert alert-danger">${response.Message}</div>`);
+                                }
+                            }
+
                             $c.html(response.Html).fadeIn(600, () => {
                                 $('#formRutinaOnline').find('#seccion-upload-imagenes').remove();
                                 $('#formRutinaOnline').find('#seccion-galeria-imagenes').remove();
                                 if (response.Imagenes?.length > 0) {
                                     this.checklistManager.cargarImagenesExistentes(response.Imagenes);
                                 }
+
+                                // Re-habilitar botones del modal de rutina al terminar la carga
+                                try {
+                                    $('#btnAgregarNota,#btnAgregarActividad,#btnAgregarImagenRutina,#btnGuardarRutina').prop('disabled', false).removeClass('disabled');
+                                } catch (e) { }
                             });
                         });
 
@@ -3160,20 +3303,26 @@ class MantenimientoManager {
         const planta = this.datos_usuario[0].PLANTA;
 
         // Primero guardar el HTML de la rutina
+        const payload = {
+            IdEquipo: idEquipo,
+            Planta: planta,
+            ContenidoHTML: contenidoHTML
+        };
+
+        if (this.EquipoPeriodicidadSeleccionada) {
+            payload.IdEquipoPeriodicidad = this.EquipoPeriodicidadSeleccionada;
+        }
+
         $.ajax({
             url: '/Rutinas/GuardarRutina',
             type: 'POST',
             contentType: 'application/json; charset=utf-8',
-            data: JSON.stringify({
-                IdEquipo: idEquipo,
-                Planta: planta,
-                ContenidoHTML: contenidoHTML
-            }),
+            data: JSON.stringify(payload),
             dataType: 'json',
             success: (response) => {
                 if (response.Status === 'OK' || response.Success) {
                     // Ahora guardar las imágenes (si hay nuevas)
-                    this.guardarImagenesRutina(idEquipo, planta)
+                    this.guardarImagenesRutina(idEquipo, planta, this.EquipoPeriodicidadSeleccionada)
                         .then(() => {
                             AlertManager.mostrar(`Rutina guardada correctamente para el equipo "${$('#rutinaNombreEquipo').text()}"`, 'success');
                             $btnGuardar.html(textoOriginal).prop('disabled', false);
@@ -3198,7 +3347,7 @@ class MantenimientoManager {
         });
     }
 
-    async guardarImagenesRutina(idEquipo, planta) {
+    async guardarImagenesRutina(idEquipo, planta, idEquipoPeriodicidad) {
         return new Promise((resolve, reject) => {
             // Verificar si hay imágenes nuevas para guardar
             if (!window.imagenesRutina || window.imagenesRutina.length === 0) {
@@ -3220,6 +3369,9 @@ class MantenimientoManager {
                 data: function () {
                     const data = new FormData();
                     data.append('idEquipo', idEquipo);
+                    if (typeof idEquipoPeriodicidad !== 'undefined' && idEquipoPeriodicidad !== null) {
+                        data.append('idEquipoPeriodicidad', idEquipoPeriodicidad);
+                    }
                     data.append('planta', planta);
                     if (window.imagenesRutina) {
                         window.imagenesRutina.forEach((file) => {
@@ -3266,12 +3418,12 @@ class MantenimientoManager {
         });
     }
 
-    async eliminarImagenRutina(idEquipo, planta, nombreArchivo) {
+    async eliminarImagenRutina(idEquipo, planta, nombreArchivo, idEquipoPeriodicidad) {
         return new Promise((resolve, reject) => {
             $.ajax({
                 url: '/Rutinas/EliminarImagen',
                 type: 'POST',
-                data: { idEquipo: idEquipo, planta: planta, nombreArchivo: nombreArchivo },
+                data: { idEquipo: idEquipo, planta: planta, nombreArchivo: nombreArchivo, idEquipoPeriodicidad: idEquipoPeriodicidad },
                 dataType: 'json',
                 success: (response) => {
                     if (response.Status === 'OK') {

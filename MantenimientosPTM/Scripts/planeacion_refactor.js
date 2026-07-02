@@ -46,7 +46,7 @@ class GestionEventosApp {
                     query,
                     this.datos_usuario[0].EMAIL,
                     linea,
-                    0
+                    1
                 );
             } else {
                 this.gestionArticulos.ocultarSugerencias();

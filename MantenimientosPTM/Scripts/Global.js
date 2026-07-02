@@ -3782,11 +3782,12 @@ class ChecklistManager {
     async eliminarImagenGaleria($item, nombreArchivo) {
         const idEquipo = window.gestionEquiposApp?.mantenimientoManager?.EquipoAasignarRutina;
         const planta = window.gestionEquiposApp?.datos_usuario[0]?.PLANTA;
+        const idEquipoPeriodicidad = window.gestionEquiposApp?.mantenimientoManager?.EquipoPeriodicidadSeleccionada || null;
 
         if (!idEquipo || !planta) return;
 
         try {
-            await window.gestionEquiposApp?.mantenimientoManager?.eliminarImagenRutina(idEquipo, planta, nombreArchivo);
+            await window.gestionEquiposApp?.mantenimientoManager?.eliminarImagenRutina(idEquipo, planta, nombreArchivo, idEquipoPeriodicidad);
             $item.fadeOut(300, function () {
                 $(this).remove();
                 // Si no quedan imágenes, ocultar la sección

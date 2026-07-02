@@ -96,11 +96,37 @@ namespace MantenimientosPTM
 
                                 for (int i = 0; i < reader.FieldCount; i++)
                                 {
-                                    object value = reader.IsDBNull(i)
-                                        ? null
-                                        : reader.GetValue(i);
+                                    string name = reader.GetName(i);
+                                    object raw = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                                    object value = raw;
 
-                                    row.Add(reader.GetName(i), value);
+                                    if (raw != null)
+                                    {
+                                        string typeName = raw.GetType().FullName ?? string.Empty;
+
+                                        // Manejar tipos específicos del proveedor HANA que Json.NET no convierte bien
+                                        if (typeName == "Sap.Data.Hana.HanaDecimal")
+                                        {
+                                            // Intentar convertir a decimal, si falla conservar ToString()
+                                            if (decimal.TryParse(raw.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dec))
+                                                value = dec;
+                                            else
+                                                value = raw.ToString();
+                                        }
+                                        else if (typeName == "Sap.Data.Hana.HanaDateTime" || typeName == "Sap.Data.Hana.HanaTimeStamp" || typeName == "Sap.Data.Hana.HanaTime")
+                                        {
+                                            if (DateTime.TryParse(raw.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt))
+                                                value = dt;
+                                            else
+                                                value = raw.ToString();
+                                        }
+                                        else
+                                        {
+                                            // dejar value como raw para tipos CLR ya compatibles
+                                        }
+                                    }
+
+                                    row.Add(name, value);
                                 }
 
                                 rows.Add(row);
