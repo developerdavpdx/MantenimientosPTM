@@ -2257,7 +2257,7 @@ class EquipoManager {
                     $("#formLinea")[0].reset();
                     $("#formLinea").removeClass("was-validated");
 
-                    EquiposUtil.llenarLineas(this.PLANTA,null,null, "LineaProduccion", "FiltroLinea");
+                    EquiposUtil.llenarLineas(this.PLANTA, null, null, "LineaProduccion", "FiltroLinea");
 
                     setTimeout(function () {
                         $("#btnGuardarLinea").html('<i class="bi bi-save me-1"></i>Guardar');
@@ -2314,7 +2314,7 @@ class EquipoManager {
                     $("#formAgregarTipoEquipo").removeClass("was-validated");
 
                     //PENDIENTE LLENAR TIPOS DE EQUIPO
-                    EquiposUtil.llenarLineas(this.PLANTA,null,null, "LineaProduccion", "FiltroLinea");
+                    EquiposUtil.llenarLineas(this.PLANTA, null, null, "LineaProduccion", "FiltroLinea");
 
                     setTimeout(function () {
                         $("#btnGuardarTipoEquipo").html('<i class="bi bi-save me-1"></i>Guardar');
@@ -3112,7 +3112,7 @@ class MantenimientoManager {
                             <button type="button" class="btn-close-custom ms-auto" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
                           </div>
                           <div class="modal-body-custom">
-                            <div class="list-group" id="listaPeriodicidades"></div>
+                            <div class="list-group gap-3" id="listaPeriodicidades" style="padding-bottom: 20px;"></div>
                           </div>
                         </div>
                       </div>
@@ -3125,7 +3125,7 @@ class MantenimientoManager {
                     if (!$('#style-periodicidad-modal').length) {
                         $('head').append(`
                             <style id="style-periodicidad-modal">
-                                .periodicidad-item { transition: transform .28s ease, box-shadow .28s ease, opacity .28s ease; transform: translateY(8px); opacity: 0; }
+                                .periodicidad-item { transition: transform .28s ease, box-shadow .28s ease, opacity .28s ease; transform: translateY(8px); opacity: 0;border: 1px solid #0c66b8;border-radius: 12px; }
                                 .periodicidad-item.enter { transform: translateY(0); opacity: 1; }
                                 .periodicidad-item:hover { transform: scale(1.02); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
                                 .periodicidad-icon { font-size: 1.45rem; color: var(--bs-primary); margin-right: 0.6rem; }

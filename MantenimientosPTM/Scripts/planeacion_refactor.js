@@ -25,11 +25,21 @@ class GestionEventosApp {
         $('#BuscarArticulo').on('input', (e) => {
 
             const query = $(e.target).val().trim();
-            const linea = $("#PlanLinea").val();
+            const lineaVal = $("#PlanLinea").val();
+            const lineaText = $("#PlanLinea option:selected").text() || lineaVal || '';
+
+            // Normalizar línea: si el valor no existe, extraer el primer número del texto (ej. "LINEA 1 PVC" -> 1)
+            let normalizedLinea = lineaVal;
+            if (!normalizedLinea) {
+                const m = lineaText.match(/\b(\d+)\b/);
+                if (m && m[1]) normalizedLinea = m[1];
+            }
+
+            const lineaParaEnviar = normalizedLinea ? parseInt(normalizedLinea, 10) : null;
 
             if (query.length >= 2) {
 
-                if (!linea) {
+                if (!lineaParaEnviar) {
                     AlertManager.mostrar(
                         'Por favor seleccione la línea de producción.',
                         'warning'
@@ -45,7 +55,7 @@ class GestionEventosApp {
                 this.gestionArticulos.buscarArticulos(
                     query,
                     this.datos_usuario[0].EMAIL,
-                    linea,
+                    lineaParaEnviar,
                     1
                 );
             } else {

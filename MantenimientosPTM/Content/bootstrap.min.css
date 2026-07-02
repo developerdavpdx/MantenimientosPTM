@@ -5390,9 +5390,9 @@ textarea.form-control-lg {
         border-color: var(--bs-list-group-active-border-color)
     }
 
-    .list-group-item + .list-group-item {
+    /*.list-group-item + .list-group-item {
         border-top-width: 0
-    }
+    }*/
 
         .list-group-item + .list-group-item.active {
             margin-top: calc(-1 * var(--bs-list-group-border-width));

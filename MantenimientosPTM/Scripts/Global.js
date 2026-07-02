@@ -3803,21 +3803,26 @@ class ChecklistManager {
         }
     }
 
-    mostrarGaleriaImagenes(urls) {
+    mostrarGaleriaImagenes(urls,showbutton) {
         if (!urls || urls.length === 0) return;
 
         this.crearSeccionGaleriaImagenes();
 
         urls.forEach((url) => {
             const nombreArchivo = url.split('/').pop();
+            let buttondel = ``;
+
+            if (showbutton)
+                buttondel = `<button type="button" class="btn btn-sm btn-danger btn-eliminar-galeria position-absolute top-0 end-0 m-1" 
+                            title="Eliminar" style="border-radius:50%; width:32px; height:32px; padding:0; opacity:0.8;">
+                        <i class="bi bi-x" style="font-size:14px;"></i>
+                    </button>`;
+
             const $item = $(`
                 <div class="galeria-item mb-3 position-relative" data-url="${url}">
                     <img src="${url}" alt="${nombreArchivo}" class="galeria-img-rutina" 
                          style="width:100%; height:auto; border-radius:8px; cursor:pointer; border:2px solid #dee2e6;">
-                    <button type="button" class="btn btn-sm btn-danger btn-eliminar-galeria position-absolute top-0 end-0 m-1" 
-                            title="Eliminar" style="border-radius:50%; width:32px; height:32px; padding:0; opacity:0.8;">
-                        <i class="bi bi-x" style="font-size:14px;"></i>
-                    </button>
+                    ${buttondel}
                 </div>
             `);
             $('#galeriaImagenesRutina').append($item);
@@ -3990,10 +3995,10 @@ class ChecklistManager {
     }
 
     // Cargar imágenes existentes en la galería
-    cargarImagenesExistentes(urls) {
+    cargarImagenesExistentes(urls,showbutton = true) {
         if (!urls || urls.length === 0) return;
 
-        this.mostrarGaleriaImagenes(urls);
+        this.mostrarGaleriaImagenes(urls,showbutton);
     }
 
     // ============================================

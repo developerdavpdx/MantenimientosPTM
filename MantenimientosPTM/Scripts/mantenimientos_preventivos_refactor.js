@@ -1208,6 +1208,8 @@ class MantenimientoManager {
             lineaproduccion: row.LineaProduccion,
             centrocostos: row.CentroCostos,
             periodicidadmantenimiento: row.PeriodicidadMantenimiento,
+            idperiodicidad: row.IdPeriodicidad,
+            idequipoperiodicidad: row.IdEquipoPeriodicidad, //IDENTIFICADOR DE RUTINA
             diainiciomant: row.DiaInicioMant,
             diafinmant: row.DiaFinMant,
             fechainiciomant: row.FechaInicioMant,
@@ -1641,7 +1643,7 @@ class MantenimientoManager {
                 case "TecnicoMtto":
 
                     if (typeof this.configurarVistaTecnico === "function") {
-                        this.configurarVistaTecnico(data.estatusOrden, data.firmaRealizo, data.idEquipo, data.planta, data.numeroOrden, data.periodicidadMantenimiento);
+                        this.configurarVistaTecnico(data.estatusOrden, data.firmaRealizo, data.idEquipo, data.planta, data.numeroOrden, data.idEquipoPeriodicidad);
                     } else {
                         console.error("❌ configurarVistaTecnico no definido");
                     }
@@ -1668,7 +1670,7 @@ class MantenimientoManager {
                             data.numeroOrden,
                             data.idEquipo,
                             data.planta,
-                            data.periodicidadMantenimiento
+                            data.idEquipoPeriodicidad
                         );
                     } else {
                         console.error("❌ configurarVistaProduccion no definido");
@@ -1697,7 +1699,7 @@ class MantenimientoManager {
                             data.numeroOrden,
                             data.idEquipo,
                             data.planta,
-                            data.periodicidadMantenimiento
+                            data.idEquipoPeriodicidad
                         );
                     } else {
                         console.error("❌ configurarVistaAdministrador no definido");
@@ -1774,6 +1776,8 @@ class MantenimientoManager {
             centroCostos: d.centrocostos,
 
             periodicidadMantenimiento: d.periodicidadmantenimiento,
+            idPeriodicidad: d.idperiodicidad,
+            idEquipoPeriodicidad: d.idequipoperiodicidad,
             fechaInicioMantenimiento: d.fechainiciomantenimiento,
             fechaFinMantenimiento: d.fechafinmantenimiento,
             fechaReferencia: d.fechareferencia,
@@ -1900,7 +1904,7 @@ class MantenimientoManager {
     // ========================================
     // 🔧 CONFIGURAR VISTA TÉCNICO (CORRECTIVO)
     // ========================================
-    configurarVistaTecnico(EstatusOrden, FirmaTecnico, IdEquipo, Planta, NumeroOrden, Periodicidad) {
+    configurarVistaTecnico(EstatusOrden, FirmaTecnico, IdEquipo, Planta, NumeroOrden, IdEquipoPeriodicidad) {
 
         // MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
         if (EstatusOrden == 4) {
@@ -1981,14 +1985,14 @@ class MantenimientoManager {
         // ========================================
         //🔥 RUTINA
         // ========================================
-        this.ConsultarRutinaServer(IdEquipo, Planta, Periodicidad);
+        this.ConsultarRutinaServer(IdEquipo, Planta, IdEquipoPeriodicidad);
 
     }
 
     // ========================================
     // 👨‍💼 CONFIGURAR VISTA PRODUCCION (CORRECTIVO)
     // ========================================
-    configurarVistaProduccion(EstatusOrden, FirmaTecnico, FirmaSuperviso, FirmaMantenimiento, NumeroOrden, IdEquipo, Planta, Periodicidad) {
+    configurarVistaProduccion(EstatusOrden, FirmaTecnico, FirmaSuperviso, FirmaMantenimiento, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad) {
 
         // MOSTRAR FIRMAS
         $('#SeccionFirmas').removeClass('d-none');
@@ -2075,7 +2079,7 @@ class MantenimientoManager {
             // ========================================
             //🔥 RUTINA
             // ========================================
-            this.ConsultarRutinaServer(IdEquipo, Planta, Periodicidad);
+            this.ConsultarRutinaServer(IdEquipo, Planta, IdEquipoPeriodicidad);
         }
 
         //IMPORTANTE SI YA FIRMO MANTENIMIENTO OCULTAR BOTON GUARDAR
@@ -2088,7 +2092,7 @@ class MantenimientoManager {
     // ========================================
     // 👨‍💼 CONFIGURAR VISTA ADMIN (CORRECTIVO)
     // ========================================
-    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaMantenimiento, FirmaSuperviso, NumeroOrden, IdEquipo, Planta, Periodicidad) {
+    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaMantenimiento, FirmaSuperviso, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad) {
 
         // MOSTRAR FIRMAS
         $('#SeccionFirmas').removeClass('d-none');
@@ -2177,7 +2181,7 @@ class MantenimientoManager {
             // ========================================
             //🔥 RUTINA
             // ========================================
-            this.ConsultarRutinaServer(IdEquipo, Planta);
+            this.ConsultarRutinaServer(IdEquipo, Planta, IdEquipoPeriodicidad);
         }
 
         //IMPORTANTE SI YA FIRMO MANTENIMIENTO OCULTAR BOTON GUARDAR
@@ -2540,7 +2544,7 @@ class MantenimientoManager {
                                 $('#formRutinaOnline').find('#seccion-upload-imagenes').remove();
                                 $('#formRutinaOnline').find('#seccion-galeria-imagenes').remove();
                                 if (response.Imagenes?.length > 0) {
-                                    this.checklistManager.cargarImagenesExistentes(response.Imagenes);
+                                    this.checklistManager.cargarImagenesExistentes(response.Imagenes,false);
                                 }
 
                                 //✅ TRANSFORMAR LAS FIRMAS A RADIOBUTTONS PARA TECNICO
