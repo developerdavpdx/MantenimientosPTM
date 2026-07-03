@@ -78,7 +78,7 @@ class EntradaMercanciaApp {
         });
 
         // Abrir modal de entrada de mercancía
-        $(document).on('click', '.btn-entrada-mercancia', (e) => {
+        $(document).on('click', '.btn-entrada-mercancia', async (e) => {
             const $btn = $(e.currentTarget);
             $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>');
 
@@ -108,6 +108,8 @@ class EntradaMercanciaApp {
             $("#inputValMoneda").val(17.23);
 
             $("#SaveEM").attr("DocEntry", DocEntry);
+
+            await this.ObtenerFacturasPTM(DocNum);
 
             $('#entradaMercancia').modal('show');
             $btn.prop('disabled', false).html('<i class="bi bi-box-arrow-in-down"></i>');
@@ -177,13 +179,199 @@ class EntradaMercanciaApp {
             });
         });
 
-
         $("#btnGuardarRech").on("click", () => {
             let motivoRecha = $("#motivoRech").value();
             let comentarios = $("#CommentRech").value();
         });
+
+        // Reemplazo del handler .radio-factura
+        $(document).on("click", ".radio-factura", (e) => {
+            const $radio = $(e.currentTarget);
+
+            // Extraer todos los atributos data-* en un objeto
+            const datos = {};
+            if ($radio && $radio.length) {
+                const attrs = $radio[0].attributes;
+                for (let i = 0; i < attrs.length; i++) {
+                    const a = attrs[i];
+                    if (a && a.name && a.name.indexOf('data-') === 0) {
+                        const key = a.name.slice(5); // quita 'data-'
+                        datos[key] = a.value;
+                    }
+                }
+            }
+
+            // Obtener el valor de data-factura (fallback con jQuery.data)
+            const factura = datos['factura'] || $radio.data('factura') || '';
+
+            // Rellenar todos los inputs .input-folio dentro de #tablaArticulos con data-factura
+            $('#tablaArticulos').find('.input-folio').each(function () {
+                $(this).val(factura);
+                // mantener también en atributo data-factura para referencia
+                $(this).attr('data-factura', factura);
+            });
+
+            // (Opcional) si quieres exponer los demás datos en cada fila, podríamos setear
+            // data-oc, data-folio, data-total, data-rfcemisor en cada input-folio:
+            $('#tablaArticulos').find('.input-folio').each(function () {
+                if (datos['oc']) $(this).attr('data-oc', datos['oc']);
+                if (datos['folio']) $(this).attr('data-folio', datos['folio']);
+                if (datos['total']) $(this).attr('data-total', datos['total']);
+                if (datos['rfcemisor']) $(this).attr('data-rfcemisor', datos['rfcemisor']);
+            });
+        });
     }
 
+    async ObtenerFacturasPTM(OrdenCompra) {
+        //Se realiza la peticion para obtener las facturas
+        const responseFacturas = await $.ajax({
+            url: `/${this.URLBase}/ObtenerFacturasPTM`,
+            type: 'GET',
+            data: {
+                oc: OrdenCompra
+            }
+        });
+
+        //Se comienzan a colocar las cards mostrando las facturas ligadas a OC
+        //Parseamos la data obtenida
+        const dataFacturas = JSON.parse(responseFacturas.Data);
+        const facturas = dataFacturas.data.facturas; //Obtenemos las facturas
+        let htmlFacturas = '';
+        let badgeEstado = 'bg-success';
+
+        facturas.forEach(f => {
+
+            //Seleccion tipo de estado de factura
+            switch (f.estado.toLowerCase()) {
+
+                case 'registrada':
+                    badgeEstado = 'bg-success';
+                    break;
+
+                case 'pendiente':
+                    badgeEstado = 'bg-warning text-dark';
+                    break;
+
+                case 'rechazada':
+                    badgeEstado = 'bg-danger';
+                    break;
+            }
+
+            htmlFacturas += `
+                             <div class="col-12 col-md-6 col-xl-4">
+                                <div class="card cards-facturas border-0 rounded-4 factura-card h-100">
+                                    <!-- ENCABEZADO -->
+                                    <div class="card-header text-white border-0 py-3">
+                                        <div class="form-check contenedor-checkFactura">
+                                            
+                                            <div class="factura-id">
+                                                ID: ${f.id}
+                                            </div>
+                                            <input class="form-check-input mb-2 me-1 radio-factura"
+                                                    type="radio"
+                                                    name="facturaSeleccionada"
+
+                                                    data-id="${f.id}"
+                                                    data-factura="${f.uuid}"
+                                                    data-oc="${f.oc}"
+                                                    data-folio="${f.folio}"
+                                                    data-total="${f.total}"
+                                                    data-rfcEmisor="${f.rfcEmisor}"
+                                                    id="radioFactura_${f.folio}">
+
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            
+                                            <div>
+                                                <div class="factura-title mb-1">
+                                                    FACTURA ELECTRÓNICA
+                                                </div>
+
+                                                <small class="factura-Emisor">
+                                                    RFC Emisor: ${f.rfcEmisor}
+                                                </small>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="fw-bold">${f.folio}</div>
+
+                                                <span class="badge ${badgeEstado} rounded-pill mt-2 pb-2">
+                                                    ${f.estado}
+                                                </span>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+
+                                    <!-- BODY -->
+                                    <div class="card-body">
+
+                                        <div class="row g-3">
+
+                                            <!-- PROVEEDOR -->
+                                            <div class="col-12">
+                                                <small class="text-muted d-block">
+                                                    Proveedor:
+                                                </small>
+                                                <div class="fw-semibold">
+                                                   ${f.razon}
+                                                </div>
+                                            </div>
+                                            <!-- OC -->
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">
+                                                    Orden de Compra:
+                                                </small>
+                                                <div class="fw-semibold">
+                                                    ${f.oc}
+                                                </div>
+                                            </div>
+                                            <!-- FECHA -->
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">
+                                                    Fecha:
+                                                </small>
+                                                <div class="fw-semibold">
+                                                    ${f.fechaFactura}
+                                                </div>
+                                            </div>
+
+                                            <!-- MONEDA -->
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Moneda:</small>
+                                                <div class="fw-semibold">${f.moneda}</div>
+                                            </div>
+
+                                        </div>
+
+                                        <!-- TOTAL -->
+                                        <div class="factura-area-total p-3 mt-4">
+                                            <div class="text-muted small">TOTAL</div>
+                                            <div class="fs-3 fw-bold text-success ms-3">$${this.formatearImporte(f.total)}</div>
+                                        </div>
+
+                                    </div>
+
+                                    <!-- UUID -->
+                                    <div class="card-footer pb-3">
+                                        <div class="small text-muted fw-semibold">UUID:</div>
+                                        <small class="text-break factura-uuid ms-3">${f.uuid}</small>
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        `;
+        });
+        $('#contenedorFacturas').html(htmlFacturas);
+
+    }
+
+    formatearImporte(total) {
+        return Number(total).toLocaleString('es-MX', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
     // ============================
     // HELPERS PRIVADOS
     // ============================
@@ -256,7 +444,7 @@ class EntradaMercanciaApp {
 // ========================================
 class UIManager {
     static inicializarUI() {
-        $("#EntradaMercanciaURL").addClass("selected-item");
+        $("#EntradasMercanciaURL").addClass("selected-item");
         $("#AlmacenContainer").addClass("selected");
         $("#AlmacenContainer a").addClass("whiteText");
         $("#almacen-collapse").addClass("show");
@@ -692,33 +880,39 @@ class EntradaMercanciaManager {
                 Linea, NArticulo, Descripcion, Detalles,
                 Cantidad, PrecioU, PorDesc, IVAImporte,
                 Total, Almacen, Departamento, Proceso,
-                Gastos, Cedes, CodOp, Unidad, ArtUnidad,
+                Gastos, Cedis, CodOp, Unidad, ArtUnidad,
                 FolioFact, Lote
             } = it;
             //<td class="detalles" >${Detalles}</td>
             tbody.append(`
                 <tr>
-                    <td class="text-center">  
-                        <input type="checkbox" class="select-docline" value="" data-linea=${Linea} id="checkArt${Linea}">
+                    <td class="text-center align-middle">  
+                        <input type="checkbox" class="select-docline form-check-input" value="" data-linea=${Linea} id="checkArt${Linea}">
                     </td>
-                    <td class="text-center linea">${Linea}</td>
-                    <td class="itemcode">${NArticulo}</td>
-                    <td class="desc">${Descripcion}</td>
-                    <td class="cantidad" ><input style="width:60px" type="number" value="0" max="${Cantidad}" id="InputCantidad${Linea}" disabled > </td>
-                    <td class="lote" ><input style="width:60px" type="text" value="" id="InputLote${Linea}" disabled > </td>
-                    <td class="sap-yellow foliofac"><input style="width:60px" type="text" value="" id="InputFolioFact${Linea}" disabled > </td>
-                    <td class="preciou">${PrecioU}</td>
-                    <td>${PorDesc}</td>
-                    <td>${IVAImporte}</td>
-                    <td>${Total}</td>
-                    <td>${Almacen}</td>
-                    <td class="sap-yellow">${Departamento}</td>
-                    <td class="sap-yellow">${Proceso}</td>
-                    <td class="sap-yellow">${Gastos}</td>
-                    <td class="sap-yellow">${Cedes}</td>
-                    <td>${CodOp}</td>
-                    <td>${Unidad}</td>
-                    <td>${ArtUnidad}</td>
+                    <td class="text-center linea align-middle">${Linea}</td>
+                    <td class="itemcode align-middle">${NArticulo}</td>
+                    <td class="desc align-middle">${Descripcion}</td>
+                    <td class="cantidad align-middle">
+                        <input type="number" class="form-control form-control-sm input-cantidad text-center" value="0" max="${Cantidad}" id="InputCantidad${Linea}" disabled>
+                    </td>
+                    <td class="lote align-middle">
+                        <input type="text" class="form-control form-control-sm input-lote" value="${Lote || ''}" id="InputLote${Linea}" disabled>
+                    </td>
+                    <td class="sap-yellow foliofac align-middle">
+                        <input type="text" class="form-control form-control-sm input-folio" value="${FolioFact || ''}" id="InputFolioFact${Linea}" disabled>
+                    </td>
+                    <td class="preciou align-middle"><span class="text-nowrap">${PrecioU}</span></td>
+                    <td class="align-middle">${PorDesc}</td>
+                    <td class="align-middle">${IVAImporte}</td>
+                    <td class="align-middle">${Total}</td>
+                    <td class="align-middle">${Almacen}</td>
+                    <td class="sap-yellow align-middle">${Departamento}</td>
+                    <td class="sap-yellow align-middle">${Proceso}</td>
+                    <td class="sap-yellow align-middle">${Gastos}</td>
+                    <td class="sap-yellow align-middle">${Cedis}</td>
+                    <td class="align-middle">${CodOp}</td>
+                    <td class="align-middle">${Unidad}</td>
+                    <td class="align-middle">${ArtUnidad}</td>
                 </tr>
             `);
         });
@@ -788,7 +982,7 @@ class EntradaMercanciaManager {
     }
 
 
-  
+
     /**
      * Obtiene los datos de las filas seleccionadas (línea, cantidad, precio unitario)
      * @returns {Array} Array de objetos con los datos seleccionados

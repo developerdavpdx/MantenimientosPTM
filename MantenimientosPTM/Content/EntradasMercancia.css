@@ -1,0 +1,565 @@
+﻿/* Variables y colores */
+:root {
+    --entrada-yellow: #fff5cc; /* amarillo pálido utilizado en la UI */
+    --input-border: #d8d8d8;
+}
+
+/* Scroll horizontal y layout */
+.table-responsive-custom, .table-responsive {
+    overflow-x: auto;
+}
+
+/* Estilo tipo SAP para la tabla de entrada */
+#tablaArticulos,
+#tablaArticulos.sap-table {
+    width: 100%;
+    min-width: 1400px; /* evita compresión excesiva; ajusta si hace falta */
+    border-collapse: collapse;
+    table-layout: auto;
+    white-space: nowrap;
+}
+
+    /* Encabezado estilo SAP */
+    #tablaArticulos thead th {
+        background: #e9ecef;
+        color: #000;
+        font-weight: 600;
+        text-align: center;
+        border: 1px solid #c6c6c6;
+        padding: 6px 8px;
+        vertical-align: middle;
+    }
+
+    /* Celdas */
+    #tablaArticulos tbody td {
+        padding: 6px 8px;
+        border: 1px solid #d0d0d0;
+        vertical-align: middle;
+        transition: background-color 150ms ease;
+        box-sizing: border-box;
+    }
+
+    /* Filas alternadas (suave) */
+    #tablaArticulos tbody tr:nth-child(even) {
+        background-color: #fafafa;
+    }
+
+    /* Hover general: pintar toda la fila (todas las celdas) en amarillo pálido */
+    #tablaArticulos tbody tr:hover td {
+        background-color: var(--entrada-yellow);
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03);
+    }
+
+    /* Columnas tipo SAP (amarillas por defecto) */
+    #tablaArticulos td.sap-yellow {
+        background-color: var(--entrada-yellow);
+    }
+
+    /* EXCEPCIONES: columnas que deben quedar BLANCAS incluso en hover */
+    #tablaArticulos tbody tr:hover td.cantidad,
+    #tablaArticulos tbody tr:hover td.lote,
+    #tablaArticulos tbody tr:hover td.foliofac,
+    #tablaArticulos tbody tr:hover td:first-child,
+    #tablaArticulos tbody tr:hover td:nth-child(1) {
+        background-color: #ffffff !important;
+    }
+
+    /* Inputs dentro de las celdas: por defecto blancos */
+    #tablaArticulos td input.form-control,
+    #tablaArticulos td input.form-control-sm,
+    #tablaArticulos td input {
+        background-color: #fff;
+        border: 1px solid var(--input-border);
+        color: #222;
+        box-sizing: border-box;
+        padding: 4px 6px;
+        height: auto;
+    }
+
+    /* Forzar inputs transparentes en hover *salvo* las excepciones anteriores */
+    #tablaArticulos td.sap-yellow input:not([type="checkbox"]),
+    #tablaArticulos tbody tr:hover td input:not([type="checkbox"]),
+    #tablaArticulos tbody tr:hover td input.form-control:not([type="checkbox"]),
+    #tablaArticulos tbody tr:hover td input.form-control-sm:not([type="checkbox"]) {
+        background-color: transparent !important;
+        border-color: rgba(0,0,0,0.06) !important;
+        box-shadow: none !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+    }
+
+    /* Asegurar que inputs en columnas excluidas (cantidad, lote, folio, primer col) queden blancos */
+    #tablaArticulos td.cantidad input,
+    #tablaArticulos td.lote input,
+    #tablaArticulos td.foliofac input,
+    #tablaArticulos tbody tr:hover td.cantidad input,
+    #tablaArticulos tbody tr:hover td.lote input,
+    #tablaArticulos tbody tr:hover td.foliofac input,
+    #tablaArticulos td:first-child input,
+    #tablaArticulos tbody tr:hover td:first-child input {
+        background-color: #ffffff !important;
+        border-color: var(--input-border) !important;
+        box-shadow: none !important;
+    }
+
+    /* Excluir checkboxes de las reglas para que su marcado sea visible */
+    #tablaArticulos tbody tr:hover td input[type="checkbox"],
+    #tablaArticulos td input[type="checkbox"],
+    #tablaArticulos input[type="checkbox"]:checked {
+        background-color: initial !important;
+        border-color: initial !important;
+        box-shadow: none !important;
+        -webkit-appearance: checkbox !important;
+        appearance: auto !important;
+    }
+
+    /* Anchos mínimos y comportamiento de inputs */
+    #tablaArticulos td .form-control {
+        min-width: 120px;
+        max-width: 260px;
+    }
+
+    /* Inputs específicos */
+    #tablaArticulos td.cantidad .form-control,
+    #tablaArticulos td .input-cantidad input.form-control {
+        min-width: 120px;
+        max-width: 160px;
+    }
+
+    #tablaArticulos td.lote .form-control,
+    #tablaArticulos td .input-lote input.form-control,
+    #tablaArticulos td.foliofac .form-control,
+    #tablaArticulos td .input-folio input.form-control {
+        min-width: 140px;
+        max-width: 220px;
+    }
+
+    /* Descripción: permitir wrap */
+    #tablaArticulos td.desc {
+        max-width: 420px;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    /* Evitar wrap en códigos y precios para legibilidad */
+    #tablaArticulos td.itemcode,
+    #tablaArticulos td.preciou,
+    #tablaArticulos th.itemcode,
+    #tablaArticulos th.preciou {
+        white-space: nowrap;
+    }
+
+    /* Th/td: anchos mínimos por columna (ajusta si cambias columnas) */
+    #tablaArticulos thead th:nth-child(1),
+    #tablaArticulos tbody td:nth-child(1) {
+        min-width: 44px;
+    }
+    /* control responsive / checkbox */
+    #tablaArticulos thead th:nth-child(2),
+    #tablaArticulos tbody td:nth-child(2) {
+        min-width: 60px;
+    }
+    /* checkbox */
+    #tablaArticulos thead th:nth-child(3),
+    #tablaArticulos tbody td:nth-child(3) {
+        min-width: 120px;
+    }
+    /* número */
+    #tablaArticulos thead th:nth-child(4),
+    #tablaArticulos tbody td:nth-child(4) {
+        min-width: 340px;
+    }
+    /* N° Artículo */
+    #tablaArticulos thead th:nth-child(5),
+    #tablaArticulos tbody td:nth-child(5) {
+        min-width: 120px;
+    }
+    /* Descripción */
+    #tablaArticulos thead th:nth-child(6),
+    #tablaArticulos tbody td:nth-child(6) {
+        min-width: 240px !important;
+    }
+    /* Cantidad */
+    #tablaArticulos thead th:nth-child(7),
+    #tablaArticulos tbody td:nth-child(7) {
+        min-width: 240px !important;
+    }
+    /* Lote */
+    #tablaArticulos thead th:nth-child(8),
+    #tablaArticulos tbody td:nth-child(8) {
+        min-width: 150px;
+    }
+    /* Folio Fact. */
+    #tablaArticulos thead th:nth-child(n+9),
+    #tablaArticulos tbody td:nth-child(n+9) {
+        min-width: 100px;
+    }
+
+    /* Inputs pequeños: padding consistente */
+    #tablaArticulos .form-control-sm {
+        padding: .25rem .5rem;
+    }
+
+    /* Alineación vertical */
+    #tablaArticulos td.align-middle {
+        vertical-align: middle !important;
+    }
+
+    /* Checkbox centrado */
+    #tablaArticulos td .form-check-input,
+    #tablaArticulos td .form-check-input[type="checkbox"] {
+        margin: 0 auto;
+        display: block;
+    }
+
+/* Estilos para cards de facturas (sin cambios funcionales) */
+.cards-facturas {
+    box-shadow: 1px 1px 10px 0px #c7c7c7 !important;
+}
+
+.factura-card {
+    position: relative;
+    overflow: hidden;
+}
+
+    .factura-card::after {
+        content: '';
+        position: absolute;
+        width: 77px;
+        height: 132px;
+        right: 18px;
+        bottom: 230px;
+        background-image: url(Images/PAC.png);
+        background-repeat: no-repeat;
+        background-size: contain;
+        opacity: .08;
+        pointer-events: none;
+    }
+
+    .factura-card .card-header {
+        background: #0a63b4;
+    }
+
+    .factura-card .card-footer {
+        border-top: 1px dashed #000000;
+        background-color: #ffba262b;
+    }
+
+.factura-title {
+    font-weight: 700 !important;
+    font-size: 17px;
+}
+
+.factura-Emisor {
+    color: #ffffff85 !important;
+    font-size: 13px;
+}
+
+.factura-area-total {
+    background-color: #f5f5f5;
+    border-radius: 10px;
+    border: 1px solid #cecece;
+}
+
+.factura-uuid {
+    font-size: 14px;
+    color: #787878;
+}
+
+.factura-id {
+    color: #ffffff85 !important;
+}
+
+.contenedor-checkFactura {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    padding-left: 0px;
+}
+
+.radio-factura {
+    width: 20px;
+    height: 20px;
+}
+
+    .radio-factura:hover {
+        cursor: pointer;
+    }
+
+    .radio-factura:checked {
+        background-color: #9f9f9f !important;
+        border-color: #a2a2a2;
+        box-shadow: 0px 0px 5px 1px #9a9a9a;
+    }
+/* Aumentar ancho de columnas Lote y Folio Fact. y inputs internos */
+#tablaArticulos td.lote,
+#tablaArticulos td.foliofac {
+    min-width: 240px !important;
+    max-width: 380px;
+}
+
+/* Si el header tiene posiciones fijas (nth-child), también reforzamos */
+#tablaArticulos thead th:nth-child(6),
+#tablaArticulos tbody td:nth-child(6),
+#tablaArticulos thead th:nth-child(7),
+#tablaArticulos tbody td:nth-child(7) {
+    min-width: 240px !important;
+}
+
+/* Inputs dentro de Lote y Folio: ocupar más ancho y mostrar contenido completo */
+#tablaArticulos td.lote input.input-lote,
+#tablaArticulos td.foliofac input.input-folio {
+    width: 92% !important;
+    min-width: 200px !important;
+    max-width: 340px;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    background-color: #fff !important; /* mantener blanco en excepciones */
+}
+
+/* Si usas solo clases genéricas de input */
+#tablaArticulos .input-lote,
+#tablaArticulos .input-folio {
+    width: 92% !important;
+    min-width: 200px !important;
+}
+
+/* Pequeño ajuste responsivo para pantallas muy pequeñas */
+@media (max-width: 1200px) {
+    #tablaArticulos td.lote,
+    #tablaArticulos td.foliofac,
+    #tablaArticulos thead th:nth-child(6),
+    #tablaArticulos thead th:nth-child(7),
+    #tablaArticulos td.lote input.input-lote,
+    #tablaArticulos td.foliofac input.input-folio {
+        min-width: 160px !important;
+        width: 80% !important;
+    }
+}
+
+/* Ajuste extra: Lote / Folio más anchos + padding uniforme en inputs */
+#tablaArticulos td.lote,
+#tablaArticulos td.foliofac {
+    min-width: 300px !important;
+    max-width: 520px;
+}
+
+/* Refuerzo por posición (si cabe) */
+#tablaArticulos thead th:nth-child(7),
+#tablaArticulos tbody td:nth-child(7),
+#tablaArticulos thead th:nth-child(8),
+#tablaArticulos tbody td:nth-child(8) {
+    min-width: 300px !important;
+}
+
+/* Inputs: mismo padding a izquierda/derecha y ocupar más espacio */
+#tablaArticulos td input.input-lote,
+#tablaArticulos td input.input-folio,
+#tablaArticulos td input.input-cantidad,
+#tablaArticulos .input-lote,
+#tablaArticulos .input-folio,
+#tablaArticulos .input-cantidad {
+    width: 94% !important;
+    min-width: 240px !important;
+    max-width: 480px;
+    padding: 8px 12px !important; /* izquierda/derecha iguales */
+    box-sizing: border-box;
+    background-color: #fff !important; /* mantener blanco en excepciones */
+    border-radius: 6px;
+    border: 1px solid var(--input-border) !important;
+    height: auto;
+    line-height: 1.2;
+    text-align: center;
+}
+
+/* Si se usan inputs .form-control-sm dentro de esas celdas */
+#tablaArticulos td.lote .form-control-sm,
+#tablaArticulos td.foliofac .form-control-sm,
+#tablaArticulos td.cantidad .form-control-sm {
+    padding: 6px 10px !important;
+}
+
+/* Mantener excepciones visuales en hover (sin romper padding) */
+#tablaArticulos tbody tr:hover td.cantidad input,
+#tablaArticulos tbody tr:hover td.lote input,
+#tablaArticulos tbody tr:hover td.foliofac input,
+#tablaArticulos td.cantidad input,
+#tablaArticulos td.lote input,
+#tablaArticulos td.foliofac input {
+    background-color: #ffffff !important;
+    border-color: var(--input-border) !important;
+}
+
+/* Ajuste responsivo para pantallas pequeñas */
+@media (max-width: 1200px) {
+    #tablaArticulos td.lote,
+    #tablaArticulos td.foliofac,
+    #tablaArticulos thead th:nth-child(7),
+    #tablaArticulos thead th:nth-child(8) {
+        min-width: 260px !important;
+    }
+    #tablaArticulos td input.input-lote,
+    #tablaArticulos td input.input-folio,
+    #tablaArticulos td input.input-cantidad {
+        width: 86% !important;
+        min-width: 140px !important;
+        padding: 6px 8px !important;
+    }
+}
+
+/* +++ MÁS ESPACIO PARA LOTE Y FOLIO +++ */
+/* Forzamos celdas mucho más anchas */
+#tablaArticulos td.lote,
+#tablaArticulos td.foliofac {
+    min-width: 560px !important;   /* aumentar si hace falta */
+    max-width: none !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+}
+
+/* Refuerzo por índice de columna (si usas nth-child) */
+#tablaArticulos thead th:nth-child(7),
+#tablaArticulos tbody td:nth-child(7),
+#tablaArticulos thead th:nth-child(8),
+#tablaArticulos tbody td:nth-child(8) {
+    min-width: 560px !important;
+}
+
+/* Que el input ocupe TODO el ancho utilizable de la celda */
+#tablaArticulos td.lote input,
+#tablaArticulos td.foliofac input,
+#tablaArticulos .input-lote,
+#tablaArticulos .input-folio {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 8px 12px !important; /* mismo padding izquierdo/derecho */
+    min-width: 520px !important;  /* ayuda a mostrar UUIDs largos */
+    max-width: none !important;
+    background-color: #fff !important; /* mantener blanco en excepciones */
+    border-radius: 6px;
+    border: 1px solid var(--input-border) !important;
+    text-align: left; /* si prefieres centrar cambia a center */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Quitar reglas que puedan dejar inputs transparentes aquí */
+#tablaArticulos tbody tr:hover td.foliofac input,
+#tablaArticulos tbody tr:hover td.lote input {
+    background-color: #ffffff !important;
+    border-color: var(--input-border) !important;
+}
+
+/* Responsivo: reducir pero seguir mostrando bastante texto */
+@media (max-width: 1600px) {
+    #tablaArticulos td.lote,
+    #tablaArticulos td.foliofac,
+    #tablaArticulos thead th:nth-child(7),
+    #tablaArticulos thead th:nth-child(8) {
+        min-width: 440px !important;
+    }
+    #tablaArticulos td.lote input,
+    #tablaArticulos td.foliofac input {
+        min-width: 400px !important;
+        padding: 6px 10px !important;
+    }
+}
+
+@media (max-width: 1200px) {
+    #tablaArticulos td.lote,
+    #tablaArticulos td.foliofac,
+    #tablaArticulos thead th:nth-child(7),
+    #tablaArticulos thead th:nth-child(8) {
+        min-width: 260px !important;
+    }
+    #tablaArticulos td.lote input,
+    #tablaArticulos td.foliofac input {
+        min-width: 180px !important;
+        padding: 6px 8px !important;
+    }
+}
+
+/* Ajuste equilibrado: Lote / Folio (no expanden la tabla) + Precio U. fijo */
+
+/* Limitar anchura visual de las celdas Lote y Folio pero permitir que el input muestre texto con ellipsis */
+#tablaArticulos td.lote,
+#tablaArticulos td.foliofac {
+    min-width: 420px !important;
+    max-width: 480px !important;
+    overflow: hidden;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* Inputs dentro de Lote / Folio: ocupar toda la celda, padding uniforme y truncado visual */
+#tablaArticulos td.lote input,
+#tablaArticulos td.foliofac input,
+#tablaArticulos .input-lote,
+#tablaArticulos .input-folio {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 8px 12px !important; /* mismo padding a ambos lados */
+    min-width: 380px !important;
+    max-width: none !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    background-color: #fff !important;
+    border-radius: 6px;
+    border: 1px solid var(--input-border) !important;
+}
+
+/* Mantener inputs de Cantidad pequeños y con padding uniforme */
+#tablaArticulos td.cantidad input,
+#tablaArticulos .input-cantidad {
+    width: 120px !important;
+    min-width: 90px !important;
+    padding: 8px 12px !important;
+    box-sizing: border-box;
+}
+
+/* Fijar ancho de la columna Precio U. para que no se agrande */
+#tablaArticulos thead th:nth-child(8),
+#tablaArticulos tbody td:nth-child(8),
+#tablaArticulos td.preciou {
+    min-width: 120px !important;
+    max-width: 140px !important;
+    white-space: nowrap;
+    text-align: right;
+}
+
+/* Asegurar que el span dentro no provoque crecimiento */
+#tablaArticulos td.preciou span.text-nowrap {
+    display: inline-block;
+    width: 100%;
+    text-align: right;
+    box-sizing: border-box;
+}
+
+/* Reglas responsivas: reducir anchos en pantallas pequeñas sin romper layout */
+@media (max-width: 1600px) {
+    #tablaArticulos td.lote,
+    #tablaArticulos td.foliofac {
+        min-width: 360px !important;
+    }
+    #tablaArticulos td.lote input,
+    #tablaArticulos td.foliofac input {
+        min-width: 320px !important;
+    }
+}
+
+@media (max-width: 1200px) {
+    #tablaArticulos td.lote,
+    #tablaArticulos td.foliofac {
+        min-width: 220px !important;
+    }
+    #tablaArticulos td.lote input,
+    #tablaArticulos td.foliofac input {
+        min-width: 180px !important;
+        padding: 6px 8px !important;
+    }
+}

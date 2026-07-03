@@ -2311,6 +2311,7 @@
     <Content Include="Content\Login.css" />
     <Content Include="Content\CustomTables.css" />
     <Content Include="Content\select2.min.css" />
+    <Content Include="Content\EntradasMercancia.css" />
     <Content Include="Content\SolicitudRefacciones.css" />
     <Content Include="Content\TiemposMuertos.css" />
     <Content Include="Content\TopScrollTable.css" />

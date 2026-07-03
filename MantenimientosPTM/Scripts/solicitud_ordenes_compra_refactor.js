@@ -167,15 +167,6 @@ class SolicitudCompraApp {
                     return;
                 }
 
-                //Se realiza la peticion para obtener las facturas
-                const responseFacturas = await $.ajax({
-                    url: `/${this.URLBase}/ObtenerFacturasPTM`,
-                    type: 'GET',
-                    data: {
-                        oc: OrdenCompra
-                    }
-                });
-
                 // ✅ Agrupar por CodigoArticulo
                 const agrupados = Object.values(
                     response.data.reduce((acc, item) => {

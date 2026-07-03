@@ -283,6 +283,8 @@ class SolicitudRefaccionesApp {
         const $btn = $(e.currentTarget);
         const solicita = $btn.data('solicita');
         const ordenTrabajo = $btn.data('ordentrabajo');
+        const numeroempleado = $btn.data('numeroempleado');
+        const departamento = $btn.data('departamento');
 
         GlobalUtil.mostrarLoader(true);
 
@@ -330,6 +332,8 @@ class SolicitudRefaccionesApp {
             this.solicitudManager.llenarFirmas();
 
             $('#solicitante').val(solicita);
+            $('#numEmpleado').val(numeroempleado);
+            $('#area').val(departamento);
             $("#titleSalidaMercancia").text("Entrega de Materiales");
             $("#btnRechazarDev").addClass("d-none");
             $("#btnGuardarVale").attr("operacion", "SALIDA");
@@ -1414,6 +1418,9 @@ class SolicitudManager {
                         <i class="bi bi-box-seam text-muted me-1"></i>${nombreMostrar}
                     </td>
                     <td class="text-center align-middle">
+                        <i class="bi bi-boxes text-info me-1"></i>${cantidadOriginal}
+                    </td>
+                    <td class="text-center align-middle">
                         <input type="number" min="1" max="${art.STOCK || maxStock}"
                                class="form-control form-control-sm text-center fw-bold cantidadEditable" ${isAtendida ? 'disabled' : ''}
                                value="${CantidadSurtida}"
@@ -2276,11 +2283,14 @@ class SolicitudManager {
         const ordenTrabajo = row.OrdenTrabajo || '';
         const estatus = row.Estatus || '';
         const solicita = row.UsuarioSolicita || '';
+        const NumeroEmpleado = row.NumeroEmpleado || '';
+        const Departamento = row.Departamento || '';
+
         const totalPendienteDevolucion =
             row.totalPendienteDevolucion || 0;
         const esAdmin = true; // o basado en this.datos_usuario[0].TIPOUSUARIO
 
-        const dataAttrs = `data-ordentrabajo="${ordenTrabajo}" data-estatus="${estatus}" data-solicita="${solicita}" data-totalatendidas="${totalPendienteDevolucion}"`;
+        const dataAttrs = `data-ordentrabajo="${ordenTrabajo}" data-estatus="${estatus}" data-solicita="${solicita}" data-numeroempleado="${NumeroEmpleado}" data-departamento="${Departamento}" data-totalatendidas="${totalPendienteDevolucion}"`;
 
         const btn = (color, cssClass, icon, tooltip, attrs = '') =>
             `<button class="btn btn-sm ${color} ${cssClass}" data-bs-toggle="tooltip" title="${tooltip}" ${attrs} ${dataAttrs}>
