@@ -677,7 +677,7 @@ class EquipoManager {
 
                             if (row.Estatus == "En Pausa") {
                                 iconpause = "bi bi-play";
-                                iconpausedesign = "btn-success";
+                                iconpausedesign = "btn-ptm-edit";
                                 iconpausetitle = "Reanudar";
                             }
                             else {
