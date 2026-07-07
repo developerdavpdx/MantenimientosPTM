@@ -325,155 +325,7 @@
     </div>
 </div>
 
-
-<!-- ══════════════════════════════════════════════
-     MODAL: GENERAR REQUISICIÓN
-══════════════════════════════════════════════ -->
-<div class="modal fade" id="SolcitarModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-90">
-        <div class="modal-content">
-
-            <!-- ── Header ── -->
-            <div class="modal-header-custom">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="modal-icon-wrap">
-                        <i class="bi bi-journal-arrow-up"></i>
-                    </div>
-                    <div>
-                        <div class="modal-title-custom">Generar Requisición</div>
-                        <div class="modal-subtitle-custom" id="subtitleRequisicion">Complete los datos para crear la requisición</div>
-                    </div>
-                </div>
-                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-
-            <!-- ── Body ── -->
-            <div class="modal-body-custom">
-                <form id="formGenerarRequisicion" class="needs-validation" novalidate>
-
-                    <!-- Sección: Artículos -->
-                    <div class="mb-3">
-                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
-                            <i class="bi bi-box-seam-fill me-2"></i>Artículos de la Solicitud
-                        </h6>
-                        <div>
-                            <table class="table table-sm table-striped" id="tablaRequisicionArticulos">
-                                <thead class="table-light text-center">
-                                    <tr>
-                                        <th>Orden Trabajo</th>
-                                        <th>Código</th>
-                                        <th>Artículo</th>
-                                        <th>Cant. a Encargar</th>
-                                        <th>Proveedor <span class="text-danger">*</span></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="bodyRequisicionArticulos">
-                                    <!-- Se llena dinámicamente -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <hr class="divider-custom">
-
-                    <!-- Sección: Contabilización global -->
-                    <div class="mb-3">
-                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
-                            <i class="bi bi-building me-2"></i>Contabilización
-                        </h6>
-                        <div class="row g-3">
-                            <!-- Departamento -->
-                            <div class="col-md-6" style="position: relative;">
-                                <label class="form-label-custom" for="SolDep">
-                                    <i class="bi bi-building"></i> Departamento <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control-custom"
-                                       id="SolDep" name="SolDep"
-                                       placeholder="Buscar departamento..."
-                                       autocomplete="off">
-                                <div id="sugerenciasDep" class="autocomplete-centrocostos"></div>
-                                <input type="hidden" id="SolDepCodigo" name="SolDepCodigo">
-                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa el departamento.</div>
-                            </div>
-
-                            <!-- Proceso -->
-                            <div class="col-md-6" style="position: relative;">
-                                <label class="form-label-custom" for="SolProceso">
-                                    <i class="bi bi-bar-chart-steps"></i> Proceso <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control-custom"
-                                       id="SolProceso" name="SolProceso"
-                                       placeholder="Buscar proceso..."
-                                       autocomplete="off">
-                                <div id="sugerenciasProceso" class="autocomplete-centrocostos"></div>
-                                <input type="hidden" id="SolProcesoCodigo" name="SolProcesoCodigo">
-                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa el proceso.</div>
-                            </div>
-
-                            <!-- Gastos -->
-                            <div class="col-md-6" style="position: relative;">
-                                <label class="form-label-custom" for="SolGastos">
-                                    <i class="bi bi-coin"></i> Gastos <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control-custom"
-                                       id="SolGastos" name="SolGastos"
-                                       placeholder="Buscar gastos..."
-                                       autocomplete="off">
-                                <div id="sugerenciasGastos" class="autocomplete-centrocostos"></div>
-                                <input type="hidden" id="SolGastosCodigo" name="SolGastosCodigo">
-                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa gastos.</div>
-                            </div>
-
-                            <!-- Cedis -->
-                            <div class="col-md-6" style="position: relative;">
-                                <label class="form-label-custom" for="SolCedis">
-                                    <i class="bi bi-briefcase-fill"></i> Cedis <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control-custom"
-                                       id="SolCedis" name="SolCedis"
-                                       placeholder="Buscar cedis..."
-                                       autocomplete="off">
-                                <div id="sugerenciasCedis" class="autocomplete-centrocostos"></div>
-                                <input type="hidden" id="SolCedisCodigo" name="SolCedisCodigo">
-                                <div class="modal-error-msg invalid-feedback">⚠️ Ingresa el cedis.</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr class="divider-custom">
-
-                    <!-- Sección: Facturas -->
-                    <!--<div class="mb-3">
-                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
-                            <i class="bi bi-file-earmark-text me-2"></i>Facturas
-                        </h6>
-                        <div class="row" id="contenedorFacturas">-->
-                    <!--Se colocan los cards de facturas de manera dinamica-->
-                    <!--</div>
-                    </div>-->
-                    <!-- Alerta Container -->
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div id="alertSolicitudCompraContainer"></div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            <!-- ── Footer ── -->
-            <div class="modal-footer-custom">
-                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle me-1"></i> Cancelar
-                </button>
-                <button type="button" class="btn-modal-guardar" id="completeSolCompra">
-                    <i class="bi bi-floppy-fill me-1"></i> Guardar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+@Html.Partial("_ModalRequisionCompra")
 
 
 <!-- ══════════════════════════════════════════════
@@ -585,4 +437,8 @@
     </div>
 </div>
 
+<!-- ✅ VARIABLE GLOBAL PARA IDENTIFICAR LA VISTA -->
+<script>
+    window.CURRENT_VIEW = 'SolicitudCompra'; // Identificar que estamos en Solicitud de Compra
+</script>
 <script src="~/Scripts/solicitud_ordenes_compra_refactor.js?=v1.2.1"></script>

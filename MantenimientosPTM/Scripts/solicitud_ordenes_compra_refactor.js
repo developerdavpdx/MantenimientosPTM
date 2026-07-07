@@ -38,13 +38,20 @@ class SolicitudCompraApp {
     }
 
     inicializar() {
-        UIManagerCompra.inicializarUI();
+        // ✅ SIEMPRE inicializar estas cosas (necesarias para reutilización)
         this.compraManager.inicializar();
-        this.configurarEventosFiltros();
         this.configurarEventos();
         this.configurarAutoCompletes();
-        this.initHubSolicitudCompra();
-        console.log('✅ Sistema de Solicitud de Compra inicializado correctamente');
+
+        // ✅ SOLO INICIALIZAR SI ESTAMOS EN LA VISTA DE SOLICITUD DE COMPRA
+        if (window.CURRENT_VIEW === 'SolicitudCompra') {
+            UIManagerCompra.inicializarUI();
+            this.configurarEventosFiltros();
+            this.initHubSolicitudCompra();
+            console.log('✅ Sistema de Solicitud de Compra inicializado correctamente');
+        } else {
+            console.info('ℹ️ Inicialización parcial en vista: ' + window.CURRENT_VIEW);
+        }
     }
 
     configurarAutoCompletes() {
@@ -237,139 +244,6 @@ class SolicitudCompraApp {
                             gestion.ocultarSugerencias();
                         }
                     });
-
-                    //Se comienzan a colocar las cards mostrando las facturas ligadas a OC
-                    //Parseamos la data obtenida
-                    const dataFacturas = JSON.parse(responseFacturas.Data);
-                    const facturas = dataFacturas.data.facturas; //Obtenemos las facturas
-                    let htmlFacturas = '';
-                    let badgeEstado = 'bg-success';
-
-                    facturas.forEach(f => {
-
-                        //Seleccion tipo de estado de factura
-                        switch (f.estado.toLowerCase()) {
-
-                            case 'registrada':
-                                badgeEstado = 'bg-success';
-                                break;
-
-                            case 'pendiente':
-                                badgeEstado = 'bg-warning text-dark';
-                                break;
-
-                            case 'rechazada':
-                                badgeEstado = 'bg-danger';
-                                break;
-                        }
-
-                        htmlFacturas += `
-                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="card cards-facturas border-0 rounded-4 factura-card h-100">
-                                    <!-- ENCABEZADO -->
-                                    <div class="card-header text-white border-0 py-3">
-                                        <div class="form-check contenedor-checkFactura">
-                                            
-                                            <div class="factura-id">
-                                                ID: ${f.id}
-                                            </div>
-                                            <input class="form-check-input mb-2 me-1 radio-factura"
-                                                    type="radio"
-                                                    name="facturaSeleccionada"
-
-                                                    data-id="${f.id}"
-                                                    data-factura="${f.uuid}"
-                                                    data-oc="${f.oc}"
-                                                    data-folio="${f.folio}"
-                                                    data-total="${f.total}"
-                                                    data-rfcEmisor="${f.rfcEmisor}"
-                                                    id="radioFactura_${f.folio}">
-
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            
-                                            <div>
-                                                <div class="factura-title mb-1">
-                                                    FACTURA ELECTRÓNICA
-                                                </div>
-
-                                                <small class="factura-Emisor">
-                                                    RFC Emisor: ${f.rfcEmisor}
-                                                </small>
-                                            </div>
-                                            <div class="text-end">
-                                                <div class="fw-bold">${f.folio}</div>
-
-                                                <span class="badge ${badgeEstado} rounded-pill mt-2 pb-2">
-                                                    ${f.estado}
-                                                </span>
-                                            </div>
-                                            
-                                        </div>
-                                    </div>
-
-                                    <!-- BODY -->
-                                    <div class="card-body">
-
-                                        <div class="row g-3">
-
-                                            <!-- PROVEEDOR -->
-                                            <div class="col-12">
-                                                <small class="text-muted d-block">
-                                                    Proveedor:
-                                                </small>
-                                                <div class="fw-semibold">
-                                                   ${f.razon}
-                                                </div>
-                                            </div>
-                                            <!-- OC -->
-                                            <div class="col-6">
-                                                <small class="text-muted d-block">
-                                                    Orden de Compra:
-                                                </small>
-                                                <div class="fw-semibold">
-                                                    ${f.oc}
-                                                </div>
-                                            </div>
-                                            <!-- FECHA -->
-                                            <div class="col-6">
-                                                <small class="text-muted d-block">
-                                                    Fecha:
-                                                </small>
-                                                <div class="fw-semibold">
-                                                    ${f.fechaFactura}
-                                                </div>
-                                            </div>
-
-                                            <!-- MONEDA -->
-                                            <div class="col-6">
-                                                <small class="text-muted d-block">Moneda:</small>
-                                                <div class="fw-semibold">${f.moneda}</div>
-                                            </div>
-
-                                        </div>
-
-                                        <!-- TOTAL -->
-                                        <div class="factura-area-total p-3 mt-4">
-                                            <div class="text-muted small">TOTAL</div>
-                                            <div class="fs-3 fw-bold text-success ms-3">$${this.formatearImporte(f.total)}</div>
-                                        </div>
-
-                                    </div>
-
-                                    <!-- UUID -->
-                                    <div class="card-footer pb-3">
-                                        <div class="small text-muted fw-semibold">UUID:</div>
-                                        <small class="text-break factura-uuid ms-3">${f.uuid}</small>
-                                    </div>
-
-                                </div>
-
-                            </div>
-                        `;
-                    });
-                    $('#contenedorFacturas').html(htmlFacturas);
-
                 });
 
                 $('#SolcitarModal').modal('show');
@@ -404,17 +278,30 @@ class SolicitudCompraApp {
 
                 const nombreArticulo = fila.find('td:eq(2)').text().trim();
 
+                // ✅ CAPTURAR CANTIDAD: Intenta primero desde input, luego desde badge/texto
+                let cantidadTotal;
+                const $cantidadInput = fila.find('.cantidad-editable');
+
+                if ($cantidadInput.length > 0) {
+                    // Si existe input editable, obtener su valor
+                    cantidadTotal = parseInt($cantidadInput.val()) || 0;
+                } else {
+                    // Si no, obtener del texto de la celda (badge o texto plano)
+                    const textocelda = fila.find('td:eq(3)').text().trim();
+                    cantidadTotal = parseInt(textocelda) || 0;
+                }
+
                 articulos.push({
                     IdsDetalle: JSON.parse(fila.attr('data-idsdetalle')), // ✅ array de IDs
                     CodigoArticulo: fila.data('codigoarticulo'),
                     NombreArticulo: nombreArticulo,
-                    CantidadTotal: parseInt(fila.find('td:eq(3)').text().trim()),
+                    CantidadTotal: cantidadTotal,
                     ...gestion.obtenerDatosFormulario()  // codigoProveedor, nombreProveedor
                 });
             });
 
             if (proveedorFaltante) {
-                AlertManager.mostrar('⚠️ Selecciona un proveedor para cada artículo.', 'warning');
+                AlertManager.mostrar('Selecciona un proveedor para cada artículo.', 'warning');
                 return;
             }
 
@@ -426,7 +313,7 @@ class SolicitudCompraApp {
                         $(g._inputBuscar).addClass('is-invalid');
                     }
                 });
-                AlertManager.mostrar('⚠️ Completa todos los campos de contabilización.', 'warning');
+                AlertManager.mostrar('Completa todos los campos de contabilización.', 'warning');
                 return;
             }
 
@@ -458,9 +345,20 @@ class SolicitudCompraApp {
             .html('<i class="bi bi-hourglass-split me-1"></i> Guardando...');
 
         try {
+
+            let urlfinal = "";
+
+            // ✅ SOLO INICIALIZAR SI ESTAMOS EN LA VISTA DE SOLICITUD DE COMPRA
+            if (window.CURRENT_VIEW === 'SolicitudCompra') {
+                urlfinal = "ActualizarSolicitudOrdenCompraMP";
+            }
+            else if (window.CURRENT_VIEW === 'ReporteStock') {
+                urlfinal = "InsertarSolicitudOrdenCompraMPUndependent";
+            }
+
             // ✅ Paso 1: Actualizar solicitud de compra con estatus "Espera Autorizacion"
             const responseInsert = await $.ajax({
-                url: `/${this.URLBase}/ActualizarSolicitudOrdenCompraMP`,
+                url: `/${this.URLBase}/${urlfinal}`,
                 type: 'POST',
                 contentType: 'application/json; charset=utf-8',
                 data: JSON.stringify({
@@ -545,36 +443,44 @@ class SolicitudCompraApp {
     // SIGNALR MANAGER — SOLICITUDES DE COMPRA
     // ========================================
     initHubSolicitudCompra() {
+        // ✅ SOLO INICIALIZAR EN LA VISTA CORRECTA
+        if (window.CURRENT_VIEW !== 'SolicitudCompra') {
+            console.info('ℹ️ SignalR Solicitud Compra omitido (vista: ' + window.CURRENT_VIEW + ')');
+            return;
+        }
+
+        // ✅ VERIFICAR QUE EL MODAL EXISTE
+        const $modalEl = document.getElementById('actualizacionRefaccionesModal');
+        if (!$modalEl) {
+            console.warn('Modal actualizacionRefaccionesModal no encontrado');
+            return;
+        }
+
         const self = this;
         const hub = $.connection.mantenimientoHub;
         let reconnectDelay = 5000;
         let isReloadingSolicitudCompra = false;
 
         const miPlanta = this.datos_usuario[0]?.PLANTA || '';
-        // Reemplaza la función debeRecibirAviso por esta versión más robusta
+
+        // ✅ Reemplaza la función debeRecibirAviso por esta versión más robusta
         const debeRecibirAviso = (planta) => {
             const mi = String(miPlanta || '').trim();
             const pl = String(planta || '').trim();
             return mi !== '' && mi === pl;
         };
 
-        let modalActualizacion = null;
-        const $modalEl = document.getElementById('actualizacionRefaccionesModal');
+        let modalActualizacion = new bootstrap.Modal($modalEl, {
+            backdrop: 'static',
+            keyboard: false
+        });
 
-        // ✅ Inicializar modal de actualización
-        if ($modalEl) {
-            modalActualizacion = new bootstrap.Modal($modalEl, {
-                backdrop: 'static',
-                keyboard: false
+        const btnConfirmar = document.getElementById('btnConfirmarActualizacion');
+        if (btnConfirmar) {
+            btnConfirmar.addEventListener('click', () => {
+                modalActualizacion.hide();
+                self._recargarTabla();
             });
-
-            const btnConfirmar = document.getElementById('btnConfirmarActualizacion');
-            if (btnConfirmar) {
-                btnConfirmar.addEventListener('click', () => {
-                    modalActualizacion.hide();
-                    self._recargarTabla();
-                });
-            }
         }
 
         // ✅ Método que se ejecuta cuando se recibe notificación
@@ -585,6 +491,7 @@ class SolicitudCompraApp {
                 console.info("🔕 Aviso ignorado — no corresponde a esta planta:", miPlanta);
                 return;
             }
+
             // Validaciones para no recargar innecesariamente
             if ($modalEl && $modalEl.classList.contains('show')) {
                 console.info("🔕 Modal de actualización ya está abierto");
@@ -648,8 +555,6 @@ class SolicitudCompraApp {
             isReloadingSolicitudCompra = false;
         }
     }
-
-
 }
 
 // ========================================
@@ -657,17 +562,27 @@ class SolicitudCompraApp {
 // ========================================
 class UIManagerCompra {
     static inicializarUI() {
+        // ✅ VERIFICAR QUE LOS ELEMENTOS EXISTEN ANTES DE USARLOS
+        if ($('#SolicitudOrdenesCompraURL').length === 0) {
+            console.info('UIManagerCompra.inicializarUI() omitido - elementos no encontrados');
+            return;
+        }
+
         $("#SolicitudOrdenesCompraURL").addClass("selected-item");
         $("#AlmacenContainer").addClass("selected");
         $("#AlmacenContainer a").addClass("whiteText");
         $("#almacen-collapse").addClass("show");
+
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
 
-        $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
-        $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
+        if ($('#FiltroFechaInicio').length > 0) {
+            $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
+            $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
+        }
     }
 }
+
 
 // ========================================
 // GESTOR DE COMPRAS
@@ -1422,6 +1337,10 @@ class CompraManager {
 // INICIALIZACIÓN
 // ========================================
 $(document).ready(function () {
+    // ✅ SIEMPRE CREAR LA APP PARA ACCESO A EVENTOS Y MÉTODOS
     const app = new SolicitudCompraApp();
     app.inicializar();
+
+    console.log('✅ SolicitudCompraApp disponible en window.AppSolicitudCompra');
+    console.log('ℹ️ Vista actual: ' + (window.CURRENT_VIEW || 'no definida'));
 });
