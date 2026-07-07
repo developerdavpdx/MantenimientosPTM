@@ -867,6 +867,7 @@ namespace MantenimientosPTM
         public class EntradasMercanciaRequest
         {
             public int DocEntryOrdenCompra { get; set; }
+            public DateTime fechaDoc { get; set; }
             public List<LineaEntradaMercancia> Lineas { get; set; } = new List<LineaEntradaMercancia>();
         }
 

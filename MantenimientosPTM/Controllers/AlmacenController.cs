@@ -1549,7 +1549,7 @@ namespace MantenimientosPTM.Controllers
             try
             {
                 // ✅ Leer body JSON
-                string body = await new System.IO.StreamReader(Request.InputStream).ReadToEndAsync();
+                string body = await new StreamReader(Request.InputStream).ReadToEndAsync();
                 var payload = JsonConvert.DeserializeObject<EntradasMercanciaRequest>(body);
 
                 if (payload == null)

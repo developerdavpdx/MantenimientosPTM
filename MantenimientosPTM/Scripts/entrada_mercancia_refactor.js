@@ -140,6 +140,7 @@ class EntradaMercanciaApp {
             const nombreProv = $("#nombreProv").val().trim();
             const codigoProv = $("#codigoProv").val().trim();
             const ordenCompra = $("#ordenCompra").val().trim();
+            const fechaDoc = $("#FechaDoc").val();
 
             if (!nombreProv || !codigoProv || !ordenCompra) {
                 AlertManager.mostrar('Por favor complete los campos: Proveedor y Orden de Compra.', 'warning');
@@ -153,12 +154,6 @@ class EntradaMercanciaApp {
                 return;
             }
 
-            //const lineas = this.entradaManager.currentDocLinesOC.map(e => ({
-            //    NumeroLinea: e.Linea,
-            //    Cantidad: e.Cantidad,
-            //    PrecioUnitario: e.PrecioU
-            //}));
-
             const lineas = this.entradaManager.obtenerFilasSeleccionadas();
 
             console.log("Articulos seleccionados:");
@@ -169,6 +164,7 @@ class EntradaMercanciaApp {
 
             const payload = {
                 DocEntryOrdenCompra: DocEntryOC,
+                fechaDoc: fechaDoc,
                 Lineas: lineas
             };
 
@@ -219,6 +215,13 @@ class EntradaMercanciaApp {
                 if (datos['total']) $(this).attr('data-total', datos['total']);
                 if (datos['rfcemisor']) $(this).attr('data-rfcemisor', datos['rfcemisor']);
             });
+
+            $("#inputDivisa").val(datos['moneda']);
+
+            // Parsear la fecha: de '2026-06-22 09:54:29.000' a '2026-06-22'
+            const fechaFactura = datos['fecha'] ? datos['fecha'].split(' ')[0] : '';
+            $("#FechaDoc").val(fechaFactura);
+
         });
     }
 
@@ -273,6 +276,8 @@ class EntradaMercanciaApp {
 
                                                     data-id="${f.id}"
                                                     data-factura="${f.uuid}"
+                                                    data-fecha="${f.fechaFactura}"
+                                                    data-moneda="${f.moneda}"
                                                     data-oc="${f.oc}"
                                                     data-folio="${f.folio}"
                                                     data-total="${f.total}"
@@ -397,6 +402,7 @@ class EntradaMercanciaApp {
     _setFechasActuales() {
         const fechaHoy = this._getFechaHoy();
         $('#FechaCount').val(fechaHoy);
+        $('#FechaV').val(fechaHoy);
         $('#FechaDoc').val(fechaHoy);
     }
 
@@ -998,9 +1004,9 @@ class EntradaMercanciaManager {
             // Obtener datos de la fila
             const linea = $fila.find('.linea').text().trim();
             const code = $fila.find('.itemcode').text().trim();
-            const cantidad = parseInt($fila.find('.cantidad input').val()) || 0;
-            const lote = parseInt($fila.find('.lote input').val()) || '';
-            const folio = parseInt($fila.find('.folioFact input').val()) || '';
+            const cantidad = parseInt($fila.find('.input-cantidad').val()) || 0;
+            const lote = $fila.find('.input-lote').val() || '';
+            const folio = $fila.find('.input-folio').val() || '';
             const precioUnitario = parseFloat($fila.find('.preciou').text().trim()) || 0;
 
             filasSeleccionadas.push({
