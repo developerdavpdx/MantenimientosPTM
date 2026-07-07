@@ -367,8 +367,9 @@ namespace MantenimientosPTM.Controllers
                 var parametrosFinOT = new
                 {
                     P_ID_MANTENIMIENTO = datos.IdMantenimiento,
+                    P_ORDENTRABAJO = string.Empty,
                     P_ESTATUS = 4,
-                    P_USUARIO_ACTUALIZA = datos.Solicitante
+                    P_USUARIOACTUALIZA = datos.Solicitante
                 };
 
                 allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, false, null);

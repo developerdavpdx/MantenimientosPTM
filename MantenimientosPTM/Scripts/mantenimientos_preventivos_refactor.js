@@ -345,7 +345,7 @@ class MantenimientosPreventivoApp {
                                        ${item.NIVEL_URGENCIA || ''}
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge ${classBadge}">${item.ESTATUS || ''}</span>
+                                        <span class="badge text-black ${classBadge}">${item.ESTATUS || ''}</span>
                                     </td>
                                 </tr>
                             `;

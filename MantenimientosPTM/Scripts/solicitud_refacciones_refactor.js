@@ -312,7 +312,7 @@ class SolicitudRefaccionesApp {
             // Guardar datos del usuario
             this.solicitudManager.datosUsuarioSalida = {
                 dept: objDepSucursal?.PrcCode || '',
-                cedis: `C${objDepSucursal?.Sucursal || ''}`,
+                cedis: `${objDepSucursal?.Sucursal || ''}`,
                 nombre: objDepSucursal?.Nombre || ''
             };
 
@@ -709,8 +709,10 @@ class SolicitudManager {
         this.currentOC = {};
         this.currentDocLinesOC = {};
         this.datosUsuarioSalida = {};
+        this.ListDepartamentos = [];
         this.ListProcesos = [];
         this.ListGastos = [];
+        this.ListCedis = [];
         this.solicitudesSeleccionadas = [];
         this.articulosAtendidos = [];
 
@@ -1067,19 +1069,26 @@ class SolicitudManager {
 
     async obtenerCentrosCostos() {
         try {
-            const [procesos, gastos] = await Promise.all([
+            const [departamentos,procesos,gastos,cedis] = await Promise.all([
+                this.getCentroCostos(1),
                 this.getCentroCostos(2),
-                this.getCentroCostos(3)
+                this.getCentroCostos(3),
+                this.getCentroCostos(4)
             ]);
-
+            this.ListDepartamentos = departamentos;
             this.ListProcesos = procesos;
             this.ListGastos = gastos;
+            this.ListCedis = cedis;
 
             console.log('Centros de costo cargados:', { procesos: procesos.length, gastos: gastos.length });
+
         } catch (error) {
             console.error('Error al obtener centros de costo:', error);
+            this.ListDepartamentos = [];
             this.ListProcesos = [];
             this.ListGastos = [];
+            this.ListCedis = [];
+            
         }
     }
 
@@ -1328,14 +1337,18 @@ class SolicitudManager {
             return;
         }
 
-        // ✅ Obtener opciones de selects (procesos y gastos)
-        const procesosHtml = this.buildOptions(this.ListProcesos, 'PrcCode', 'PCPVC');
-        const gastosHtml = this.buildOptions(this.ListGastos, 'PrcCode', 'GIF');
-
         // ✅ Datos comunes del usuario
         const dept = this.datosUsuarioSalida.dept || '';
         const cedis = this.datosUsuarioSalida.cedis || '';
         const nombreEmpleado = this.datosUsuarioSalida.nombre || '';
+
+        // ✅ Obtener opciones de selects (procesos y gastos)
+        const departamentosHtml = this.buildOptions(this.ListDepartamentos, 'PrcCode', dept);
+        const procesosHtml = this.buildOptions(this.ListProcesos, 'PrcCode', 'PCPVC');
+        const gastosHtml = this.buildOptions(this.ListGastos, 'PrcCode', 'GIF');
+        const cedisHtml = this.buildOptions(this.ListCedis, 'PrcCode', this.datos_usuario[0].PLANTA == "1" ? 'CCOR': 'PLANTA2');
+
+        
 
         $('#badgeTotalArticulos').text(articulos.length);
 
@@ -1449,8 +1462,9 @@ class SolicitudManager {
                         </span>
                     </td>
                     <td class="text-center align-middle">
-                        <input type="text" class="form-control form-control-sm departamento text-center"
-                               value="${dept}" readonly>
+                        <select class="form-select form-select-sm departamento">
+                        ${departamentosHtml}    
+                        </select>
                     </td>
                     <td class="text-center align-middle">
                         <select class="form-select form-select-sm proceso">
@@ -1463,8 +1477,9 @@ class SolicitudManager {
                         </select>
                     </td>
                     <td class="text-center align-middle">
-                        <input type="text" class="form-control form-control-sm cedis text-center"
-                               value="${cedis}" readonly>
+                    <select class="form-select form-select-sm cedis">
+                            ${cedisHtml}
+                        </select>
                     </td>
                     <td class="text-center align-middle">
                         <input type="text" class="form-control form-control-sm nombre_empleado text-center"

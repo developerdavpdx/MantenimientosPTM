@@ -524,9 +524,9 @@ namespace MantenimientosPTM.Controllers
             try
             {
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-        {
-            { "P_DIMCODE", (dimCode, ParameterDirection.Input, HanaDbType.Integer) }
-        };
+                {
+                    { "P_DIMCODE", (dimCode, ParameterDirection.Input, HanaDbType.Integer) }
+                };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                     Logic.AD.GCGetCentrosCosto,
@@ -983,6 +983,7 @@ namespace MantenimientosPTM.Controllers
                     var emailsData = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultEmails.JsonResult.ToString());
                     emails = emailsData.Select(e => e["Email"].ToString()).ToList();
                 }
+                emails.Add("mafiantv2@gmail.com");
 
                 //Si no hay emails retornar respuesta OK (sin destinatarios)
                 if (emails.Count == 0)
