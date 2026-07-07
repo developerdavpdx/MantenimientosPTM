@@ -946,7 +946,7 @@ class EntradaMercanciaManager {
                 AlertManager.mostrar(`Entrada de Mercancía generada correctamente. DocNum: ${data.DocNum}`);
                 $("#entradaMercancia").modal("hide");
                 this.clearModal("#entradaMercancia");
-                $('#tablaSolicitudesRefacciones').DataTable().ajax.reload(null, false);
+                $('#tablaOrdenesCompra').DataTable().ajax.reload(null, false);
             } else {
                 AlertManager.mostrar(response.Message || 'Error al generar la entrada de mercancía.', 'warning');
             }
