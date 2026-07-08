@@ -772,9 +772,20 @@ namespace MantenimientosPTM.Controllers
                     {
                         var paramPeriodicidad = Logic.GlobalCommands.ConvertToHanaParameters(new AccesoDatosEquipos.PeriodicidadEquipoMTTO { Id_Periodicidad = periodicidad, Id_Equipo = IdEquipo, Usuario = RequestData.Usuario }, true, null);
 
+                        excludedParams = new[] {
+                                    "P_ID_EQUIPO_PERIODICIDAD",
+                                    "P_DESCRIPCION_PERIODICIDAD",
+                                    "P_ESTATUS",
+                                    "P_FECHA_CREACION"
+                                };
+
+                        var parametersPeriodicidad = paramPeriodicidad
+                        .Where(p => !excludedParams.Contains(p.Key))
+                        .ToDictionary(p => p.Key, p => p.Value);
+
                         var resultHanaPeriodicidad = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                             Logic.AD.GCInsertaPeriodicidadesEquipo,
-                            paramPeriodicidad
+                            parametersPeriodicidad
                         );
 
                         if (resultHanaPeriodicidad.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -839,6 +850,46 @@ namespace MantenimientosPTM.Controllers
                     RequestData = JsonConvert.DeserializeObject<AccesoDatosEquipos.EquipoMTTO>(jsonData);
                 }
 
+
+                // Consultar periodicidades actuales
+                var parametrosConsulta = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_IDEQUIPO", (RequestData.IdEquipo, ParameterDirection.Input, HanaDbType.Integer) }
+                };
+
+                var resultConsulta = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCConsultarPeriodicidadesEquipo,
+                    parametrosConsulta
+                );
+
+                List<AccesoDatosEquipos.PeriodicidadEquipoMTTO> periodicidadesActuales =
+                    new List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>();
+
+                if (!string.IsNullOrEmpty(resultConsulta.JsonResult) &&
+                    resultConsulta.JsonResult != "[]")
+                {
+                    periodicidadesActuales =
+                        JsonConvert.DeserializeObject<List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>>
+                        (
+                            resultConsulta.JsonResult
+                        );
+                }
+
+                var actuales = periodicidadesActuales
+                    .Select(x => x.Id_Periodicidad.Value)
+                    .ToList();
+
+                var nuevas = RequestData.PeriodicidadesMantenimiento;
+
+                // Periodicidades a insertar (no existen actualmente)
+                var agregar = nuevas.Except(actuales).ToList();
+
+                // Periodicidades a desactivar (ya no vienen en la solicitud)
+                var desactivar = actuales.Except(nuevas).ToList();
+
+                // Periodicidades que permanecen iguales
+                var mantener = actuales.Intersect(nuevas).ToList();
+
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
                 var excludedParams = new[]
                 {
@@ -869,26 +920,10 @@ namespace MantenimientosPTM.Controllers
 
                     try
                     {
-                        // Eliminar periodicidades actuales
-                        var parametrosEliminar = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
-                        {
-                            { "P_ID_EQUIPO", (RequestData.IdEquipo, ParameterDirection.Input, HanaDbType.Integer) },
-                        };
-
-                        var resultEliminar = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                            Logic.AD.GCEliminarPeriodicidadesEquipo,
-                            parametrosEliminar
-                        );
-
-                        if (resultEliminar.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            errorPeriodicidad = true;
-                        }
-
-                        // Insertar las nuevas periodicidades
+                        // Insertar únicamente las periodicidades nuevas
                         if (!errorPeriodicidad)
                         {
-                            foreach (var periodicidad in RequestData.PeriodicidadesMantenimiento)
+                            foreach (var periodicidad in agregar)
                             {
                                 var paramPeriodicidad =
                                     Logic.GlobalCommands.ConvertToHanaParameters(
@@ -902,13 +937,49 @@ namespace MantenimientosPTM.Controllers
                                         null
                                     );
 
+                                excludedParams = new[] {
+                                    "P_ID_EQUIPO_PERIODICIDAD",
+                                    "P_DESCRIPCION_PERIODICIDAD",
+                                    "P_ESTATUS",
+                                    "P_FECHA_CREACION"
+                                };
+
+                                var parametersperiodicidad = paramPeriodicidad
+                                .Where(p => !excludedParams.Contains(p.Key))
+                                .ToDictionary(p => p.Key, p => p.Value);
+
                                 var resultPeriodicidad =
                                     Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                                         Logic.AD.GCInsertaPeriodicidadesEquipo,
-                                        paramPeriodicidad
+                                        parametersperiodicidad
                                     );
 
                                 if (resultPeriodicidad.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    errorPeriodicidad = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Desactivar periodicidades eliminadas
+                        if (!errorPeriodicidad)
+                        {
+                            foreach (var periodicidad in desactivar)
+                            {
+                                var parametrosDesactivar = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
+                            {
+                                { "P_ID_EQUIPO", (RequestData.IdEquipo, ParameterDirection.Input, HanaDbType.Integer) },
+                                { "P_ID_PERIODICIDAD", (periodicidad, ParameterDirection.Input, HanaDbType.Integer) },
+                                { "P_USUARIO", (RequestData.Usuario, ParameterDirection.Input, HanaDbType.NVarChar) }
+                            };
+
+                                var resultDesactivar = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                                    Logic.AD.GCDesactivarPeriodicidadEquipo,
+                                    parametrosDesactivar
+                                );
+
+                                if (resultDesactivar.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
                                 {
                                     errorPeriodicidad = true;
                                     break;

@@ -50,7 +50,13 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
     async inicializar() {
         await this.inicializarCommon();
-        // 🔥 CONSULTAR DATOS
+
+        // 🔥 NUEVO: Inicializar gestor de correos
+        this.correctosManager = new CorreosManagerPVC();
+        this.correctosManager.setAppProduccion(this);
+        this.correctosManager.inicializar();
+
+        // 📧 CONSULTAR DATOS
         this.consultarDatos(null, null, null);
         console.log('✅ Sistema PVC inicializado');
     }
@@ -827,6 +833,12 @@ class GestionProduccionPVC extends GestionProduccionBase {
     configurarEventos() {
         $('#btnExportarExcel').on('click', () => this.exportarExcel());
         $('#btnGuardarCambios').on('click', () => this.guardarCambios());
+
+        // 🔥 NUEVO: Abrir modal para enviar por correo
+        $('#btnEnviarCorreo').on('click', () => {
+            const modal = new bootstrap.Modal(document.getElementById('modalEnviarExcelCorreo'));
+            modal.show();
+        });
 
         // Delegación de eventos para botones de la tabla (si los hay)
         $(document).on('click', '.btn-editar-fila', (e) => {
@@ -1730,7 +1742,16 @@ class ExcelExporterPVC extends ExcelExporterBase {
     }
 
     agregarFilasDatos(worksheet, estructura) {
+        let filaTotales = null;
+
+        // Primero, recopilar todos los datos (excluyendo TOTALES)
         this.gridApi.forEachNodeAfterFilterAndSort((node) => {
+            // Guardar la fila de totales para procesarla al final
+            if (node.data && node.data.id === 'TOTALES') {
+                filaTotales = node;
+                return; // No procesarla aquí, la haremos al final
+            }
+
             const fila = [];
 
             estructura.grupos.forEach(grupo => {
@@ -1778,8 +1799,24 @@ class ExcelExporterPVC extends ExcelExporterBase {
                         valor = parseFloat(valor);
                     }
 
-                    if (node.data.id === 'TOTALES' &&
-                        ![
+                    fila.push(valor || '');
+                });
+            });
+
+            worksheet.addRow(fila);
+        });
+
+        // Ahora procesar la fila de totales si existe
+        if (filaTotales) {
+            const fila = [];
+
+            estructura.grupos.forEach(grupo => {
+                grupo.children.forEach(col => {
+                    let valor = filaTotales.data[col.field];
+
+                    // Para TOTALES, mostrar valores numéricos (no vacíos)
+                    if (valor !== null && valor !== undefined && valor !== '') {
+                        if (![
                             'Mes',
                             'Fecha',
                             'Producto',
@@ -1787,6 +1824,9 @@ class ExcelExporterPVC extends ExcelExporterBase {
                             'Linea',
                             'Turno'
                         ].includes(col.field)) {
+                            valor = parseFloat(valor);
+                        }
+                    } else {
                         valor = '';
                     }
 
@@ -1795,7 +1835,7 @@ class ExcelExporterPVC extends ExcelExporterBase {
             });
 
             worksheet.addRow(fila);
-        });
+        }
     }
 
     aplicarEstilos(worksheet, estructura) {
@@ -1958,6 +1998,11 @@ class ExcelExporterPVC extends ExcelExporterBase {
                             left: { style: 'thin' },
                             right: { style: 'thin' }
                         };
+
+                        // Aplicar formato numérico a la fila de totales también
+                        if (!['Fecha', 'Linea', 'Producto', 'Turno', 'TRIP', 'Mes'].includes(col.field)) {
+                            celda.numFmt = '0.00';
+                        }
                     } else {
                         const colorFondo = this.obtenerColorCelda(col.cellClass);
 
@@ -2129,5 +2174,184 @@ class ExcelExporterPVC extends ExcelExporterBase {
             }
         });
 
+    }
+}
+
+// ========================================
+// 📧 GESTOR DE CORREOS PARA ENVÍO DE EXCEL
+// ========================================
+class CorreosManagerPVC {
+    constructor() {
+        this.correosNotificacion = [];
+        this.appProduccion = null;
+    }
+
+    setAppProduccion(app) {
+        this.appProduccion = app;
+    }
+
+    inicializar() {
+        $("#btnAgregarCorreoPVC").off("click").on("click", () => this.agregarCorreo());
+        $("#inputCorreoPVC").off("keydown").on("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                this.agregarCorreo();
+            }
+        });
+        $("#btnEnviarExcelCorreo").off("click").on("click", () => this.enviarExcelPorCorreo());
+    }
+
+    agregarCorreo() {
+        const input = $("#inputCorreoPVC");
+        const correo = input.val().trim().toLowerCase();
+        const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        // Validar formato
+        if (!regexEmail.test(correo)) {
+            $("#errorCorreoPVC").text("Ingrese un correo válido.").show();
+            input.addClass("is-invalid");
+            return;
+        }
+
+        // Validar duplicado
+        if (this.correosNotificacion.includes(correo)) {
+            $("#errorCorreoPVC").text("Este correo ya fue agregado.").show();
+            input.addClass("is-invalid");
+            return;
+        }
+
+        // Agregar a la lista
+        this.correosNotificacion.push(correo);
+        this.renderCorreos();
+
+        // Limpiar input
+        input.val('').removeClass("is-invalid");
+        $("#errorCorreoPVC").hide();
+    }
+
+    renderCorreos() {
+        const lista = $("#listaCorreosPVC");
+        lista.empty();
+
+        if (this.correosNotificacion.length === 0) {
+            lista.html(`
+                <span class="text-muted" style="font-size:0.82rem;">
+                    <i class="bi bi-info-circle me-1"></i> No hay correos agregados aún.
+                </span>
+            `);
+            return;
+        }
+
+        this.correosNotificacion.forEach((correo, index) => {
+            lista.append(`
+                <span class="badge d-flex align-items-center gap-2 px-3 py-2"
+                      style="background: var(--modal-primary-soft); color: var(--modal-primary); 
+                             border: 1px solid var(--modal-primary-mid); border-radius: 20px; font-size:0.82rem;">
+                    <i class="bi bi-envelope"></i>
+                    ${correo}
+                    <button type="button" class="btn-remove-correo" data-index="${index}"
+                            style="background:none; border:none; padding:0; cursor:pointer; 
+                                   color: var(--modal-primary); line-height:1;">
+                        <i class="bi bi-x-lg" style="font-size:0.7rem;"></i>
+                    </button>
+                </span>
+            `);
+        });
+
+        // Evento eliminar badge
+        $(".btn-remove-correo").off("click").on("click", (e) => {
+            const index = $(e.currentTarget).data("index");
+            this.correosNotificacion.splice(index, 1);
+            this.renderCorreos();
+        });
+    }
+
+    async enviarExcelPorCorreo() {
+        if (this.correosNotificacion.length === 0) {
+            AlertManager.mostrar("Debe agregar al menos un correo", "warning");
+            return;
+        }
+
+        const btn = $("#btnEnviarExcelCorreo");
+        btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Generando Excel...');
+        btn.prop("disabled", true);
+
+        try {
+            // 🔥 Generar Excel en el cliente con estilos
+            const exporter = new ExcelExporterPVC(this.appProduccion.gridApi, this.appProduccion.columnDefs);
+            const archivoExcel = await exporter.generarExcelParaEnvio();
+
+            if (!archivoExcel) {
+                AlertManager.mostrar("No se pudo generar el Excel", "warning");
+                this.resetearBoton(btn);
+                return;
+            }
+
+            btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Enviando...');
+
+            // 🔥 Convertir Blob a Base64
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const base64Excel = reader.result.split(',')[1]; // Obtener solo la parte Base64
+
+                try {
+                    // 🔥 Obtener metadatos del grid
+                    const payload = {
+                        correos: this.correosNotificacion,
+                        archivoExcelBase64: base64Excel,
+                        usuario: this.appProduccion.datos_usuario[0].NOMBRECOMPLETO,
+                        planta: this.appProduccion.datos_usuario[0].PLANTA,
+                        tipoReporte: 'PVC'
+                    };
+
+                    // 🔥 Enviar al servidor
+                    const response = await $.ajax({
+                        url: `/${this.appProduccion.URLBase}/EnviarExcelProduccionPorCorreo`,
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(payload),
+                        beforeSend: () => {
+                            GlobalUtil.mostrarLoader(true);
+                        }
+                    });
+
+                    if (response.Status === "OK") {
+                        AlertManager.mostrar("Excel enviado correctamente", "success");
+                        // Limpiar correos
+                        this.correosNotificacion = [];
+                        this.renderCorreos();
+                        // Cerrar modal
+                        bootstrap.Modal.getInstance(document.getElementById('modalEnviarExcelCorreo')).hide();
+                    } else {
+                        AlertManager.mostrar(response.Message || "Error al enviar el email", "danger");
+                    }
+                } catch (error) {
+                    console.error(error);
+                    AlertManager.mostrar("Error al procesar la solicitud: " + (error.statusText || error.message), "danger");
+                } finally {
+                    this.resetearBoton(btn);
+                    GlobalUtil.mostrarLoader(false);
+                }
+            };
+
+            reader.readAsDataURL(archivoExcel);
+
+        } catch (error) {
+            console.error(error);
+            AlertManager.mostrar("Error al generar el Excel: " + error.message, "danger");
+            this.resetearBoton(btn);
+        }
+    }
+
+    resetearBoton(btn) {
+        btn.html('<i class="bi bi-send-fill me-1"></i> Enviar');
+        btn.prop("disabled", false);
+    }
+
+    limpiarFormulario() {
+        this.correosNotificacion = [];
+        this.renderCorreos();
+        $("#inputCorreoPVC").val('').removeClass("is-invalid");
+        $("#errorCorreoPVC").hide();
     }
 }

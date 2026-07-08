@@ -209,8 +209,9 @@ namespace MantenimientosPTM
                 // ✅ 3 — Armar body
                 var goodsReceipt = new
                 {
-                    DocDate = DateTime.Now.ToString("yyyy-MM-dd"),
-                    DocDueDate = DateTime.Now.ToString("yyyy-MM-dd"),
+                    DocDate = payload.fechaDoc,
+                    DocDueDate = payload.fechaDoc,
+                    U_COK1_01FOLIOUUID = payload.Lineas[0].Folio, // 👈 aquí
                     Comments = $"Entrada de mercancía generada por interfaz PTM Mantenimientos — {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
                     DocumentLines = documentLines
                 };

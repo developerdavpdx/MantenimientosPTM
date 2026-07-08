@@ -106,93 +106,109 @@
     text-align:center;
 }
 
-/*Estilos card factura*/
 
-.cards-facturas {
-    box-shadow: 1px 1px 10px 0px #c7c7c7 !important;
+
+/* Ajustes: aumentar ancho de columna "Artículo" y "Nombre Empleado" en tabla de salida */
+#tablaArticulosSalida {
+    min-width: 1400px; /* evita compresión extrema; ajusta si hace falta */
 }
 
-.factura-card {
-    position: relative;
-    overflow: hidden;
+    /* Columna "Artículo" (6ª columna) — más espacio y wrap para el texto */
+    #tablaArticulosSalida thead th:nth-child(6),
+    #tablaArticulosSalida tbody td:nth-child(6) {
+        min-width: 320px;
+        max-width: 520px;
+        white-space: normal;
+        word-break: break-word;
+        text-align: left;
+    }
+
+    /* Columna "Nombre Empleado" (18ª columna) — inputs más anchos */
+    #tablaArticulosSalida thead th:nth-child(18),
+    #tablaArticulosSalida tbody td:nth-child(18) {
+        min-width: 260px;
+        max-width: 420px;
+    }
+
+        /* Asegurar que el input de nombre ocupe el 100% del ancho disponible */
+        #tablaArticulosSalida tbody td:nth-child(18) .form-control.nombre_empleado,
+        #tablaArticulosSalida tbody td:nth-child(18) input.nombre_empleado {
+            width: 100%;
+            min-width: 220px;
+            box-sizing: border-box;
+        }
+
+    /* Mejor visibilidad de inputs dentro de la columna Artículo si existieran */
+    #tablaArticulosSalida tbody td:nth-child(6) input,
+    #tablaArticulosSalida tbody td:nth-child(6) .form-control {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+/* Ajustes responsivos: reducir min-widths en pantallas muy pequeñas */
+@media (max-width: 1200px) {
+    #tablaArticulosSalida thead th:nth-child(6),
+    #tablaArticulosSalida tbody td:nth-child(6) {
+        min-width: 260px;
+    }
+
+    #tablaArticulosSalida thead th:nth-child(18),
+    #tablaArticulosSalida tbody td:nth-child(18) {
+        min-width: 200px;
+    }
 }
 
-factura-card .card-header {
-    background: #065fad;
+/* Centro global para tabla Artículos para Salida */
+#tablaArticulosSalida thead th {
+    text-align: center !important;
+    vertical-align: middle !important;
 }
 
-.factura-card::after {
-    content: '';
-    position: absolute;
-    width: 77px;
-    height: 132px;
-    right: 18px;
-    bottom: 230px;
-    background-image: url(Images/PAC.png);
-    background-repeat: no-repeat;
-    background-size: contain;
-    opacity: .08;
-    pointer-events: none;
+/* Centrar todos los valores de celda */
+#tablaArticulosSalida tbody td {
+    text-align: center !important;
+    vertical-align: middle !important;
 }
 
-.factura-card:hover {
-    transform: translateY(-2px);
-}
+    /* Asegurar que la columna "Artículo" y "Nombre Empleado" mantengan sus anchos pero centradas */
+    #tablaArticulosSalida thead th:nth-child(6),
+    #tablaArticulosSalida tbody td:nth-child(6),
+    #tablaArticulosSalida thead th:nth-child(18),
+    #tablaArticulosSalida tbody td:nth-child(18) {
+        text-align: center !important;
+    }
 
-.factura-card .card-header {
-    background: #0a63b4;
-        
-}
+    /* Badges e íconos centrados dentro de la celda */
+    #tablaArticulosSalida tbody td .badge,
+    #tablaArticulosSalida tbody td i {
+        display: inline-block;
+        margin: 0 auto;
+        vertical-align: middle;
+    }
 
-.factura-card .card-footer {
-    border-top: 1px dashed #000000;
-    background-color: #ffba262b;
-}
+    /* Inputs y selects: que ocupen ancho pero el texto centrado y centrados en la celda */
+    #tablaArticulosSalida tbody td input,
+    #tablaArticulosSalida tbody td select,
+    #tablaArticulosSalida tbody td .form-control {
+        display: block;
+        margin: 0 auto;
+        text-align: center;
+        box-sizing: border-box;
+    }
 
-.factura-title {
-    font-weight: 700 !important;
-    font-size: 17px;
-}
+    /* Inputs específicos: cantidad y nombre empleado */
+    #tablaArticulosSalida tbody td .cantidadEditable,
+    #tablaArticulosSalida tbody td .nombre_empleado {
+        width: 90%;
+        min-width: 140px;
+        max-width: 360px;
+    }
 
-.factura-Emisor {
-    color: #ffffff85 !important;
-    font-size: 13px;
+/* En móviles ajustar ligeramente */
+@media (max-width: 1200px) {
+    #tablaArticulosSalida tbody td .cantidadEditable,
+    #tablaArticulosSalida tbody td .nombre_empleado {
+        width: 80%;
+        min-width: 100px;
+    }
 }
-
-.factura-area-total {
-    background-color: #f5f5f5;
-    border-radius: 10px;
-    border: 1px solid #cecece;
-}
-
-.factura-uuid {
-    font-size: 14px;
-    color: #787878;
-}
-
-.factura-id {
-    color: #ffffff85 !important;
-}
-
-.contenedor-checkFactura {
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    padding-left: 0px;
-}
-
-.radio-factura {
-    width: 20px;
-    height: 20px;
-}
-
-.radio-factura:hover {
-    cursor:pointer;
-}
-
-.radio-factura:checked {
-    background-color: #9f9f9f !important;
-    border-color: #a2a2a2;
-    box-shadow: 0px 0px 5px 1px #9a9a9a;
-}
-

@@ -61,6 +61,7 @@ class MantenimientosPreventivoApp {
         this.URLBase = "MantenimientosPreventivos";
         this.URLBaseCorrectivos = "MantenimientosCorrectivos";
         this.URLBaseRutinas = "Rutinas";
+        this.URLBaseAlmacen = "Almacen";
         this.gestionTecnicos = new GestionTecnicos(this.URLBase);
         this.gestionFirmas = new GestionFirmas();
         this.datos_usuario = GlobalUtil.getDatosUsuario();
@@ -344,7 +345,7 @@ class MantenimientosPreventivoApp {
                                        ${item.NIVEL_URGENCIA || ''}
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge ${classBadge}">${item.ESTATUS || ''}</span>
+                                        <span class="badge text-black ${classBadge}">${item.ESTATUS || ''}</span>
                                     </td>
                                 </tr>
                             `;
@@ -799,7 +800,7 @@ class MantenimientoManager {
                             const esAdmin = tipoUsuario === "AdminMtto" || tipoUsuario === "Administrador";
                             const esTecnico = tipoUsuario === "TecnicoMtto";
                             const esSupProduccion = tipoUsuario === "Produccion";
-                            const tieneRefacciones = data.TieneRefaciones;
+                            const tieneRefacciones = data.TieneRefacciones;
 
                             const estatusOrden = row.EstatusOrden || '';
                             const ordenFinalizada = row.OrdenTrabajoFinalizada || '';
@@ -839,9 +840,9 @@ class MantenimientoManager {
 
                                 // 🔧 LISTADO DE REFACCIÓNES
                                 if (tieneRefacciones === "SI") {
-                                    listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Solicitar Refacción', dataAttrs);
+                                    listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Historial de Refacciones', dataAttrs);
                                 } else {
-                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Solicitar Refacción');
+                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
                                 }
 
                                 return `${refaccionBtn}${caratulaBtn}${impresionBtn}${listRefBtn}`;
@@ -1207,6 +1208,8 @@ class MantenimientoManager {
             lineaproduccion: row.LineaProduccion,
             centrocostos: row.CentroCostos,
             periodicidadmantenimiento: row.PeriodicidadMantenimiento,
+            idperiodicidad: row.IdPeriodicidad,
+            idequipoperiodicidad: row.IdEquipoPeriodicidad, //IDENTIFICADOR DE RUTINA
             diainiciomant: row.DiaInicioMant,
             diafinmant: row.DiaFinMant,
             fechainiciomant: row.FechaInicioMant,
@@ -1239,6 +1242,7 @@ class MantenimientoManager {
             firmasuperviso: row.FirmaSuperviso,
             nombresuperviso: row.NombreSuperviso,
             firmamantenimiento: row.FirmaMantenimiento,
+            tieneRefacciones: row.TieneRefacciones,
             nombremantenimiento: row.NombreMantenimiento
         };
 
@@ -1639,7 +1643,7 @@ class MantenimientoManager {
                 case "TecnicoMtto":
 
                     if (typeof this.configurarVistaTecnico === "function") {
-                        this.configurarVistaTecnico(data.estatusOrden, data.firmaRealizo, data.idEquipo, data.planta, data.numeroOrden);
+                        this.configurarVistaTecnico(data.estatusOrden, data.firmaRealizo, data.idEquipo, data.planta, data.numeroOrden, data.idEquipoPeriodicidad);
                     } else {
                         console.error("❌ configurarVistaTecnico no definido");
                     }
@@ -1665,7 +1669,8 @@ class MantenimientoManager {
                             data.firmaMantenimiento,
                             data.numeroOrden,
                             data.idEquipo,
-                            data.planta
+                            data.planta,
+                            data.idEquipoPeriodicidad
                         );
                     } else {
                         console.error("❌ configurarVistaProduccion no definido");
@@ -1693,7 +1698,8 @@ class MantenimientoManager {
                             data.firmaSuperviso,
                             data.numeroOrden,
                             data.idEquipo,
-                            data.planta
+                            data.planta,
+                            data.idEquipoPeriodicidad
                         );
                     } else {
                         console.error("❌ configurarVistaAdministrador no definido");
@@ -1770,6 +1776,8 @@ class MantenimientoManager {
             centroCostos: d.centrocostos,
 
             periodicidadMantenimiento: d.periodicidadmantenimiento,
+            idPeriodicidad: d.idperiodicidad,
+            idEquipoPeriodicidad: d.idequipoperiodicidad,
             fechaInicioMantenimiento: d.fechainiciomantenimiento,
             fechaFinMantenimiento: d.fechafinmantenimiento,
             fechaReferencia: d.fechareferencia,
@@ -1896,7 +1904,7 @@ class MantenimientoManager {
     // ========================================
     // 🔧 CONFIGURAR VISTA TÉCNICO (CORRECTIVO)
     // ========================================
-    configurarVistaTecnico(EstatusOrden, FirmaTecnico, IdEquipo, Planta, NumeroOrden) {
+    configurarVistaTecnico(EstatusOrden, FirmaTecnico, IdEquipo, Planta, NumeroOrden, IdEquipoPeriodicidad) {
 
         // MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
         if (EstatusOrden == 4) {
@@ -1977,14 +1985,14 @@ class MantenimientoManager {
         // ========================================
         //🔥 RUTINA
         // ========================================
-        this.ConsultarRutinaServer(IdEquipo, Planta);
+        this.ConsultarRutinaServer(IdEquipo, Planta, IdEquipoPeriodicidad);
 
     }
 
     // ========================================
     // 👨‍💼 CONFIGURAR VISTA PRODUCCION (CORRECTIVO)
     // ========================================
-    configurarVistaProduccion(EstatusOrden, FirmaTecnico, FirmaSuperviso, FirmaMantenimiento, NumeroOrden, IdEquipo, Planta) {
+    configurarVistaProduccion(EstatusOrden, FirmaTecnico, FirmaSuperviso, FirmaMantenimiento, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad) {
 
         // MOSTRAR FIRMAS
         $('#SeccionFirmas').removeClass('d-none');
@@ -2071,7 +2079,7 @@ class MantenimientoManager {
             // ========================================
             //🔥 RUTINA
             // ========================================
-            this.ConsultarRutinaServer(IdEquipo, Planta);
+            this.ConsultarRutinaServer(IdEquipo, Planta, IdEquipoPeriodicidad);
         }
 
         //IMPORTANTE SI YA FIRMO MANTENIMIENTO OCULTAR BOTON GUARDAR
@@ -2084,7 +2092,7 @@ class MantenimientoManager {
     // ========================================
     // 👨‍💼 CONFIGURAR VISTA ADMIN (CORRECTIVO)
     // ========================================
-    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaMantenimiento, FirmaSuperviso, NumeroOrden, IdEquipo, Planta) {
+    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaMantenimiento, FirmaSuperviso, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad) {
 
         // MOSTRAR FIRMAS
         $('#SeccionFirmas').removeClass('d-none');
@@ -2173,7 +2181,7 @@ class MantenimientoManager {
             // ========================================
             //🔥 RUTINA
             // ========================================
-            this.ConsultarRutinaServer(IdEquipo, Planta);
+            this.ConsultarRutinaServer(IdEquipo, Planta, IdEquipoPeriodicidad);
         }
 
         //IMPORTANTE SI YA FIRMO MANTENIMIENTO OCULTAR BOTON GUARDAR
@@ -2485,10 +2493,10 @@ class MantenimientoManager {
         $('#rutinaProceso').text(area);
 
         // 🔥 CARGAR LA VISTA DESDE EL SERVIDOR
-        this.ConsultarRutinaServer(idEquipo);
+        this.ConsultarRutinaServer(idEquipo, planta, periodicidadMantenimiento);
     }
 
-    ConsultarRutinaServer(idEquipo, Planta) {
+    ConsultarRutinaServer(idEquipo, Planta, idEquipoPeriodicidad) {
 
         // CARGAR LA VISTA DESDE EL SERVIDOR
         const startTime = Date.now();
@@ -2497,7 +2505,12 @@ class MantenimientoManager {
         $.ajax({
             url: `/${this.URLBaseRutinas}/ObtenerRutinaCompleta`,
             type: 'GET',
-            data: { idEquipo: idEquipo, Planta: Planta },
+            data: (function () {
+                const d = { idEquipo: idEquipo };
+                if (typeof Planta !== 'undefined' && Planta !== null) d.Planta = Planta;
+                if (typeof idEquipoPeriodicidad !== 'undefined' && idEquipoPeriodicidad !== null) d.idEquipoPeriodicidad = idEquipoPeriodicidad;
+                return d;
+            })(),
             dataType: 'json',
             beforeSend: function () {
                 $('#formRutinaOnline').html(`
@@ -2531,7 +2544,7 @@ class MantenimientoManager {
                                 $('#formRutinaOnline').find('#seccion-upload-imagenes').remove();
                                 $('#formRutinaOnline').find('#seccion-galeria-imagenes').remove();
                                 if (response.Imagenes?.length > 0) {
-                                    this.checklistManager.cargarImagenesExistentes(response.Imagenes);
+                                    this.checklistManager.cargarImagenesExistentes(response.Imagenes,false);
                                 }
 
                                 //✅ TRANSFORMAR LAS FIRMAS A RADIOBUTTONS PARA TECNICO

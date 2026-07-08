@@ -18,5 +18,11 @@ namespace MantenimientosPTM.Hubs
         {
             Clients.Others.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
         }
+
+        // ✅ NUEVO: Notificación de cambios en Solicitudes de Compra
+        public void NotificarActualizacionSolicitudCompra(string planta)
+        {
+            Clients.All.actualizarTablaSolicitudCompra(planta);
+        }
     }
 }

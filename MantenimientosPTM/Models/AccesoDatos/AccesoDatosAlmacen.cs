@@ -448,6 +448,12 @@ namespace MantenimientosPTM
             [JsonProperty("USUARIO_ATIENDE")]
             public string UsuarioAtiende { get; set; }
 
+            [JsonProperty("NUMERO_EMPLEADO")]
+            public string NumeroEmpleado { get; set; }
+
+            [JsonProperty("DEPARTAMENTO")]
+            public string Departamento { get; set; }
+
             [JsonProperty("FOLIO_COMPRA")]
             public string FolioCompra { get; set; }
         }
@@ -601,16 +607,16 @@ namespace MantenimientosPTM
         public class SolicitudCompraDetalle
         {
             [JsonProperty("ID_DETALLE")]
-            public int IdDetalle { get; set; }
+            public int? IdDetalle { get; set; }
 
             [JsonProperty("ID_SOLICITUD_COMPRA")]
-            public int IdSolicitudCompra { get; set; }
+            public int? IdSolicitudCompra { get; set; }
 
             [JsonProperty("ID_SOLICITUD_REFACCION")]
-            public int IdSolicitudRefaccion { get; set; }
+            public int? IdSolicitudRefaccion { get; set; }
 
             [JsonProperty("CANTIDAD_ENCARGAR")]
-            public int CantidadEncargar { get; set; }
+            public int? CantidadEncargar { get; set; }
 
             [JsonProperty("ORDEN_TRABAJO")]
             public string OrdenTrabajo { get; set; }
@@ -625,16 +631,16 @@ namespace MantenimientosPTM
             public string NombreArticulo { get; set; }
 
             [JsonProperty("CANTIDAD_REQUERIDA")]
-            public int CantidadRequerida { get; set; }
+            public int? CantidadRequerida { get; set; }
 
             [JsonProperty("STOCK_ACTUAL")]
-            public decimal StockActual { get; set; }
+            public decimal? StockActual { get; set; }
 
             [JsonProperty("MIN_STOCK")]
-            public decimal MinStock { get; set; }
+            public decimal? MinStock { get; set; }
 
             [JsonProperty("MAX_STOCK")]
-            public decimal MaxStock { get; set; }
+            public decimal? MaxStock { get; set; }
 
             [JsonProperty("NIVEL_URGENCIA")]
             public string NivelUrgencia { get; set; }
@@ -861,6 +867,7 @@ namespace MantenimientosPTM
         public class EntradasMercanciaRequest
         {
             public int DocEntryOrdenCompra { get; set; }
+            public DateTime fechaDoc { get; set; }
             public List<LineaEntradaMercancia> Lineas { get; set; } = new List<LineaEntradaMercancia>();
         }
 

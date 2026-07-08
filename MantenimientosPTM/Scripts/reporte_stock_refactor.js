@@ -1,37 +1,37 @@
 // ========================================
-// APLICACIÓN REPORTE STOCK ALMACÉN
+// APLICACIÓN PRINCIPAL
 // ========================================
 class ReporteStockApp {
     constructor() {
         this.URLBase = "Almacen";
         this.datos_usuario = GlobalUtil.getDatosUsuario();
         this.PLANTA = this.datos_usuario[0].PLANTA;
-        
+        this.reporteManager = new ReporteStockManager(this.URLBase, this.datos_usuario, this.PLANTA);
+
         window.AppReporteStock = this;
     }
 
     inicializar() {
-        this.configurarPlanta();
+        UIManagerReporteStock.inicializarUI(this.PLANTA);
+        this.reporteManager.inicializar();
         this.configurarEventosFiltros();
-        this.llenarTablaReporteStock();
         console.log('✅ Reporte de Stock Almacén inicializado correctamente');
     }
 
-    configurarPlanta() {
-        $('#FiltroPlanta').val(this.PLANTA);
-    }
-
     configurarEventosFiltros() {
+        // ✅ Botón Aplicar
         $('#btnAplicarFiltros').on('click', () => {
             this._recargarTabla();
         });
 
+        // ✅ Botón Limpiar
         $('#btnLimpiarFiltros').on('click', () => {
             $('#formFiltrosReporteStock')[0].reset();
             $('#FiltroPlanta').val(this.PLANTA);
             this._recargarTabla();
         });
 
+        // ✅ Filtros de texto — solo al presionar Enter
         $('#FiltroCodigoArticulo, #FiltroNombreArticulo').on('keypress', (e) => {
             if (e.which === 13) {
                 e.preventDefault();
@@ -39,12 +39,194 @@ class ReporteStockApp {
             }
         });
 
+        // ✅ Exportar a Excel
         $('#btnExportarExcel').on('click', () => {
-            this.exportarExcel();
+            this.reporteManager.exportarExcel();
+        });
+
+        // ✅ Generar solicitud de compra desde artículos seleccionados en el reporte
+        // ✅ Generar solicitud de compra desde artículos seleccionados en el reporte
+        $('#btnGenerarSolicitudCompra').on('click', async () => {
+            const dt = this.reporteManager.table;
+            if (!dt) {
+                AlertManager.mostrar('Tabla de artículos no inicializada.', 'warning');
+                return;
+            }
+
+            const seleccionadas = [];
+
+            $('#tablaReporteStock tbody input.chkArticulo:checked').each(function () {
+                const $tr = $(this).closest('tr');
+                const rowData = dt.row($tr).data();
+                if (!rowData) return;
+
+                seleccionadas.push({
+                    IdSolicitud: rowData.IdSolicitud ?? 0,
+                    OrdenTrabajo: '', // no corresponde en stock
+                    CodigoArticulo: rowData.CodigoArticulo ?? rowData.Codigo ?? '',
+                    NombreArticulo: rowData.NombreArticulo ?? '',
+                    Cantidad: rowData.Solicitar ?? 1,
+                    Stock: rowData.Stock ?? 0,
+                    Min: rowData.Min ?? 0,
+                    Max: rowData.Max ?? 0,
+                    StatusValidacion: rowData.StatusValidacion ?? ''
+                });
+            });
+
+            if (seleccionadas.length === 0) {
+                AlertManager.mostrar('Debes seleccionar al menos un artículo para continuar.', 'warning');
+                return;
+            }
+
+            // ✅ NUEVA LÓGICA: Generar requisición con centros de costo (como el btn-aprobar)
+            try {
+                // ✅ IDENTIFICAR SI VIENE DE REPORTE STOCK
+                const esDesdeReporteStock = window.CURRENT_VIEW === 'ReporteStock';
+
+                // Limpiar centros de costo
+                Object.values(window.AppSolicitudCompra.centrosCosto).forEach(g => g.limpiar());
+
+                // Preparar datos agrupados
+                const agrupados = Object.values(
+                    seleccionadas.reduce((acc, item) => {
+                        const key = item.CodigoArticulo;
+                        if (acc[key]) {
+                            acc[key].Cantidad += item.Cantidad;
+                            acc[key].IdsDetalle = acc[key].IdsDetalle || [];
+                            acc[key].OrdenesTrabajoArr = acc[key].OrdenesTrabajoArr || [];
+                        } else {
+                            acc[key] = {
+                                ...item,
+                                IdsDetalle: [item.IdSolicitud],
+                                OrdenesTrabajoArr: [item.OrdenTrabajo]
+                            };
+                        }
+                        return acc;
+                    }, {})
+                );
+
+                // Renderizar tabla de requisición
+                $('#bodyRequisicionArticulos').empty();
+                $('#formGenerarRequisicion')[0].reset();
+                $('#formGenerarRequisicion').removeClass('was-validated');
+                $('#subtitleRequisicion').html(
+                    `<i class="bi bi-box-seam me-1"></i> <strong>${seleccionadas.length}</strong> artículo(s) seleccionado(s)`
+                );
+
+                agrupados.forEach((item, i) => {
+                    // Renderizar badges de órdenes de trabajo
+                    const ordenesBadges = item.OrdenesTrabajoArr
+                        .map(ot => `<span class="badge bg-blue-ptm badge-custom me-1">${ot || 'N/A'}</span>`)
+                        .join('');
+
+                    // ✅ SI ES DESDE REPORTE STOCK: Cantidad editable | SI NO: Badge solo lectura
+                    const cantidadHTML = esDesdeReporteStock
+                        ? `<input type="number" class="form-control form-control-sm text-center cantidad-editable" 
+                                  id="CantidadEditable_${i}" 
+                                  value="${item.Cantidad || 0}" 
+                                  min="1" 
+                                  data-cantidad-original="${item.Cantidad || 0}"
+                                  style="width: 80px;">`
+                        : `<span class="badge bg-blue-ptm badge-custom">${item.Cantidad || 0}</span>`;
+
+                    $('#bodyRequisicionArticulos').append(`
+                        <tr data-idsdetalle='${JSON.stringify(item.IdsDetalle)}'
+                            data-codigoarticulo="${item.CodigoArticulo}"
+                            data-from-stock="${esDesdeReporteStock}">
+                            <td class="text-center">${ordenesBadges || '<em class="text-muted">Sin OT</em>'}</td>
+                            <td class="text-center">
+                                <small class="fw-semibold text-muted">${item.CodigoArticulo || ''}</small>
+                            </td>
+                            <td>${item.NombreArticulo || 'N/A'}</td>
+                            <td class="text-center fw-semibold">${cantidadHTML}</td>
+                            <td>
+                                <div class="sol-buscar-proveedor-wrap">
+                                    <input type="text" class="form-control-custom sol-buscar-proveedor"
+                                           id="BuscarProveedor_${i}" placeholder="Buscar proveedor..." autocomplete="off">
+                                    <div id="sugerenciasProveedor_${i}" class="autocomplete-sugerencias-proveedores"></div>
+                                    <input type="hidden" id="CodigoProveedor_${i}" class="sol-codigo-proveedor">
+                                    <input type="hidden" id="NombreProveedor_${i}" class="sol-nombre-proveedor">
+                                </div>
+                            </td>
+                        </tr>
+                    `);
+
+                    // Instanciar gestor de proveedores
+                    const gestion = new GestionProveedores({
+                        inputBuscar: `#BuscarProveedor_${i}`,
+                        inputCodigo: `#CodigoProveedor_${i}`,
+                        inputNombre: `#NombreProveedor_${i}`,
+                        contenedorSugerencias: `#sugerenciasProveedor_${i}`,
+                        showBadge: true
+                    });
+
+                    $(`#BuscarProveedor_${i}`).data('gestion', gestion);
+
+                    $(`#BuscarProveedor_${i}`).on('keyup', (e) => {
+                        const query = $(e.target).val().trim();
+                        if (query.length >= 2) {
+                            gestion.buscarProveedores(query, this.datos_usuario[0].EMAIL);
+                        } else {
+                            gestion.ocultarSugerencias();
+                        }
+                    });
+
+                    $(document).on(`click.proveedor_${i}`, (e) => {
+                        if (!$(e.target).closest(`#BuscarProveedor_${i}, #sugerenciasProveedor_${i}`).length) {
+                            gestion.ocultarSugerencias();
+                        }
+                    });
+                });
+
+                // Mostrar modal
+                $('#SolcitarModal').modal('show');
+
+            } catch (error) {
+                AlertManager.mostrar('Error al procesar los artículos: ' + error.message, 'warning');
+                console.error(error);
+            }
         });
     }
 
     _recargarTabla() {
+        this.reporteManager.recargarTabla();
+    }
+}
+
+// ========================================
+// GESTOR DE UI
+// ========================================
+class UIManagerReporteStock {
+    static inicializarUI(planta) {
+        $("#ReporteStockURL").addClass("selected-item");
+        $("#AlmacenContainer").addClass("selected");
+        $("#AlmacenContainer a").addClass("whiteText");
+        $("#almacen-collapse").addClass("show");
+
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
+
+        $('#FiltroPlanta').val(planta);
+    }
+}
+
+// ========================================
+// GESTOR DE REPORTE DE STOCK
+// ========================================
+class ReporteStockManager {
+    constructor(URLBase, datos_usuario, planta) {
+        this.URLBase = URLBase;
+        this.datos_usuario = datos_usuario;
+        this.PLANTA = planta;
+        this.table = null;
+    }
+
+    inicializar() {
+        this.llenarTablaReporteStock();
+        console.log('✅ ReporteStockManager inicializado correctamente');
+    }
+
+    recargarTabla() {
         if ($.fn.DataTable.isDataTable('#tablaReporteStock')) {
             $('#tablaReporteStock').DataTable().ajax.reload(null, false);
         }
@@ -57,22 +239,23 @@ class ReporteStockApp {
                 $('#tablaReporteStock').DataTable().clear().destroy();
             }
 
-            function calcularHeaderOffset() {
+            const calcularHeaderOffset = () => {
                 if (window.innerWidth < 541) return 200;
                 if (window.innerWidth < 640) return 156;
                 if (window.innerWidth < 992) return 158;
                 if (window.innerWidth < 1155) return 125;
                 if (window.innerWidth < 1400) return 118;
                 return 113;
-            }
+            };
 
-            const table = $('#tablaReporteStock').DataTable({
+            this.table = $('#tablaReporteStock').DataTable({
                 processing: false,
                 serverSide: true,
                 destroy: true,
                 searching: false,
                 autoWidth: false,
                 colReorder: true,
+                ordering: false,
 
                 fixedHeader: {
                     header: true,
@@ -96,109 +279,194 @@ class ReporteStockApp {
                     },
 
                     dataSrc: (json) => {
-                        console.log("Respuesta DataTable:", json);
+                        if (json && Array.isArray(json.data)) {
+                            json.data.forEach(item => {
+                                if (item.Solicitar != null) {
+                                    let n = Number(item.Solicitar) || 0;
+                                    if (n < 0) item.Solicitar = Math.abs(n);
+                                }
+                            });
+                        }
                         return json.data || [];
                     }
                 },
 
                 columns: [
-
-                    // CHECKBOX
                     {
                         data: null,
-                        title: '',
+                        title: '<input type="checkbox" id="checkAll" title="Seleccionar todos">',
                         orderable: false,
                         searchable: false,
                         className: 'text-center',
-                        width: '40px',
-                        render: function (data, type, row) {
-                            return `
-                            <input type="checkbox"
-                                   class="chkArticulo"
-                                   data-codigo="${row.CodigoArticulo}">
-                        `;
+                        width: '50px',
+                        render: (data, type, row) => {
+                            return `<input type="checkbox" class="chkArticulo" data-codigo="${row.CodigoArticulo}">`;
                         }
                     },
-
-                    { data: "Activo", title: "Activo", className: "text-center" },
-                    { data: "CodigoArticulo", title: "Código Artículo", className: "text-center" },
-                    { data: "NombreArticulo", title: "Nombre Artículo", className: "text-start" },
-                    { data: "UMI", title: "UMI", className: "text-center" },
-                    { data: "NivelesDeStock", title: "Niveles Stock", className: "text-center" },
-
                     {
-                        data: "Stock",
-                        title: "Stock",
-                        className: "text-end",
-                        render: (data) => this.formatearNumero(data)
+                        data: "Activo",
+                        title: "Activo",
+                        className: "text-center",
+                        orderable: false,
+                        width: '60px',
+                        render: (data) => {
+                            if (data === true || data === "Y" || data === "S" || data === "Activo") {
+                                return `<i class="bi bi-check-circle-fill text-success" title="Activo"></i>`;
+                            }
+                            return `<i class="bi bi-x-circle-fill text-danger" title="Inactivo"></i>`;
+                        }
                     },
-
-                    {
-                        data: "Min",
-                        title: "Min",
-                        className: "text-end",
-                        render: (data) => this.formatearNumero(data)
-                    },
-
-                    {
-                        data: "Max",
-                        title: "Max",
-                        className: "text-end",
-                        render: (data) => this.formatearNumero(data)
-                    },
-
-                    {
-                        data: "Requis",
-                        title: "Requis",
-                        className: "text-end",
-                        render: (data) => this.formatearNumero(data)
-                    },
-
-                    {
-                        data: "Pedidos",
-                        title: "Pedidos",
-                        className: "text-end",
-                        render: (data) => this.formatearNumero(data)
-                    },
-
-                    {
-                        data: "CantSalidaPromMensual",
-                        title: "Salida Prom. Mensual",
-                        className: "text-end",
-                        render: (data) => this.formatearNumero(data)
-                    },
-
-                    {
-                        data: "CantMaxSalidaMensual",
-                        title: "Salida Máx. Mensual",
-                        className: "text-end",
-                        render: (data) => this.formatearNumero(data)
-                    },
-
-                    {
-                        data: "Solicitar",
-                        title: "Solicitar",
-                        className: "text-end",
-                        render: (data) => this.formatearNumero(data)
-                    },
-
                     {
                         data: "StatusValidacion",
                         title: "Status",
                         className: "text-center",
+                        orderable: false,
+                        width: '80px',
                         render: (data) => {
-
                             if (data === "Go!") {
-                                return '<span class="badge bg-success">Go!</span>';
+                                return `<span class="badge btn-ptm-primary badge-custom"><i class="bi bi-check-circle-fill"></i> Go!</span>`;
                             }
-
                             if (data === "Stop!") {
-                                return '<span class="badge bg-danger">Stop!</span>';
+                                return `<span class="badge bg-danger badge-custom"><i class="bi bi-x-octagon-fill"></i> Stop!</span>`;
                             }
-
                             return data ?? '';
                         }
+                    },
+                    {
+                        data: "CodigoArticulo",
+                        title: "Código Artículo",
+                        className: "text-center",
+                        orderable: false,
+                        width: '120px',
+                        render: (data) =>
+                            data
+                                ? `<i class="bi bi-upc-scan text-muted me-1"></i><small class="fw-semibold">${data}</small>`
+                                : 'N/A'
+                    },
+                    {
+                        data: "NombreArticulo",
+                        title: "Nombre Artículo",
+                        className: "text-center",
+                        orderable: false,
+                        width: '200px',
+                        render: (data) =>
+                            data
+                                ? `<i class="bi bi-box-seam text-info me-1"></i>${data}`
+                                : 'N/A'
+                    },
+                    {
+                        data: "UMI",
+                        title: "UMI",
+                        className: "text-center",
+                        orderable: false,
+                        width: '60px',
+                        render: (data) => {
+                            const texto = data
+                                ? data.charAt(0).toUpperCase() + data.slice(1).toLowerCase()
+                                : '';
+                            return `<span class="badge bg-light text-dark border badge-custom">${texto}</span>`;
+                        }
+                    },
+                    {
+                        data: "NivelesDeStock",
+                        title: "Niveles Stock",
+                        className: "text-center",
+                        orderable: false,
+                        width: '100px',
+                        render: (data) => {
+                            if (!data) return '';
+                            switch (data) {
+                                case 'Bajo':
+                                    return `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Bajo`;
+                                case 'Critico':
+                                case 'Crítico':
+                                    return `<i class="bi bi-exclamation-octagon-fill text-danger me-1"></i>Crítico`;
+                                case 'Normal':
+                                case 'Óptimo':
+                                case 'Optimo':
+                                    return `<i class="bi bi-check-circle-fill text-success me-1"></i>${data}`;
+                                default:
+                                    return data;
+                            }
+                        }
+                    },
+                    {
+                        data: "Stock",
+                        title: "Stock",
+                        className: "text-center",
+                        orderable: false,
+                        width: '70px',
+                        render: (data) =>
+                            `<i class="bi bi-box-seam text-info me-1"></i>${this.formatearNumero(data)}`
+                    },
+                    {
+                        data: "Min",
+                        title: "Min",
+                        className: "text-center",
+                        orderable: false,
+                        width: '70px',
+                        render: (data) =>
+                            `<i class="bi bi-arrow-down-circle text-warning me-1"></i>${this.formatearNumero(data)}`
+                    },
+                    {
+                        data: "Max",
+                        title: "Max",
+                        className: "text-center",
+                        orderable: false,
+                        width: '70px',
+                        render: (data) =>
+                            `<i class="bi bi-arrow-up-circle text-success me-1"></i>${this.formatearNumero(data)}`
+                    },
+                    {
+                        data: "Requis",
+                        title: "Requis",
+                        className: "text-center",
+                        orderable: false,
+                        width: '70px',
+                        render: (data) =>
+                            `<i class="bi bi-clipboard-check text-primary me-1"></i>${this.formatearNumero(data)}`
+                    },
+                    {
+                        data: "Pedidos",
+                        title: "Pedidos",
+                        className: "text-center",
+                        orderable: false,
+                        width: '70px',
+                        render: (data) =>
+                            `<i class="bi bi-cart-check text-primary me-1"></i>${this.formatearNumero(data)}`
+                    },
+                    {
+                        data: "CantSalidaPromMensual",
+                        title: "Salida Prom. Mensual",
+                        className: "text-center",
+                        orderable: false,
+                        width: '130px',
+                        render: (data) =>
+                            `<i class="bi bi-graph-up text-secondary me-1"></i>${this.formatearNumero(data)}`
+                    },
+                    {
+                        data: "CantMaxSalidaMensual",
+                        title: "Salida Máx. Mensual",
+                        className: "text-center",
+                        orderable: false,
+                        width: '130px',
+                        render: (data) =>
+                            `<i class="bi bi-graph-up-arrow text-danger me-1"></i>${this.formatearNumero(data)}`
+                    },
+                    {
+                        data: "Solicitar",
+                        title: "Solicitar",
+                        className: "text-center",
+                        orderable: false,
+                        width: '80px',
+                        render: (data) =>
+                            `<i class="bi bi-cart-plus text-primary me-1"></i>${this.formatearNumero(data)}`
                     }
+                ],
+
+                columnDefs: [
+                    { className: "text-center", targets: '_all' },
+                    { orderable: false, targets: '_all' }
                 ],
 
                 language: {
@@ -226,21 +494,65 @@ class ReporteStockApp {
                 buttons: []
             });
 
+            // Llamar al iniciar y al dibujar
+            this.table.on('draw', () => {
+                const $all = $('#tablaReporteStock tbody input.chkArticulo');
+                const total = $all.length;
+                const selected = $all.filter(':checked').length;
+
+                if (total === 0) {
+                    $('#checkAll').prop('checked', false).prop('indeterminate', false);
+                } else {
+                    $('#checkAll').prop('checked', selected === total);
+                    $('#checkAll').prop('indeterminate', selected > 0 && selected < total);
+                }
+            });
+
+            // ========================================
+            // 🔵 EVENTOS: SELECCIONAR TODOS
+            // ========================================
+            $('#tablaReporteStock thead').off('change', '#checkAll').on('change', '#checkAll', () => {
+                const checked = $('#checkAll').prop('checked');
+                $('#tablaReporteStock tbody input.chkArticulo').prop('checked', checked);
+            });
+
+            // ========================================
+            // 🔵 EVENTOS: ACTUALIZAR ESTADO DEL HEADER
+            // ========================================
+            $('#tablaReporteStock tbody').off('change', 'input.chkArticulo').on('change', 'input.chkArticulo', () => {
+                const $all = $('#tablaReporteStock tbody input.chkArticulo');
+                const total = $all.length;
+                const selected = $all.filter(':checked').length;
+
+                if (total === 0) {
+                    $('#checkAll').prop('checked', false).prop('indeterminate', false);
+                } else {
+                    $('#checkAll').prop('checked', selected === total);
+                    $('#checkAll').prop('indeterminate', selected > 0 && selected < total);
+                }
+            });
+
+            // Resize listener mejorado
             $(window)
                 .off('resize.reporteStock')
                 .on('resize.reporteStock', () => {
-
                     if ($.fn.DataTable.isDataTable('#tablaReporteStock')) {
-
                         const dt = $('#tablaReporteStock').DataTable();
-
-                        dt.fixedHeader.headerOffset(
-                            calcularHeaderOffset()
-                        );
-
+                        dt.fixedHeader.headerOffset(calcularHeaderOffset());
                         dt.fixedHeader.adjust();
                     }
                 });
+
+            // Agregar atributos en cada fila
+            this.table.on('createdRow', (row, data, dataIndex) => {
+                try {
+                    $(row).attr('data-codigo', data.CodigoArticulo || '');
+                    $(row).attr('data-nombre', data.NombreArticulo || '');
+                    $(row).attr('data-stock', data.Stock ?? 0);
+                    $(row).attr('data-min', data.Min ?? 0);
+                    $(row).attr('data-max', data.Max ?? 0);
+                } catch (err) { /* noop */ }
+            });
 
         }
         catch (error) {
@@ -336,7 +648,7 @@ class ExcelExporterStock {
             headerRow.alignment = { horizontal: 'center' };
             headerRow.height = 25;
 
-            datos.forEach((item, index) => {
+            datos.forEach((item) => {
                 const row = worksheet.addRow({
                     Activo: item.Activo || '',
                     CodigoArticulo: item.CodigoArticulo || '',

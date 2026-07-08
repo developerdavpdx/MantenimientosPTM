@@ -2783,7 +2783,7 @@ class SessionManager {
         }
 
         //ALMACEN
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen") {
+        if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen" || datos_usuario[0].TIPOUSUARIO == "Almacen") {
             $("#MantenimientosMainContainer").addClass("d-none"); //MANTENIMIENTOS 
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
@@ -2791,7 +2791,7 @@ class SessionManager {
         }
 
         //PLANEACION
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion") {
+        if (datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion" || datos_usuario[0].TIPOUSUARIO == "Planeacion") {
             $("#MantenimientosMainContainer").addClass("d-none"); //MANTENIMIENTOS 
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
@@ -2799,7 +2799,7 @@ class SessionManager {
         }
 
         //PRODUCCION
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion") {
+        if (datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion" || datos_usuario[0].TIPOUSUARIO == "Produccion") {
             $("#GestionEquiposURL").addClass("d-none"); //GESTION EQUIPOS
             $("#MCProgramarURL").addClass("d-none"); //GESTION EQUIPOS
             $("#CalendarioManttoURL").addClass("d-none"); //GESTION EQUIPOS
@@ -3782,11 +3782,12 @@ class ChecklistManager {
     async eliminarImagenGaleria($item, nombreArchivo) {
         const idEquipo = window.gestionEquiposApp?.mantenimientoManager?.EquipoAasignarRutina;
         const planta = window.gestionEquiposApp?.datos_usuario[0]?.PLANTA;
+        const idEquipoPeriodicidad = window.gestionEquiposApp?.mantenimientoManager?.EquipoPeriodicidadSeleccionada || null;
 
         if (!idEquipo || !planta) return;
 
         try {
-            await window.gestionEquiposApp?.mantenimientoManager?.eliminarImagenRutina(idEquipo, planta, nombreArchivo);
+            await window.gestionEquiposApp?.mantenimientoManager?.eliminarImagenRutina(idEquipo, planta, nombreArchivo, idEquipoPeriodicidad);
             $item.fadeOut(300, function () {
                 $(this).remove();
                 // Si no quedan imágenes, ocultar la sección
@@ -3802,21 +3803,26 @@ class ChecklistManager {
         }
     }
 
-    mostrarGaleriaImagenes(urls) {
+    mostrarGaleriaImagenes(urls,showbutton) {
         if (!urls || urls.length === 0) return;
 
         this.crearSeccionGaleriaImagenes();
 
         urls.forEach((url) => {
             const nombreArchivo = url.split('/').pop();
+            let buttondel = ``;
+
+            if (showbutton)
+                buttondel = `<button type="button" class="btn btn-sm btn-danger btn-eliminar-galeria position-absolute top-0 end-0 m-1" 
+                            title="Eliminar" style="border-radius:50%; width:32px; height:32px; padding:0; opacity:0.8;">
+                        <i class="bi bi-x" style="font-size:14px;"></i>
+                    </button>`;
+
             const $item = $(`
                 <div class="galeria-item mb-3 position-relative" data-url="${url}">
                     <img src="${url}" alt="${nombreArchivo}" class="galeria-img-rutina" 
                          style="width:100%; height:auto; border-radius:8px; cursor:pointer; border:2px solid #dee2e6;">
-                    <button type="button" class="btn btn-sm btn-danger btn-eliminar-galeria position-absolute top-0 end-0 m-1" 
-                            title="Eliminar" style="border-radius:50%; width:32px; height:32px; padding:0; opacity:0.8;">
-                        <i class="bi bi-x" style="font-size:14px;"></i>
-                    </button>
+                    ${buttondel}
                 </div>
             `);
             $('#galeriaImagenesRutina').append($item);
@@ -3989,10 +3995,10 @@ class ChecklistManager {
     }
 
     // Cargar imágenes existentes en la galería
-    cargarImagenesExistentes(urls) {
+    cargarImagenesExistentes(urls,showbutton = true) {
         if (!urls || urls.length === 0) return;
 
-        this.mostrarGaleriaImagenes(urls);
+        this.mostrarGaleriaImagenes(urls,showbutton);
     }
 
     // ============================================
@@ -4477,6 +4483,54 @@ class ExcelExporterBase {
         } catch (error) {
             console.error('Error al exportar:', error);
             alert('Error al exportar Excel: ' + (error && error.message ? error.message : error));
+        }
+    }
+
+    // ✨ NUEVO MÉTODO: Generar Excel sin descargarlo (para enviar por correo)
+    async generarExcelParaEnvio() {
+        if (typeof ExcelJS === 'undefined') {
+            console.error('❌ ExcelJS no cargado');
+            throw new Error('Librería de Excel no disponible');
+        }
+
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet(this.getSheetName());
+
+            const estructura = this.analizarEstructuraColumnas();
+
+            this.agregarFilaGrupos(worksheet, estructura);
+            this.agregarFilaHeaders(worksheet, estructura);
+
+            if (this.agregarFilasDatos) {
+                this.agregarFilasDatos(worksheet, estructura);
+            } else {
+                this._agregarFilasDatosDefault(worksheet, estructura);
+            }
+
+            if (this.aplicarEstilos) {
+                this.aplicarEstilos(worksheet, estructura);
+            } else {
+                this._aplicarEstilosDefault(worksheet, estructura);
+            }
+
+            this._enforceHeaderWhite(worksheet, estructura);
+
+            if (this.ajustarAnchos) {
+                this.ajustarAnchos(worksheet);
+            } else {
+                this.ajustarAnchosDefault(worksheet);
+            }
+
+            if (this.applyTotalsRowStyle) this.applyTotalsRowStyle(worksheet, estructura);
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+            return blob; // Devolver el Blob para envío por correo
+        } catch (error) {
+            console.error('Error al generar Excel:', error);
+            throw error;
         }
     }
 
