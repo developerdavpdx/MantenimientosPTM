@@ -4486,6 +4486,54 @@ class ExcelExporterBase {
         }
     }
 
+    // ✨ NUEVO MÉTODO: Generar Excel sin descargarlo (para enviar por correo)
+    async generarExcelParaEnvio() {
+        if (typeof ExcelJS === 'undefined') {
+            console.error('❌ ExcelJS no cargado');
+            throw new Error('Librería de Excel no disponible');
+        }
+
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet(this.getSheetName());
+
+            const estructura = this.analizarEstructuraColumnas();
+
+            this.agregarFilaGrupos(worksheet, estructura);
+            this.agregarFilaHeaders(worksheet, estructura);
+
+            if (this.agregarFilasDatos) {
+                this.agregarFilasDatos(worksheet, estructura);
+            } else {
+                this._agregarFilasDatosDefault(worksheet, estructura);
+            }
+
+            if (this.aplicarEstilos) {
+                this.aplicarEstilos(worksheet, estructura);
+            } else {
+                this._aplicarEstilosDefault(worksheet, estructura);
+            }
+
+            this._enforceHeaderWhite(worksheet, estructura);
+
+            if (this.ajustarAnchos) {
+                this.ajustarAnchos(worksheet);
+            } else {
+                this.ajustarAnchosDefault(worksheet);
+            }
+
+            if (this.applyTotalsRowStyle) this.applyTotalsRowStyle(worksheet, estructura);
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+            return blob; // Devolver el Blob para envío por correo
+        } catch (error) {
+            console.error('Error al generar Excel:', error);
+            throw error;
+        }
+    }
+
     _agregarFilasDatosDefault(worksheet, estructura) {
         const textFields = this.getTextFields();
         this.gridApi.forEachNodeAfterFilterAndSort((node) => {

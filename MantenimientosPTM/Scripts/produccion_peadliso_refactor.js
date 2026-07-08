@@ -54,6 +54,12 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
     async inicializar() {
         await this.inicializarCommon();
+
+        // 📧 NUEVO: Inicializar gestor de correos
+        this.correosManager = new CorreosManagerPeadLiso();
+        this.correosManager.setAppProduccion(this);
+        this.correosManager.inicializar();
+
         // 🔥 CONSULTAR DATOS
         this.consultarDatos(null, null, null);
         console.log('✅ Sistema PEAD LISO inicializado');
@@ -1066,6 +1072,14 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         $('#btnExportarExcel').on('click', () => this.exportarExcel());
 
         // ========================================
+        // 📧 NUEVO: Abrir modal para enviar por correo
+        // ========================================
+        $('#btnEnviarCorreo').on('click', () => {
+            const modal = new bootstrap.Modal(document.getElementById('modalEnviarExcelCorreo'));
+            modal.show();
+        });
+
+        // ========================================
         // FILTROS
         // ========================================
         $("#btnAplicarFiltros").on("click", () => {
@@ -1582,7 +1596,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
     copiarFilaAnterior(params) {
 
-        const filaActual = params.node.data;
+        // 🔥 Manejar tanto params.node (del callback del grid) como node directo (del menú contextual)
+        const node = params.node || params;
+        const filaActual = node?.data;
 
         if (!filaActual || filaActual.id === 'TOTALES') {
             return;
@@ -1639,7 +1655,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             add: [nuevaFila],
 
             addIndex:
-                params.node.rowIndex + 1
+                node.rowIndex + 1
 
         });
 
@@ -2054,5 +2070,184 @@ class ExcelExporterPeadLiso extends ExcelExporterBase {
                 });
             }
         });
+    }
+}
+
+// ========================================
+// 📧 GESTOR DE CORREOS PARA ENVÍO DE EXCEL
+// ========================================
+class CorreosManagerPeadLiso {
+    constructor() {
+        this.correosNotificacion = [];
+        this.appProduccion = null;
+    }
+
+    setAppProduccion(app) {
+        this.appProduccion = app;
+    }
+
+    inicializar() {
+        $("#btnAgregarCorreoPeadLiso").off("click").on("click", () => this.agregarCorreo());
+        $("#inputCorreoPeadLiso").off("keydown").on("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                this.agregarCorreo();
+            }
+        });
+        $("#btnEnviarExcelCorreo").off("click").on("click", () => this.enviarExcelPorCorreo());
+    }
+
+    agregarCorreo() {
+        const input = $("#inputCorreoPeadLiso");
+        const correo = input.val().trim().toLowerCase();
+        const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        // Validar formato
+        if (!regexEmail.test(correo)) {
+            $("#errorCorreoPeadLiso").text("Ingrese un correo válido.").show();
+            input.addClass("is-invalid");
+            return;
+        }
+
+        // Validar duplicado
+        if (this.correosNotificacion.includes(correo)) {
+            $("#errorCorreoPeadLiso").text("Este correo ya fue agregado.").show();
+            input.addClass("is-invalid");
+            return;
+        }
+
+        // Agregar a la lista
+        this.correosNotificacion.push(correo);
+        this.renderCorreos();
+
+        // Limpiar input
+        input.val('').removeClass("is-invalid");
+        $("#errorCorreoPeadLiso").hide();
+    }
+
+    renderCorreos() {
+        const lista = $("#listaCorreosPeadLiso");
+        lista.empty();
+
+        if (this.correosNotificacion.length === 0) {
+            lista.html(`
+                <span class="text-muted" style="font-size:0.82rem;">
+                    <i class="bi bi-info-circle me-1"></i> No hay correos agregados aún.
+                </span>
+            `);
+            return;
+        }
+
+        this.correosNotificacion.forEach((correo, index) => {
+            lista.append(`
+                <span class="badge d-flex align-items-center gap-2 px-3 py-2"
+                      style="background: var(--modal-primary-soft); color: var(--modal-primary); 
+                             border: 1px solid var(--modal-primary-mid); border-radius: 20px; font-size:0.82rem;">
+                    <i class="bi bi-envelope"></i>
+                    ${correo}
+                    <button type="button" class="btn-remove-correo" data-index="${index}"
+                            style="background:none; border:none; padding:0; cursor:pointer; 
+                                   color: var(--modal-primary); line-height:1;">
+                        <i class="bi bi-x-lg" style="font-size:0.7rem;"></i>
+                    </button>
+                </span>
+            `);
+        });
+
+        // Evento eliminar badge
+        $(".btn-remove-correo").off("click").on("click", (e) => {
+            const index = $(e.currentTarget).data("index");
+            this.correosNotificacion.splice(index, 1);
+            this.renderCorreos();
+        });
+    }
+
+    async enviarExcelPorCorreo() {
+        if (this.correosNotificacion.length === 0) {
+            AlertManager.mostrar("Debe agregar al menos un correo", "warning");
+            return;
+        }
+
+        const btn = $("#btnEnviarExcelCorreo");
+        btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Generando Excel...');
+        btn.prop("disabled", true);
+
+        try {
+            // 🔥 Generar Excel en el cliente con estilos
+            const exporter = new ExcelExporterPeadLiso(this.appProduccion.gridApi, this.appProduccion.columnDefs);
+            const archivoExcel = await exporter.generarExcelParaEnvio();
+
+            if (!archivoExcel) {
+                AlertManager.mostrar("No se pudo generar el Excel", "warning");
+                this.resetearBoton(btn);
+                return;
+            }
+
+            btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Enviando...');
+
+            // 🔥 Convertir Blob a Base64
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const base64Excel = reader.result.split(',')[1]; // Obtener solo la parte Base64
+
+                try {
+                    // 🔥 Obtener metadatos del grid
+                    const payload = {
+                        correos: this.correosNotificacion,
+                        archivoExcelBase64: base64Excel,
+                        usuario: this.appProduccion.datos_usuario[0].NOMBRECOMPLETO,
+                        planta: this.appProduccion.datos_usuario[0].PLANTA,
+                        tipoReporte: 'PEAD LISO'
+                    };
+
+                    // 🔥 Enviar al servidor
+                    const response = await $.ajax({
+                        url: `/${this.appProduccion.URLBase}/EnviarExcelProduccionPorCorreo`,
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(payload),
+                        beforeSend: () => {
+                            GlobalUtil.mostrarLoader(true);
+                        }
+                    });
+
+                    if (response.Status === "OK") {
+                        AlertManager.mostrar("Excel enviado correctamente", "success");
+                        // Limpiar correos
+                        this.correosNotificacion = [];
+                        this.renderCorreos();
+                        // Cerrar modal
+                        bootstrap.Modal.getInstance(document.getElementById('modalEnviarExcelCorreo')).hide();
+                    } else {
+                        AlertManager.mostrar(response.Message || "Error al enviar el email", "danger");
+                    }
+                } catch (error) {
+                    console.error(error);
+                    AlertManager.mostrar("Error al procesar la solicitud: " + (error.statusText || error.message), "danger");
+                } finally {
+                    this.resetearBoton(btn);
+                    GlobalUtil.mostrarLoader(false);
+                }
+            };
+
+            reader.readAsDataURL(archivoExcel);
+
+        } catch (error) {
+            console.error(error);
+            AlertManager.mostrar("Error al generar el Excel: " + error.message, "danger");
+            this.resetearBoton(btn);
+        }
+    }
+
+    resetearBoton(btn) {
+        btn.html('<i class="bi bi-send-fill me-1"></i> Enviar');
+        btn.prop("disabled", false);
+    }
+
+    limpiarFormulario() {
+        this.correosNotificacion = [];
+        this.renderCorreos();
+        $("#inputCorreoPeadLiso").val('').removeClass("is-invalid");
+        $("#errorCorreoPeadLiso").hide();
     }
 }

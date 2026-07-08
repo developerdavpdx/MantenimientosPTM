@@ -911,7 +911,6 @@ namespace MantenimientosPTM.Controllers
                     string archivoExcelBase64 = requestData["archivoExcelBase64"];
                     string usuario = requestData["usuario"];
                     string planta = requestData["planta"];
-                    string tipoReporte = requestData["tipoReporte"] != null ? requestData["tipoReporte"].ToString() : "PVC";
 
                     if (correos == null || correos.Count == 0)
                     {
@@ -935,7 +934,7 @@ namespace MantenimientosPTM.Controllers
                     byte[] archivoExcel = Convert.FromBase64String(archivoExcelBase64);
 
                     // Crear plantilla HTML del correo
-                    string plantillaHtml = ObtenerPlantillaCorreoProduccionConExcel(usuario, planta, tipoReporte);
+                    string plantillaHtml = ObtenerPlantillaCorreoProduccionConExcel(usuario, planta);
 
                     // Enviar correo a cada destinatario
                     bool todosEnviados = true;
@@ -957,7 +956,7 @@ namespace MantenimientosPTM.Controllers
                                 {
                                     mail.From = new MailAddress(smtpUser, "Sistema de Producción PTM");
                                     mail.To.Add(correo);
-                                    mail.Subject = $"Reporte de Producción {tipoReporte} - {DateTime.Now:dd/MM/yyyy}";
+                                    mail.Subject = $"Reporte de Producción PVC - {DateTime.Now:dd/MM/yyyy}";
                                     mail.Body = plantillaHtml;
                                     mail.IsBodyHtml = true;
 
@@ -965,7 +964,7 @@ namespace MantenimientosPTM.Controllers
                                     if (archivoExcel != null && archivoExcel.Length > 0)
                                     {
                                         Attachment attachment = new Attachment(new MemoryStream(archivoExcel),
-                                            $"Produccion_{tipoReporte.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+                                            $"Produccion_PVC_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
                                         attachment.ContentDisposition.CreationDate = DateTime.Now;
                                         attachment.ContentDisposition.ModificationDate = DateTime.Now;
                                         attachment.ContentDisposition.ReadDate = DateTime.Now;
@@ -1011,7 +1010,7 @@ namespace MantenimientosPTM.Controllers
         // ========================================
         // GENERA LA PLANTILLA HTML PARA CORREO CON EXCEL
         // ========================================
-        private string ObtenerPlantillaCorreoProduccionConExcel(string usuario, string planta, string tipoReporte)
+        private string ObtenerPlantillaCorreoProduccionConExcel(string usuario, string planta)
         {
             // Obtener logo en base64
             string logoBase64 = ObtenerLogoEnBase64();
@@ -1025,12 +1024,12 @@ namespace MantenimientosPTM.Controllers
                 <style>
                     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
                     .container { max-width: 800px; margin: 0 auto; background: #f5f5f5; padding: 20px; border-radius: 10px; }
-                    .header { background: linear-gradient(to right, #0058a1, #0070d1); color: white; padding: 20px 30px; border-radius: 10px 10px 0 0; }
-                    .header-table { width: 100%; border-collapse: collapse; }
-                    .header-content h1 { margin: 0; font-size: 24px; color: #000000; font-weight: bold; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); }
-                    .header-content p { margin: 5px 0 0 0; opacity: 0.95; color: #000000; font-size: 13px; }
-                    .header-logo { text-align: right; vertical-align: middle; }
+                    .header { background: linear-gradient(to right, #0058a1, #0070d1); color: white; padding: 20px 30px; border-radius: 10px 10px 0 0; display: flex; align-items: center; justify-content: space-between; }
+                    .header-content { flex: 1; }
+                    .header-logo { flex: 0 0 auto; }
                     .header-logo img { height: 40px; width: auto; }
+                    .header h1 { margin: 0; font-size: 24px; color: #ffffff; font-weight: bold; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); }
+                    .header p { margin: 5px 0 0 0; opacity: 0.95; color: #ffffff; font-size: 13px; }
                     .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; }
                     .info-box { background: #e8f4f8; border-left: 4px solid #0058a1; padding: 15px; margin: 20px 0; border-radius: 5px; }
                     .info-box strong { color: #0058a1; }
@@ -1042,21 +1041,18 @@ namespace MantenimientosPTM.Controllers
             <body>
                 <div class='container'>
                     <div class='header'>
-                        <table class='header-table'>
-                            <tr>
-                                <td class='header-content' style='width: 70%; vertical-align: middle;'>
-                                    <h1>📊 Reporte de Producción " + tipoReporte + @"</h1>
-                                    <p>Sistema de Gestión de Tiempos Muertos</p>
-                                </td>
-                                <td class='header-logo' style='width: 30%; text-align: right; vertical-align: middle; padding-left: 20px;'>
-                                    " + (string.IsNullOrEmpty(logoBase64) ? "" : $"<img width='150' src='data:image/png;base64,{logoBase64}' alt='PTM Logo'>") + @"
-                                </td>
-                            </tr>
-                        </table>
+                        <div class='header-content'>
+                            <h1>📊 Reporte de Producción PVC</h1>
+                            <p>Sistema de Gestión de Tiempos Muertos</p>
+                        </div>
+                        <div class='header-logo'>
+                            " + (string.IsNullOrEmpty(logoBase64) ? "" : $"<img src='data:image/png;base64,{logoBase64}' alt='PTM Logo'>") + @"
+                        </div>
                     </div>
 
                     <div class='content'>
                         <h2 style='color: #0058a1; border-bottom: 2px solid #0058a1; padding-bottom: 10px;'>
+                            ✅ Reporte Generado Exitosamente
                         </h2>
 
                         <div class='info-box'>
@@ -1070,13 +1066,19 @@ namespace MantenimientosPTM.Controllers
 
                         <div class='attachment-info'>
                             <strong>📎 Archivo Adjunto:</strong>
-                            <p>Encontrará anexo el archivo Excel <strong>Produccion_" + tipoReporte + @"</strong> con todos los datos y estilos de causas de tiempos muertos completamente formateado</p>
+                            <p>Encontrará anexo el archivo Excel <strong>Produccion_PVC</strong> con todos los datos y estilos de causas de tiempos muertos completamente formateado con:</p>
+                            <ul>
+                                <li>✨ Colores y formatos profesionales</li>
+                                <li>📊 Todas las columnas de datos</li>
+                                <li>🎯 Acentos y caracteres especiales preservados</li>
+                                <li>📈 Cálculos y KPIs incluidos</li>
+                            </ul>
                         </div>
 
                         <div>
                             <h3 style='color: #0058a1;'>📋 Contenido del Reporte:</h3>
                             <ul>
-                                <li><strong>Datos Generales:</strong> Mes, Fecha, Línea, Producto, Turno</li>
+                                <li><strong>Datos Generales:</strong> Mes, Fecha, Línea, Producto, Turno, TRIP</li>
                                 <li><strong>Producción:</strong> TR Fabricados, Producción Neta Real, Peso Estándar</li>
                                 <li><strong>Disponibilidad:</strong> Horas Programadas, Tiempo Disponible</li>
                                 <li><strong>Tiempos No Disponibles:</strong> Mantenimiento, Control, Cambios, etc.</li>
