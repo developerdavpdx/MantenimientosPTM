@@ -935,7 +935,8 @@ namespace MantenimientosPTM.Controllers
                     byte[] archivoExcel = Convert.FromBase64String(archivoExcelBase64);
 
                     // Crear plantilla HTML del correo
-                    string plantillaHtml = ObtenerPlantillaCorreoProduccionConExcel(usuario, planta, tipoReporte);
+                    string logoPath;
+                    string plantillaHtml = ObtenerPlantillaCorreoProduccionConExcel(usuario, planta, tipoReporte, out logoPath);
 
                     // Enviar correo a cada destinatario
                     bool todosEnviados = true;
@@ -960,6 +961,18 @@ namespace MantenimientosPTM.Controllers
                                     mail.Subject = $"Reporte de Producción {tipoReporte} - {DateTime.Now:dd/MM/yyyy}";
                                     mail.Body = plantillaHtml;
                                     mail.IsBodyHtml = true;
+
+                                    // En vez de mail.Body = plantillaHtml, usamos AlternateView para poder anexar el logo
+                                    AlternateView vistaHtml = AlternateView.CreateAlternateViewFromString(plantillaHtml, null, "text/html");
+
+                                    if (!string.IsNullOrEmpty(logoPath))
+                                    {
+                                        LinkedResource logo = new LinkedResource(logoPath, "image/png");
+                                        logo.ContentId = "logoPTM"; // debe coincidir con el cid del HTML
+                                        vistaHtml.LinkedResources.Add(logo);
+                                    }
+
+                                    mail.AlternateViews.Add(vistaHtml);
 
                                     // Adjuntar Excel
                                     if (archivoExcel != null && archivoExcel.Length > 0)
@@ -1011,121 +1024,155 @@ namespace MantenimientosPTM.Controllers
         // ========================================
         // GENERA LA PLANTILLA HTML PARA CORREO CON EXCEL
         // ========================================
-        private string ObtenerPlantillaCorreoProduccionConExcel(string usuario, string planta, string tipoReporte)
+        private string ObtenerPlantillaCorreoProduccionConExcel(string usuario, string planta, string tipoReporte, out string logoPath)
         {
             // Obtener logo en base64
-            string logoBase64 = ObtenerLogoEnBase64();
+            logoPath = ObtenerRutaLogo();
+            string logoCid = "logoPTM"; 
+
 
             string html = @"
-            <!DOCTYPE html>
-            <html lang='es'>
-            <head>
-                <meta charset='UTF-8'>
-                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                <style>
-                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-                    .container { max-width: 800px; margin: 0 auto; background: #f5f5f5; padding: 20px; border-radius: 10px; }
-                    .header { background: linear-gradient(to right, #0058a1, #0070d1); color: white; padding: 20px 30px; border-radius: 10px 10px 0 0; }
-                    .header-table { width: 100%; border-collapse: collapse; }
-                    .header-content h1 { margin: 0; font-size: 24px; color: #000000; font-weight: bold; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); }
-                    .header-content p { margin: 5px 0 0 0; opacity: 0.95; color: #000000; font-size: 13px; }
-                    .header-logo { text-align: right; vertical-align: middle; }
-                    .header-logo img { height: 40px; width: auto; }
-                    .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; }
-                    .info-box { background: #e8f4f8; border-left: 4px solid #0058a1; padding: 15px; margin: 20px 0; border-radius: 5px; }
-                    .info-box strong { color: #0058a1; }
-                    .footer { background: #f0f0f0; padding: 15px; text-align: center; font-size: 12px; color: #666; border-radius: 5px; margin-top: 20px; }
-                    .attachment-info { background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0; }
-                    .attachment-info strong { color: #155724; }
-                </style>
-            </head>
-            <body>
-                <div class='container'>
-                    <div class='header'>
-                        <table class='header-table'>
-                            <tr>
-                                <td class='header-content' style='width: 70%; vertical-align: middle;'>
-                                    <h1>📊 Reporte de Producción " + tipoReporte + @"</h1>
-                                    <p>Sistema de Gestión de Tiempos Muertos</p>
-                                </td>
-                                <td class='header-logo' style='width: 30%; text-align: right; vertical-align: middle; padding-left: 20px;'>
-                                    " + (string.IsNullOrEmpty(logoBase64) ? "" : $"<img width='150' src='data:image/png;base64,{logoBase64}' alt='PTM Logo'>") + @"
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
+                <!DOCTYPE html>
+                <html lang='es'>
+                <head>
+                    <meta charset='UTF-8'>
+                    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+                    <title>Reporte de Producción</title>
+                </head>
+                <body style='margin:0; padding:0; background-color:#f5f5f5; font-family: Tahoma, Geneva, Verdana, sans-serif;'>
 
-                    <div class='content'>
-                        <h2 style='color: #0058a1; border-bottom: 2px solid #0058a1; padding-bottom: 10px;'>
-                        </h2>
+                    <!-- Wrapper -->
+                    <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='background-color:#f5f5f5;'>
+                        <tr>
+                            <td align='center' style='padding:20px 10px;'>
 
-                        <div class='info-box'>
-                            <strong>📋 Información General:</strong>
-                            <ul style='margin: 10px 0; padding-left: 20px;'>
-                                <li><strong>Planta:</strong> " + planta + @"</li>
-                                <li><strong>Usuario:</strong> " + usuario + @"</li>
-                                <li><strong>Fecha de Generación:</strong> " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + @"</li>
-                            </ul>
-                        </div>
+                                <!-- Contenedor principal -->
+                                <table role='presentation' width='800' cellpadding='0' cellspacing='0' style='max-width:800px; width:100%; background-color:#f5f5f5;'>
 
-                        <div class='attachment-info'>
-                            <strong>📎 Archivo Adjunto:</strong>
-                            <p>Encontrará anexo el archivo Excel <strong>Produccion_" + tipoReporte + @"</strong> con todos los datos y estilos de causas de tiempos muertos completamente formateado</p>
-                        </div>
+                                    <!-- HEADER -->
+                                    <tr>
+                                        <td style='background-color:#0058a1; padding:20px 30px; border-radius:10px 10px 0 0;'>
+                                            <table role='presentation' width='100%' cellpadding='0' cellspacing='0'>
+                                                <tr>
+                                                    <td style='width:70%; vertical-align:middle;'>
+                                                        <h1 style='margin:0; font-size:24px; color:#ffffff; font-weight:bold; font-family: Tahoma, Geneva, Verdana, sans-serif;'>
+                                                            &#128202; Reporte de Producción " + tipoReporte + @"
+                                                        </h1>
+                                                        <p style='margin:5px 0 0 0; color:#ffffff; font-size:13px; font-family: Tahoma, Geneva, Verdana, sans-serif;'>
+                                                            Sistema de Gestión de Tiempos Muertos
+                                                        </p>
+                                                    </td>
+                                                    <td style='width:30%; text-align:right; vertical-align:middle; padding-left:20px;'>
+                                                        " + (string.IsNullOrEmpty(logoPath) ? "" : $"<img src='cid:{logoCid}' width='150' height='auto' alt='PTM Logo' style='display:block; max-width:150px;'>") + @"
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
 
-                        <div>
-                            <h3 style='color: #0058a1;'>📋 Contenido del Reporte:</h3>
-                            <ul>
-                                <li><strong>Datos Generales:</strong> Mes, Fecha, Línea, Producto, Turno</li>
-                                <li><strong>Producción:</strong> TR Fabricados, Producción Neta Real, Peso Estándar</li>
-                                <li><strong>Disponibilidad:</strong> Horas Programadas, Tiempo Disponible</li>
-                                <li><strong>Tiempos No Disponibles:</strong> Mantenimiento, Control, Cambios, etc.</li>
-                                <li><strong>Tiempos No Productivos:</strong> Causas de paros, faltas de materiales, etc.</li>
-                                <li><strong>KPIs:</strong> Porcentajes y métricas calculadas automáticamente</li>
-                            </ul>
-                        </div>
+                                    <!-- CONTENIDO -->
+                                    <tr>
+                                        <td style='background-color:#ffffff; padding:30px; border-radius:0 0 10px 10px;'>
 
-                        <p style='margin-top: 30px; color: #666;'>
-                            Si tiene alguna pregunta sobre este reporte, contáctenos a través del sistema de soporte.
-                        </p>
-                    </div>
+                                            <!-- Info general -->
+                                            <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='background-color:#e8f4f8; border-left:4px solid #0058a1; margin:0 0 20px 0;'>
+                                                <tr>
+                                                    <td style='padding:15px; font-family: Tahoma, Geneva, Verdana, sans-serif; font-size:14px; color:#333333;'>
+                                                        <strong style='color:#0058a1;'>&#128203; Información General:</strong>
+                                                        <table role='presentation' cellpadding='0' cellspacing='0' style='margin-top:10px;'>
+                                                            <tr><td style='padding:2px 0;'><strong>Planta:</strong> " + planta + @"</td></tr>
+                                                            <tr><td style='padding:2px 0;'><strong>Usuario:</strong> " + usuario + @"</td></tr>
+                                                            <tr><td style='padding:2px 0;'><strong>Fecha de Generación:</strong> " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + @"</td></tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
 
-                    <div class='footer'>
-                        <p>
-                            <strong>Plastics Technology de México, S. de R.L. de C.V.</strong><br>
-                            Sistema Automatizado de Mantenimiento y Producción<br>
-                            Este es un correo automático, por favor no responda directamente.
-                        </p>
-                    </div>
-                </div>
-            </body>
-            </html>
+                                            <!-- Adjunto -->
+                                            <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='background-color:#d4edda; border:1px solid #c3e6cb; margin:0 0 20px 0;'>
+                                                <tr>
+                                                    <td style='padding:15px; font-family: Tahoma, Geneva, Verdana, sans-serif; font-size:14px; color:#333333;'>
+                                                        <strong style='color:#155724;'>&#128206; Archivo Adjunto:</strong>
+                                                        <p style='margin:8px 0 0 0;'>Encontrará anexo el archivo Excel <strong>Produccion_" + tipoReporte + @"</strong> con todos los datos y estilos de causas de tiempos muertos completamente formateado</p>
+                                                    </td>
+                                                </tr>
+                                            </table>
+
+                                            <!-- Contenido del reporte -->
+                                            <table role='presentation' width='100%' cellpadding='0' cellspacing='0'>
+                                                <tr>
+                                                    <td style='font-family: Tahoma, Geneva, Verdana, sans-serif; font-size:14px; color:#333333;'>
+                                                        <h3 style='color:#0058a1; margin:0 0 10px 0;'>&#128203; Contenido del Reporte:</h3>
+                                                        <ul style='margin:0; padding-left:20px;'>
+                                                            <li><strong>Datos Generales:</strong> Mes, Fecha, Línea, Producto, Turno</li>
+                                                            <li><strong>Producción:</strong> TR Fabricados, Producción Neta Real, Peso Estándar</li>
+                                                            <li><strong>Disponibilidad:</strong> Horas Programadas, Tiempo Disponible</li>
+                                                            <li><strong>Tiempos No Disponibles:</strong> Mantenimiento, Control, Cambios, etc.</li>
+                                                            <li><strong>Tiempos No Productivos:</strong> Causas de paros, faltas de materiales, etc.</li>
+                                                            <li><strong>KPIs:</strong> Porcentajes y métricas calculadas automáticamente</li>
+                                                        </ul>
+                                                    </td>
+                                                </tr>
+                                            </table>
+
+                                            <table role='presentation' width='100%' cellpadding='0' cellspacing='0'>
+                                                <tr>
+                                                    <td style='padding-top:30px; font-family: Tahoma, Geneva, Verdana, sans-serif; font-size:13px; color:#666666;'>
+                                                        Si tiene alguna pregunta sobre este reporte, contáctenos a través del sistema de soporte.
+                                                    </td>
+                                                </tr>
+                                            </table>
+
+                                        </td>
+                                    </tr>
+
+                                    <!-- FOOTER -->
+                                    <tr>
+                                        <td style='background-color:#f0f0f0; padding:15px; text-align:center; border-radius:5px;'>
+                                            <p style='margin:0; font-family: Tahoma, Geneva, Verdana, sans-serif; font-size:12px; color:#666666;'>
+                                                <strong>Plastics Technology de México, S. de R.L. de C.V.</strong><br>
+                                                Sistema Automatizado de Mantenimiento y Producción<br>
+                                                Este es un correo automático, por favor no responda directamente.
+                                            </p>
+                                        </td>
+                                    </tr>
+
+                                </table>
+                                <!-- /Contenedor principal -->
+
+                            </td>
+                        </tr>
+                    </table>
+                    <!-- /Wrapper -->
+
+                </body>
+                </html>
+
             ";
                         return html;
         }
 
         // ========================================
-        // OBTENER LOGO EN BASE64
+        // OBTENER LOGO
         // ========================================
-        private string ObtenerLogoEnBase64()
+        private string ObtenerRutaLogo()
         {
             try
             {
                 // Intentar primero con LogoPTM.png (versión a color)
-                string logoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Images", "LogoPTM.png");
+                string logoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Images", "LogoPTMWhite.png");
 
                 if (System.IO.File.Exists(logoPath))
                 {
-                    byte[] logoBytes = System.IO.File.ReadAllBytes(logoPath);
-                    return Convert.ToBase64String(logoBytes);
+                    return logoPath;
                 }
 
                 // Si no existe, intentar con LogoPTMWhite.png
                 logoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Images", "LogoPTMWhite.png");
                 if (System.IO.File.Exists(logoPath))
                 {
-                    byte[] logoBytes = System.IO.File.ReadAllBytes(logoPath);
-                    return Convert.ToBase64String(logoBytes);
+                    return logoPath;
                 }
             }
             catch (Exception ex)
@@ -1135,5 +1182,7 @@ namespace MantenimientosPTM.Controllers
 
             return string.Empty;
         }
+    
+        
     }
 }
