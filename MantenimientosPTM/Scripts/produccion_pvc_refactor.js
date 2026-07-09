@@ -1495,6 +1495,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 return;
             }
 
+            totales.PesoMinimo += Number(node.data.PesoMinimo || 0);
             totales.TRFabricados += Number(node.data.TRFabricados || 0);
             totales.ProduccionNetaReal += Number(node.data.ProduccionNetaReal || 0);
             totales.PesoEstandar += Number(node.data.PesoEstandar || 0);
@@ -1799,7 +1800,12 @@ class ExcelExporterPVC extends ExcelExporterBase {
                         valor = parseFloat(valor);
                     }
 
-                    fila.push(valor || '');
+                    // 🔥 Si el valor es 0, mantener el 0 (no convertir a string vacío)
+                    if (valor === 0 || valor === '0') {
+                        fila.push(0);
+                    } else {
+                        fila.push(valor || '');
+                    }
                 });
             });
 
@@ -1830,7 +1836,12 @@ class ExcelExporterPVC extends ExcelExporterBase {
                         valor = '';
                     }
 
-                    fila.push(valor || '');
+                    // 🔥 Si el valor es 0, mantener el 0 (no convertir a string vacío)
+                    if (valor === 0 || valor === '0') {
+                        fila.push(0);
+                    } else {
+                        fila.push(valor || '');
+                    }
                 });
             });
 

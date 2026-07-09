@@ -4547,7 +4547,12 @@ class ExcelExporterBase {
                     if (node.data.id === 'TOTALES' && textFields.includes(col.field)) {
                         valor = '';
                     }
-                    fila.push(valor || '');
+                    // 🔥 Si el valor es 0, mantener el 0 (no convertir a string vacío)
+                    if (valor === 0 || valor === '0') {
+                        fila.push(0);
+                    } else {
+                        fila.push(valor || '');
+                    }
                 });
             });
             worksheet.addRow(fila);
@@ -4699,9 +4704,4 @@ $(document).ready(function () {
 
     console.log('✅ Global.js cargado correctamente');
 });
-
-
-// ========================================
-// VALIDACION VENCIMIENTO
-// ========================================
 

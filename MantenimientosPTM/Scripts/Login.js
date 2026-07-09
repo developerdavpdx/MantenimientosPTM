@@ -40,111 +40,110 @@ class ValidationManagerLogin {
                 console.log('Sistema vencido, redirigiendo a /Login/Ended');
 
                 // Redirigir a la vista de acceso vencido con delay
-                setTimeout(function() {
-                    window.location.href = '/Login/Ended';
-                }, 500);
-                return;
+                window.location.href = '/Login/Ended';
             }
 
-            const usuario = $('#usuario').val();
-            const password = $('#password').val();
-            const recordarme = $('#recordarme').is(':checked');
+            else {
+                const usuario = $('#usuario').val();
+                const password = $('#password').val();
+                const recordarme = $('#recordarme').is(':checked');
 
-            AlertManager.mostrar('Iniciando sesión...', 'info');
+                AlertManager.mostrar('Iniciando sesión...', 'info');
 
-            const btnSubmit = $('.btn-login');
-            btnSubmit.prop('disabled', true);
-            btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Iniciando...');
+                const btnSubmit = $('.btn-login');
+                btnSubmit.prop('disabled', true);
+                btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Iniciando...');
 
-            $.ajax({
-                url: '/Login/ValidaUsuario',
-                type: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Usuario': usuario,
-                    'Password': password
-                },
-                success: function (data) {
-                    console.log('Respuesta del servidor:', data);
+                $.ajax({
+                    url: '/Login/ValidaUsuario',
+                    type: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Usuario': usuario,
+                        'Password': password
+                    },
+                    success: function (data) {
+                        console.log('Respuesta del servidor:', data);
 
-                    if (data.Status === 'OK') {
-                        let UserData = data.Data;
-                        if (typeof UserData === 'string') {
-                            try {
-                                UserData = JSON.parse(UserData);
-                            } catch (e) {
-                                console.warn('No se pudo parsear Data:', e);
+                        if (data.Status === 'OK') {
+                            let UserData = data.Data;
+                            if (typeof UserData === 'string') {
+                                try {
+                                    UserData = JSON.parse(UserData);
+                                } catch (e) {
+                                    console.warn('No se pudo parsear Data:', e);
+                                }
                             }
-                        }
-                        if (UserData[0].STATUS == "200") {
+                            if (UserData[0].STATUS == "200") {
 
-                            //Agregar correo
-                            UserData[0].EMAIL = usuario;
+                                //Agregar correo
+                                UserData[0].EMAIL = usuario;
 
-                            AlertManager.mostrar('¡Bienvenido! ' + data.Message, 'success');
-                            btnSubmit.addClass("text-white");
-                            btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Estamos preparando todo...');
+                                AlertManager.mostrar('¡Bienvenido! ' + data.Message, 'success');
+                                btnSubmit.addClass("text-white");
+                                btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Estamos preparando todo...');
 
-                            if (recordarme) {
-                                localStorage.setItem('recordarUsuario', usuario);
-                            } else {
-                                localStorage.removeItem('recordarUsuario');
-                            }
+                                if (recordarme) {
+                                    localStorage.setItem('recordarUsuario', usuario);
+                                } else {
+                                    localStorage.removeItem('recordarUsuario');
+                                }
 
-                            sessionStorage.setItem('userData', JSON.stringify(UserData));
+                                sessionStorage.setItem('userData', JSON.stringify(UserData));
 
-                            //Validar permisos y modulos
-                            let datos_usuario = GlobalUtil.getDatosUsuario();
+                                //Validar permisos y modulos
+                                let datos_usuario = GlobalUtil.getDatosUsuario();
 
-                            //Administrador
-                            if (datos_usuario[0].TIPOUSUARIO == "AdminMtto" || datos_usuario[0].TIPOUSUARIO == "Administrador") {
-                                setTimeout(function () {
-                                    window.location.href = '/Equipos/GestionEquipos';
-                                }, 1000);
+                                //Administrador
+                                if (datos_usuario[0].TIPOUSUARIO == "AdminMtto" || datos_usuario[0].TIPOUSUARIO == "Administrador") {
+                                    setTimeout(function () {
+                                        window.location.href = '/Equipos/GestionEquipos';
+                                    }, 1000);
+                                }
+                                //Tecnico Mtto
+                                else if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+                                    setTimeout(function () {
+                                        window.location.href = '/MantenimientosPreventivos/MantenimientoPreventivo';
+                                    }, 1000);
+                                }
+                                //Almacen
+                                else if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen" || datos_usuario[0].TIPOUSUARIO == "Almacen") {
+                                    setTimeout(function () {
+                                        window.location.href = '/Almacen/SolicitudRefacciones';
+                                    }, 1000);
+                                }
+                                //Planeacion
+                                else if (datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion" || datos_usuario[0].TIPOUSUARIO == "Planeacion") {
+                                    setTimeout(function () {
+                                        window.location.href = '/Planeacion/Planeacion';
+                                    }, 1000);
+                                }
+                                //Produccion
+                                else if (datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion" || datos_usuario[0].TIPOUSUARIO == "Produccion") {
+                                    setTimeout(function () {
+                                        window.location.href = '/Produccion/ParosProduccion';
+                                    }, 1000);
+                                }
                             }
-                            //Tecnico Mtto
-                            else if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
-                                setTimeout(function () {
-                                    window.location.href = '/MantenimientosPreventivos/MantenimientoPreventivo';
-                                }, 1000);
+                            else {
+                                AlertManager.mostrar("No fue posible iniciar sesión, valida tus credenciales.", 'warning');
+                                ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
+                                ValidationManagerLogin.validacionEnProceso = false;
                             }
-                            //Almacen
-                            else if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen" || datos_usuario[0].TIPOUSUARIO == "Almacen") {
-                                setTimeout(function () {
-                                    window.location.href = '/Almacen/SolicitudRefacciones';
-                                }, 1000);
-                            }
-                            //Planeacion
-                            else if (datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion" || datos_usuario[0].TIPOUSUARIO == "Planeacion") {
-                                setTimeout(function () {
-                                    window.location.href = '/Planeacion/Planeacion';
-                                }, 1000);
-                            }
-                            //Produccion
-                            else if (datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion" || datos_usuario[0].TIPOUSUARIO == "Produccion") {
-                                setTimeout(function () {
-                                    window.location.href = '/Produccion/ParosProduccion';
-                                }, 1000);
-                            }
-                        }
-                        else {
-                            AlertManager.mostrar("No fue posible iniciar sesión, valida tus credenciales.", 'warning');
+                        } else {
+                            AlertManager.mostrar(data.Message, 'warning');
                             ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
                             ValidationManagerLogin.validacionEnProceso = false;
                         }
-                    } else { 
-                        AlertManager.mostrar(data.Message, 'warning');
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error en la petición:', error);
+                        AlertManager.mostrar('Error de conexión. Por favor, intenta de nuevo.', 'warning');
                         ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
                         ValidationManagerLogin.validacionEnProceso = false;
                     }
-                },
-                error: function (xhr, status, error) {
-                    console.error('Error en la petición:', error);
-                    AlertManager.mostrar('Error de conexión. Por favor, intenta de nuevo.', 'warning');
-                    ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
-                    ValidationManagerLogin.validacionEnProceso = false;
-                }
-            });
+                });
+            }
         });
     }
 
