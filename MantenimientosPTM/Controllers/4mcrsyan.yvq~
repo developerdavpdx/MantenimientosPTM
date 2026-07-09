@@ -296,13 +296,7 @@ namespace MantenimientosPTM.Controllers
                         throw new Exception("No se recibieron datos válidos.");
                 }
 
-                // 🔥 DETECTAR SI ES BORRADOR
-                bool esBorrador = !string.IsNullOrEmpty(datos.TipoOperacion) && datos.TipoOperacion.ToUpper() == "BORRADOR";
-
                 // 🔥 PROCESAR Y GUARDAR FIRMAS DIGITALES
-                // Si es borrador: solo Realizo es obligatoria, Superviso y Mantenimiento son opcionales
-                // Si no es borrador: todas son obligatorias
-
                 bool rutaFirmaRealizo = GuardarFirmaDigital(
                     datos.FirmaRealizo,
                     datos.NumeroOrden,
@@ -310,7 +304,7 @@ namespace MantenimientosPTM.Controllers
                 );
 
                 //Solo guardar la bandera
-                datos.FirmaRealizo = rutaFirmaRealizo && datos.FirmaRealizo?.Length > 0 ? "SI" : "";
+                datos.FirmaRealizo = rutaFirmaRealizo && datos.FirmaRealizo.Length > 0 ? "SI" : "";
 
                 bool rutaFirmaSuperviso = GuardarFirmaDigital(
                     datos.FirmaSuperviso,
@@ -318,8 +312,9 @@ namespace MantenimientosPTM.Controllers
                     "Superviso"
                 );
 
+
                 //Solo guardar la bandera
-                datos.FirmaSuperviso = rutaFirmaSuperviso && datos.FirmaSuperviso?.Length > 0 ? "SI" : "";
+                datos.FirmaSuperviso = rutaFirmaSuperviso && datos.FirmaSuperviso.Length > 0 ? "SI" : "";
 
                 bool rutaFirmaMantenimiento = GuardarFirmaDigital(
                     datos.FirmaMantenimiento,
@@ -328,11 +323,11 @@ namespace MantenimientosPTM.Controllers
                 );
 
                 //Solo guardar la bandera
-                datos.FirmaMantenimiento = rutaFirmaMantenimiento && datos.FirmaMantenimiento?.Length > 0 ? "SI" : "";
+                datos.FirmaMantenimiento = rutaFirmaMantenimiento && datos.FirmaMantenimiento.Length > 0 ? "SI" : "";
 
-                // 🔥 VALIDACIÓN DE FIRMAS (todas obligatorias - como estaba)
                 if (!rutaFirmaRealizo || !rutaFirmaSuperviso || !rutaFirmaMantenimiento)
                 {
+                    // Construir respuesta JSON
                     jsonResponse.Status = "NO";
                     jsonResponse.Message = $"No fue posible actualizar la solicitud, no fue posible guardar las firmas, intenta de nuevo más tarde.";
                     jsonResponse.Data = string.Empty;
@@ -369,30 +364,53 @@ namespace MantenimientosPTM.Controllers
                     return Json(jsonResponse, JsonRequestBehavior.AllowGet);
                 }
 
-                // 🔥 ACTUALIZAR ESTATUS SOLO SI NO ES BORRADOR
-                if (!esBorrador)
+                var parametrosFinOT = new
                 {
-                    var parametrosFinOT = new
-                    {
-                        P_ID_MANTENIMIENTO = datos.IdMantenimiento,
-                        P_ORDENTRABAJO = string.Empty,
-                        P_ESTATUS = 4,
-                        P_USUARIOACTUALIZA = datos.Solicitante
-                    };
+                    P_ID_MANTENIMIENTO = datos.IdMantenimiento,
+                    P_ORDENTRABAJO = string.Empty,
+                    P_ESTATUS = 4,
+                    P_USUARIOACTUALIZA = datos.Solicitante
+                };
 
-                    allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, false, null);
-                    var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparameters);
-                }
-                else
-                {
-                    // En borrador, solo logged
-                    System.Diagnostics.Debug.WriteLine($"📝 Borrador guardado sin cambiar estatus para OT {datos.NumeroOrden}");
-                }
+                allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, false, null);
+                var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparameters);
+
 
                 //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
                 string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
                 var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
                 context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+
+                // Validar si ya se completó la CARÁTULA Y LA RUTINA ONLINE
+                //var parametrosMantenimiento = new
+                //{
+                //    P_ID_MANTENIMIENTO = datos.IdMantenimiento
+                //};
+
+                //allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosMantenimiento, false, null);
+
+                //var CaratulaRutinaCompleta = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                //    Logic.AD.GCValidarOTFinalizada,
+                //    allparameters
+                //);
+
+                //// Si ya está finalizada en conjunto con la rutina online actualizar estatus de mantenimiento
+                //JArray CARRUT = JArray.Parse(CaratulaRutinaCompleta.JsonResult);
+                //string OT = CARRUT[0]["ORDEN_TRABAJO_FINALIZADA"].ToString();
+                //string RUTINA = CARRUT[0]["RUTINA_COMPLETADA"].ToString();
+
+                //if (OT == "SI" && RUTINA == "SI")
+                //{
+                //    var parametrosFinOT = new
+                //    {
+                //        P_ID_MANTENIMIENTO = datos.IdMantenimiento,
+                //        P_ESTATUS = 4,
+                //        P_USUARIO_ACTUALIZA = datos.Solicitante
+                //    };
+
+                //    allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, false, null);
+                //    var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparameters);
+                //}
 
                 // ✅ Verificar resultado
                 if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
@@ -400,12 +418,8 @@ namespace MantenimientosPTM.Controllers
                     var resultado = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultHana.JsonResult);
                     var idOtDetalle = resultado[0]["ID_OT_DETALLE"].ToString();
 
-                    string mensaje = esBorrador 
-                        ? "Borrador de orden de trabajo guardado correctamente"
-                        : "Orden de trabajo guardada correctamente con firmas digitales";
-
                     jsonResponse.Status = "SI";
-                    jsonResponse.Message = mensaje;
+                    jsonResponse.Message = "Orden de trabajo guardada correctamente con firmas digitales";
                     jsonResponse.Data = idOtDetalle;
                 }
                 else
@@ -879,15 +893,16 @@ namespace MantenimientosPTM.Controllers
                     P_COMENTARIOS = comentarios,
                     P_USUARIO_REGISTRO = usuarioRegistro,
                     P_ID_OT_DETALLE = IdOtDetalle,
-                    P_ACTIVIDADES_JSON = actividadesJson
+                    P_ACTIVIDADES_JSON = actividadesJson,
+                    P_ES_BORRADOR = true // 🔥 Indicador de borrador
                 };
 
                 // Convertir a parámetros HANA
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosRutina, false, null);
 
-                // 🔥 EJECUTAR STORED PROCEDURE PARA BORRADOR (usamos el mismo SP existente)
+                // 🔥 EJECUTAR STORED PROCEDURE PARA BORRADOR (nuevo SP o existente adaptado)
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCGuardarRutinaMP, // 🔥 Mismo SP, el parámetro P_ES_BORRADOR lo maneja
+                    Logic.AD.GCGuardarRutinaBorradorMP, // 🔥 Nuevo nombre de constante para SP
                     allparameters
                 );
 
@@ -908,6 +923,3 @@ namespace MantenimientosPTM.Controllers
                 return Json(jsonResponse);
             }
         }
-        #endregion
-    }
-}

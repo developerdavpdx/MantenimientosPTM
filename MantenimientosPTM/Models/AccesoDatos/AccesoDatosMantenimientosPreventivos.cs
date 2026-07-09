@@ -377,7 +377,7 @@ namespace MantenimientosPTM
             public string HoraFin { get; set; }
             public string TextoSecuencia { get; set; }
             public string TecnicosAsignados { get; set; }
-            public decimal DuracionHrs { get; set; }
+            public decimal? DuracionHrs { get; set; }
             public string Usuario { get; set; }
 
             // 🔥 NUEVOS CAMPOS PARA FIRMAS

@@ -175,6 +175,9 @@ class MantenimientosPreventivoApp {
         // ✅ CORRECTO - Debes pasar "e" como parámetro
         $('#formOrdenMantenimiento').on('submit', (e) => this.mantenimientoManager.guardarOT(e));
 
+        // 🔥 EVENT LISTENER PARA GUARDAR BORRADOR
+        $('#btnGuardarBorrador').on('click', (e) => this.mantenimientoManager.guardarBorrador(e));
+
         // Guardar estatus
         $('#btnGuardarEstatus').on('click', () => this.mantenimientoManager.guardarEstatus());
 
@@ -2366,6 +2369,7 @@ class MantenimientoManager {
             // 🔥 GUARDAR LA ORDEN DE TRABAJO
             await this.guardarOTDefinitivo(datos);
 
+
         } catch (error) {
             console.error('Error en el proceso:', error);
             AlertManager.mostrar('No es posible guardar la orden de trabajo: ' + error, 'warning', "alertOrdenContainer");
@@ -2375,9 +2379,153 @@ class MantenimientoManager {
         return false;
     }
     // 🔥 MÉTODO SEPARADO PARA GUARDAR LA OT (también async)
+    // 🔥 MÉTODO PARA GUARDAR BORRADOR (sin validaciones estrictas)
+    async guardarBorrador(e) {
+        if (e) e.preventDefault();
+
+        // ✅ Validar solo campo crítico: Número de Orden
+        const numeroOrden = $('#NumeroOrden').val();
+        if (!numeroOrden || numeroOrden.trim() === '') {
+            AlertManager.mostrar('El número de orden es requerido', 'warning', "alertOrdenContainer");
+            return false;
+        }
+
+        // ✅ Deshabilitar botón y mostrar loading
+        $('#btnGuardarBorrador').html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando Borrador...').prop('disabled', true);
+
+        try {
+            // 🔥 OBTENER SOLO LOS DATOS DISPONIBLES (sin validaciones)
+            const datosBorrador = this._obtenerDatosBorrador();
+
+            console.log('📝 Datos del borrador:', datosBorrador);
+
+            // 🔥 GUARDAR RUTINA EN BORRADOR (validación relajada)
+            const rutinaGuardada = await this.guardarRutinaParaBorrador(datosBorrador.NumeroOrden, datosBorrador.EstatusOrden);
+            if (!rutinaGuardada) {
+                $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+                return false;
+            }
+
+            // ✅ SUBIR PDF SI EXISTE (cuando es rutina default para TecnicoMtto)
+            if (this.pdfTemporalRutina) {
+                console.log('📄 Subiendo PDF de rutina...');
+                const pdfSubido = await this.SubirPdfRutinaAsync(this.pdfTemporalRutina);
+                if (!pdfSubido) {
+                    console.warn('⚠️ Advertencia: El PDF no se subió, pero continuaremos con el borrador');
+                }
+                this.pdfTemporalRutina = null;
+            }
+
+            // ✅ AGREGAR DATOS REQUERIDOS PARA GUARDADO
+            datosBorrador.Usuario = this.datos_usuario[0].EMAIL;
+            datosBorrador.TipoOperacion = 'BORRADOR'; // 🔥 Tipo especial para borrador
+            datosBorrador.IdMantenimiento = this.ID_MANTENIMIENTO;
+
+            // ✅ Convertir horas si existen
+            if (datosBorrador.HoraInicio) {
+                datosBorrador.HoraInicio = this.convertirA24Horas(datosBorrador.HoraInicio);
+            }
+            if (datosBorrador.HoraFin) {
+                datosBorrador.HoraFin = this.convertirA24Horas(datosBorrador.HoraFin);
+            }
+
+            // ✅ Agregar técnicos si existen
+            if (this.gestionTecnicos.tecnicosAsignados.length > 0) {
+                datosBorrador.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
+            }
+
+            // ✅ Guardar el borrador
+            await this.guardarBorradorDefinitivo(datosBorrador);
+
+        } catch (error) {
+            console.error('Error en guardarBorrador:', error);
+            AlertManager.mostrar('No es posible guardar el borrador: ' + error, 'warning', "alertOrdenContainer");
+            $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+        }
+
+        return false;
+    }
+
+    // 🔥 MÉTODO PARA EXTRAER DATOS DEL BORRADOR (solo disponibles)
+    _obtenerDatosBorrador() {
+        const datos = {};
+
+        // 🔥 Campos que SIEMPRE se intentan obtener (pueden estar vacíos)
+        const camposFormulario = [
+            'NumeroOrden',
+            'Solicitante',
+            'ClaseMantenimiento',
+            'CodigoMantenimiento',
+            'EstatusOrden',
+            'FechaInicioExtrema',
+            'FechaFinExtrema',
+            'UbicacionTecnica',
+            'CentroCostos',
+            'DescripcionEquipo',
+            'NumeroEquipo',
+            'GrupoPlaneacion',
+            'HoraInicio',
+            'HoraFin',
+            'TextoSecuencia',
+            'DuracionHrs'
+        ];
+
+        camposFormulario.forEach(campo => {
+            const valor = $(`#${campo}`).val();
+            if (valor !== null && valor !== undefined) {
+                datos[campo] = valor;
+            }
+        });
+
+        return datos;
+    }
+
+    // 🔥 MÉTODO SEPARADO PARA GUARDAR EL BORRADOR (también async)
+    async guardarBorradorDefinitivo(datos) {
+        let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: `/${this.URLBase}/InsertarOrdenTrabajoMP`,
+                type: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Rol-Usuario': TipoUsuario
+                },
+                contentType: 'application/json; charset=utf-8',
+                data: JSON.stringify(datos),
+                dataType: 'json',
+                success: (response) => {
+                    if (response.Status === 'SI') {
+                        AlertManager.mostrar(
+                            '✅ Borrador guardado correctamente. Puede continuar editando o cerrar.',
+                            'success',
+                            "alertOrdenContainer"
+                        );
+
+                        // Recargar la tabla
+                        $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+
+                        // 🔥 NO cerrar el modal automáticamente para permitir seguir editando
+                        resolve(true);
+                    } else {
+                        AlertManager.mostrar(response.Message || 'Error al guardar el borrador', 'warning', "alertOrdenContainer");
+                        reject(false);
+                    }
+
+                    // Restaurar botón
+                    $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+                },
+                error: (xhr, status, error) => {
+                    AlertManager.mostrar('Error al conectar con el servidor', 'warning', "alertOrdenContainer");
+                    $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+                    reject(error);
+                }
+            });
+        });
+    }
+
     async guardarOTDefinitivo(datos) {
         let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
-
         return new Promise((resolve, reject) => {
             $.ajax({
                 url: `/${this.URLBase}/InsertarOrdenTrabajoMP`,
@@ -2880,6 +3028,84 @@ class MantenimientoManager {
                     $("#btnGuardarRutina").html('<i class="bi bi-check2-circle me-1"></i>Guardar Rutina');
                     $("#btnGuardarRutina").prop("disabled", false);
                     reject(false); // ❌ ERROR
+                }
+            });
+        });
+    }
+
+    // 🔥 NUEVO: Método para guardar rutina en BORRADOR (validación relajada)
+    async guardarRutinaParaBorrador(OrdenTrabajo, EstatusOrden) {
+        return new Promise((resolve, reject) => {
+            // ✅ MISMA LÓGICA: Si hay PDF de rutina (rutina default), no validar actividades
+            const esRutinaDefault = $('#esRutinaDefault').length > 0;
+            const tienePdf = this.pdfTemporalRutina !== null || ($('#seccionPdfRutina').is(':visible') && $('#pdfViewerContainer').is(':visible'));
+
+            if (esRutinaDefault && tienePdf) {
+                // Es rutina default con PDF - no hay actividades que validar
+                console.log('📄 Rutina con PDF (Borrador) - omitiendo validación de actividades');
+                resolve(true);
+                return;
+            }
+            if (EstatusOrden == "Cerrado") {
+                // Ya solo son firmas
+                console.log('📄 Solo guardando firmas (Borrador)');
+                resolve(true);
+                return;
+            }
+
+            const respuestas = this.obtenerRespuestasRutina();
+            const comentarios = $('#Comentarios').val();
+
+            // 🔥 VALIDACIÓN RELAJADA: Al menos UNA actividad debe estar respondida
+            const conRespuesta = respuestas.filter(r => r.estado !== null);
+            if (conRespuesta.length === 0) {
+                AlertManager.mostrar('Debe responder al menos una actividad para guardar el borrador', 'warning');
+                resolve(false);
+                return;
+            }
+
+            console.log(`✅ Borrador: ${conRespuesta.length} de ${respuestas.length} actividades respondidas`);
+
+            // 🔥 CREAR FORMDATA
+            const formData = new FormData();
+            formData.append('idMantenimiento', this.ID_MANTENIMIENTO);
+            formData.append('idEquipo', this.ID_EQUIPO);
+            formData.append('comentarios', comentarios);
+            formData.append('actividades', JSON.stringify(respuestas));
+            formData.append('usuarioRegistro', this.datos_usuario[0].EMAIL);
+            formData.append('OrdenTrabajo', OrdenTrabajo);
+            formData.append('Planta', this.datos_usuario[0].PLANTA);
+            formData.append('esBorrador', 'true'); // 🔥 Flag para indicar que es borrador
+
+            // 🔥 AGREGAR IMÁGENES
+            const files = window.imagenesRutina || [];
+            console.log('Total de archivos:', files.length);
+
+            for (let i = 0; i < files.length; i++) {
+                formData.append('imagenes', files[i]);
+                console.log(`Agregando imagen ${i}:`, files[i].name);
+            }
+
+            // Enviar al servidor (endpoint diferente para borrador)
+            $.ajax({
+                url: `/${this.URLBase}/GuardarRutinaBorrador`,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                beforeSend: function () {
+                    // No mostramos loading aquí porque se guarda en background
+                },
+                success: function (response) {
+                    console.log('✅ Rutina en borrador guardada correctamente:', response);
+                    AlertManager.mostrar('✅ Borrador de rutina guardado', 'success', 'alertOrdenContainer');
+                    resolve(true);
+                },
+                error: function (xhr, status, error) {
+                    console.warn('⚠️ Advertencia al guardar borrador de rutina:', error);
+                    AlertManager.mostrar('Advertencia: No se pudo guardar el borrador de la rutina, pero continuaremos', 'warning', 'alertOrdenContainer');
+                    // 🔥 NO rechazamos - permitimos continuar aunque falle
+                    resolve(true);
                 }
             });
         });

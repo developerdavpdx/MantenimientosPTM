@@ -358,6 +358,17 @@ textarea.form-control-custom {
             box-shadow: 0 6px 18px rgba(198, 40, 40, 0.4);
         }
 
+    /* 🔥 Botón guardar — variante draft (naranja/ámbar) */
+    .btn-modal-guardar.draft {
+        background: linear-gradient(135deg, #F57C00, #FB8C00);
+        box-shadow: 0 4px 14px rgba(245, 124, 0, 0.3);
+    }
+
+        .btn-modal-guardar.draft:hover {
+            background: linear-gradient(135deg, #E65100, #F57C00);
+            box-shadow: 0 6px 18px rgba(245, 124, 0, 0.4);
+        }
+
     /* Botón guardar — variante success (verde) */
     .btn-modal-guardar.success {
         background: linear-gradient(135deg, #2E7D32, #43A047);
