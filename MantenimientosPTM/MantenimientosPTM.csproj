@@ -2455,6 +2455,7 @@
     <Content Include="Views\Equipos\_ModalGestionAreas.cshtml" />
     <Content Include="Views\Almacen\_ModalSolicitudCompra.cshtml" />
     <Content Include="Views\Almacen\_ModalRequisionCompra.cshtml" />
+    <Content Include="Views\Login\Ended.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

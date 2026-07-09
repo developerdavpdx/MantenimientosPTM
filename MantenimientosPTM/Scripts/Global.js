@@ -4699,3 +4699,9 @@ $(document).ready(function () {
 
     console.log('✅ Global.js cargado correctamente');
 });
+
+
+// ========================================
+// VALIDACION VENCIMIENTO
+// ========================================
+

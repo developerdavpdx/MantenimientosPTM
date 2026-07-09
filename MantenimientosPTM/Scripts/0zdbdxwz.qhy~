@@ -2,8 +2,6 @@
 // GESTOR DE LOGIN
 // ========================================
 class ValidationManagerLogin {
-    // Flag para prevenir múltiples validaciones
-    static validacionEnProceso = false;
 
     // Inicializar formulario con jQuery
     static inicializarFormulario(formId) {
@@ -24,25 +22,11 @@ class ValidationManagerLogin {
 
     // Procesar login con jQuery AJAX
     static procesarLogin() {
-        // Evitar que se ejecute múltiples veces
-        if (ValidationManagerLogin.validacionEnProceso) {
-            console.warn('Validación ya en proceso, ignorando esta llamada');
-            return;
-        }
-
-        ValidationManagerLogin.validacionEnProceso = true;
-
         // Primero validar que el sistema no esté vencido
         ValidationManagerLogin.validarVencimiento(function(vencido) {
             if (vencido) {
-                // Deshabilitar interacciones antes de redirigir
-                $('body').css('pointer-events', 'none');
-                console.log('Sistema vencido, redirigiendo a /Login/Ended');
-
-                // Redirigir a la vista de acceso vencido con delay
-                setTimeout(function() {
-                    window.location.href = '/Login/Ended';
-                }, 500);
+                // Redirigir a la vista de acceso vencido
+                window.location.href = '/Login/Ended';
                 return;
             }
 
@@ -130,19 +114,16 @@ class ValidationManagerLogin {
                         else {
                             AlertManager.mostrar("No fue posible iniciar sesión, valida tus credenciales.", 'warning');
                             ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
-                            ValidationManagerLogin.validacionEnProceso = false;
                         }
                     } else { 
                         AlertManager.mostrar(data.Message, 'warning');
                         ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
-                        ValidationManagerLogin.validacionEnProceso = false;
                     }
                 },
                 error: function (xhr, status, error) {
                     console.error('Error en la petición:', error);
                     AlertManager.mostrar('Error de conexión. Por favor, intenta de nuevo.', 'warning');
                     ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
-                    ValidationManagerLogin.validacionEnProceso = false;
                 }
             });
         });
@@ -160,19 +141,16 @@ class ValidationManagerLogin {
             url: '/Login/ObtenerFechaVencimiento',
             type: 'GET',
             dataType: 'json',
-            timeout: 5000, // Timeout de 5 segundos
             success: function(data) {
-                console.log('Respuesta de vencimiento:', data);
                 if (data.Status === 'OK' && data.Vencido) {
                     callback(true); // Sistema está vencido
                 } else {
                     callback(false); // Sistema vigente
                 }
             },
-            error: function(xhr, status, error) {
-                console.warn('No se pudo validar fecha de vencimiento:', error);
-                // En caso de error, permitir continuar por seguridad
-                callback(false);
+            error: function() {
+                console.warn('No se pudo validar fecha de vencimiento');
+                callback(false); // En caso de error, permitir continuar
             }
         });
     }

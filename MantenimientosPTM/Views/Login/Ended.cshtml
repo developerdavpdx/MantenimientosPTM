@@ -1,0 +1,188 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Acceso Vencido - PTM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+  :root{
+    --ptm-bg-1:#081c2e;
+    --ptm-bg-2:#0a2540;
+    --ptm-blue-light:#29a0de;
+    --ptm-blue-mid:#1877c4;
+    --ptm-blue-dark:#0a5fa0;
+    --ptm-steel-light:#a9c3d8;
+    --ptm-line:rgba(41,160,222,0.18);
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(41,160,222,0.10), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(24,119,196,0.14), transparent 45%),
+      linear-gradient(180deg, var(--ptm-bg-1), var(--ptm-bg-2));
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color:#dfe3e8;
+    padding:24px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* Textura tipo "placa industrial" */
+  body::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+  }
+
+  .card-panel{
+    position:relative;
+    width:100%;
+    max-width:460px;
+    background:linear-gradient(155deg, #1a2029 0%, #12161d 100%);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:6px;
+    padding:44px 38px 34px;
+    box-shadow:
+      0 20px 60px rgba(0,0,0,0.5),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  /* Esquinas tipo remaches */
+  .rivet{
+    position:absolute;
+    width:6px; height:6px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, #6b7280, #2a2f38);
+    box-shadow:0 1px 2px rgba(0,0,0,0.6);
+  }
+  .rivet.tl{top:14px;left:14px;}
+  .rivet.tr{top:14px;right:14px;}
+  .rivet.bl{bottom:14px;left:14px;}
+  .rivet.br{bottom:14px;right:14px;}
+
+  .status-strip{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ptm-blue-light);
+    font-weight:600;
+    margin-bottom:28px;
+  }
+  .status-strip .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--ptm-blue-light);
+    box-shadow:0 0 0 0 rgba(41,160,222,0.6);
+    animation:pulse 2s infinite;
+  }
+  @@keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(41,160,222,0.45);}
+    70%{box-shadow:0 0 0 8px rgba(41,160,222,0);}
+    100%{box-shadow:0 0 0 0 rgba(41,160,222,0);}
+  }
+
+  .logo-wrap{
+    display:flex;
+    justify-content:center;
+    margin-bottom:26px;
+  }
+  .logo-wrap img{
+    height:38px;
+    width:auto;
+  }
+
+  .icon-lock{
+    width:64px;height:64px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(155deg, #142a42, #0a1c2e);
+    border:1px solid var(--ptm-line);
+    margin-bottom:22px;
+    font-size:26px;
+    color:var(--ptm-blue-light);
+  }
+
+  h1.title{
+    font-size:1.5rem;
+    font-weight:700;
+    color:#f0f2f5;
+    margin-bottom:8px;
+    letter-spacing:-0.01em;
+  }
+
+  p.subtitle{
+    color:var(--ptm-steel-light);
+    font-size:0.94rem;
+    line-height:1.55;
+    margin-bottom:26px;
+  }
+
+  .divider-line{
+    height:1px;
+    background:linear-gradient(90deg, transparent, var(--ptm-line), transparent);
+    margin:0 0 24px;
+  }
+
+  .footer-tag{
+    text-align:center;
+    font-size:0.7rem;
+    color:#4a5f75;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    margin-top:30px;
+  }
+
+  @@media (prefers-reduced-motion: reduce){
+    .status-strip .dot{animation:none;}
+  }
+    </style>
+</head>
+<body>
+
+    <div class="card-panel">
+        <div class="rivet tl"></div>
+        <div class="rivet tr"></div>
+        <div class="rivet bl"></div>
+        <div class="rivet br"></div>
+
+        <div class="logo-wrap">
+            <img src="LogoPTM.png" alt="PTM">
+        </div>
+
+        <div class="status-strip">
+            <span class="dot"></span>
+            Sesión bloqueada
+        </div>
+
+        <div class="icon-lock">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+
+        <h1 class="title">Tu acceso ha vencido</h1>
+        <p class="subtitle">
+            Tu cuenta ya no tiene permisos activos para ingresar al Sistema Integral de Mantenimientos PTM.
+        </p>
+
+        <div class="footer-tag">PTM · Sistema Integral de Mantenimientos</div>
+    </div>
+
+    <script>
+  // Espacio disponible si luego quieres inyectar datos con Razor (@@User.Identity.Name, fecha, etc.)
+    </script>
+
+</body>
+</html>
