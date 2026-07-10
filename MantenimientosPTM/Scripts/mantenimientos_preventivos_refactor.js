@@ -156,11 +156,6 @@ class MantenimientosPreventivoApp {
             this.mantenimientoManager.abrirModalRefaccion($(e.currentTarget));
         });
 
-        // Rutina online
-        $(document).on('click', '.btn-rutina-online', (e) => {
-            this.mantenimientoManager.abrirModalRutinaOnline($(e.currentTarget));
-        });
-
         // Carátula online
         $(document).on('click', '.btn-caratula-online', (e) => {
             this.mantenimientoManager.abrirModalCaratulaOnline($(e.currentTarget));
@@ -1519,10 +1514,15 @@ class MantenimientoManager {
     // ============================
     // ORDENES TRABAJO
     // ============================
-    abrirModalCaratulaOnline(btn) {
+    async abrirModalCaratulaOnline(btn) {
         try {
             // ========================================
-            // 1️ DATA
+            // 1️ MODAL
+            // ========================================
+            $('#modalOrdenMantenimiento').modal('show');
+
+            // ========================================
+            // 3 DATA
             // ========================================
             const data = this.getDataFromButtonMP(btn);
 
@@ -1536,7 +1536,7 @@ class MantenimientoManager {
             this.TIPO_OPERACION = (data.estatusOrden == "4" ? "U" : "I");
 
             // ========================================
-            // 2️ RESET
+            // 4 RESET
             // ========================================
             $("#formOrdenMantenimiento")[0].reset();
             ValidationManager.limpiarValidacion('#formOrdenMantenimiento');
@@ -1555,7 +1555,7 @@ class MantenimientoManager {
                                         </div>"`);
 
             // ========================================
-            // 3️ DATOS GENERALES
+            // 5 DATOS GENERALES
             // ========================================
             $('#NumeroOrden').val(data.numeroOrden || '');
             $('#Solicitante').val(this.datos_usuario[0].EMAIL || '');
@@ -1566,7 +1566,7 @@ class MantenimientoManager {
             $('#DescEquipo').val(data.descripcionEquipo || '');
 
             // ========================================
-            // 4️ FECHA / HORA APERTURA
+            // 6 FECHA / HORA APERTURA
             // ========================================
             if (data.horaApertura && data.horaApertura.includes(' ')) {
                 try {
@@ -1583,7 +1583,7 @@ class MantenimientoManager {
             }
 
             // ========================================
-            // 5️ UBICACIÓN / DATOS TÉCNICOS
+            // 7 UBICACIÓN / DATOS TÉCNICOS
             // ========================================
             $("#UbicacionTecnica").val(data.area ? `AREA ${data.area}` : '');
             $("#CentroCostos").val(data.centroCostos || '');
@@ -1602,7 +1602,7 @@ class MantenimientoManager {
             $("#fechaImpresion").text(DateUtils.obtenerFechaHora());
 
             // ========================================
-            // 6️🔥 REGISTRO DE TRABAJO
+            // 8 REGISTRO DE TRABAJO
             // ========================================
             if (data.horaInicio) {
                 $("#HoraInicioTrabajo").val(data.horaInicio.substring(0, 5));
@@ -1617,13 +1617,13 @@ class MantenimientoManager {
             $("#DuracionHrs").val(data.duracionHrs || '');
 
             // ========================================
-            // 7️ IDS
+            // 9 IDS
             // ========================================
             this.ID_EQUIPO = data.idEquipo;
             this.ID_MANTENIMIENTO = data.idMantenimiento;
 
             // ========================================
-            // 8️ RUTINA (CLAVE EN MP)
+            // 10 RUTINA (CLAVE EN MP)
             // ========================================
             $('#rutinaNombreEquipo').text(data.nombreEquipo + ' ' + data.numeroDocPmCalidad);
             $('#rutinaProceso').text(data.area);
@@ -1634,7 +1634,7 @@ class MantenimientoManager {
             $("#galeriaEvidenciaRutina").remove();
 
             // ========================================
-            // 9 CONFIGURACIÓN POR ROL
+            // 11 CONFIGURACIÓN POR ROL
             // ========================================
             const tipoUsuario = this.datos_usuario?.[0]?.TIPOUSUARIO || "";
 
@@ -1646,14 +1646,9 @@ class MantenimientoManager {
                 case "TecnicoMtto":
 
                     if (typeof this.configurarVistaTecnico === "function") {
-                        this.configurarVistaTecnico(data.estatusOrden, data.firmaRealizo, data.idEquipo, data.planta, data.numeroOrden, data.idEquipoPeriodicidad);
+                        await this.configurarVistaTecnico(data.estatusOrden, data.firmaRealizo, data.firmaSuperviso, data.firmaMantenimiento, data.idEquipo, data.planta, data.numeroOrden, data.idEquipoPeriodicidad);
                     } else {
                         console.error("❌ configurarVistaTecnico no definido");
-                    }
-
-                    // 🔥 Si la orden ya está atendida → cargar actividades
-                    if (data.estatusOrden == 4 && typeof this.ConsultarActividadesPorOTMP === "function") {
-                        this.ConsultarActividadesPorOTMP(data.numeroOrden, data.idEquipo, data.planta, data.comentariosRutina);
                     }
 
                     break;
@@ -1673,17 +1668,12 @@ class MantenimientoManager {
                             data.numeroOrden,
                             data.idEquipo,
                             data.planta,
-                            data.idEquipoPeriodicidad
+                            data.idEquipoPeriodicidad,
+                            data.comentariosRutina
                         );
                     } else {
                         console.error("❌ configurarVistaProduccion no definido");
                     }
-
-                    // 🔥 Si la orden ya está atendida → cargar actividades
-                    if (data.estatusOrden == 4 && typeof this.ConsultarActividadesPorOTMP === "function") {
-                        this.ConsultarActividadesPorOTMP(data.numeroOrden, data.idEquipo, data.planta, data.comentariosRutina);
-                    }
-
                     break;
 
 
@@ -1702,13 +1692,14 @@ class MantenimientoManager {
                             data.numeroOrden,
                             data.idEquipo,
                             data.planta,
-                            data.idEquipoPeriodicidad
+                            data.idEquipoPeriodicidad,
+                            data.comentariosRutina
                         );
                     } else {
                         console.error("❌ configurarVistaAdministrador no definido");
                     }
 
-                    // 🔥 Igual que producción: ver actividades si ya está atendida
+                    // 🔥 Si la orden ya está atendida → cargar actividades READONLY
                     if (data.estatusOrden == 4 && typeof this.ConsultarActividadesPorOTMP === "function") {
                         this.ConsultarActividadesPorOTMP(data.numeroOrden, data.idEquipo, data.planta, data.comentariosRutina);
                     }
@@ -1734,8 +1725,8 @@ class MantenimientoManager {
                         );
                     }
 
-                    // 🔥 También carga actividades por seguridad
-                    if (data.estatusOrden == 4 && typeof this.ConsultarActividadesPorOTMP === "function") {
+                    // 🔥 También carga actividades por seguridad si está atendida
+                    else if (data.estatusOrden == 4 && typeof this.ConsultarActividadesPorOTMP === "function") {
                         this.ConsultarActividadesPorOTMP(data.numeroOrden, data.idEquipo, data.planta);
                     }
 
@@ -1754,10 +1745,6 @@ class MantenimientoManager {
             // ========================================
             this.cargarTecnicos(data.numeroOrden, "MP");
 
-            // ========================================
-            // 1️2 MODAL
-            // ========================================
-            $('#modalOrdenMantenimiento').modal('show');
         }
         catch (error) {
             console.error("❌ Error en abrirModalCaratulaOnline:", error);
@@ -1907,12 +1894,18 @@ class MantenimientoManager {
     // ========================================
     // 🔧 CONFIGURAR VISTA TÉCNICO (CORRECTIVO)
     // ========================================
-    configurarVistaTecnico(EstatusOrden, FirmaTecnico, IdEquipo, Planta, NumeroOrden, IdEquipoPeriodicidad) {
+    async configurarVistaTecnico(EstatusOrden, FirmaTecnico, FirmaSupervisor, FirmaMantenimiento, IdEquipo, Planta, NumeroOrden, IdEquipoPeriodicidad) {
 
         // MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
         if (EstatusOrden == 4) {
             $('#EvidenciaOrdenTrabajo').removeClass('d-none');
             $('#CierreOrdenTrabajo').removeClass('d-none');
+
+            //HORA DE INICIO
+            $("#HoraInicio").prop('readonly', true);
+
+            //HORA DE FIN
+            $("#HoraFin").prop('readonly', true);
 
             //TEXTO DE SECUENCIA
             $("#TextoSecuencia").prop('readonly', true);
@@ -1934,17 +1927,35 @@ class MantenimientoManager {
             $("#EvidenciaOrdenTrabajo").addClass("d-none");
 
             // BOTONES
-            if (EstatusOrden == '4' && FirmaTecnico != "")
+            if (FirmaTecnico != "") {
                 $('#btnGuardarOT').addClass('d-none').prop('disabled', true);
+                $('#btnGuardarBorrador').addClass('d-none').prop('disabled', true);
+            }
             else
                 $('#btnGuardarOT').removeClass('d-none').prop('disabled', false);
 
             $('#btnExportMantenimientoPDF').addClass('d-none');
 
+            if (FirmaSupervisor != "")
+                this.gestionFirmas._bloquearFirma("Superviso", true);
+            else
+                this.gestionFirmas.deshabilitarFirma("Superviso", true);
+
+            if (FirmaMantenimiento != "")
+                this.gestionFirmas._bloquearFirma("Mantenimiento", true);
+            else
+                this.gestionFirmas.deshabilitarFirma("Mantenimiento", true);
+
+            // 🔥 CARGAR ACTIVIDADES COMPLETADAS (READONLY)
+            // await this.ConsultarRutinaServer(IdEquipo, Planta, IdEquipoPeriodicidad);
+            this.ConsultarActividadesPorOTMP(NumeroOrden, IdEquipo, Planta, "");
+
             return;
         }
 
         // SECCIONES
+        $('#btnGuardarOT').removeClass('d-none').prop('disabled', false);
+        $('#btnGuardarBorrador').removeClass('d-none').prop('disabled', false);
         $('#EvidenciaOrdenTrabajo').removeClass('d-none');
         $('#CierreOrdenTrabajo').removeClass('d-none');
         $('#SeccionFirmas').removeClass('d-none');
@@ -1988,114 +1999,19 @@ class MantenimientoManager {
         // ========================================
         //🔥 RUTINA
         // ========================================
-        this.ConsultarRutinaServer(IdEquipo, Planta, IdEquipoPeriodicidad);
+        await this.ConsultarRutinaServer(IdEquipo, Planta, IdEquipoPeriodicidad);
 
-    }
-
-    // ========================================
-    // 👨‍💼 CONFIGURAR VISTA PRODUCCION (CORRECTIVO)
-    // ========================================
-    configurarVistaProduccion(EstatusOrden, FirmaTecnico, FirmaSuperviso, FirmaMantenimiento, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad) {
-
-        // MOSTRAR FIRMAS
-        $('#SeccionFirmas').removeClass('d-none');
-
-        // REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
-        $('#EvidenciaOrdenTrabajo input').prop('required', false);
-        $('#EvidenciaOrdenTrabajo input').prop('readonly', true);
-        $('#CierreOrdenTrabajo input').prop('required', false);
-        $('#CierreOrdenTrabajo input').prop('readonly', true);
-        // 🔥 CAMPOS BLOQUEADOS DEFAULT ADMIN
-        $("#Scrap").attr('readonly', true).prop('required', false);
-        $("#HoraCierreMan").attr('readonly', true).prop('required', false);
-
-        // 🔥 FIRMAS
-        this._configureFirmas({
-            showRealizo: true,
-            showSuperviso: true,
-            showMantenimiento: true,
-            nombreSuperviso: this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase(),
-            bloquearRealizo: (FirmaTecnico != ""),
-            bloquearSuperviso: false,
-            bloquearMantenimiento: (FirmaMantenimiento != "")
-        });
-        //Cambiar títulos de firma dependiendo la planta
-        switch (this.datos_usuario[0].PLANTA) {
-            case 1:
-                $("#supervisor_mantenimiento_sign").text("Coordinador Mantenimiento");
-                break;
-            case 2:
-                break;
-
+        // 🔥 Si es BORRADOR → cargar/marcar actividades EDITABLE DESPUÉS de que se cargue la rutina
+        // ConsultarRutinaServer() trae HTML limpio, necesitamos marcar lo ya guardado en BD
+        if (EstatusOrden == 2 && typeof this.ConsultarActividadesPorOTMPEditable === "function") {
+            this.ConsultarActividadesPorOTMPEditable(NumeroOrden, IdEquipo, Planta);
         }
-
-        // bloquear correctamente (ya manejado por helper en la mayoría de casos)
-        if (FirmaTecnico != "") this.gestionFirmas._bloquearFirma("Realizo", true);
-        else this.gestionFirmas.deshabilitarFirma("Realizo", true);
-
-        if (FirmaMantenimiento != "") this.gestionFirmas._bloquearFirma("Mantenimiento", true);
-        else this.gestionFirmas.deshabilitarFirma("Mantenimiento", true);
-
-        // MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
-        if (EstatusOrden == 4) {
-            $('#EvidenciaOrdenTrabajo').removeClass('d-none');
-            $('#CierreOrdenTrabajo').removeClass('d-none');
-
-            //TEXTO DE SECUENCIA
-            $("#TextoSecuencia").prop('readonly', true);
-
-            // BOTONES
-            $('#btnGuardarOT').removeClass('d-none');
-            $('#btnExportMantenimientoPDF').removeClass('d-none');
-
-            //INPUTS FIRMAS
-            $('#firmaMantenimientoContainer input[type="text"]').prop('required', false);
-            $('#firmaRealizoContainer input[type="text"]').prop('required', false);
-            $('#firmaSupervisoContainer input[type="text"]').prop('required', true);
-
-            //LISTA DE TECNICOS
-            $('#listaTecnicosAsignados').addClass('tecnicos-readonly');
-            $("#busqueda_tecnicosMainContainer").addClass("d-none");
-
-            //SECCION PARA CARGAR IMAGENES
-            $("#EvidenciaOrdenTrabajo").addClass("d-none");
-
-            //PARA DEMO OCULTAR SECCION
-            //$("#formRutinaOnline").addClass("d-none");
-            //$("#EvidenciaOrdenTrabajo").addClass("d-none");
-            //$("#rutinamaincontainer").addClass("d-none");
-        }
-        // OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
-        else {
-            $('#EvidenciaOrdenTrabajo').addClass('d-none');
-            $('#CierreOrdenTrabajo').addClass('d-none');
-
-            // BOTONES
-            $('#btnGuardarOT').addClass('d-none');
-            $('#btnExportMantenimientoPDF').removeClass('d-none');
-
-            //INPUTS FIRMAS
-            $('#firmaMantenimientoContainer input[type="text"]').prop('required', false);
-            $('#firmaRealizoContainer input[type="text"]').prop('required', false);
-            $('#firmaSupervisoContainer input[type="text"]').prop('required', false);
-
-            // ========================================
-            //🔥 RUTINA
-            // ========================================
-            this.ConsultarRutinaServer(IdEquipo, Planta, IdEquipoPeriodicidad);
-        }
-
-        //IMPORTANTE SI YA FIRMO MANTENIMIENTO OCULTAR BOTON GUARDAR
-        if (FirmaSuperviso != "") {
-            $("#btnGuardarOT").prop("disabled", true).addClass("d-none");
-        }
-
     }
 
     // ========================================
     // 👨‍💼 CONFIGURAR VISTA ADMIN (CORRECTIVO)
     // ========================================
-    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaMantenimiento, FirmaSuperviso, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad) {
+    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaMantenimiento, FirmaSuperviso, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad, ComentariosRutina) {
 
         // MOSTRAR FIRMAS
         $('#SeccionFirmas').removeClass('d-none');
@@ -2137,6 +2053,9 @@ class MantenimientoManager {
         else
             this.gestionFirmas.deshabilitarFirma("Superviso", true);
 
+        //BOTON BORRADOR
+        $('#btnGuardarBorrador').addClass('d-none').prop('disabled', true);
+
 
         // MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
         if (EstatusOrden == 4) {
@@ -2161,6 +2080,9 @@ class MantenimientoManager {
 
             //SECCION PARA CARGAR IMAGENES
             $("#EvidenciaOrdenTrabajo").addClass("d-none");
+
+            // 🔥 Si la orden ya está atendida → cargar actividades READONLY
+            this.ConsultarActividadesPorOTMP(NumeroOrden, IdEquipo, Planta, ComentariosRutina);
 
             //PARA DEMO OCULTAR SECCION
             //$("#formRutinaOnline").addClass("d-none");
@@ -2192,6 +2114,115 @@ class MantenimientoManager {
             $("#btnGuardarOT").prop("disabled", true).addClass("d-none");
         }
     }
+
+    // ========================================
+    // 👨‍💼 CONFIGURAR VISTA PRODUCCION (CORRECTIVO)
+    // ========================================
+    configurarVistaProduccion(EstatusOrden, FirmaTecnico, FirmaSuperviso, FirmaMantenimiento, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad, ComentariosRutina) {
+
+        // MOSTRAR FIRMAS
+        $('#SeccionFirmas').removeClass('d-none');
+
+        // REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
+        $('#EvidenciaOrdenTrabajo input').prop('required', false);
+        $('#EvidenciaOrdenTrabajo input').prop('readonly', true);
+        $('#CierreOrdenTrabajo input').prop('required', false);
+        $('#CierreOrdenTrabajo input').prop('readonly', true);
+        // 🔥 CAMPOS BLOQUEADOS DEFAULT ADMIN
+        $("#Scrap").attr('readonly', true).prop('required', false);
+        $("#HoraCierreMan").attr('readonly', true).prop('required', false);
+
+        // 🔥 FIRMAS
+        this._configureFirmas({
+            showRealizo: true,
+            showSuperviso: true,
+            showMantenimiento: true,
+            nombreSuperviso: this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase(),
+            bloquearRealizo: (FirmaTecnico != ""),
+            bloquearSuperviso: false,
+            bloquearMantenimiento: (FirmaMantenimiento != "")
+        });
+        //Cambiar títulos de firma dependiendo la planta
+        switch (this.datos_usuario[0].PLANTA) {
+            case 1:
+                $("#supervisor_mantenimiento_sign").text("Coordinador Mantenimiento");
+                break;
+            case 2:
+                break;
+
+        }
+
+        // bloquear correctamente (ya manejado por helper en la mayoría de casos)
+        if (FirmaTecnico != "") this.gestionFirmas._bloquearFirma("Realizo", true);
+        else this.gestionFirmas.deshabilitarFirma("Realizo", true);
+
+        if (FirmaMantenimiento != "") this.gestionFirmas._bloquearFirma("Mantenimiento", true);
+        else this.gestionFirmas.deshabilitarFirma("Mantenimiento", true);
+
+        //BOTON BORRADOR
+        $('#btnGuardarBorrador').addClass('d-none').prop('disabled', true);
+
+        // MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
+        if (EstatusOrden == 4) {
+            $('#EvidenciaOrdenTrabajo').removeClass('d-none');
+            $('#CierreOrdenTrabajo').removeClass('d-none');
+
+            //TEXTO DE SECUENCIA
+            $("#TextoSecuencia").prop('readonly', true);
+
+            // BOTONES
+            $('#btnGuardarOT').removeClass('d-none');
+            $('#btnExportMantenimientoPDF').removeClass('d-none');
+
+            //INPUTS FIRMAS
+            $('#firmaMantenimientoContainer input[type="text"]').prop('required', false);
+            $('#firmaRealizoContainer input[type="text"]').prop('required', false);
+            $('#firmaSupervisoContainer input[type="text"]').prop('required', true);
+
+            //LISTA DE TECNICOS
+            $('#listaTecnicosAsignados').addClass('tecnicos-readonly');
+            $("#busqueda_tecnicosMainContainer").addClass("d-none");
+
+            //SECCION PARA CARGAR IMAGENES
+            $("#EvidenciaOrdenTrabajo").addClass("d-none");
+
+
+            // 🔥 Si la orden ya está atendida → cargar actividades READONLY
+            this.ConsultarActividadesPorOTMP(NumeroOrden, IdEquipo, Planta, ComentariosRutina);
+
+            if (FirmaSuperviso != "") this.gestionFirmas._bloquearFirma("Superviso", true);
+            else this.gestionFirmas.deshabilitarFirma("Superviso", false);
+
+
+
+        }
+        // OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
+        else {
+            $('#EvidenciaOrdenTrabajo').addClass('d-none');
+            $('#CierreOrdenTrabajo').addClass('d-none');
+
+            // BOTONES
+            $('#btnGuardarOT').addClass('d-none');
+            $('#btnExportMantenimientoPDF').removeClass('d-none');
+
+            //INPUTS FIRMAS
+            $('#firmaMantenimientoContainer input[type="text"]').prop('required', false);
+            $('#firmaRealizoContainer input[type="text"]').prop('required', false);
+            $('#firmaSupervisoContainer input[type="text"]').prop('required', false);
+
+            // ========================================
+            //🔥 RUTINA
+            // ========================================
+            this.ConsultarRutinaServer(IdEquipo, Planta, IdEquipoPeriodicidad);
+        }
+
+        //IMPORTANTE SI YA FIRMO MANTENIMIENTO OCULTAR BOTON GUARDAR
+        if (FirmaSuperviso != "") {
+            $("#btnGuardarOT").prop("disabled", true).addClass("d-none");
+        }
+
+    }
+
 
     // ============================
     // Helper: configurar uploader (activar/desactivar)
@@ -2434,6 +2465,23 @@ class MantenimientoManager {
                 datosBorrador.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
             }
 
+            // 🔥 GUARDAR LAS FIRMAS (si existen) - SIN VALIDAR QUE SEAN OBLIGATORIAS
+            if ($('#SeccionFirmas').is(':visible')) {
+                // Guardar firmas en los campos ocultos si están disponibles
+                this.gestionFirmas.guardarTodasLasFirmas();
+
+                // Obtener las firmas
+                const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
+
+                // Agregar datos de firmas al objeto (aunque estén vacías, va)
+                datosBorrador.FirmaRealizo = firmas.realizo.firma || '';
+                datosBorrador.NombreRealizo = firmas.realizo.nombre || '';
+                datosBorrador.FirmaSuperviso = firmas.superviso.firma || '';
+                datosBorrador.NombreSuperviso = firmas.superviso.nombre || '';
+                datosBorrador.FirmaMantenimiento = firmas.mantenimiento.firma || '';
+                datosBorrador.NombreMantenimiento = firmas.mantenimiento.nombre || '';
+            }
+
             // ✅ Guardar el borrador
             await this.guardarBorradorDefinitivo(datosBorrador);
 
@@ -2497,7 +2545,7 @@ class MantenimientoManager {
                 success: (response) => {
                     if (response.Status === 'SI') {
                         AlertManager.mostrar(
-                            '✅ Borrador guardado correctamente. Puede continuar editando o cerrar.',
+                            'Borrador guardado correctamente. Puede continuar editando o cerrar.',
                             'success',
                             "alertOrdenContainer"
                         );
@@ -2605,222 +2653,185 @@ class MantenimientoManager {
 
     // ============================
     // RUTINAS
-    // ============================
-    abrirModalRutinaOnline(btn) {
-        // ===== OBTENER TODOS LOS DATA ATTRIBUTES =====
-        const idEquipo = btn.data('idequipo');
-        const planta = btn.data('planta');
-        const numeroDocPmCalidad = btn.data('numerodocpmcalidad');
-        const nombreEquipo = btn.data('nombreequipo');
-        const descripcionEquipo = btn.data('descripcionequipo');
-        const idArea = btn.data('idarea');
-        const area = btn.data('area');
-        const idLineaProduccion = btn.data('idlineaproduccion');
-        const lineaProduccion = btn.data('lineaproduccion');
-        const centrocostos = btn.data('centrocostos');
-        const periodicidadMantenimiento = btn.data('periodicidadmantenimiento');
-        const diaInicioMant = btn.data('diainiciomant');
-        const diaFinMant = btn.data('diafinmant');
-        const fechaInicioMant = btn.data('fechainiciomant');
-        const mesMantenimiento = btn.data('mesmantenimiento');
-        const fechaInicioMantenimiento = btn.data('fechainiciomantenimiento');
-        const fechaFinMantenimiento = btn.data('fechafinmantenimiento');
-        const fechaReferencia = btn.data('fechareferencia');
-        const tipoMantenimiento = btn.data('tipomantenimiento');
-        const numeroOrden = btn.data('numeroorden');
-        const horaApertura = btn.data('horaapertura');
-        const estatusOrden = btn.data('estatusorden');
-        const descEstatusOrden = btn.data('descestatusorden');
-        const idMantenimiento = btn.data('idmantenimiento');
+    // ===========================
 
-        // Guardar los datos del equipo
-        this.ID_EQUIPO = idEquipo;
-        this.ID_MANTENIMIENTO = idMantenimiento;
+    ConsultarRutinaServer(idEquipo, Planta, idEquipoPeriodicidad, ShowLoader) {
 
-        $('#rutinaNombreEquipo').text(nombreEquipo + ' ' + numeroDocPmCalidad);
-        $('#rutinaProceso').text(area);
+        return new Promise((resolve, reject) => {
+            // CARGAR LA VISTA DESDE EL SERVIDOR
 
-        // 🔥 CARGAR LA VISTA DESDE EL SERVIDOR
-        this.ConsultarRutinaServer(idEquipo, planta, periodicidadMantenimiento);
-    }
+            // 🔥 CARGAR LA VISTA DESDE EL SERVIDOR
+            $.ajax({
+                url: `/${this.URLBaseRutinas}/ObtenerRutinaCompleta`,
+                type: 'GET',
+                data: (function () {
+                    const d = { idEquipo: idEquipo };
+                    if (typeof Planta !== 'undefined' && Planta !== null) d.Planta = Planta;
+                    if (typeof idEquipoPeriodicidad !== 'undefined' && idEquipoPeriodicidad !== null) d.idEquipoPeriodicidad = idEquipoPeriodicidad;
+                    return d;
+                })(),
+                dataType: 'json',
+                beforeSend: function () {
+                    if (ShowLoader) {
+                        $('#formRutinaOnline').html(`
+                            <div class="ai-loader">
 
-    ConsultarRutinaServer(idEquipo, Planta, idEquipoPeriodicidad) {
+                                <div class="ai-core">
+                                    <div class="ai-ring"></div>
+                                    <div class="ai-ring delay"></div>
+                                    <div class="ai-ring delay2"></div>
+                                </div>
 
-        // CARGAR LA VISTA DESDE EL SERVIDOR
-        const startTime = Date.now();
+                                <div class="ai-wave"></div>
 
-        // 🔥 CARGAR LA VISTA DESDE EL SERVIDOR
-        $.ajax({
-            url: `/${this.URLBaseRutinas}/ObtenerRutinaCompleta`,
-            type: 'GET',
-            data: (function () {
-                const d = { idEquipo: idEquipo };
-                if (typeof Planta !== 'undefined' && Planta !== null) d.Planta = Planta;
-                if (typeof idEquipoPeriodicidad !== 'undefined' && idEquipoPeriodicidad !== null) d.idEquipoPeriodicidad = idEquipoPeriodicidad;
-                return d;
-            })(),
-            dataType: 'json',
-            beforeSend: function () {
-                $('#formRutinaOnline').html(`
-                <div class="ai-loader">
+                                <p class="ai-text">CARGANDO RUTINA...</p>
 
-                    <div class="ai-core">
-                        <div class="ai-ring"></div>
-                        <div class="ai-ring delay"></div>
-                        <div class="ai-ring delay2"></div>
-                    </div>
+                            </div>`);
+                    }
+                },
 
-                    <div class="ai-wave"></div>
+                success: (response) => {
+                    const render = () => {
+                        if (response.Status === 'OK') {
 
-                    <p class="ai-text">CARGANDO RUTINA...</p>
+                            const $c = $('#formRutinaOnline');
 
-                </div>
-            `);
-            },
+                            $c.fadeOut(400, () => {  // 👈 arrow function aquí también
+                                $c.html(response.Html).fadeIn(600, () => {
+                                    $('#formRutinaOnline').find('#seccion-upload-imagenes').remove();
+                                    $('#formRutinaOnline').find('#seccion-galeria-imagenes').remove();
+                                    if (response.Imagenes?.length > 0) {
+                                        this.checklistManager.cargarImagenesExistentes(response.Imagenes, false);
+                                    }
 
-            success: (response) => {
-                const elapsed = Date.now() - startTime;
-                const minDelay = 2000; // 👈 3 segundos
+                                    //✅ TRANSFORMAR LAS FIRMAS A RADIOBUTTONS PARA TECNICO
+                                    if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+                                        $('#rutinaChecklist .actividad').each(function (index) {
 
-                const render = () => {
-                    if (response.Status === 'OK') {
+                                            const actividadNum = index + 1;
+                                            const firmaContainer = $(this).find('.d-flex.gap-4.mt-2');
 
-                        const $c = $('#formRutinaOnline');
+                                            const radioHTML = `
+                                                <div class="radio-transition d-flex gap-4 mt-2" style="display:none;">
 
-                        $c.fadeOut(400, () => {  // 👈 arrow function aquí también
-                            $c.html(response.Html).fadeIn(600, () => {
-                                $('#formRutinaOnline').find('#seccion-upload-imagenes').remove();
-                                $('#formRutinaOnline').find('#seccion-galeria-imagenes').remove();
-                                if (response.Imagenes?.length > 0) {
-                                    this.checklistManager.cargarImagenesExistentes(response.Imagenes,false);
-                                }
+                                                    <div class="form-check position-relative">
+                                                        <input class="form-check-input" 
+                                                               type="radio" 
+                                                               name="actividad_${actividadNum}" 
+                                                               id="actividad_${actividadNum}_realizado" 
+                                                               value="realizado" 
+                                                               required>
 
-                                //✅ TRANSFORMAR LAS FIRMAS A RADIOBUTTONS PARA TECNICO
-                                if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
-                                    $('#rutinaChecklist .actividad').each(function (index) {
+                                                        <label class="form-check-label fw-semibold"
+                                                               for="actividad_${actividadNum}_realizado">
+                                                            Realizado
+                                                        </label>
 
-                                        const actividadNum = index + 1;
-                                        const firmaContainer = $(this).find('.d-flex.gap-4.mt-2');
-
-                                        const radioHTML = `
-                                            <div class="radio-transition d-flex gap-4 mt-2" style="display:none;">
-            
-                                                <div class="form-check position-relative">
-                                                    <input class="form-check-input" 
-                                                           type="radio" 
-                                                           name="actividad_${actividadNum}" 
-                                                           id="actividad_${actividadNum}_realizado" 
-                                                           value="realizado" 
-                                                           required>
-
-                                                    <label class="form-check-label fw-semibold"
-                                                           for="actividad_${actividadNum}_realizado">
-                                                        Realizado
-                                                    </label>
-
-                                                    <div class="invalid-feedback custom-invalid-feedback">
-                                                        ⚠️ Por favor complete la actividad.
+                                                        <div class="invalid-feedback custom-invalid-feedback">
+                                                            ⚠️ Por favor complete la actividad.
+                                                        </div>
                                                     </div>
+
+                                                    <div class="form-check">
+                                                        <input class="form-check-input"
+                                                               type="radio"
+                                                               name="actividad_${actividadNum}"
+                                                               id="actividad_${actividadNum}_no_realizado"
+                                                               value="no_realizado">
+
+                                                        <label class="form-check-label fw-semibold"
+                                                               for="actividad_${actividadNum}_no_realizado">
+                                                            No Realizado
+                                                        </label>
+                                                    </div>
+
                                                 </div>
+                                            `;
 
-                                                <div class="form-check">
-                                                    <input class="form-check-input"
-                                                           type="radio"
-                                                           name="actividad_${actividadNum}"
-                                                           id="actividad_${actividadNum}_no_realizado"
-                                                           value="no_realizado">
+                                            // 🔥 Animación fluida
+                                            firmaContainer.fadeOut(250, function () {
 
-                                                    <label class="form-check-label fw-semibold"
-                                                           for="actividad_${actividadNum}_no_realizado">
-                                                        No Realizado
-                                                    </label>
-                                                </div>
+                                                $(this).replaceWith(radioHTML);
 
-                                            </div>
-                                        `;
+                                                const nuevoRadio = $(
+                                                    `input[name="actividad_${actividadNum}"]`
+                                                ).closest('.radio-transition');
 
-                                        // 🔥 Animación fluida
-                                        firmaContainer.fadeOut(250, function () {
+                                                nuevoRadio
+                                                    .hide()
+                                                    .css({
+                                                        opacity: 0,
+                                                        transform: 'translateY(10px)'
+                                                    })
+                                                    .slideDown(250)
+                                                    .animate({
+                                                        opacity: 1
+                                                    }, {
+                                                        duration: 300,
+                                                        step: function (now) {
+                                                            $(this).css(
+                                                                'transform',
+                                                                `translateY(${10 - (10 * now)}px)`
+                                                            );
+                                                        }
+                                                    });
 
-                                            $(this).replaceWith(radioHTML);
-
-                                            const nuevoRadio = $(
-                                                `input[name="actividad_${actividadNum}"]`
-                                            ).closest('.radio-transition');
-
-                                            nuevoRadio
-                                                .hide()
-                                                .css({
-                                                    opacity: 0,
-                                                    transform: 'translateY(10px)'
-                                                })
-                                                .slideDown(250)
-                                                .animate({
-                                                    opacity: 1
-                                                }, {
-                                                    duration: 300,
-                                                    step: function (now) {
-                                                        $(this).css(
-                                                            'transform',
-                                                            `translateY(${10 - (10 * now)}px)`
-                                                        );
-                                                    }
-                                                });
+                                            });
 
                                         });
-
-                                    });
-                                }
-
-                                // 🔥 ELIMINAR TODOS LOS BOTONES DE ELIMINAR
-                                $('#rutinaChecklist .btn-eliminar-actividad').remove();
-
-                                // 🔥 QUITAR CLASE "actividad" DE TODOS LOS DIVS
-                                $('#rutinaChecklist .actividad').removeClass('actividad').addClass("actividad_realizada");
-
-                                // 🔥 CARGAR IMÁGENES EXISTENTES DE LA RUTINA
-                                if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
-                                    this.CargarEvidenciaRutina(idEquipo, Planta);
-                                    $("#seccion-upload-imagenes").hide();
-                                }
-
-                                // 🔥 DETECTAR SI ES RUTINA DEFAULT Y MOSTRAR SECCIÓN PDF
-                                if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
-                                    const esRutinaDefault = $('#esRutinaDefault').length > 0;
-                                    if (esRutinaDefault) {
-                                        // Ocultar rutina default y mostrar sección PDF
-                                        $('#formRutinaOnline').hide();
-                                        $('#seccionPdfRutina').show();
-                                        this.CargarPdfRutina(idEquipo, Planta);
-                                    } else {
-                                        $('#formRutinaOnline').show();
-                                        $('#seccionPdfRutina').hide();
                                     }
-                                }
+
+                                    // 🔥 ELIMINAR TODOS LOS BOTONES DE ELIMINAR
+                                    $('#rutinaChecklist .btn-eliminar-actividad').remove();
+
+                                    // 🔥 QUITAR CLASE "actividad" DE TODOS LOS DIVS
+                                    $('#rutinaChecklist .actividad').removeClass('actividad').addClass("actividad_realizada");
+
+                                    // 🔥 CARGAR IMÁGENES EXISTENTES DE LA RUTINA
+                                    if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+                                        this.CargarEvidenciaRutina(idEquipo, Planta);
+                                        $("#seccion-upload-imagenes").hide();
+                                    }
+
+                                    // 🔥 DETECTAR SI ES RUTINA DEFAULT Y MOSTRAR SECCIÓN PDF
+                                    if (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+                                        const esRutinaDefault = $('#esRutinaDefault').length > 0;
+                                        if (esRutinaDefault) {
+                                            // Ocultar rutina default y mostrar sección PDF
+                                            $('#formRutinaOnline').hide();
+                                            $('#seccionPdfRutina').show();
+                                            this.CargarPdfRutina(idEquipo, Planta);
+                                        } else {
+                                            $('#formRutinaOnline').show();
+                                            $('#seccionPdfRutina').hide();
+                                        }
+                                    }
+
+                                    // 🔥 RESOLVER LA PROMISE CUANDO TODO ESTÉ LISTO
+                                    resolve();
+                                });
                             });
-                        });
 
 
 
-                    } else {
-                        $('#formRutinaOnline').html(`<div class="alert alert-danger">${response.Message}</div>`);
-                    }
-                };
+                        } else {
+                            $('#formRutinaOnline').html(`<div class="alert alert-danger">${response.Message}</div>`);
+                            reject(new Error(response.Message));
+                        }
+                    };
 
-                if (elapsed < minDelay) {
-                    setTimeout(render, minDelay - elapsed);
-                } else {
                     render();
+                },
+                error: (xhr, status, error) => {
+                    $('#formRutinaOnline').html(`
+                <div class="alert alert-danger" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Error al cargar la rutina: ${error}
+                </div>
+            `);
+                    reject(error);
                 }
-            },
-            error: (xhr, status, error) => {
-                $('#formRutinaOnline').html(`
-            <div class="alert alert-danger" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                Error al cargar la rutina: ${error}
-            </div>
-        `);
-            }
+            });
         });
 
     }
@@ -2853,7 +2864,7 @@ class MantenimientoManager {
 
                 const elapsed = Date.now() - startTime;
                 const minDelay = 1200;
-
+                let ComentariosRutina = "";
                 const render = () => {
 
                     if (!response || response.length === 0) {
@@ -2868,13 +2879,13 @@ class MantenimientoManager {
                     response.forEach((act, index) => {
 
                         const actividadNum = index + 1;
-
+                        ComentariosRutina = act.COMENTARIOS || "";
                         const checkedSI = act.COMPLETADA === "SI" ? "checked" : "";
                         const checkedNO = act.COMPLETADA === "NO" ? "checked" : "";
 
                         html += `
                         <div class="actividad_realizada mb-3 p-3 border rounded">
-                            <div class="fw-bold texto-actividad">${actividadNum}. ${act.DESCRIPCION || ""}</div>
+                            <div class="fw-bold texto-actividad">${act.DESCRIPCION || ""}</div>
                             <div class="d-flex gap-4 mt-2">
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio"
@@ -2949,6 +2960,136 @@ class MantenimientoManager {
         });
     }
 
+    // 🔥 NUEVO: Método para cargar actividades en MODO EDITABLE (para borradores)
+    // Similar a ConsultarActividadesPorOTMP pero SIN deshabilitar radios
+    ConsultarActividadesPorOTMPEditable(numeroOrden, idEquipo, Planta) {
+
+        const startTime = Date.now();
+
+        $.ajax({
+            url: `/${this.URLBase}/ObtenerActividadesPorOTMP`,
+            type: 'GET',
+            data: { numeroOrden: numeroOrden },
+            dataType: 'json',
+
+            beforeSend: function () {
+                // 🔥 NO mostrar loader aquí - validamos primero si hay datos
+            },
+
+            success: (response) => {
+
+                // 🔥 VALIDACIÓN: Si no hay datos guardados en BD, salir sin modificar nada
+                if (!response || response.length === 0) {
+                    console.log('✅ Sin actividades guardadas en BD - Manteniendo template limpio del servidor');
+                    return;
+                }
+
+                // 🔥 Si SÍ hay datos, mostrar loader y marcar
+                $('#formRutinaOnline').html(`
+                <div class="ai-loader">
+                    <div class="ai-core">
+                        <div class="ai-ring"></div>
+                        <div class="ai-ring delay"></div>
+                        <div class="ai-ring delay2"></div>
+                    </div>
+                    <div class="ai-wave"></div>
+                    <p class="ai-text">VALIDANDO BORRADOR...</p>
+                </div>
+            `);
+
+                const elapsed = Date.now() - startTime;
+                const minDelay = 1200;
+                let ComentariosRutina = "";
+
+                const render = () => {
+
+                    const $c = $('#formRutinaOnline');
+
+                    let html = `<div id="rutinaChecklist">`;
+
+                    response.forEach((act, index) => {
+
+                        const actividadNum = index + 1;
+                        ComentariosRutina = act.COMENTARIOS || "";
+                        const checkedSI = act.COMPLETADA === "SI" ? "checked" : "";
+                        const checkedNO = act.COMPLETADA === "NO" ? "checked" : "";
+
+                        // 🔥 SIN disabled - para que puedas seguir editando en borrador
+                        html += `
+                        <div class="actividad_realizada mb-3 p-3 border rounded">
+                            <div class="fw-bold texto-actividad">${act.DESCRIPCION || ""}</div>
+                            <div class="d-flex gap-4 mt-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio"
+                                        name="actividad_${actividadNum}"
+                                        value="realizado"
+                                        ${checkedSI}>
+                                    <label class="form-check-label fw-semibold">
+                                        Realizado
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio"
+                                        name="actividad_${actividadNum}"
+                                        value="no_realizado"
+                                        ${checkedNO}>
+                                    <label class="form-check-label fw-semibold">
+                                        No Realizado
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    });
+
+                    html += `</div>`;
+
+                    html += `<div class="mb-3">
+                            <label for="ComentariosRutina" class="form-label">Comentarios</label>
+                            <textarea class="form-control" id="ComentariosRutina" rows="3" required="">${ComentariosRutina || ''}</textarea>
+                            </div>`;
+
+                    $c.fadeOut(300, () => {
+                        $c.html(html).fadeIn(500, () => {
+
+                            // 🔥 CARGAR IMÁGENES EXISTENTES DE LA RUTINA EN MODO EDITABLE (PARA BORRADORES)
+                            this.CargarEvidenciaRutinaBorrador(numeroOrden, Planta)
+
+                            // 🔥 DETECTAR SI ES RUTINA DEFAULT Y MOSTRAR PDF (PARA BORRADORES)
+                            const esRutinaDefault = $('#esRutinaDefault').length > 0;
+
+                            if (esRutinaDefault) {
+                                $('#formRutinaOnline').hide();
+                                $('#seccionPdfRutina').show();
+                                this.CargarPdfRutinaPorOT(numeroOrden);
+                            } else {
+                                $('#formRutinaOnline').show();
+                                $('#seccionPdfRutina').hide();
+                            }
+
+                        });
+                    });
+
+                };
+
+                if (elapsed < minDelay) {
+                    setTimeout(render, minDelay - elapsed);
+                } else {
+                    render();
+                }
+            },
+
+            error: (xhr, status, error) => {
+                $('#formRutinaOnline').html(`
+                <div class="alert alert-danger">
+                    Error al cargar borrador: ${error}
+                </div>
+            `);
+            }
+        });
+    }
+
     async guardarRutina(OrdenTrabajo, EstatusOrden) {
         return new Promise((resolve, reject) => {
             // ✅ NUEVA LÓGICA: Si hay PDF de rutina (rutina default), no validar actividades
@@ -2969,7 +3110,7 @@ class MantenimientoManager {
             }
 
             const respuestas = this.obtenerRespuestasRutina();
-            const comentarios = $('#Comentarios').val();
+            const comentarios = $('#ComentariosRutina').val();
 
             // Validar que todas las actividades estén respondidas
             const sinResponder = respuestas.filter(r => r.estado === null);
@@ -3054,7 +3195,7 @@ class MantenimientoManager {
             }
 
             const respuestas = this.obtenerRespuestasRutina();
-            const comentarios = $('#Comentarios').val();
+            const comentarios = $('#ComentariosRutina').val();
 
             // 🔥 VALIDACIÓN RELAJADA: Al menos UNA actividad debe estar respondida
             const conRespuesta = respuestas.filter(r => r.estado !== null);
@@ -3077,13 +3218,21 @@ class MantenimientoManager {
             formData.append('Planta', this.datos_usuario[0].PLANTA);
             formData.append('esBorrador', 'true'); // 🔥 Flag para indicar que es borrador
 
-            // 🔥 AGREGAR IMÁGENES
+            // 🔥 AGREGAR IMÁGENES NUEVAS
             const files = window.imagenesRutina || [];
-            console.log('Total de archivos:', files.length);
+            console.log('Total de archivos nuevos:', files.length);
 
             for (let i = 0; i < files.length; i++) {
                 formData.append('imagenes', files[i]);
                 console.log(`Agregando imagen ${i}:`, files[i].name);
+            }
+
+            // 🔥 AGREGAR LISTA DE IMÁGENES ELIMINADAS
+            const uploader = $('#uploadArea').data('imageUploader');
+            const imagenesEliminadas = uploader && uploader.getDeletedImages ? uploader.getDeletedImages() : [];
+            if (imagenesEliminadas.length > 0) {
+                formData.append('imagenesEliminadas', JSON.stringify(imagenesEliminadas));
+                console.log(`📍 ${imagenesEliminadas.length} imagen(es) marcada(s) para eliminar:`, imagenesEliminadas);
             }
 
             // Enviar al servidor (endpoint diferente para borrador)
@@ -3097,8 +3246,6 @@ class MantenimientoManager {
                     // No mostramos loading aquí porque se guarda en background
                 },
                 success: function (response) {
-                    console.log('✅ Rutina en borrador guardada correctamente:', response);
-                    AlertManager.mostrar('✅ Borrador de rutina guardado', 'success', 'alertOrdenContainer');
                     resolve(true);
                 },
                 error: function (xhr, status, error) {
@@ -3177,6 +3324,25 @@ class MantenimientoManager {
             }, index * 150); // 👈 delay entre imágenes (ajustable)
 
         });
+    }
+
+    // 🔥 NUEVO: Cargar imágenes existentes en MODO EDITABLE para BORRADORES
+    // Las imágenes se cargan en el uploader con opción de eliminar
+    CargarEvidenciaRutinaBorrador(NumeroOrden, Planta) {
+        $.get(`/${this.URLBaseRutinas}/ObtenerImagenes`, { NumeroOrden: NumeroOrden, Planta: Planta })
+            .done(data => {
+                if (data.Status === 'OK' && data.Imagenes && data.Imagenes.length > 0) {
+                    // 🔥 Cargar imágenes en el uploader (modo editable con delete)
+                    const uploader = $('#uploadArea').data('imageUploader');
+                    if (uploader && uploader.loadExistingImages) {
+                        uploader.loadExistingImages(data.Imagenes);
+                        console.log(`✅ ${data.Imagenes.length} imagen(es) cargada(s) en modo editable`);
+                    }
+                }
+            })
+            .fail(() => {
+                console.log('No se pudieron cargar las imágenes de evidencia');
+            });
     }
 
     // ============================================================
@@ -3592,6 +3758,7 @@ class MantenimientoManager {
         }
     }
 }
+
 
 
 // ========================================

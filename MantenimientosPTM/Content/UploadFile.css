@@ -110,7 +110,7 @@
     margin-top: 5px;
 }
 
-.delete-btn {
+.delete-btn, .delete-btn-existing {
     background: #f44336;
     color: white;
     border: none;
@@ -122,11 +122,39 @@
     transition: background 0.3s ease;
 }
 
-    .delete-btn:hover {
+    .delete-btn:hover, .delete-btn-existing:hover {
         background: #d32f2f;
     }
 
-.progress-bar {
+/* 🔥 NUEVO: Estilo para imágenes marcadas para eliminar */
+.preview-item.marked-for-deletion {
+    opacity: 0.6;
+    position: relative;
+}
+
+.preview-item.marked-for-deletion img {
+    filter: grayscale(100%) brightness(0.7);
+}
+
+.deletion-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(244, 67, 54, 0.95);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 10;
+    white-space: nowrap;
+}
+
+.preview-bar {
     width: 100%;
     height: 6px;
     background: #e0e0e0;

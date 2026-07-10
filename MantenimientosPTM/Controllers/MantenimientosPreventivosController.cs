@@ -837,6 +837,7 @@ namespace MantenimientosPTM.Controllers
                 var Planta = Request.Form["Planta"];
                 var actividadesJson = Request.Form["actividades"];
                 var esBorrador = Request.Form["esBorrador"]; // 🔥 Flag para indicar borrador
+                var imagenesEliminadasJson = Request.Form["imagenesEliminadas"]; // 🔥 NUEVO: Lista de imágenes eliminadas
 
                 // Validar datos básicos (menos estricto que GuardarRutina)
                 if (string.IsNullOrEmpty(idMantenimiento) || string.IsNullOrEmpty(actividadesJson))
@@ -844,7 +845,38 @@ namespace MantenimientosPTM.Controllers
                     throw new Exception("Faltan datos obligatorios (idMantenimiento o actividades).");
                 }
 
-                // 🔥 OBTENER Y GUARDAR LAS IMÁGENES (solo en servidor, no en BD)
+                // 🔥 PROCESAR IMÁGENES ELIMINADAS (borrar archivos físicos)
+                int imagenesEliminadasCount = 0;
+                if (!string.IsNullOrEmpty(imagenesEliminadasJson))
+                {
+                    try
+                    {
+                        var imagenesEliminadas = JsonConvert.DeserializeObject<List<string>>(imagenesEliminadasJson);
+                        if (imagenesEliminadas != null && imagenesEliminadas.Count > 0)
+                        {
+                            foreach (var urlEliminada in imagenesEliminadas)
+                            {
+                                // Convertir URL a ruta física
+                                // Ej: /EvidenciaRutinas/PLANTA/OT/imagen.jpg → C:\...\EvidenciaRutinas\PLANTA\OT\imagen.jpg
+                                string rutaFisica = Server.MapPath($"~{urlEliminada}");
+
+                                if (System.IO.File.Exists(rutaFisica))
+                                {
+                                    System.IO.File.Delete(rutaFisica);
+                                    imagenesEliminadasCount++;
+                                    System.Diagnostics.Debug.WriteLine($"✅ Imagen eliminada: {rutaFisica}");
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception exDelete)
+                    {
+                        // No fallar si hay error al eliminar - solo loguear
+                        System.Diagnostics.Debug.WriteLine($"⚠️ Error al eliminar imágenes: {exDelete.Message}");
+                    }
+                }
+
+                // 🔥 OBTENER Y GUARDAR LAS IMÁGENES NUEVAS (solo en servidor, no en BD)
                 var imagenes = Request.Files;
                 List<string> rutasImagenes = new List<string>();
 
@@ -895,7 +927,7 @@ namespace MantenimientosPTM.Controllers
                 jsonResponse.Status = resultHana.JsonResult.Contains("ERROR") ? "NO" : "SI";
                 jsonResponse.Message = resultHana.JsonResult.Contains("ERROR")
                     ? "No fue posible guardar el borrador de la rutina."
-                    : $"Borrador de rutina guardado correctamente. {rutasImagenes.Count} imagen(es) guardada(s).";
+                    : $"Borrador de rutina guardado correctamente. {rutasImagenes.Count} imagen(es) nueva(s) guardada(s). {imagenesEliminadasCount} imagen(es) eliminada(s).";
                 jsonResponse.Data = string.Empty;
 
                 return Json(jsonResponse);

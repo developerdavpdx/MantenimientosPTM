@@ -403,7 +403,7 @@ namespace MantenimientosPTM
 
             public int ID_RUTINA { get; set; }
             public DateTime? FECHA_REALIZACION { get; set; }
-
+            public string COMENTARIOS { get; set; }
             public int ID_ACTIVIDAD { get; set; }
             public string NOMBRE_ACTIVIDAD { get; set; }
             public string DESCRIPCION { get; set; }
