@@ -1281,177 +1281,227 @@ class MantenimientoManager {
     // ORDENES TRABAJO
     // ============================
     abrirModalCaratulaOnline(btn) {
+        try {
+            // ========================================
+            // 1️ MODAL
+            // ========================================
+            $('#modalOrdenMantenimiento').modal('show');
 
-        const data = this.getDataFromButtonMC(btn);
-        this.gestionTecnicos.tecnicosAsignados = [];
-        $("#listaTecnicosAsignados").empty();
-        // 🔥 Tipo operación
-        this.TIPO_OPERACION = (data.estatusOrden == "4" ? "U" : "I");
+            // ========================================
+            // 2️ DATA
+            // ========================================
+            const data = this.getDataFromButtonMC(btn);
 
-        // Reset
-        $("#formOrdenMantenimiento")[0].reset();
-        ValidationManager.limpiarValidacion('#formOrdenMantenimiento');
-        $("#btnGuardarOT").prop("disabled", false);
-        $("#btnGuardarOT").removeClass("btn_disabled");
+            if (!btn || !btn.data()) {
+                console.error("❌ Botón inválido o sin data");
+                AlertManager.mostrar("No se pudo obtener información de la orden, intente de nuevo más tarde.", "warning");
+                return;
+            }
 
-        // ================= DATOS =================
-        $('#NumeroOrden').val(data.numeroOrden || '');
-        $('#Solicitante').val(data.solicitante || '');
-        $('#NominaSolicitante').val(data.nominaSolicitante || '');
-        $('#ClaseMantenimiento').val(data.claseMantenimiento || 'Z10');
-        $('#NombreEquipo').val(data.nombreEquipo || '');
-        $('#DescEquipo').val(data.descripcionEquipo || '');
-        $('#TextoCorto').val(data.textoCorto || '');
-        $("#EstatusOrden").val(data.descEstatusOrden || '');
+            // 🔥 Tipo operación
+            this.TIPO_OPERACION = (data.estatusOrden == "4" ? "U" : "I");
 
-        // 🔥 Fecha/Hora
-        let HoraAperturaOT = "";
+            // ========================================
+            // 3️ RESET
+            // ========================================
+            $("#formOrdenMantenimiento")[0].reset();
+            ValidationManager.limpiarValidacion('#formOrdenMantenimiento');
 
-        if (data.horaApertura) {
-            const [fechaParte, horaParte] = data.horaApertura.split(' ');
-            const [dia, mes, anio] = fechaParte.split('/');
-            HoraAperturaOT = horaParte.substring(0, 5);
-            $("#FechaInicioExtrema").val(`${anio}-${mes}-${dia}`);
-            $("#HoraInicio").val(HoraAperturaOT);
-            $("#HoraInicioTrabajo").val(HoraAperturaOT);
-        }
+            $("#btnGuardarOT").prop("disabled", false);
+            $("#btnGuardarOT").removeClass("btn_disabled");
 
-        $("#Scrap").val(data.scrap);
-        $("#HoraCierreMan").val(data.horaCierreMan);
+            this.gestionFirmas.limpiarTodasLasFirmas();
+            this.gestionTecnicos.tecnicosAsignados = [];
 
-        $("#UbicacionTecnica").val(data.area ? `AREA ${data.area}` : '');
-        $("#CentroCostos").val(data.centroCostos || '');
-        $("#NumDocPmCalidad").val(data.numeroDocPmCalidad || '');
-        $("#Linea").val(data.lineaProduccion || '');
-        $("#DescripcionEquipo").val(data.descripcionEquipo || '');
-        $("#NumeroEquipo").val(data.numeroDocPmCalidad || '');
+            $("#listaTecnicosAsignados").empty().append(`<div style="font-size:0.85rem; color:var(--modal-text-muted);">
+                                            <i class="bi bi-info-circle me-2"></i>No hay técnicos asignados
+                                        </div>`);
 
-        const tipoMtto = (this.datos_usuario[0].PLANTA == "2") ? "CORRECTIVO" : "Z10";
-        $("#TipoMantenimiento").val(tipoMtto);
+            // ========================================
+            // 4️ DATOS GENERALES
+            // ========================================
+            $('#NumeroOrden').val(data.numeroOrden || '');
+            $('#Solicitante').val(data.solicitante || '');
+            $('#NominaSolicitante').val(data.nominaSolicitante || '');
+            $('#ClaseMantenimiento').val(data.claseMantenimiento || 'Z10');
+            $('#NombreEquipo').val(data.nombreEquipo || '');
+            $('#DescEquipo').val(data.descripcionEquipo || '');
+            $('#TextoCorto').val(data.textoCorto || '');
+            $("#EstatusOrden").val(data.descEstatusOrden || '');
 
-        let codigo_mantenimiento = (this.datos_usuario[0].PLANTA == "1" ? "PL1" : "PL2") + "-CMT" + data.area + "01-L01-F01";
-        $("#CodigoMantenimiento").val(codigo_mantenimiento);
+            // ========================================
+            // 5️ FECHA/HORA APERTURA
+            // ========================================
+            if (data.horaApertura) {
+                try {
+                    const [fechaParte, horaParte] = data.horaApertura.split(' ');
+                    const [dia, mes, anio] = fechaParte.split('/');
+                    const HoraAperturaOT = horaParte.substring(0, 5);
+                    $("#FechaInicioExtrema").val(`${anio}-${mes}-${dia}`);
+                    $("#HoraInicio").val(HoraAperturaOT);
+                    $("#HoraInicioTrabajo").val(HoraAperturaOT);
+                } catch (err) {
+                    console.warn("⚠️ Error parseando horaApertura:", data.horaApertura);
+                }
+            }
 
-        $("#GrupoPlaneacion").val(this.datos_usuario[0].PLANTA + "_" + data.area);
-        $("#fechaImpresion").text(DateUtils.obtenerFechaHora());
+            $("#Scrap").val(data.scrap);
+            $("#HoraCierreMan").val(data.horaCierreMan);
 
-        // ================= REGISTRO DE TRABAJO =================
-        // Hora Inicio
-        if (data.horaInicioTime) {
-            $("#HoraInicioTrabajo").val(data.horaInicioTime.substring(0, 5));
-        }
-        // Hora Fin
-        if (data.horaFinTime) {
-            $("#HoraFin").val(data.horaFinTime.substring(0, 5));
-        }
-        // Texto Secuencia
-        $("#TextoSecuencia").val(data.textoSecuencia || '');
-        // Duración
-        $("#DuracionHrs").val(data.duracionHrs || '');
+            // ========================================
+            // 6️ UBICACIÓN / DATOS TÉCNICOS
+            // ========================================
+            $("#UbicacionTecnica").val(data.area ? `AREA ${data.area}` : '');
+            $("#CentroCostos").val(data.centroCostos || '');
+            $("#NumDocPmCalidad").val(data.numeroDocPmCalidad || '');
+            $("#Linea").val(data.lineaProduccion || '');
+            $("#DescripcionEquipo").val(data.descripcionEquipo || '');
+            $("#NumeroEquipo").val(data.numeroDocPmCalidad || '');
 
-        // IDs
-        this.ID_SOLICITUD = data.idSolicitud;
-        this.ID_EQUIPO = data.idEquipo;
-        this.ID_MANTENIMIENTO = data.idMantenimiento;
+            const tipoMtto = (this.datos_usuario[0].PLANTA == "2") ? "CORRECTIVO" : "Z10";
+            $("#TipoMantenimiento").val(tipoMtto);
 
-        // UI
-        $('#rutinaNombreEquipo').text(data.nombreEquipo + ' ' + data.numeroDocPmCalidad);
-        $('#rutinaProceso').text(data.area);
+            const codigo_mantenimiento = (this.datos_usuario[0].PLANTA == "1" ? "PL1" : "PL2") + "-CMT" + data.area + "01-L01-F01";
+            $("#CodigoMantenimiento").val(codigo_mantenimiento);
 
-        this.gestionFirmas.limpiarTodasLasFirmas();
+            $("#GrupoPlaneacion").val(this.datos_usuario[0].PLANTA + "_" + data.area);
+            $("#fechaImpresion").text(DateUtils.obtenerFechaHora());
 
-        const tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
-        HoraAperturaOT = $("#HoraInicio").val();
+            // ========================================
+            // 7️ REGISTRO DE TRABAJO
+            // ========================================
+            if (data.horaInicioTime) {
+                $("#HoraInicioTrabajo").val(data.horaInicioTime.substring(0, 5));
+            }
 
-        // 🔥 ENCOLAR Y CARGAR FIRMAS PRIMERO (antes de configurarVista)
-        // Si el usuario NO es Produccion ni TecnicoMtto -> ocultar el campo de firma Mantenimiento y no permitir guardar OT
-        if (tipoUsuario !== "Produccion" && tipoUsuario !== "TecnicoMtto") {
-            // Solo encolar firmas Realizo y Superviso
-            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo);
-            this.gestionFirmas.queueFirma('superviso', data.firmaSuperviso, data.nombreSuperviso);
-        } else {
-            // En usuarios Produccion o TecnicoMtto encolar todas las firmas
-            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo);
+            if (data.horaFinTime) {
+                $("#HoraFin").val(data.horaFinTime.substring(0, 5));
+            }
+
+            $("#TextoSecuencia").val(data.textoSecuencia || '');
+            $("#DuracionHrs").val(data.duracionHrs || '');
+
+            // ========================================
+            // 8️ IDS
+            // ========================================
+            this.ID_SOLICITUD = data.idSolicitud;
+            this.ID_EQUIPO = data.idEquipo;
+            this.ID_MANTENIMIENTO = data.idMantenimiento;
+
+            // ========================================
+            // 9️ RUTINA (CLAVE EN MC)
+            // ========================================
+            $('#rutinaNombreEquipo').text(data.numeroDocPmCalidad ? data.nombreEquipo + ' ' + data.numeroDocPmCalidad : data.nombreEquipo);
+            $('#rutinaProceso').text(data.area);
+
+            // ========================================
+            // 10️ CONFIGURACIÓN POR ROL
+            // ========================================
+            const tipoUsuario = this.datos_usuario[0].TIPOUSUARIO || "";
+
+            switch (tipoUsuario) {
+
+                // ============================
+                // 🔧 TÉCNICO
+                // ============================
+                case "TecnicoMtto":
+
+                    if (typeof this.configurarVistaTecnico === "function") {
+                        this.configurarVistaTecnico(data.MaquinaDetenida, data.estatusOrden, data.firmaRealizo);
+                    } else {
+                        console.error("❌ configurarVistaTecnico no definido");
+                    }
+                    break;
+
+
+                // ============================
+                // 🏭 PRODUCCIÓN
+                // ============================
+                case "Produccion":
+
+                    if (typeof this.configurarVistaProduccion === "function") {
+                        this.configurarVistaProduccion(
+                            data.MaquinaDetenida,
+                            data.estatusOrden,
+                            data.firmaRealizo,
+                            data.firmaSuperviso,
+                            data.firmaMantenimiento,
+                            data.horaApertura,
+                            data.horaCierre,
+                            data.horaInicio,
+                            data.horaFin
+                        );
+                    } else {
+                        console.error("❌ configurarVistaProduccion no definido");
+                    }
+                    break;
+
+
+                // ============================
+                // 👨‍💼 ADMIN / ADMIN MTTO
+                // ============================
+                case "AdminMtto":
+                case "Administrador":
+
+                    if (typeof this.configurarVistaAdministrador === "function") {
+                        this.configurarVistaAdministrador(
+                            data.MaquinaDetenida,
+                            data.estatusOrden,
+                            data.firmaRealizo,
+                            data.firmaMantenimiento,
+                            data.firmaSuperviso,
+                            data.horaApertura,
+                            data.horaCierre,
+                            data.horaInicio,
+                            data.horaFin
+                        );
+                    } else {
+                        console.error("❌ configurarVistaAdministrador no definido");
+                    }
+
+                    break;
+
+
+                // ============================
+                // 🧠 FALLBACK (CRÍTICO)
+                // ============================
+                default:
+
+                    console.warn("⚠️ Tipo de usuario no reconocido:", tipoUsuario);
+
+                    if (typeof this.configurarVistaAdministrador === "function") {
+                        this.configurarVistaAdministrador(
+                            data.MaquinaDetenida,
+                            data.estatusOrden,
+                            data.firmaRealizo,
+                            data.firmaMantenimiento,
+                            data.firmaSuperviso,
+                            data.horaApertura,
+                            data.horaCierre,
+                            data.horaInicio,
+                            data.horaFin
+                        );
+                    }
+
+                    break;
+            }
+
+            // ========================================
+            // 🔥 1️1 FIRMAS
+            // ========================================
+            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo, (data.estatusOrden == 2 ? false : true));
             this.gestionFirmas.queueFirma('superviso', data.firmaSuperviso, data.nombreSuperviso);
             this.gestionFirmas.queueFirma('mantenimiento', data.firmaMantenimiento, data.nombreMantenimiento);
+
+            // ========================================
+            // 🔥 1️2 TÉCNICOS
+            // ========================================
+            this.cargarTecnicos(data.numeroOrden, "MC");
+
+        } catch (error) {
+            console.error("❌ Error en abrirModalCaratulaOnline:", error);
+            AlertManager.mostrar("Error al abrir la orden, intente de nuevo más tarde.", "danger");
         }
-
-        // 🔥 CARGAR FIRMAS EXISTENTES DEL BORRADOR (después de queueFirma, ANTES de configurarVista)
-        this.cargarFirmasExistentes({
-            firmaRealizo: data.firmaRealizo,
-            nombreRealizo: data.nombreRealizo,
-            firmaSuperviso: data.firmaSuperviso,
-            nombreSuperviso: data.nombreSuperviso,
-            firmaMantenimiento: data.firmaMantenimiento,
-            nombreMantenimiento: data.nombreMantenimiento
-        });
-
-        // 🔥 AHORA CONFIGURAR LA VISTA DEL ROL (después de cargar firmas)
-        if (tipoUsuario === "TecnicoMtto") {
-            this.configurarVistaTecnico(data.estatusOrden, data.firmaRealizo);
-        } else if (tipoUsuario === "Produccion") {
-            this.configurarVistaProduccion(data.MaquinaDetenida, data.estatusOrden, data.firmaRealizo, data.firmaSuperviso, data.firmaMantenimiento, data.horaApertura, data.horaCierre, data.horaInicio, data.horaFin);
-        }
-        else {
-            this.configurarVistaAdministrador(data.MaquinaDetenida, data.estatusOrden, data.firmaRealizo, data.firmaMantenimiento, data.firmaSuperviso, data.horaApertura, data.horaCierre, data.horaInicio, data.horaFin);
-        }
-
-        // 🔥 OCULTAR FIRMA MANTENIMIENTO PARA ADMIN (si no es Produccion ni TecnicoMtto)
-        if (tipoUsuario !== "Produccion" && tipoUsuario !== "TecnicoMtto") {
-            // Ocultar firma y botón mediante helper global (con fallback si no está disponible)
-            if (typeof GlobalUtil !== 'undefined' && typeof GlobalUtil.ocultarFirmaMantenimiento === 'function') {
-                GlobalUtil.ocultarFirmaMantenimiento();
-            } else {
-                try {
-                    $("#firmaMantenimientoContainer").addClass('d-none');
-                    $("#btnGuardarOT").addClass('d-none');
-                    $("#btnGuardarOT").prop('disabled', true).addClass('btn_disabled');
-                    if (this.gestionFirmas && this.gestionFirmas.deshabilitarFirma) {
-                        this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
-                    }
-                } catch (e) {
-                    console.warn('Error ocultando firma/btnGuardarOT:', e);
-                }
-            }
-        }
-
-
-
-        try {
-            // 🔥 SETEAR EL ESTADO DEL TOGGLE PARA AMBOS CASOS (status 4 y otros)
-            $('#maquinaDetenidaToggle').prop('checked', (data.MaquinaDetenida == 1 ? true : false)).trigger('change');
-
-            if (data.estatusOrden == 4) {
-                $('#maquinaDetenidaBanner').addClass('maquina-detenida-banner maquina-detenida-banner-stopped');
-                $("#StopMachineInputContainer").addClass('d-none');
-                $("#MaquinaDetenidaToggle").prop('disabled', true);
-                if (data.MaquinaDetenida == 1) {
-                    $("#maquina_detenida_icon").removeClass("bi-check-circle-fill").addClass("bi-exclamation-octagon-fill");
-                    $("#maquina_detenida_title").text("El quipo se detuvo");
-                }
-                else {
-                    $("#maquina_detenida_icon").removeClass("bi-exclamation-octagon-fill").addClass("bi-check-circle-fill");
-                    $("#maquina_detenida_title").text("El equipo operó normalmente");
-                }
-                // 🔥 OCULTAR BOTÓN BORRADOR PARA STATUS 4
-                $("#btnGuardarBorrador").hide();
-            } else {
-                $('#maquinaDetenidaBanner').removeClass('maquina-detenida-banner maquina-detenida-banner-stopped');
-                $("#StopMachineInputContainer").removeClass('d-none');
-                $("#MaquinaDetenidaToggle").prop('disabled', false);
-                $("#MaquinaDetenidaToggle").removeAttr('required');
-                // 🔥 MOSTRAR BOTÓN BORRADOR PARA STATUS 2 (DRAFT)
-                if (data.estatusOrden == 2) {
-                    $("#btnGuardarBorrador").show();
-                } else {
-                    $("#btnGuardarBorrador").hide();
-                }
-            }
-        } catch (e) { console.warn('MaquinaDetenida no disponible en data'); }
-
-        this.cargarTecnicos(data.numeroOrden, "MC");
-
-        $('#modalOrdenMantenimiento').modal('show');
     }
 
     cargarFirmasExistentes(firmas) {
@@ -1471,17 +1521,17 @@ class MantenimientoManager {
 
         const key = `${numeroOrden}_${tipo}`;
 
-        if (!this.cacheTecnicos) {
-            this.cacheTecnicos = {};
-        }
+        // if (!this.cacheTecnicos) {
+        //     this.cacheTecnicos = {};
+        // }
 
-        // 🔥 CACHE
-        if (this.cacheTecnicos[key]) {
-            if (this.cacheTecnicos[key].length > 0) {
-                this.gestionTecnicos.cargarTecnicosDesdeDB(this.cacheTecnicos[key]);
-                return;
-            }
-        }
+        // // 🔥 CACHE
+        // if (this.cacheTecnicos[key]) {
+        //     if (this.cacheTecnicos[key].length > 0) {
+        //         this.gestionTecnicos.cargarTecnicosDesdeDB(this.cacheTecnicos[key]);
+        //         return;
+        //     }
+        // }
 
         $.ajax({
             url: `/${this.URLBase}/ObtenerTecnicosOT`,
@@ -1502,7 +1552,7 @@ class MantenimientoManager {
 
             success: (data) => {
 
-                this.cacheTecnicos[key] = data;
+                // this.cacheTecnicos[key] = data;
 
                 this.gestionTecnicos.cargarTecnicosDesdeDB(data);
             },
@@ -1787,27 +1837,30 @@ class MantenimientoManager {
                 success: (response) => {
                     if (response.Status === 'SI') {
                         AlertManager.mostrar(
-                            'Borrador guardado correctamente',
+                            'Borrador guardado correctamente, puede seguir editando o cerrar la ventana.',
                             'success',
                             "alertOrdenContainer"
                         );
 
-                        // Cerrar modal después de 2 segundos
-                        setTimeout(() => {
-                            $('#modalOrdenMantenimiento').modal('hide');
-                            $('#formOrdenMantenimiento')[0].reset();
-                            this.gestionTecnicos.limpiar();
-                            // Recargar tabla si existe
-                            if ($('#tablaMantenimientosRango').DataTable) {
-                                try {
-                                    $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
-                                } catch (e) {
-                                    console.log('Tabla no disponible para recargar');
-                                }
-                            }
-                        }, 2000);
+                        $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
 
                         resolve(true);
+
+                        // Cerrar modal después de 2 segundos
+                        // setTimeout(() => {
+                        //     $('#modalOrdenMantenimiento').modal('hide');
+                        //     $('#formOrdenMantenimiento')[0].reset();
+                        //     this.gestionTecnicos.limpiar();
+                        //     // Recargar tabla si existe
+                        //     if ($('#tablaMantenimientosRango').DataTable) {
+                        //         try {
+                        //             $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                        //         } catch (e) {
+                        //             console.log('Tabla no disponible para recargar');
+                        //         }
+                        //     }
+                        // }, 2000);
+                        
                     } else {
                         AlertManager.mostrar(response.Message || 'Error al guardar el borrador', 'warning', "alertOrdenContainer");
                         reject(false);
@@ -1897,40 +1950,82 @@ class MantenimientoManager {
     // ========================================
     // 🔧 CONFIGURAR VISTA TÉCNICO (CORRECTIVO)
     // ========================================
-    configurarVistaTecnico(EstatusOrden, FirmaTecnico) {
+    configurarVistaTecnico(MaquinaDetenida, EstatusOrden, FirmaTecnico) {
 
+        let Detenida = (parseInt(MaquinaDetenida) == 1 ? true : false);
         // SECCIONES
         $('#EvidenciaOrdenTrabajo').removeClass('d-none');
         $('#CierreOrdenTrabajo').removeClass('d-none');
         $('#SeccionFirmas').removeClass('d-none');
 
-        // REQUIRED
-        $('#EvidenciaOrdenTrabajo input:not(#fileInput)').prop('required', true);
-        $('#CierreOrdenTrabajo input:not(#BuscarTecnico)').prop('required', true);
-        $('#BuscarTecnico, #fileInput').prop('required', false);
+        // ========================================
+        // 🔥 CONFIGURAR BANNER DE MÁQUINA DETENIDA
+        // ========================================
+        this._configurarBannerMaquinaDetenida(Detenida, EstatusOrden);
 
         // BOTONES
-        if (EstatusOrden == '4' && FirmaTecnico != "")
+        if (EstatusOrden == '4' && FirmaTecnico != "") {
             $('#btnGuardarOT').addClass('d-none').prop('disabled', true);
-        else
+            $('#btnGuardarBorrador').addClass('d-none').prop('disabled', true);
+        }
+        else {
             $('#btnGuardarOT').removeClass('d-none').prop('disabled', false);
+            $('#btnGuardarBorrador').removeClass('d-none').prop('disabled', false);
+        }
 
         $('#btnExportMantenimientoPDF').addClass('d-none');
 
-        // UPLOADER
-        $('#previewArea').empty();
-        $('#clearAll').hide();
-        $('#uploadArea').removeClass('upload-area-disabled');
-        $('#uploadInfo').show();
+        // ========================================
+        // 🔥 SI STATUS 4: DESHABILITAR TODO
+        // ========================================
+        if (EstatusOrden == '4') {
+            // Deshabilitar sección de cierre
+            $('#CierreOrdenTrabajo input').prop('readonly', true).prop('required', false);
+            $('#HoraInicioTrabajo').prop('readonly', true).prop('required', false);
+            $('#HoraFin').prop('readonly', true).prop('required', false);
+            $('#TextoSecuencia').prop('readonly', true).prop('required', false);
+            $('#BuscarTecnico').prop('readonly', true).prop('required', false).prop('disabled', true);
 
-        const uploader = $('#uploadArea').data('imageUploader');
-        if (uploader && uploader.enableUpload) {
-            uploader.enableUpload();
+            // Deshabilitar búsqueda de técnicos
+            $('#BusquedaTecnicosContainer').addClass('d-none');
+
+            // Deshabilitar uploader
+            $('#uploadArea').addClass('upload-area-disabled');
+            $('#uploadInfo').hide();
+            $('#clearAll').hide();
+            const uploader = $('#uploadArea').data('imageUploader');
+            if (uploader && uploader.disableUpload) {
+                uploader.disableUpload();
+            }
+
+            // Campos de cierre bloqueados
+            $("#Scrap").attr('readonly', true).prop('required', false);
+            $("#HoraCierreMan").attr('readonly', true).prop('required', false);
+        } 
+        // ========================================
+        // 🔥 SI NO ES STATUS 4: PERMITIR EDICIÓN
+        // ========================================
+        else {
+            // REQUIRED
+            $('#EvidenciaOrdenTrabajo input:not(#fileInput)').prop('required', true);
+            $('#CierreOrdenTrabajo input:not(#BuscarTecnico)').prop('required', true);
+            $('#BuscarTecnico, #fileInput').prop('required', false);
+
+            // UPLOADER
+            $('#previewArea').empty();
+            $('#clearAll').hide();
+            $('#uploadArea').removeClass('upload-area-disabled');
+            $('#uploadInfo').show();
+
+            const uploader = $('#uploadArea').data('imageUploader');
+            if (uploader && uploader.enableUpload) {
+                uploader.enableUpload();
+            }
+
+            // CAMPOS EDITABLES
+            $("#Scrap").removeAttr('readonly').prop('required', true);
+            $("#HoraCierreMan").removeAttr('readonly').prop('required', true);
         }
-
-        // CAMPOS EDITABLES
-        $("#Scrap").removeAttr('readonly').prop('required', true);
-        $("#HoraCierreMan").removeAttr('readonly').prop('required', true);
 
         // 🔥 FIRMAS - TECNICO SOLO PUEDE FIRMAR EN REALIZO
         this.gestionFirmas.mostrarFirma('Realizo', true);
@@ -1940,15 +2035,7 @@ class MantenimientoManager {
         this.gestionFirmas.mostrarFirma('Mantenimiento', true);  // MOSTRAR pero deshabilitar
         this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
 
-         // 🔥 EN STATUS 4 (COMPLETADO): DESHABILITADO TODO
-        // EN STATUS 2 (BORRADOR): SOLO REALIZO EDITABLE (permitir dibujar/borrar/redibujar)
-        if (EstatusOrden == '4') {
-            // Completado: Realizo readonly/deshabilitado
-            this.gestionFirmas.deshabilitarFirma('Realizo', true);
-        } else {
-            // Si es borrador (status 2): DESBLOQUEAR Realizo para que pueda redibujar
-            this.gestionFirmas._desbloquearFirmaParaEdicion('Realizo');
-        }
+
 
         $('#firmaRealizoContainer input[type="text"]').prop('required', true);
         $('#firmaSupervisoContainer input[type="text"]').prop('required', false);
@@ -1972,6 +2059,8 @@ class MantenimientoManager {
     configurarVistaProduccion(MaquinaDetenida, EstatusOrden, FirmaTecnico, FirmaSuperviso, FirmaMantenimiento, HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo) {
 
         // MOSTRAR FIRMAS
+        let Detenida = (parseInt(MaquinaDetenida) == 1 ? true : false);
+
         $('#SeccionFirmas').removeClass('d-none');
 
         // REQUIRED OFF PARA ADMIN, SIEMPRE LO LLENA EL TECNICO
@@ -1982,6 +2071,11 @@ class MantenimientoManager {
         // 🔥 CAMPOS BLOQUEADOS DEFAULT ADMIN
         $("#Scrap").attr('readonly', true).prop('required', false);
         $("#HoraCierreMan").attr('readonly', true).prop('required', false);
+
+        // ========================================
+        // 🔥 CONFIGURAR BANNER DE MÁQUINA DETENIDA
+        // ========================================
+        this._configurarBannerMaquinaDetenida(Detenida, EstatusOrden);
 
         // 🔥 FIRMAS
         this._configureFirmas({
@@ -2219,6 +2313,54 @@ class MantenimientoManager {
             $("#HoraCierreMan").removeAttr('readonly').prop('required', true);
         } else {
             $("#HoraCierreMan").attr('readonly', true).prop('required', false);
+        }
+    }
+
+    // ============================
+    // 🔥 CONFIGURAR BANNER MÁQUINA DETENIDA
+    // ============================
+    _configurarBannerMaquinaDetenida(Detenida, EstatusOrden) {
+        const $banner = $('#maquinaDetenidaBanner');
+        const $container = $('#StopMachineInputContainer');
+        const $toggle = $('#MaquinaDetenidaToggle');
+        const $icon = $('#maquina_detenida_icon');
+        const $title = $('#maquina_detenida_title');
+
+        // Si es status 4 (completado): Mostrar banner sin switch
+        if (EstatusOrden == '4') {
+            $container.addClass('d-none');
+            $toggle.prop('disabled', true);
+
+            if (Detenida) {
+                // Máquina estuvo detenida
+                $banner.addClass('banner-stopped').addClass('maquina-detenida-banner-stopped');
+                $icon.removeClass('bi-check-circle-fill').addClass('bi-exclamation-octagon-fill');
+                $icon.css('color', '#dc2626');
+                $title.text('La máquina estuvo detenida');
+                $banner.css('animation', 'pulse-stopped 2s ease-in-out infinite');
+            } else {
+                // Máquina operó normalmente
+                $banner.removeClass('banner-stopped').removeClass('maquina-detenida-banner-stopped');
+                $icon.removeClass('bi-exclamation-octagon-fill').addClass('bi-check-circle-fill');
+                $icon.css('color', '#1291ce');
+                $icon.css('animation', 'bounce-check 0.6s ease');
+                $title.text('El equipo operó normalmente');
+                $banner.css('animation', 'pulse-normal 2s ease-in-out infinite');
+            }
+
+            $banner.addClass('maquina-detenida-banner');
+        } 
+        // Si NO es status 4: Mostrar switch editable
+        else {
+            $container.removeClass('d-none');
+            $toggle.prop('disabled', false);
+            $toggle.prop('required', false);
+            $toggle.prop('checked', Detenida);
+            $banner.removeClass('banner-stopped').removeClass('maquina-detenida-banner-stopped').removeClass('maquina-detenida-banner');
+            $banner.css('animation', 'none');
+            $icon.removeClass('bi-exclamation-octagon-fill').addClass('bi-info-circle');
+            $icon.css('color', '#6c757d');
+            $title.text('Máquina detenida');
         }
     }
 

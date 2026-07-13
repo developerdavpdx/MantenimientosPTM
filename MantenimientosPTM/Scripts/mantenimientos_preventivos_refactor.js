@@ -1900,14 +1900,23 @@ class MantenimientoManager {
             $('#EvidenciaOrdenTrabajo').removeClass('d-none');
             $('#CierreOrdenTrabajo').removeClass('d-none');
 
+            // ========================================
+            // 🔥 DESHABILITAR TODOS LOS INPUTS
+            // ========================================
             //HORA DE INICIO
-            $("#HoraInicio").prop('readonly', true);
+            $("#HoraInicio").prop('readonly', true).prop('required', false);
 
             //HORA DE FIN
-            $("#HoraFin").prop('readonly', true);
+            $("#HoraFin").prop('readonly', true).prop('required', false);
 
             //TEXTO DE SECUENCIA
-            $("#TextoSecuencia").prop('readonly', true);
+            $("#TextoSecuencia").prop('readonly', true).prop('required', false);
+
+            // BUSCAR TÉCNICOS
+            $("#BuscarTecnico").prop('readonly', true).prop('required', false).prop('disabled', true);
+
+            // DURACIÓN
+            $("#DuracionHrs").prop('readonly', true).prop('required', false);
 
             // BOTONES
             $('#btnGuardarOT').removeClass('d-none');
@@ -1924,6 +1933,15 @@ class MantenimientoManager {
 
             //SECCION PARA CARGAR IMAGENES
             $("#EvidenciaOrdenTrabajo").addClass("d-none");
+
+            // Deshabilitar uploader
+            $('#uploadArea').addClass('upload-area-disabled');
+            $('#uploadInfo').hide();
+            $('#clearAll').hide();
+            const uploaderDisabled = $('#uploadArea').data('imageUploader');
+            if (uploaderDisabled && uploaderDisabled.disableUpload) {
+                uploaderDisabled.disableUpload();
+            }
 
             // BOTONES
             if (FirmaTecnico != "") {
@@ -1952,6 +1970,9 @@ class MantenimientoManager {
             return;
         }
 
+        // ========================================
+        // 🔥 SI NO ES STATUS 4: HABILITAR TODO
+        // ========================================
         // SECCIONES
         $('#btnGuardarOT').removeClass('d-none').prop('disabled', false);
         $('#btnGuardarBorrador').removeClass('d-none').prop('disabled', false);
@@ -1959,6 +1980,24 @@ class MantenimientoManager {
         $('#CierreOrdenTrabajo').removeClass('d-none');
         $('#SeccionFirmas').removeClass('d-none');
         $("#busqueda_tecnicosMainContainer").removeClass('d-none');
+
+        // ========================================
+        // 🔥 HABILITAR TODOS LOS INPUTS
+        // ========================================
+        //HORA DE INICIO
+        $("#HoraInicio").prop('readonly', false).prop('required', true);
+
+        //HORA DE FIN
+        $("#HoraFin").prop('readonly', false).prop('required', true);
+
+        //TEXTO DE SECUENCIA
+        $("#TextoSecuencia").prop('readonly', false).prop('required', true);
+
+        // BUSCAR TÉCNICOS
+        $("#BuscarTecnico").prop('readonly', false).prop('required', false).prop('disabled', false);
+
+        // DURACIÓN
+        $("#DuracionHrs").prop('readonly', true).prop('required', true); // Sigue readonly (calculado)
 
         // REQUIRED
         $('#EvidenciaOrdenTrabajo input:not(#fileInput)').prop('required', true);
@@ -2330,7 +2369,7 @@ class MantenimientoManager {
 
         // 🔥 VALIDAR FIRMAS (solo si la sección está visible)
         if ($('#SeccionFirmas').is(':visible')) {
-            if (!this.gestionFirmas.validarFirmas()) {
+            if (!this.gestionFirmas.validarFirmas(FirmaRequerida)) {
                 $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
                 return false;
             }
@@ -2349,7 +2388,7 @@ class MantenimientoManager {
             const rutinaGuardada = await this.guardarRutina(datos.NumeroOrden, datos.EstatusOrden);
 
             if (!rutinaGuardada) {
-                AlertManager.mostrar('Error al guardar la rutina. No se puede continuar.', 'warning', "alertOrdenContainer");
+                AlertManager.mostrar('Complete las actividades pendientes antes de guardar continuar.', 'info', "alertOrdenContainer");
                 $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
                 return false;
             }
@@ -3115,7 +3154,7 @@ class MantenimientoManager {
             const sinResponder = respuestas.filter(r => r.estado === null);
             if (sinResponder.length > 0) {
                 AlertManager.mostrar(`Faltan ${sinResponder.length} actividades por responder`, 'warning');
-                reject(false); // ❌ Rechazar si falta algo
+                resolve(false); // ❌ Rechazar si falta algo
                 return;
             }
 
@@ -3167,7 +3206,7 @@ class MantenimientoManager {
                     AlertManager.mostrar('No se pudo guardar la rutina: ' + error, 'warning');
                     $("#btnGuardarRutina").html('<i class="bi bi-check2-circle me-1"></i>Guardar Rutina');
                     $("#btnGuardarRutina").prop("disabled", false);
-                    reject(false); // ❌ ERROR
+                    resolve(false); // ❌ ERROR
                 }
             });
         });

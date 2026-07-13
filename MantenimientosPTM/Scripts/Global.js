@@ -314,33 +314,47 @@ class GestionFirmas {
         tiposArray.forEach(tipo => this.deshabilitarFirma(tipo, true));
     }
 
-    async _cargarFirmaFromDB(tipo, ruta, nombre,disabled = true) {
+    async _cargarFirmaFromDB(tipo, ruta, nombre, disabled = true) {
         if (!ruta) return;
 
         const key = this._mapTipo(tipo);
         const pad = await this._ensurePad(key);
         if (!pad) return;
 
-        const canvas = pad.canvas;
-        const ctx = canvas.getContext("2d");
-
         pad.clear();
 
         await new Promise((resolve) => {
             const img = new Image();
+            img.crossOrigin = 'anonymous';
             img.onload = () => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                resolve();
+                try {
+                    // 🔥 Convertir imagen a canvas y luego a DataURL
+                    const canvas = document.createElement('canvas');
+                    canvas.width = pad.canvas.width;
+                    canvas.height = pad.canvas.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // ✅ Cargar a través de SignaturePad (así lo reconoce como no vacío)
+                    const dataURL = canvas.toDataURL('image/png');
+                    pad.fromDataURL(dataURL);
+
+                    resolve();
+                } catch (e) {
+                    console.warn('Error procesando firma:', e);
+                    resolve();
+                }
             };
             img.onerror = () => { console.warn("Error cargando firma:", ruta); resolve(); };
-            img.src = ruta;
+            // 🔥 Cache buster: agregar timestamp para evitar caché del navegador
+            const rutaConTimestamp = ruta.includes('?') ? `${ruta}&t=${Date.now()}` : `${ruta}?t=${Date.now()}`;
+            img.src = rutaConTimestamp;
         });
 
         $(`#nombre${key}`).val(nombre || '');
         $(`#placeholder${key}`).hide();
         if (disabled)
-        this._bloquearFirma(key);
+            this._bloquearFirma(key);
     }
 
     _bloquearFirma(tipo) {
@@ -399,24 +413,24 @@ class GestionFirmas {
         container.removeClass('firma-deshabilitada');
     }
 
-    async queueFirma(tipo, ruta, nombre,disabled = true) {
+    async queueFirma(tipo, ruta, nombre, disabled = true) {
         if (!tipo) return;
         if (!ruta) return;
         if (this._firmasInicializadas) {
-            await this._cargarFirmaFromDB(tipo, ruta, nombre,disabled);
+            await this._cargarFirmaFromDB(tipo, ruta, nombre, disabled);
             return;
         }
         if (!this._firmasPendientes) this._firmasPendientes = [];
         const existe = this._firmasPendientes.some(f => f.tipo === tipo);
         if (existe) return;
-        this._firmasPendientes.push({ tipo, ruta, nombre });
+        this._firmasPendientes.push({ tipo, ruta, nombre, disabled });
     }
 
     async _procesarFirmasPendientes() {
         if (!this._firmasPendientes || this._firmasPendientes.length === 0) return;
         console.log('🖋️ Procesando firmas pendientes...');
         for (const f of this._firmasPendientes) {
-            await this._cargarFirmaFromDB(f.tipo, f.ruta, f.nombre);
+            await this._cargarFirmaFromDB(f.tipo, f.ruta, f.nombre, f.disabled);
         }
         this._firmasPendientes = null;
     }

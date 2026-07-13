@@ -777,4 +777,72 @@ textarea.form-control-document {
     font-size: 1.25rem;
     flex-shrink: 0;
 }
+
+/* ========================================
+   🔥 ANIMACIONES CHULADAS PARA BANNER
+   ======================================== */
+
+/* Animación de bounce para check verde */
+@keyframes bounce-check {
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.15);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Animación pulse para máquina detenida (rojo) */
+@keyframes pulse-stopped {
+    0%, 100% {
+        box-shadow: 0 1px 8px rgba(220, 38, 38, 0.3);
+    }
+    50% {
+        box-shadow: 0 1px 16px rgba(220, 38, 38, 0.6);
+    }
+}
+
+/* Animación pulse para máquina normal (azul) */
+@keyframes pulse-normal {
+    0%, 100% {
+        box-shadow: 0 1px 8px rgba(18, 145, 206, 0.2);
+    }
+    50% {
+        box-shadow: 0 1px 16px rgba(18, 145, 206, 0.5);
+    }
+}
+
+/* Animación glow para check circle */
+@keyframes glow-check {
+    0% {
+        text-shadow: 0 0 5px rgba(18, 145, 206, 0.5);
+    }
+    50% {
+        text-shadow: 0 0 15px rgba(18, 145, 206, 0.8);
+    }
+    100% {
+        text-shadow: 0 0 5px rgba(18, 145, 206, 0.5);
+    }
+}
+
+/* Estado visual para banner cuando está detenida */
+.banner-stopped {
+    background: linear-gradient(90deg, #fff5f0, #ffe8e8) !important;
+    border: 2px solid #dc2626 !important;
+}
+
+.banner-stopped #maquina_detenida_icon {
+    animation: none !important;
+}
+
+.banner-stopped #maquina_detenida_title {
+    color: #dc2626;
+    font-weight: 600;
+}
+
 /* Cuando el banner indica máquina detenida, impedir interacción con el switch vía CSS

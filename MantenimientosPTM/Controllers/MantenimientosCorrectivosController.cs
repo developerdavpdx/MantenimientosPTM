@@ -1026,6 +1026,9 @@ namespace MantenimientosPTM.Controllers
                 // Ruta completa del archivo
                 string rutaCompleta = Path.Combine(carpetaOrden, nombreArchivo);
 
+                if (System.IO.File.Exists(rutaCompleta))
+                    System.IO.File.Delete(rutaCompleta);
+
                 if (!System.IO.File.Exists(rutaCompleta))
                 {
                     // 🔥 GUARDAR EL ARCHIVO (Esta es la línea correcta)
