@@ -3195,7 +3195,7 @@ class MantenimientoManager {
             }
 
             const respuestas = this.obtenerRespuestasRutina();
-            const comentarios = $('#ComentariosRutina').val();
+            const comentarios = $('#ComentariosRutina').val() || $('#Comentarios').val();
 
             // 🔥 VALIDACIÓN RELAJADA: Al menos UNA actividad debe estar respondida
             const conRespuesta = respuestas.filter(r => r.estado !== null);

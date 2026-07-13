@@ -374,15 +374,15 @@ namespace MantenimientosPTM
             public string NumeroOrden { get; set; }
             public string ClaseMantenimiento { get; set; }
             public string UbicacionTecnica { get; set; }
-            public decimal Scrap { get; set; }
+            public decimal? Scrap { get; set; }
             public string CentroCostos { get; set; }
             // 🔥 Cambiar a tipo fuerte
-            public DateTime HoraInicio { get; set; }
-            public DateTime HoraFin { get; set; }
-            public DateTime HoraCierreMan { get; set; }
+            public DateTime? HoraInicio { get; set; }
+            public DateTime? HoraFin { get; set; }
+            public DateTime? HoraCierreMan { get; set; }
             public string TextoSecuencia { get; set; }
             public string TecnicosAsignados { get; set; } // "328,325,317"
-            public decimal DuracionHrs { get; set; }
+            public decimal? DuracionHrs { get; set; }
             public string Solicitante { get; set; }
             public string Usuario { get; set; }
             // 🔥 NUEVOS CAMPOS PARA FIRMAS
@@ -394,7 +394,7 @@ namespace MantenimientosPTM
             public string NombreMantenimiento { get; set; }
             public string TipoOperacion { get; set; }
             // Indicador si la máquina estaba detenida al momento del registro (1 = detenido, 0 = funcionando)
-            public int MaquinaDetenida { get; set; }
+            public int? MaquinaDetenida { get; set; }
         }
         public class ActividadRutina
         {

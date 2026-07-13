@@ -523,6 +523,129 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        // 🔥 GUARDAR BORRADOR DE ORDEN DE TRABAJO CORRECTIVO
+        [HttpPost]
+        public JsonResult InsertarOrdenTrabajoMCBorrador()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            AccesoDatosMantenimientosCorrectivos.OrdenTrabajoMCDTO datos;
+
+            try
+            {
+                // Leer el cuerpo de la solicitud JSON
+                Request.InputStream.Position = 0;
+
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    // Deserializar a objeto OrdenTrabajoMCDTO
+                    datos = JsonConvert.DeserializeObject<AccesoDatosMantenimientosCorrectivos.OrdenTrabajoMCDTO>(jsonData);
+
+                    if (datos == null)
+                        throw new Exception("No se recibieron datos válidos.");
+                }
+
+                // 🔥 PROCESAR Y GUARDAR FIRMAS DIGITALES (sin validar para borrador)
+                bool rutaFirmaRealizo = true;
+                bool rutaFirmaSuperviso = true;
+
+                if (!string.IsNullOrEmpty(datos.FirmaRealizo) && datos.FirmaRealizo.Length > 0)
+                {
+                    rutaFirmaRealizo = GuardarFirmaDigital(
+                        datos.FirmaRealizo,
+                        datos.NumeroOrden,
+                        "Realizo"
+                    );
+                }
+
+                datos.FirmaRealizo = rutaFirmaRealizo && datos.FirmaRealizo != null && datos.FirmaRealizo.Length > 0 ? "SI" : "";
+
+                if (!string.IsNullOrEmpty(datos.FirmaSuperviso) && datos.FirmaSuperviso.Length > 0)
+                {
+                    rutaFirmaSuperviso = GuardarFirmaDigital(
+                        datos.FirmaSuperviso,
+                        datos.NumeroOrden,
+                        "Superviso"
+                    );
+                }
+
+                datos.FirmaSuperviso = rutaFirmaSuperviso && datos.FirmaSuperviso != null && datos.FirmaSuperviso.Length > 0 ? "SI" : "";
+
+                string[] excludedParams = null;
+                // Convertir a parámetros HANA
+                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(datos, true, null);
+
+                excludedParams = new[]
+                    {
+                    "P_IDMANTENIMIENTO",
+                    "P_SOLICITANTE",
+                    "P_USUARIO",
+                    "P_TIPOOPERACION"
+                    };
+
+                var parameters = allparameters
+                    .Where(p => !excludedParams.Contains(p.Key))
+                    .ToDictionary(p => p.Key, p => p.Value);
+
+                // 🔥 EJECUTAR STORED PROCEDURE (pero SIN cambiar el estatus)
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCInsertaOrdenTrabajoMC,
+                    parameters
+                );
+
+                if (resultHana.JsonResult.ToUpper().Contains("ERROR"))
+                {
+                    jsonResponse.Status = "NO";
+                    jsonResponse.Message = "No fue posible guardar el borrador, intenta de nuevo más tarde.";
+                    jsonResponse.Data = string.Empty;
+
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+                else
+                {
+                    // NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                    context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
+                }
+
+                // 🔥 NOTA: No cambiamos el estatus a 4 para el borrador
+                // El estatus permanece como 2 (borrador/draft)
+
+                // Verificar resultado
+                if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
+                {
+                    var resultado = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultHana.JsonResult);
+                    var idOtDetalle = resultado[0]["ID_OT_DETALLE"].ToString();
+
+                    jsonResponse.Status = "SI";
+                    jsonResponse.Message = "Borrador guardado correctamente";
+                    jsonResponse.Data = idOtDetalle;
+                }
+                else
+                {
+                    throw new Exception("No fue posible guardar el borrador");
+                }
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                string MethodName = MethodBase.GetCurrentMethod().Name;
+                string ControllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
+
+                jsonResponse.Status = "NO";
+                jsonResponse.Message = $"No fue posible guardar el borrador en {MethodName} de {ControllerName}: {ex.Message}";
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+        }
+
         [HttpPost]
         public JsonResult InsertarSolicitudRefaccion()
         {

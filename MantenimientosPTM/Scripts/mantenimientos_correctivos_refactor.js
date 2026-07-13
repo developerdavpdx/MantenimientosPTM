@@ -123,6 +123,9 @@ class MantenimientosPreventivoApp {
         // ✅ CORRECTO - Debes pasar "e" como parámetro
         $('#formOrdenMantenimiento').on('submit', (e) => this.mantenimientoManager.guardarOT(e));
 
+        // 🔥 GUARDAR BORRADOR
+        $('#btnGuardarBorrador').on('click', (e) => this.mantenimientoManager.guardarOTBorrador(e));
+
         // Guardar estatus
         $('#btnGuardarEstatus').on('click', () => this.mantenimientoManager.guardarEstatus());
 
@@ -1095,7 +1098,7 @@ class MantenimientoManager {
     // ============================
     abrirModalRefaccion(btn) {
 
-        const data = this.getDataFromButton(btn);
+        const data = this.getDataFromButtonMC(btn);
 
         // Reset del formulario
         $("#formSolicitarRefaccion")[0].reset();
@@ -1284,7 +1287,7 @@ class MantenimientoManager {
     // ============================
     abrirModalCaratulaOnline(btn) {
 
-        const data = this.getDataFromButton(btn);
+        const data = this.getDataFromButtonMC(btn);
         this.gestionTecnicos.tecnicosAsignados = [];
         $("#listaTecnicosAsignados").empty();
         // 🔥 Tipo operación
@@ -1373,6 +1376,16 @@ class MantenimientoManager {
             this.configurarVistaAdministrador(data.MaquinaDetenida, data.estatusOrden, data.firmaRealizo, data.firmaMantenimiento, data.firmaSuperviso, data.horaApertura, data.horaCierre, data.horaInicio, data.horaFin);
         }
 
+        // 🔥 CARGAR FIRMAS EXISTENTES DEL BORRADOR
+        this.cargarFirmasExistentes({
+            firmaRealizo: data.firmaRealizo,
+            nombreRealizo: data.nombreRealizo,
+            firmaSuperviso: data.firmaSuperviso,
+            nombreSuperviso: data.nombreSuperviso,
+            firmaMantenimiento: data.firmaMantenimiento,
+            nombreMantenimiento: data.nombreMantenimiento
+        });
+
         // 🔥 Firma
         // Si el usuario NO es Produccion ni TecnicoMtto -> ocultar el campo de firma Mantenimiento y no permitir guardar OT
         if (tipoUsuario !== "Produccion" && tipoUsuario !== "TecnicoMtto") {
@@ -1405,6 +1418,9 @@ class MantenimientoManager {
 
 
         try {
+            // 🔥 SETEAR EL ESTADO DEL TOGGLE PARA AMBOS CASOS (status 4 y otros)
+            $('#maquinaDetenidaToggle').prop('checked', (data.MaquinaDetenida == 1 ? true : false)).trigger('change');
+
             if (data.estatusOrden == 4) {
                 $('#maquinaDetenidaBanner').addClass('maquina-detenida-banner maquina-detenida-banner-stopped');
                 $("#StopMachineInputContainer").addClass('d-none');
@@ -1417,12 +1433,19 @@ class MantenimientoManager {
                     $("#maquina_detenida_icon").removeClass("bi-exclamation-octagon-fill").addClass("bi-check-circle-fill");
                     $("#maquina_detenida_title").text("El equipo operó normalmente");
                 }
+                // 🔥 OCULTAR BOTÓN BORRADOR PARA STATUS 4
+                $("#btnGuardarBorrador").hide();
             } else {
                 $('#maquinaDetenidaBanner').removeClass('maquina-detenida-banner maquina-detenida-banner-stopped');
-                $('#maquinaDetenidaToggle').prop('checked', (data.MaquinaDetenida == 1 ? true : false));
                 $("#StopMachineInputContainer").removeClass('d-none');
                 $("#MaquinaDetenidaToggle").prop('disabled', false);
                 $("#MaquinaDetenidaToggle").removeAttr('required');
+                // 🔥 MOSTRAR BOTÓN BORRADOR PARA STATUS 2 (DRAFT)
+                if (data.estatusOrden == 2) {
+                    $("#btnGuardarBorrador").show();
+                } else {
+                    $("#btnGuardarBorrador").hide();
+                }
             }
         } catch (e) { console.warn('MaquinaDetenida no disponible en data'); }
 
@@ -1436,6 +1459,11 @@ class MantenimientoManager {
         this.gestionFirmas._cargarFirmaFromDB('realizo', firmas.firmaRealizo, firmas.nombreRealizo);
         this.gestionFirmas._cargarFirmaFromDB('superviso', firmas.firmaSuperviso, firmas.nombreSuperviso);
         this.gestionFirmas._cargarFirmaFromDB('mantenimiento', firmas.firmaMantenimiento, firmas.nombreMantenimiento);
+
+        // 🔥 GUARDAR LAS FIRMAS EN LOS CAMPOS OCULTOS PARA QUE LA VALIDACIÓN LAS RECONOZCA
+        setTimeout(() => {
+            this.gestionFirmas.guardarTodasLasFirmas();
+        }, 500);
 
     }
 
@@ -1692,8 +1720,111 @@ class MantenimientoManager {
         });
     }
 
-    getDataFromButton(btn) {
+    // 🔥 GUARDAR BORRADOR DE OT CORRECTIVO
+    async guardarOTBorrador(e) {
+        e.preventDefault();
 
+        // Mostrar loading
+        $('#btnGuardarBorrador').html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando Borrador...').prop('disabled', true);
+
+        try {
+            const datos = GlobalUtil.obtenerDatosAnyFormulario("formOrdenMantenimiento");
+            datos.Usuario = this.datos_usuario[0].EMAIL;
+            datos.TipoOperacion = "B"; // B = Borrador (Draft)
+            datos.EstatusOrden = 2; // Status 2 = Draft
+
+            // Convertir horas de 12h a 24h
+            if (datos.HoraInicioTrabajo) {
+                datos.HoraInicio = this.convertirA24Horas(datos.HoraInicioTrabajo);
+            }
+            if (datos.HoraFin) {
+                datos.HoraFin = this.convertirA24Horas(datos.HoraFin);
+            }
+
+            datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
+            datos.IdMantenimiento = this.ID_MANTENIMIENTO;
+
+            // Estado de máquina detenida
+            datos.MaquinaDetenida = $('#MaquinaDetenidaToggle').is(':checked') ? 1 : 0;
+
+            // 🔥 OBTENER Y AGREGAR FIRMAS DIGITALES (sin validar)
+            const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
+
+            datos.FirmaRealizo = firmas.realizo.firma || '';
+            datos.NombreRealizo = firmas.realizo.nombre || '';
+            datos.FirmaSuperviso = firmas.superviso.firma || '';
+            datos.NombreSuperviso = firmas.superviso.nombre || '';
+            datos.FirmaMantenimiento = firmas.mantenimiento.firma || '';
+            datos.NombreMantenimiento = firmas.mantenimiento.nombre || '';
+
+            // Guardar el borrador
+            await this.guardarOTBorradorDefinitivo(datos);
+
+        } catch (error) {
+            console.error('Error en el proceso:', error);
+            AlertManager.mostrar('No es posible guardar el borrador: ' + error, 'warning', "alertOrdenContainer");
+            $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
+        }
+
+        return false;
+    }
+
+    // 🔥 MÉTODO PARA GUARDAR EL BORRADOR EN LA BD
+    async guardarOTBorradorDefinitivo(datos) {
+        let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: `/${this.URLBase}/InsertarOrdenTrabajoMCBorrador`,
+                type: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Rol-Usuario': TipoUsuario
+                },
+                contentType: 'application/json; charset=utf-8',
+                data: JSON.stringify(datos),
+                dataType: 'json',
+                success: (response) => {
+                    if (response.Status === 'SI') {
+                        AlertManager.mostrar(
+                            'Borrador guardado correctamente',
+                            'success',
+                            "alertOrdenContainer"
+                        );
+
+                        // Cerrar modal después de 2 segundos
+                        setTimeout(() => {
+                            $('#modalOrdenMantenimiento').modal('hide');
+                            $('#formOrdenMantenimiento')[0].reset();
+                            this.gestionTecnicos.limpiar();
+                            // Recargar tabla si existe
+                            if ($('#tablaMantenimientosRango').DataTable) {
+                                try {
+                                    $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                                } catch (e) {
+                                    console.log('Tabla no disponible para recargar');
+                                }
+                            }
+                        }, 2000);
+
+                        resolve(true);
+                    } else {
+                        AlertManager.mostrar(response.Message || 'Error al guardar el borrador', 'warning', "alertOrdenContainer");
+                        reject(false);
+                    }
+
+                    // Restaurar botón
+                    $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
+                },
+                error: (xhr, status, error) => {
+                    AlertManager.mostrar('Error al conectar con el servidor', 'warning', "alertOrdenContainer");
+                    $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
+                    reject(error);
+                }
+            });
+        });
+    }
+
+    getDataFromButtonMC(btn) {
         const d = btn.data();
 
         return {
