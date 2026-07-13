@@ -314,7 +314,7 @@ class GestionFirmas {
         tiposArray.forEach(tipo => this.deshabilitarFirma(tipo, true));
     }
 
-    async _cargarFirmaFromDB(tipo, ruta, nombre) {
+    async _cargarFirmaFromDB(tipo, ruta, nombre,disabled = true) {
         if (!ruta) return;
 
         const key = this._mapTipo(tipo);
@@ -339,6 +339,7 @@ class GestionFirmas {
 
         $(`#nombre${key}`).val(nombre || '');
         $(`#placeholder${key}`).hide();
+        if (disabled)
         this._bloquearFirma(key);
     }
 
@@ -377,11 +378,32 @@ class GestionFirmas {
         });
     }
 
-    async queueFirma(tipo, ruta, nombre) {
+    _desbloquearFirmaParaEdicion(tipo) {
+        const key = this._mapTipo(tipo);
+        const pad = this.signaturePads[key];
+
+        if (!pad) {
+            console.warn(`❌ Pad no disponible para desbloquear: ${key}`);
+            return;
+        }
+
+        const container = $(`#firma${key}Container`);
+        const canvas = document.getElementById(`canvas${key}`);
+        const nombreInput = $(`#nombre${key}`);
+
+        if (pad && pad.on) pad.on();
+        container.find('button').show();
+        nombreInput.prop('readonly', false);
+        if (canvas) $(canvas).css({ 'pointer-events': 'auto', 'cursor': 'crosshair', 'opacity': '1' });
+        container.removeClass('firma-readonly');
+        container.removeClass('firma-deshabilitada');
+    }
+
+    async queueFirma(tipo, ruta, nombre,disabled = true) {
         if (!tipo) return;
         if (!ruta) return;
         if (this._firmasInicializadas) {
-            await this._cargarFirmaFromDB(tipo, ruta, nombre);
+            await this._cargarFirmaFromDB(tipo, ruta, nombre,disabled);
             return;
         }
         if (!this._firmasPendientes) this._firmasPendientes = [];

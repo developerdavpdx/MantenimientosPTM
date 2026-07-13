@@ -1650,7 +1650,6 @@ class MantenimientoManager {
                     } else {
                         console.error("❌ configurarVistaTecnico no definido");
                     }
-
                     break;
 
 
@@ -1736,7 +1735,7 @@ class MantenimientoManager {
             // ========================================
             // 🔥 1️0 FIRMAS
             // ========================================
-            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo);
+            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo, (data.estatusOrden == 2 ? false: true));
             this.gestionFirmas.queueFirma('superviso', data.firmaSuperviso, data.nombreSuperviso);
             this.gestionFirmas.queueFirma('mantenimiento', data.firmaMantenimiento, data.nombreMantenimiento);
 
