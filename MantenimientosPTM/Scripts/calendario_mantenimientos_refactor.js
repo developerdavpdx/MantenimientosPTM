@@ -146,6 +146,8 @@ class CalendarManager {
                 day: 'Día'
             },
             showNonCurrentDates: true,
+            dayMaxEventRows: false, // ✅ Mostrar TODOS los eventos sin límite
+            dayMaxEvents: false,    // ✅ No limitar eventos por día
             events: [], // ✅ Inicialmente vacío, se carga después
             datesSet: (info) => this.actualizarTitulo(info),
             dateClick: (info) => this.handleDateClick(info),
@@ -231,10 +233,10 @@ class CalendarManager {
             // Determinar color según tipo
             const colorEvento = colores[item.TIPO_MANTENIMIENTO] || '#6c757d';
 
-            // Formatear fechas
+            // Formatear fechas - con fallback: FECHA_COMPLETADO → HORA_APERTURA → fecha actual
             const fechaInicio = new Date(item.FECHA_INICIO);
             const fechaFin = new Date(item.FECHA_FIN);
-            const fechaCompletado = new Date(item.FECHA_COMPLETADO);
+            const fechaCompletado = new Date(item.FECHA_COMPLETADO || item.HORA_APERTURA || new Date());
 
             // ✅ SOLO pintar el día que fue completado (no rango)
             const fechaCompletadoStr = fechaCompletado.toISOString().split('T')[0];

@@ -684,7 +684,7 @@ class MantenimientoManager {
                             const tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
                             const esAdmin = tipoUsuario === "AdminMtto" || tipoUsuario === "Administrador";
                             const esTecnico = tipoUsuario === "TecnicoMtto";
-                            const esSupProduccion = tipoUsuario === "Produccion";
+                            const esSupProduccion = tipoUsuario === "Produccion" || tipoUsuario === "SupervisorProduccion";
                             const tieneRefacciones = data.TieneRefaciones;
 
                             const estatusOrden = row.EstatusOrden || '';

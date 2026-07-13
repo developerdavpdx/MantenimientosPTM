@@ -797,7 +797,7 @@ class MantenimientoManager {
                             const tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
                             const esAdmin = tipoUsuario === "AdminMtto" || tipoUsuario === "Administrador";
                             const esTecnico = tipoUsuario === "TecnicoMtto";
-                            const esSupProduccion = tipoUsuario === "Produccion";
+                            const esSupProduccion = tipoUsuario === "Produccion" || tipoUsuario === "SupervisorProduccion";
                             const tieneRefacciones = data.TieneRefacciones;
 
                             const estatusOrden = row.EstatusOrden || '';
@@ -1895,6 +1895,17 @@ class MantenimientoManager {
     // ========================================
     async configurarVistaTecnico(EstatusOrden, FirmaTecnico, FirmaSupervisor, FirmaMantenimiento, IdEquipo, Planta, NumeroOrden, IdEquipoPeriodicidad) {
 
+        //Cambiar títulos de firma dependiendo la planta
+        switch (this.datos_usuario[0].PLANTA) {
+            case 1:
+                $("#supervisor_mantenimiento_sign").text("Coordinador Mantenimiento");
+                $("#supervisor_producción_sign").text("Supervisor/Jefe Proceso");
+                break;
+            case 2:
+                break;
+
+        }
+
         // MOSTRAR SECCIONES SI LA ORDEN YA FUE ATENDIDA POR EL TÉCNICO
         if (EstatusOrden == 4) {
             $('#EvidenciaOrdenTrabajo').removeClass('d-none');
@@ -2051,6 +2062,18 @@ class MantenimientoManager {
     // ========================================
     configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaMantenimiento, FirmaSuperviso, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad, ComentariosRutina) {
 
+
+        //Cambiar títulos de firma dependiendo la planta
+        switch (this.datos_usuario[0].PLANTA) {
+            case 1:
+                $("#supervisor_mantenimiento_sign").text("Coordinador Mantenimiento");
+                $("#supervisor_producción_sign").text("Supervisor/Jefe Proceso");
+                break;
+            case 2:
+                break;
+
+        }
+
         // MOSTRAR FIRMAS
         $('#SeccionFirmas').removeClass('d-none');
 
@@ -2078,7 +2101,6 @@ class MantenimientoManager {
             case 2:
 
                 break;
-                GestionArticulosCustom
         }
         // bloquear correctamente
         if (FirmaTecnico != "")
@@ -2158,6 +2180,17 @@ class MantenimientoManager {
     // ========================================
     configurarVistaProduccion(EstatusOrden, FirmaTecnico, FirmaSuperviso, FirmaMantenimiento, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad, ComentariosRutina) {
 
+        //Cambiar títulos de firma dependiendo la planta
+        switch (this.datos_usuario[0].PLANTA) {
+            case 1:
+                $("#supervisor_mantenimiento_sign").text("Coordinador Mantenimiento");
+                $("#supervisor_producción_sign").text("Supervisor/Jefe Proceso");
+                break;
+            case 2:
+                break;
+
+        }
+
         // MOSTRAR FIRMAS
         $('#SeccionFirmas').removeClass('d-none');
 
@@ -2180,15 +2213,6 @@ class MantenimientoManager {
             bloquearSuperviso: false,
             bloquearMantenimiento: (FirmaMantenimiento != "")
         });
-        //Cambiar títulos de firma dependiendo la planta
-        switch (this.datos_usuario[0].PLANTA) {
-            case 1:
-                $("#supervisor_mantenimiento_sign").text("Coordinador Mantenimiento");
-                break;
-            case 2:
-                break;
-
-        }
 
         // bloquear correctamente (ya manejado por helper en la mayoría de casos)
         if (FirmaTecnico != "") this.gestionFirmas._bloquearFirma("Realizo", true);
@@ -2260,7 +2284,6 @@ class MantenimientoManager {
         }
 
     }
-
 
     // ============================
     // Helper: configurar uploader (activar/desactivar)
