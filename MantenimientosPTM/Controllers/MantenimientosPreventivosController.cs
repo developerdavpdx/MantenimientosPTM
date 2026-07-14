@@ -86,7 +86,7 @@ namespace MantenimientosPTM.Controllers
                     AditionalFilter = true;
 
                 //OMITIR PARA DEMO
-                if (FiltroTipoUsuario == "Produccion")
+                if (FiltroTipoUsuario == "Produccion" || FiltroTipoUsuario == "SupervisorProduccion")
                 {
                     FiltroUsuario = "";
                     FiltroEstatusOT = "2,3,4";

@@ -1418,6 +1418,7 @@ class MantenimientoManager {
                 // 🏭 PRODUCCIÓN
                 // ============================
                 case "Produccion":
+                case "SupervisorProduccion":
 
                     if (typeof this.configurarVistaProduccion === "function") {
                         this.configurarVistaProduccion(

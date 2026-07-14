@@ -1657,6 +1657,7 @@ class MantenimientoManager {
                 // 🏭 PRODUCCIÓN
                 // ============================
                 case "Produccion":
+                case "SupervisorProduccion":
 
                     if (typeof this.configurarVistaProduccion === "function") {
                         this.configurarVistaProduccion(
@@ -2093,15 +2094,6 @@ class MantenimientoManager {
         this.gestionFirmas.mostrarFirma('Mantenimiento', true);
         $("#nombreMantenimiento").val(this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase()).attr('readonly', true);
 
-        //Cambiar títulos de firma dependiendo la planta
-        switch (this.datos_usuario[0].PLANTA) {
-            case 1:
-                $("#supervisor_mantenimiento_sign").text("Coordinador Mantenimiento");
-                break;
-            case 2:
-
-                break;
-        }
         // bloquear correctamente
         if (FirmaTecnico != "")
             this.gestionFirmas._bloquearFirma("Realizo", true);

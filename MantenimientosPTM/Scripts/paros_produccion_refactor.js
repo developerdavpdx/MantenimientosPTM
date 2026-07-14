@@ -454,6 +454,7 @@ class ProduccionManager {
 
                             if (data === "CORRECTIVO") color = "bg-warning text-dark";
                             if (data === "PRODUCCION") color = "bg-primary";
+                            if (data === "SUPERVISORPRODUCCION") color = "bg-primary";
 
                             return `<span class="badge ${color} badge-custom">
                                 <i class="bi bi-tag-fill me-1"></i>${data || 'N/A'}
