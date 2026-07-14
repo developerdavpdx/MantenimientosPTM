@@ -481,6 +481,7 @@ class MantenimientoManager {
         this.ID_EQUIPO = "";
         this.ID_SOLICITUD = "";
         this.TIPO_OPERACION = "";
+        this.EstatusOrden = null;
     }
 
     inicializar() {
@@ -1300,7 +1301,7 @@ class MantenimientoManager {
 
             // 🔥 Tipo operación
             this.TIPO_OPERACION = (data.estatusOrden == "4" ? "U" : "I");
-
+            this.EstatusOrden = data.estatusOrden; //GUARDAR EL ESTATUS ACTUAL DE LA ORDEN
             // ========================================
             // 3️ RESET
             // ========================================
@@ -1339,7 +1340,7 @@ class MantenimientoManager {
                     const HoraAperturaOT = horaParte.substring(0, 5);
                     $("#FechaInicioExtrema").val(`${anio}-${mes}-${dia}`);
                     $("#HoraInicio").val(HoraAperturaOT);
-                    $("#HoraInicioTrabajo").val(HoraAperturaOT);
+                    $("#HoraInicioTrabajo").val(HoraAperturaOT).attr("readonly", false);
                 } catch (err) {
                     console.warn("⚠️ Error parseando horaApertura:", data.horaApertura);
                 }
@@ -1370,15 +1371,17 @@ class MantenimientoManager {
             // ========================================
             // 7️ REGISTRO DE TRABAJO
             // ========================================
-            if (data.horaInicioTime) {
-                $("#HoraInicioTrabajo").val(data.horaInicioTime.substring(0, 5));
-            }
+            if (data.horaInicioTime)
+                $("#HoraInicioTrabajo").val(data.horaInicioTime.substring(0, 5)).attr("readonly", false);
+            else
+                $("#HoraInicioTrabajo").attr("readonly", false);
 
-            if (data.horaFinTime) {
-                $("#HoraFin").val(data.horaFinTime.substring(0, 5));
-            }
+            if (data.horaFinTime)
+                $("#HoraFin").val(data.horaFinTime.substring(0, 5)).attr("readonly", false);
+            else
+                $("#HoraFin").attr("readonly", false);
 
-            $("#TextoSecuencia").val(data.textoSecuencia || '');
+            $("#TextoSecuencia").val(data.textoSecuencia || '').attr("readonly", false);
             $("#DuracionHrs").val(data.duracionHrs || '');
 
             // ========================================
@@ -1407,7 +1410,13 @@ class MantenimientoManager {
                 case "TecnicoMtto":
 
                     if (typeof this.configurarVistaTecnico === "function") {
-                        this.configurarVistaTecnico(data.MaquinaDetenida, data.estatusOrden, data.firmaRealizo);
+                        this.configurarVistaTecnico(data.MaquinaDetenida,
+                            data.horaApertura,
+                            data.horaCierre,
+                            data.horaInicio,
+                            data.horaFin,
+                            data.estatusOrden,
+                            data.firmaRealizo);
                     } else {
                         console.error("❌ configurarVistaTecnico no definido");
                     }
@@ -1669,6 +1678,9 @@ class MantenimientoManager {
             // El input checkbox tiene id #MaquinaDetenidaToggle
             datos.MaquinaDetenida = $('#MaquinaDetenidaToggle').is(':checked') ? 1 : 0;
 
+            if (this.EstatusOrden == "4")
+                datos.MaquinaDetenida = null; //EVITAR QUE LO ACTUALICE SI YA ESTA EN PROCESO DE FIRMAS
+
             // 🔥 OBTENER Y AGREGAR FIRMAS DIGITALES
             const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
 
@@ -1861,7 +1873,7 @@ class MantenimientoManager {
                         //         }
                         //     }
                         // }, 2000);
-                        
+
                     } else {
                         AlertManager.mostrar(response.Message || 'Error al guardar el borrador', 'warning', "alertOrdenContainer");
                         reject(false);
@@ -1951,7 +1963,7 @@ class MantenimientoManager {
     // ========================================
     // 🔧 CONFIGURAR VISTA TÉCNICO (CORRECTIVO)
     // ========================================
-    configurarVistaTecnico(MaquinaDetenida, EstatusOrden, FirmaTecnico) {
+    configurarVistaTecnico(MaquinaDetenida, HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo, EstatusOrden, FirmaTecnico) {
 
         let Detenida = (parseInt(MaquinaDetenida) == 1 ? true : false);
         // SECCIONES
@@ -2002,7 +2014,10 @@ class MantenimientoManager {
             // Campos de cierre bloqueados
             $("#Scrap").attr('readonly', true).prop('required', false);
             $("#HoraCierreMan").attr('readonly', true).prop('required', false);
-        } 
+
+            //TIEMPOS ANALITICOS
+            this.calcularTiemposCierreOT(MaquinaDetenida, HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo);
+        }
         // ========================================
         // 🔥 SI NO ES STATUS 4: PERMITIR EDICIÓN
         // ========================================
@@ -2350,7 +2365,7 @@ class MantenimientoManager {
             }
 
             $banner.addClass('maquina-detenida-banner');
-        } 
+        }
         // Si NO es status 4: Mostrar switch editable
         else {
             $container.removeClass('d-none');

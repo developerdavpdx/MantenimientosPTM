@@ -2359,7 +2359,6 @@
     <Content Include="Content\bootstrap-grid.rtl.css.map" />
     <Content Include="Content\bootstrap-grid.min.css.map" />
     <Content Include="Content\bootstrap-grid.css.map" />
-    <Content Include="IMPLEMENTACION_BORRADOR_PROGRESS.md" />
     <None Include="Scripts\jquery-3.7.1.intellisense.js" />
     <Content Include="Scripts\jquery-3.7.1.js" />
     <Content Include="Scripts\jquery-3.7.1.min.js" />
@@ -2411,7 +2410,6 @@
     <Content Include="Scripts\modernizr-2.8.3.js" />
     <Content Include="Scripts\TopScrollManager.js" />
     <Content Include="Service\Email\Templates\CorreoBase.html" />
-    <Content Include="STORED_PROCEDURE_BORRADOR.sql" />
     <Content Include="Views\Equipos\sidebar_v1.html" />
     <Content Include="Views\Equipos\sidebar_v2.html" />
     <Content Include="Web.config" />
