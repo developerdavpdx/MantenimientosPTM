@@ -798,6 +798,7 @@ class MantenimientoManager {
                             const esAdmin = tipoUsuario === "AdminMtto" || tipoUsuario === "Administrador";
                             const esTecnico = tipoUsuario === "TecnicoMtto";
                             const esSupProduccion = tipoUsuario === "Produccion" || tipoUsuario === "SupervisorProduccion";
+                            const esSupMantenimiento = tipoUsuario === "SupervisorMantenimiento";
                             const tieneRefacciones = data.TieneRefacciones;
 
                             const estatusOrden = row.EstatusOrden || '';
@@ -818,7 +819,7 @@ class MantenimientoManager {
 
                             if (estatusOrden && estatusOrden !== '') {
 
-                                if (estatusOrden == 3 || estatusOrden == 4 || ordenFinalizada === "SI") {
+                                if (estatusOrden == 3 || estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI") {
                                     refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
                                 } else {
                                     refaccionBtn = btn('btn-ptm-primary', 'btn-solicitar-refaccion', 'tools', 'Solicitar Refacción', dataAttrs);

@@ -2805,11 +2805,28 @@ class SessionManager {
 
         //Validar permisos y modulos
         let datos_usuario = GlobalUtil.getDatosUsuario();
-        //Estatablecer el nombre de usuario
-        $("#UserName").text(datos_usuario[0].NOMBRECOMPLETO);
+
+        // Mapeo de tipos de usuario a etiquetas legibles
+        const mapeoPerfiles = {
+            'TecnicoMtto': 'Técnico Mantenimiento',
+            'SupervisorMantenimiento': 'Supervisor Mantenimiento',
+            'SupervisorAlmacen': 'Supervisor Almacén',
+            'Almacen': 'Almacén',
+            'SupervisorPlaneacion': 'Supervisor Planeación',
+            'Planeacion': 'Planeación',
+            'SupervisorProduccion': 'Supervisor Producción',
+            'Produccion': 'Producción'
+        };
+
+        // Obtener el perfil legible
+        const tipoUsuario = datos_usuario[0].TIPOUSUARIO;
+        const perfilLegible = mapeoPerfiles[tipoUsuario] || tipoUsuario;
+
+        // Establecer el nombre de usuario con perfil
+        $("#UserName").text(`${datos_usuario[0].NOMBRECOMPLETO} (${perfilLegible})`);
 
         //TECNICO MTTO
-        if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+        if (tipoUsuario === "TecnicoMtto") {
             $("#GestionEquiposURL").addClass("d-none"); //GESTION EQUIPOS
             $("#CalendarioManttoURL").addClass("d-none"); //CALENDARIO MANTEMINIENTOS COMPLETADOS
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
@@ -2817,9 +2834,16 @@ class SessionManager {
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
             $("#MetricasURL").addClass("d-none"); //METRICAS
         }
+        //SUPERVISOR MANTENIMIENTO
+        if (tipoUsuario === "SupervisorMantenimiento") {
+            $("#GestionEquiposURL").addClass("d-none"); //GESTION EQUIPOS
+            $("#AlmacenURL").addClass("d-none"); //ALMACEN
+            $("#PlaneacionURL").addClass("d-none"); //PLANEACION
+            $("#ProduccionURL").addClass("d-none"); //PRODUCCION
+        }
 
         //ALMACEN
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen" || datos_usuario[0].TIPOUSUARIO == "Almacen") {
+        if (tipoUsuario === "SupervisorAlmacen" || tipoUsuario === "Almacen") {
             $("#MantenimientosMainContainer").addClass("d-none"); //MANTENIMIENTOS 
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
@@ -2827,7 +2851,7 @@ class SessionManager {
         }
 
         //PLANEACION
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion" || datos_usuario[0].TIPOUSUARIO == "Planeacion") {
+        if (tipoUsuario === "SupervisorPlaneacion" || tipoUsuario === "Planeacion") {
             $("#MantenimientosMainContainer").addClass("d-none"); //MANTENIMIENTOS 
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
@@ -2835,10 +2859,9 @@ class SessionManager {
         }
 
         //PRODUCCION
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion" || datos_usuario[0].TIPOUSUARIO == "Produccion") {
+        if (tipoUsuario === "SupervisorProduccion" || tipoUsuario === "Produccion") {
             $("#GestionEquiposURL").addClass("d-none"); //GESTION EQUIPOS
-            $("#MCProgramarURL").addClass("d-none"); //GESTION EQUIPOS
-            $("#CalendarioManttoURL").addClass("d-none"); //GESTION EQUIPOS
+            $("#CalendarioManttoURL").addClass("d-none"); //CALENDARIO MANTENIMIENTO URL
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#MetricasURL").addClass("d-none"); //METRICAS

@@ -807,7 +807,7 @@ class ProduccionManager {
         if (errorArticulo) {
 
             $("#btnGuardarParo")
-                .html('<i class="bi bi-save me-1"></i>Guardar')
+                .html('<i class="bi bi-floppy-fill"></i> Guardar Paro')
                 .prop("disabled", false);
 
             return;
@@ -815,19 +815,26 @@ class ProduccionManager {
 
         if (errorDuracion) {
             AlertManager.mostrar(
-                '⚠️ Debe ingresar la duración en horas para todos los paros.',
+                'Debe ingresar la duración en horas para todos los paros.',
                 'warning',
                 'alertParoContainer'
             );
+
+            $("#btnGuardarParo")
+                .html('<i class="bi bi-floppy-fill"></i> Guardar Paro')
+                .prop("disabled", false);
             return;
         }
 
         if (paros.length === 0) {
             AlertManager.mostrar(
-                '⚠️ Debe agregar al menos un paro.',
+                'Debe agregar al menos un paro.',
                 'warning',
                 'alertParoContainer'
             );
+            $("#btnGuardarParo")
+                .html('<i class="bi bi-floppy-fill"></i> Guardar Paro')
+                .prop("disabled", false);
             return;
         }
 

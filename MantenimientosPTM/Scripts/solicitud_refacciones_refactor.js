@@ -1370,6 +1370,7 @@ class SolicitudManager {
 
             // ✅ Estados y clases
             const isAtendida = art.ESTATUS === 'Atendida';
+            const isReadOnly = (isAtendida ? 'readonly' : '');
             const urgenciaClass = this._getUrgenciaClass(art.NIVEL_URGENCIA);
             const estatusClass = isAtendida ? 'badge btn-ptm-primary badge-custom' : 'bg-warning text-dark';
             const urgenciaText = art.NIVEL_URGENCIA || 'N/A';
@@ -1462,27 +1463,27 @@ class SolicitudManager {
                         </span>
                     </td>
                     <td class="text-center align-middle">
-                        <select class="form-select form-select-sm departamento">
+                        <select ${isReadOnly} class="form-select form-select-sm departamento">
                         ${departamentosHtml}    
                         </select>
                     </td>
                     <td class="text-center align-middle">
-                        <select class="form-select form-select-sm proceso">
+                        <select ${isReadOnly} class="form-select form-select-sm proceso">
                             ${procesosHtml}
                         </select>
                     </td>
                     <td class="text-center align-middle">
-                        <select class="form-select form-select-sm gastos">
+                        <select ${isReadOnly} class="form-select form-select-sm gastos">
                             ${gastosHtml}
                         </select>
                     </td>
                     <td class="text-center align-middle">
-                    <select class="form-select form-select-sm cedis">
+                    <select ${isReadOnly} class="form-select form-select-sm cedis">
                             ${cedisHtml}
                         </select>
                     </td>
                     <td class="text-center align-middle">
-                        <input type="text" class="form-control form-control-sm nombre_empleado text-center"
+                        <input ${isReadOnly} type="text" class="form-control form-control-sm nombre_empleado text-center"
                                value="${nombreEmpleado}">
                     </td>
                 </tr>

@@ -106,6 +106,12 @@ class ValidationManagerLogin {
                                         window.location.href = '/MantenimientosPreventivos/MantenimientoPreventivo';
                                     }, 1000);
                                 }
+                                //Supervisor Mantenimiento
+                                if (datos_usuario[0].TIPOUSUARIO == "SupervisorMantenimiento") {
+                                    setTimeout(function () {
+                                        window.location.href = '/MantenimientosPreventivos/MantenimientoPreventivo';
+                                    }, 1000);
+                                }
                                 //Almacen
                                 else if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen" || datos_usuario[0].TIPOUSUARIO == "Almacen") {
                                     setTimeout(function () {

@@ -361,9 +361,8 @@ namespace MantenimientosPTM
                         newLine["CostingCode2"] = articulo.Proceso;
                         newLine["CostingCode3"] = articulo.Gastos;
                         newLine["CostingCode4"] = articulo.Cedis;
-                        newLine["CostingCode5"] = payload.DataMovimiento.NumEmpleado;
-                        newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
-                        newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
+                        newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe; //AUTORIZA (RECIBE)
+                        newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega; //ALMACENISTA (ENTREGA)
 
 
                         // ✅ Cuenta contable si aplica
@@ -403,7 +402,7 @@ namespace MantenimientosPTM
                 dictGI["DocDueDate"] = DateTime.Now.ToString("yyyy-MM-dd");
                 dictGI["Comments"] = $"Salida de mercancía generada por interfaz PTM Mantenimientos — {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Para solicitud: {payload.Referencia} Orden Trabajo: {payload.OrdenTrabajo}";
                 dictGI["JournalMemo"] = $"Salida de mercancía para solicitud: {payload.Referencia} Orden Trabajo: {payload.OrdenTrabajo}";
-                dictGI["Reference2"] = payload.DataMovimiento.Recibe;
+                dictGI["Reference2"] = payload.DataMovimiento.Recibe; //AUTORIZA (RECIBE)
 
                 var serie = GetSerieByName(payload.Contabilizacion[0].Cedis);
 
