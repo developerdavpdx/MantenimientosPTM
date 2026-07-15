@@ -1683,13 +1683,14 @@ class MantenimientoManager {
                 // ============================
                 case "AdminMtto":
                 case "Administrador":
+                case "SupervisorMantenimiento":
 
                     if (typeof this.configurarVistaAdministrador === "function") {
                         this.configurarVistaAdministrador(
                             data.estatusOrden,
                             data.firmaRealizo,
-                            data.firmaMantenimiento,
                             data.firmaSuperviso,
+                            data.firmaMantenimiento,
                             data.numeroOrden,
                             data.idEquipo,
                             data.planta,
@@ -1698,11 +1699,6 @@ class MantenimientoManager {
                         );
                     } else {
                         console.error("❌ configurarVistaAdministrador no definido");
-                    }
-
-                    // 🔥 Si la orden ya está atendida → cargar actividades READONLY
-                    if (data.estatusOrden == 4 && typeof this.ConsultarActividadesPorOTMP === "function") {
-                        this.ConsultarActividadesPorOTMP(data.numeroOrden, data.idEquipo, data.planta, data.comentariosRutina);
                     }
 
                     break;
@@ -1718,17 +1714,17 @@ class MantenimientoManager {
                     if (typeof this.configurarVistaAdministrador === "function") {
                         this.configurarVistaAdministrador(
                             data.estatusOrden,
-                            data.firmaMantenimiento,
+                            data.firmaRealizo,
                             data.firmaSuperviso,
+                            data.firmaMantenimientso,
                             data.numeroOrden,
                             data.idEquipo,
-                            data.planta
+                            data.planta,
+                            data.idEquipoPeriodicidad,
+                            data.comentariosRutina
                         );
-                    }
-
-                    // 🔥 También carga actividades por seguridad si está atendida
-                    else if (data.estatusOrden == 4 && typeof this.ConsultarActividadesPorOTMP === "function") {
-                        this.ConsultarActividadesPorOTMP(data.numeroOrden, data.idEquipo, data.planta);
+                    } else {
+                        console.error("❌ configurarVistaAdministrador no definido");
                     }
 
                     break;
@@ -2060,9 +2056,9 @@ class MantenimientoManager {
     }
 
     // ========================================
-    // 👨‍💼 CONFIGURAR VISTA ADMIN (CORRECTIVO)
+    // 👨‍💼 CONFIGURAR VISTA ADMIN (PREVENTIVO)
     // ========================================
-    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaMantenimiento, FirmaSuperviso, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad, ComentariosRutina) {
+    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaSuperviso,FirmaMantenimiento, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad, ComentariosRutina) {
 
 
         //Cambiar títulos de firma dependiendo la planta
@@ -2137,10 +2133,6 @@ class MantenimientoManager {
             // 🔥 Si la orden ya está atendida → cargar actividades READONLY
             this.ConsultarActividadesPorOTMP(NumeroOrden, IdEquipo, Planta, ComentariosRutina);
 
-            //PARA DEMO OCULTAR SECCION
-            //$("#formRutinaOnline").addClass("d-none");
-            //$("#EvidenciaOrdenTrabajo").addClass("d-none");
-            //$("#rutinamaincontainer").addClass("d-none");
         }
         // OCULTAR SECCIONES SI LA ORDEN NO HA SIDO ATENDIDA POR EL TÉCNICO
         else {
@@ -2212,7 +2204,7 @@ class MantenimientoManager {
         else this.gestionFirmas.deshabilitarFirma("Realizo", true);
 
         if (FirmaMantenimiento != "") this.gestionFirmas._bloquearFirma("Mantenimiento", true);
-        else this.gestionFirmas.deshabilitarFirma("Mantenimiento", true);
+        
 
         //BOTON BORRADOR
         $('#btnGuardarBorrador').addClass('d-none').prop('disabled', true);

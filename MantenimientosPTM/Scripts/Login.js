@@ -79,7 +79,6 @@ class ValidationManagerLogin {
                                 //Agregar correo
                                 UserData[0].EMAIL = usuario;
 
-                                AlertManager.mostrar('¡Bienvenido! ' + data.Message, 'success');
                                 btnSubmit.addClass("text-white");
                                 btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Estamos preparando todo...');
 
@@ -92,43 +91,35 @@ class ValidationManagerLogin {
                                 sessionStorage.setItem('userData', JSON.stringify(UserData));
 
                                 //Validar permisos y modulos
+                                //Validar permisos y modulos
                                 let datos_usuario = GlobalUtil.getDatosUsuario();
+                                const tipoUsuario = datos_usuario[0].TIPOUSUARIO;
 
-                                //Administrador
-                                if (datos_usuario[0].TIPOUSUARIO == "AdminMtto" || datos_usuario[0].TIPOUSUARIO == "Administrador") {
+                                // Mapeo de perfiles a rutas
+                                const rutasPorPerfil = {
+                                    'AdminMtto': '/Equipos/GestionEquipos',
+                                    'Administrador': '/Equipos/GestionEquipos',
+                                    'TecnicoMtto': '/MantenimientosPreventivos/MantenimientoPreventivo',
+                                    'SupervisorMantenimiento': '/MantenimientosPreventivos/MantenimientoPreventivo',
+                                    'SupervisorAlmacen': '/Almacen/SolicitudRefacciones',
+                                    'Almacen': '/Almacen/SolicitudRefacciones',
+                                    'SupervisorPlaneacion': '/Planeacion/Planeacion',
+                                    'Planeacion': '/Planeacion/Planeacion',
+                                    'SupervisorProduccion': '/Produccion/ParosProduccion',
+                                    'Produccion': '/Produccion/ParosProduccion'
+                                };
+
+                                // Validar que el perfil exista
+                                if (rutasPorPerfil[tipoUsuario]) {
                                     setTimeout(function () {
-                                        window.location.href = '/Equipos/GestionEquipos';
-                                    }, 1000);
-                                }
-                                //Tecnico Mtto
-                                else if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
-                                    setTimeout(function () {
-                                        window.location.href = '/MantenimientosPreventivos/MantenimientoPreventivo';
-                                    }, 1000);
-                                }
-                                //Supervisor Mantenimiento
-                                if (datos_usuario[0].TIPOUSUARIO == "SupervisorMantenimiento") {
-                                    setTimeout(function () {
-                                        window.location.href = '/MantenimientosPreventivos/MantenimientoPreventivo';
-                                    }, 1000);
-                                }
-                                //Almacen
-                                else if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen" || datos_usuario[0].TIPOUSUARIO == "Almacen") {
-                                    setTimeout(function () {
-                                        window.location.href = '/Almacen/SolicitudRefacciones';
-                                    }, 1000);
-                                }
-                                //Planeacion
-                                else if (datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion" || datos_usuario[0].TIPOUSUARIO == "Planeacion") {
-                                    setTimeout(function () {
-                                        window.location.href = '/Planeacion/Planeacion';
-                                    }, 1000);
-                                }
-                                //Produccion
-                                else if (datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion" || datos_usuario[0].TIPOUSUARIO == "Produccion") {
-                                    setTimeout(function () {
-                                        window.location.href = '/Produccion/ParosProduccion';
-                                    }, 1000);
+                                        AlertManager.mostrar('¡Bienvenido! ' + data.Message, 'success');
+                                        window.location.href = rutasPorPerfil[tipoUsuario];
+                                    }, 2000);
+                                } else {
+                                    // Perfil no configurado
+                                    AlertManager.mostrar('Perfil ' + tipoUsuario + ' no configurado, contacte al administrador', 'warning');
+                                    ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
+                                    ValidationManagerLogin.validacionEnProceso = false;
                                 }
                             }
                             else {

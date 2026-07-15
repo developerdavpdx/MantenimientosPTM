@@ -166,7 +166,7 @@ class CalendarManager {
     }
 
     // ✅ Función para obtener mantenimientos completados del SP
-    obtenerMantenimientosAnuales(fechaInicio = null, fechaFin = null) {
+    obtenerMantenimientosAnuales(Planta,fechaInicio = null, fechaFin = null) {
         return new Promise((resolve, reject) => {
             // Si no se proporcionan fechas, usar el año actual
             if (!fechaInicio || !fechaFin) {
@@ -179,6 +179,7 @@ class CalendarManager {
                 url: `/${this.URLBase}/GetMantenimientosCompletados`,
                 type: 'GET',
                 data: {
+                    planta: Planta,
                     fechaInicio: fechaInicio,
                     fechaFin: fechaFin
                 },
@@ -284,7 +285,7 @@ class CalendarManager {
         GlobalUtil.mostrarLoader(true);
 
         try {
-            const datosHana = await this.obtenerMantenimientosAnuales(fechaInicio, fechaFin);
+            const datosHana = await this.obtenerMantenimientosAnuales(this.datos_usuario[0].PLANTA,fechaInicio, fechaFin);
 
             if (datosHana && datosHana.length > 0) {
                 const eventosCalendario = this.transformarEventosCalendario(datosHana);
