@@ -335,7 +335,6 @@ class SolicitudRefaccionesApp {
             $('#numEmpleado').val(numeroempleado);
             $('#area').val(departamento);
             $("#titleSalidaMercancia").text("Entrega de Materiales");
-            $("#btnRechazarDev").addClass("d-none");
             $("#btnGuardarVale").attr("operacion", "SALIDA");
             $("#btnGuardarVale").attr("ordentrabajo", ordenTrabajo);
             $("#btnGuardarVale").attr("solicita", solicita);
@@ -352,7 +351,6 @@ class SolicitudRefaccionesApp {
     async _abrirModalDevolucion(e) {
         const $btn = $(e.currentTarget);
         const ot = $btn.data('ordentrabajo');
-
         GlobalUtil.mostrarLoader(true);
 
         try {
@@ -1597,7 +1595,7 @@ class SolicitudManager {
     abrirModalDevolucion(articulosAtendidos) {
 
         this.articulosAtendidos = articulosAtendidos;
-
+        $("#btnRechazarDev").removeClass("d-none");
         $('#badgeTotalDevolucion').text(articulosAtendidos.length);
 
         const tbody = $('#bodyArticulosDevolucion');
@@ -1616,7 +1614,7 @@ class SolicitudManager {
         else {
 
             articulosAtendidos.forEach((art, index) => {
-
+                const idSolicitud = String(art.ID_SOLICITUD || "")
                 const cantidadSolicitada = Number(art.CANTIDAD_SOLICITADA || 0);
                 const cantidadAtendida = Number(art.CANTIDAD_SURTIDA || 0);
 
@@ -1628,7 +1626,7 @@ class SolicitudManager {
                 </td>
 
                 <td class="text-center">
-                    <input type="checkbox"
+                    <input type="checkbox" data-idsolicitud="${idSolicitud}"
                            class="form-check-input chk-articulo-devolucion"
                            checked>
                 </td>
@@ -2309,7 +2307,7 @@ class SolicitudManager {
         const dataAttrs = `data-ordentrabajo="${ordenTrabajo}" data-estatus="${estatus}" data-solicita="${solicita}" data-numeroempleado="${NumeroEmpleado}" data-departamento="${Departamento}" data-totalatendidas="${totalPendienteDevolucion}"`;
 
         const btn = (color, cssClass, icon, tooltip, attrs = '') =>
-            `<button class="btn btn-sm ${color} ${cssClass}" data-bs-toggle="tooltip" title="${tooltip}" ${attrs} ${dataAttrs}>
+            `<button class="btn btn-sm ${color} ${cssClass}" data-bs-toggle="tooltip" data-bs-title="${tooltip}" ${attrs} ${dataAttrs}>
                 <i class="bi bi-${icon}"></i>
             </button>`;
 

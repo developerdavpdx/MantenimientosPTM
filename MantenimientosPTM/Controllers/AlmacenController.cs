@@ -2341,10 +2341,7 @@ namespace MantenimientosPTM.Controllers
                 {
                     { "P_ID_SALIDA",(idSolicitud , ParameterDirection.Input, HanaDbType.Integer) },
                     { "P_MOTIVO",(motivo , ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_COMENTARIOS",(comentario , ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "O_ID",(NewIdRech , ParameterDirection.Input, HanaDbType.Integer) },
-                    { "O_ERROR",(Error , ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "O_MSG",(Msg , ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_COMENTARIOS",(comentario , ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
