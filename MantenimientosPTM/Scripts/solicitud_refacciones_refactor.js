@@ -7,6 +7,7 @@ class SolicitudRefaccionesApp {
         this.datos_usuario = GlobalUtil.getDatosUsuario();
         this.solicitudIdCounter = 6;
         this._isReloadingRefacciones = false;
+        this.idsSeleccionado = [];
 
         // ✅ Guardar referencia para métodos enlazados
         this._recargarTablaSolicitudRefacciones = this._recargarTablaSolicitudRefacciones.bind(this);
@@ -184,8 +185,14 @@ class SolicitudRefaccionesApp {
 
         // Rechazo de devolución
         $("#btnRechazarDev").on("click", () => {
-            $('#devolucionMercancia').modal('hide');
-            $("#rechazoDevolucion").modal("show");
+
+            let idsSeleccionado = this.solicitudManager.obtenerIdsSolicitudSeleccionadas();
+            if (idsSeleccionado.length > 0) {
+                $('#devolucionMercancia').modal('hide');
+                $("#rechazoDevolucion").modal("show");
+            }
+            else
+                AlertManager.mostrar('Debes seleccionar al menos una solicitud para continuar.', 'warning');
         });
 
         // Cancelar rechazo
@@ -559,10 +566,19 @@ class SolicitudRefaccionesApp {
             return;
         }
 
+        // ✅ NUEVO: Obtener IDs seleccionados
+        const idsSeleccionados = this.solicitudManager.obtenerIdsSolicitudSeleccionadas();
+        if (idsSeleccionados.length === 0) {
+            AlertManager.mostrar('Debes seleccionar al menos una solicitud para continuar.', 'warning');
+            $btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Aceptar');
+            return;
+        }
+
         const formData = new FormData();
         formData.append("Motivo", motivo);
         formData.append("Comentario", $("#CommentRech").val().trim());
-        formData.append("IdSolicitud", $("#btnGuardarRech").attr("idsolicitud"));
+        // ✅ NUEVO: Enviar array de IDs como JSON
+        formData.append("IdsSeleccionados", JSON.stringify(idsSeleccionados));
 
         if (window.imagenesRutina && window.imagenesRutina.length > 0) {
             window.imagenesRutina.forEach((file) => {
@@ -1067,7 +1083,7 @@ class SolicitudManager {
 
     async obtenerCentrosCostos() {
         try {
-            const [departamentos,procesos,gastos,cedis] = await Promise.all([
+            const [departamentos, procesos, gastos, cedis] = await Promise.all([
                 this.getCentroCostos(1),
                 this.getCentroCostos(2),
                 this.getCentroCostos(3),
@@ -1086,7 +1102,7 @@ class SolicitudManager {
             this.ListProcesos = [];
             this.ListGastos = [];
             this.ListCedis = [];
-            
+
         }
     }
 
@@ -1335,6 +1351,11 @@ class SolicitudManager {
             return;
         }
 
+        // ✅ NUEVO: Verificar si TODOS los artículos están "Atendida"
+        const todosAtendidos = articulos.every(art =>
+            art.ESTATUS === 'Atendida' || art.ESTATUS === 'ATENDIDA'
+        );
+
         // ✅ Datos comunes del usuario
         const dept = this.datosUsuarioSalida.dept || '';
         const cedis = this.datosUsuarioSalida.cedis || '';
@@ -1344,9 +1365,7 @@ class SolicitudManager {
         const departamentosHtml = this.buildOptions(this.ListDepartamentos, 'PrcCode', dept);
         const procesosHtml = this.buildOptions(this.ListProcesos, 'PrcCode', 'PCPVC');
         const gastosHtml = this.buildOptions(this.ListGastos, 'PrcCode', 'GIF');
-        const cedisHtml = this.buildOptions(this.ListCedis, 'PrcCode', this.datos_usuario[0].PLANTA == "1" ? 'CCOR': 'PLANTA2');
-
-        
+        const cedisHtml = this.buildOptions(this.ListCedis, 'PrcCode', this.datos_usuario[0].PLANTA == "1" ? 'CCOR' : 'PLANTA2');
 
         $('#badgeTotalArticulos').text(articulos.length);
 
@@ -1461,32 +1480,56 @@ class SolicitudManager {
                         </span>
                     </td>
                     <td class="text-center align-middle">
-                        <select ${isReadOnly} class="form-select form-select-sm departamento">
+                        <select ${isReadOnly} class="form-select form-select-sm departamento" ${todosAtendidos ? 'disabled' : ''}>
                         ${departamentosHtml}    
                         </select>
                     </td>
                     <td class="text-center align-middle">
-                        <select ${isReadOnly} class="form-select form-select-sm proceso">
+                        <select ${isReadOnly} class="form-select form-select-sm proceso" ${todosAtendidos ? 'disabled' : ''}>
                             ${procesosHtml}
                         </select>
                     </td>
                     <td class="text-center align-middle">
-                        <select ${isReadOnly} class="form-select form-select-sm gastos">
+                        <select ${isReadOnly} class="form-select form-select-sm gastos" ${todosAtendidos ? 'disabled' : ''}>
                             ${gastosHtml}
                         </select>
                     </td>
                     <td class="text-center align-middle">
-                    <select ${isReadOnly} class="form-select form-select-sm cedis">
+                    <select ${isReadOnly} class="form-select form-select-sm cedis" ${todosAtendidos ? 'disabled' : ''}>
                             ${cedisHtml}
                         </select>
                     </td>
                     <td class="text-center align-middle">
                         <input ${isReadOnly} type="text" class="form-control form-control-sm nombre_empleado text-center"
-                               value="${nombreEmpleado}">
+                               value="${nombreEmpleado}" ${todosAtendidos ? 'disabled' : ''}>
                     </td>
                 </tr>
             `);
         });
+
+        // ✅ NUEVO: Ocultar botón si TODOS están atendidos
+        if (todosAtendidos) {
+            $("#btnGuardarVale").addClass("d-none");
+            // También deshabilitar el checkbox de seleccionar todos
+            $("#chkSelAllArticulos").prop('disabled', true);
+
+            // ✅ NUEVO: Deshabilitar campos cuando todos están atendidos
+            $("#solicitante").prop('disabled', true);
+            $("#numEmpleado").prop('disabled', true);
+            $("#area").prop('disabled', true);
+            $("#firmaAlmacen").prop('disabled', true);
+            $("#firmaAutoriza").prop('disabled', true);
+        } else {
+            $("#btnGuardarVale").removeClass("d-none");
+            $("#chkSelAllArticulos").prop('disabled', false);
+
+            // ✅ NUEVO: Habilitar campos cuando NO todos están atendidos
+            $("#solicitante").prop('disabled', false);
+            $("#numEmpleado").prop('disabled', false);
+            $("#area").prop('disabled', false);
+            $("#firmaAlmacen").prop('disabled', false);
+            $("#firmaAutoriza").prop('disabled', false);
+        }
 
         // ✅ Reinicializar tooltips para los nuevos elementos
         $('[data-bs-toggle="tooltip"]').tooltip();
@@ -1610,25 +1653,45 @@ class SolicitudManager {
                 </td>
             </tr>
         `);
+            $("#btnGuardarDevolucion").addClass("d-none");
+            $("#btnRechazarDev").addClass("d-none");
         }
         else {
+            // ✅ NUEVO: Verificar si TODOS tienen DEVOLUCION_RECHAZADA = 1
+            const todosRechazados = articulosAtendidos.every(art =>
+                art.DEVOLUCION_RECHAZADA === 1 || art.DEVOLUCION_RECHAZADA === '1'
+            );
 
             articulosAtendidos.forEach((art, index) => {
                 const idSolicitud = String(art.ID_SOLICITUD || "")
                 const cantidadSolicitada = Number(art.CANTIDAD_SOLICITADA || 0);
                 const cantidadAtendida = Number(art.CANTIDAD_SURTIDA || 0);
 
+                // ✅ NUEVO: Verificar si esta fila está rechazada
+                const esRechazado = art.DEVOLUCION_RECHAZADA === 1 || art.DEVOLUCION_RECHAZADA === '1';
+                const claseRechazado = esRechazado ? 'fila-devolucion-rechazada' : '';
+                const motivo = art.MOTIVO || 'Devolución rechazada';
+                const comentario = art.COMENTARIOS || '';
+
+                // ✅ Construir tooltip si está rechazado
+                let tooltipAttr = '';
+                if (esRechazado) {
+                    const textoTooltip = `❌ Devolución Rechazada\nMotivo: ${motivo}${comentario ? '\nComentario: ' + comentario : ''}`;
+                    tooltipAttr = `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="tooltip-devolucion-rechazada" data-bs-title="${textoTooltip.replace(/"/g, '&quot;')}"`;
+                }
+
                 tbody.append(`
-            <tr>
+            <tr class="${claseRechazado}" ${tooltipAttr}>
 
                 <td class="text-center">
+                    ${esRechazado ? '<i class="bi bi-x-circle-fill icono-rechazo-devolucion"></i>' : ''}
                     ${index + 1}
                 </td>
 
                 <td class="text-center">
                     <input type="checkbox" data-idsolicitud="${idSolicitud}"
                            class="form-check-input chk-articulo-devolucion"
-                           checked>
+                           ${esRechazado ? 'disabled' : 'checked'}>
                 </td>
 
                 <td class="text-center">
@@ -1669,6 +1732,7 @@ class SolicitudManager {
                            data-cantidadsolicitada="${cantidadSolicitada}"
                            data-cantidadatendida="${cantidadAtendida}"
 
+                           ${esRechazado ? 'disabled readonly' : ''}
                            required>
                 </td>
 
@@ -1691,6 +1755,15 @@ class SolicitudManager {
             </tr>
         `);
             });
+
+            // ✅ NUEVO: Ocultar botones si TODOS están rechazados
+            if (todosRechazados) {
+                $("#btnGuardarDevolucion").addClass("d-none");
+                $("#btnRechazarDev").addClass("d-none");
+            } else {
+                $("#btnGuardarDevolucion").removeClass("d-none");
+                $("#btnRechazarDev").removeClass("d-none");
+            }
         }
 
         // Configurar eventos
@@ -1711,6 +1784,12 @@ class SolicitudManager {
 
         // Actualizar contador
         this.actualizarContadorDevolucion();
+
+        // ✅ Reinicializar tooltips después de renderizar
+        setTimeout(() => {
+            $('[data-bs-toggle="tooltip"]').tooltip('dispose');
+            $('[data-bs-toggle="tooltip"]').tooltip();
+        }, 100);
 
         // Mostrar modal
         $('#devolucionMercancia').modal('show');
@@ -1753,6 +1832,35 @@ class SolicitudManager {
     actualizarContadorDevolucion() {
         const seleccionados = $('.chk-articulo-devolucion:checked').length;
         $('#contadorDevolucion').text(seleccionados);
+    }
+
+
+    // ========================================
+    // OBTENER IDS DE DEVOLUCIONES SELECCIONADAS
+    // ========================================
+
+    obtenerIdsSolicitudSeleccionadas() {
+        const idsSeleccionados = [];
+
+        $('.chk-articulo-devolucion:checked').each(function () {
+            const idSolicitud = parseInt($(this).data('idsolicitud'), 10);
+            if (!isNaN(idSolicitud)) {
+                idsSeleccionados.push(idSolicitud);
+            }
+        });
+
+        return idsSeleccionados;
+    }
+
+    validarSolicitudesSeleccionadas() {
+        const ids = this.obtenerIdsSolicitudSeleccionadas();
+
+        if (ids.length === 0) {
+            AlertManager.mostrar('Seleccione al menos una salida de mercancía para continuar.', 'warning', 'alertDevolucionContainer');
+            return null;
+        }
+
+        return ids;
     }
 
     // ========================================
@@ -2315,7 +2423,8 @@ class SolicitudManager {
             ? btn('btn-ptm-primary', 'btn-devolucion-mercancia', 'arrow-return-left', 'Generar Devolución de Mercancía')
             : '';
 
-        const salidaBtn = esAdmin && estatus === 'Pendiente'
+            //&& estatus === 'Pendiente'
+        const salidaBtn = esAdmin 
             ? btn('btn-ptm-mid', 'btn-salida-mercancia', 'box-arrow-up', 'Generar Salida de Mercancía')
             : '';
 
