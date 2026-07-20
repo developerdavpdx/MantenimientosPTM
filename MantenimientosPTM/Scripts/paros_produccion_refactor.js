@@ -229,6 +229,14 @@ class GestionEventosApp {
                     null
                 );
             });
+
+        $(document).on('click', '#eliminaParoProduccion', (e) => {
+
+            const idParo = $(e.currentTarget).data("idparo");
+
+            this.ProduccionManager.eliminarParo(idParo);
+
+        });
     }
 }
 
@@ -421,6 +429,21 @@ class ProduccionManager {
                         defaultContent: '',
                         width: '30px'
                     },
+                    {                        
+                        data: null,
+                        orderable: false,
+                        className: "text-center",
+                        width: '50px',
+                        render: (data, type, row) => {
+                            if (data.TIPO_PARO !== "CORRECTIVO") {
+                                return `<button id="eliminaParoProduccion" type="button" class="btn btn-sm btn-ptm-eliminar btn-eliminar-tipo" data-bs-toggle="tooltip" title="Eliminar" data-idParo="${data.ID_PARO}">
+                                    <i class="bi bi-trash"></i>
+                                </button>`;
+                            }
+
+                            return "";
+                        }
+                    },
                     // Columna: Planta
                     {
                         data: "PLANTA",
@@ -528,22 +551,23 @@ class ProduccionManager {
 
                 columnDefs: [
                     // Ajustes tras agregar la columna ARTICULO (desplaza índices a la derecha a partir de la posición 3)
-                    { orderable: false, targets: [0, 7, 8] },
-                    { visible: false, targets: [7, 10] },
-                    { className: "text-center", targets: [0, 1, 5, 6, 7, 9] },
+                    { orderable: false, targets: [0, 1, 8, 9] },
+                    { visible: false, targets: [8, 11] },
+                    { className: "text-center", targets: [0, 2, 5, 6, 7, 8, 10] },
 
                     // Prioridades responsive (ahora 11 columnas: 0..10)
                     { responsivePriority: 1, targets: 0 },
-                    { responsivePriority: 2, targets: 1 }, // Planta
-                    { responsivePriority: 3, targets: 2 }, // Línea
-                    { responsivePriority: 4, targets: 3 }, // Artículo (nuevo)
-                    { responsivePriority: 5, targets: 4 }, // Categoria
-                    { responsivePriority: 6, targets: 5 }, // Usuario
-                    { responsivePriority: 7, targets: 6 }, // Fecha Inicio
-                    { responsivePriority: 8, targets: 7 }, // Fecha Fin
-                    { responsivePriority: 9, targets: 8 }, // Duracion
-                    { responsivePriority: 10, targets: 9 },  // Comentarios
-                    { responsivePriority: 11, targets: 10 }  // Estado
+                    { responsivePriority: 2, targets: 1 },
+                    { responsivePriority: 3, targets: 2 }, // Planta
+                    { responsivePriority: 4, targets: 3 }, // Línea
+                    { responsivePriority: 5, targets: 4 }, // Artículo (nuevo)
+                    { responsivePriority: 6, targets: 5 }, // Categoria
+                    { responsivePriority: 7, targets: 6 }, // Usuario
+                    { responsivePriority: 8, targets: 7 }, // Fecha Inicio
+                    { responsivePriority: 9, targets: 8 }, // Fecha Fin
+                    { responsivePriority: 10, targets: 9 }, // Duracion
+                    { responsivePriority: 11, targets: 10 },  // Comentarios
+                    { responsivePriority: 12, targets: 11 }  // Estado
                 ],
 
                 ordering: false,
@@ -896,6 +920,63 @@ class ProduccionManager {
         });
     }
 
+    eliminarParo(idParo) {
+
+        ConfirmManager.mostrar({
+            titulo: `¿Eliminar paro ${idParo}?`,
+            mensaje: `
+                    <div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;">
+                        <div>Se eliminarán el paro <strong>${idParo}</strong>.</div>
+                        <hr style="margin:10px 0;">
+                        <div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irrevocable.</div>
+                    </div>
+                `,
+            onConfirm: () => {
+                $.ajax({
+                    url: `/${this.URLBase}/EliminarParoProduccion`,
+                    type: 'PUT',
+                    contentType: 'application/json; charset=utf-8',
+                    data: JSON.stringify({
+                        idParo: idParo
+                    }),
+                    dataType: 'json',
+                    beforeSend: () => { GlobalUtil.mostrarLoader(true, "Eliminando por favor espere…"); },
+                    success: (response) => {
+                        if (response.Status === 'SI') {
+                            GlobalUtil.mostrarLoader(false, "Cargando paros por favor espere...");
+                            // ✅ Cargar los eventos reales desde HANA
+                            $('#tablaPlaneacion').DataTable().ajax.reload();
+
+                            $('#eventForm')[0].reset();
+                            ValidationManager.limpiarValidacion("eventForm");
+
+
+                            AlertManager.mostrar(
+                                `Registro eliminado`,
+                                'success'
+                            );
+
+                            this.llenarTablaParos();
+                        } else {
+                            console.log("Entró al else");
+
+                            AlertManager.mostrar(
+                                response.Message,
+                                'warning'
+                            );
+                        }
+                    },
+                    error: (xhr, status, error) => {
+                        GlobalUtil.mostrarLoader(false, "Cargando paros por favor espere...");
+                        AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+                    }
+                });
+
+            }
+        });
+
+    }
+
     abrirModalAgregarPlan(e) {
         e.preventDefault();
         $("#Comentarios").val('');
@@ -1223,6 +1304,8 @@ class ProduccionManager {
                 .prop('disabled', false);
         }
     }
+
+    
 }
 
 class AutocompleteParoArticulo {

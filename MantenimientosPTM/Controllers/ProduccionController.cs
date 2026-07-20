@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using MantenimientosPTM.Models.Dto;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Sap.Data.Hana;
 using System;
@@ -1182,7 +1183,48 @@ namespace MantenimientosPTM.Controllers
 
             return string.Empty;
         }
-    
-        
+
+        [HttpPut]
+        public JsonResult EliminarParoProduccion(EliminarParoProduccionDTO request)
+        {
+           
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+                       
+            try
+            {
+                var parameters = Logic.GlobalCommands.ConvertToHanaParameters(request, true, null);
+
+                // Ejecutar stored procedure para insertar plan
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCEliminarParoProduccion, parameters);
+
+                if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                {
+                    // Construir respuesta JSON
+                    jsonResponse.Status = "NO";
+                    jsonResponse.Message = $"No fue posible eliminar el registro de paro de producción: {resultHana.JsonResult}";
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse);
+                }
+
+                // Obtener resultado del stored
+                var eliminacionR = JArray.Parse(resultHana.JsonResult);
+                string estatus = (string)eliminacionR[0]["ESTATUS"];
+                string mensaje = (string)eliminacionR[0]["MENSAJE"];
+
+                jsonResponse.Status = estatus == "OK" ? "SI" : "NO";
+                jsonResponse.Message = mensaje;
+                jsonResponse.Data = resultHana.JsonResult;
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible eliminar el registro de paro producción: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+
     }
 }
