@@ -73,6 +73,13 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOObtenerActividadesPorOTMP\"";
             }
         }
+        public string GCSolicitarReprogramacion
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOSolicitarReprogramacion\"";
+            }
+        }
         #endregion
 
         #region AditionalClassModel
@@ -411,6 +418,46 @@ namespace MantenimientosPTM
             public string OBSERVACIONES { get; set; }
             public int? ORDEN { get; set; }
         }
+
+        public class SolicitarReprogramacionDTO
+        {
+            [JsonProperty("IdSolicitud")]
+            public int? IdSolicitud { get; set; }
+            [JsonProperty("IdEquipo")]
+            public int IdEquipo { get; set; }
+
+            [JsonProperty("NumeroOrden")]
+            public string NumeroOrden { get; set; }
+
+            [JsonProperty("FechaActualInicio")]
+            public string FechaActualInicio { get; set; }
+
+            [JsonProperty("FechaActualFin")]
+            public string FechaActualFin { get; set; }
+
+            [JsonProperty("Motivo")]
+            public string Motivo { get; set; }
+
+            [JsonProperty("UsuarioSolicita")]
+            public string UsuarioSolicita { get; set; }
+
+            [JsonProperty("IdPeriodicidad")]
+            public int IdPeriodicidad { get; set; }
+
+            [JsonProperty("Planta")]
+            public int? Planta { get; set; }
+        }
+
+        public class SolicitarReprogramacionResponseDTO
+        {
+            [JsonProperty("ID_SOLICITUD")]
+            public int IdSolicitud { get; set; }
+
+            [JsonProperty("ESTATUS")]
+            public string Estatus { get; set; }
+        }
+
+        //NUEVO
         #endregion
     }
 }

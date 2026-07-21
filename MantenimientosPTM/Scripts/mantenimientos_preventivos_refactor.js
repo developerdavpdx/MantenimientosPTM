@@ -691,8 +691,6 @@ class MantenimientoManager {
             NumeroOrden: this.datosBotón.numeroOrden,
             FechaActualInicio: $('#ReprogramacionFechaActualInicio').val(),
             FechaActualFin: $('#ReprogramacionFechaActualFin').val(),
-            FechaNuevaInicio: $('#ReprogramacionFechaNovaInicio').val(),
-            FechaNovaFin: $('#ReprogramacionFechaNovaFin').val(),
             Motivo: $('#ReprogramacionMotivo').val(),
             UsuarioSolicita: this.datos_usuario[0].EMAIL,
             IdPeriodicidad: this.datosBotón.idPeriodicidad,
@@ -716,7 +714,7 @@ class MantenimientoManager {
             success: (response) => {
                 if (response.Status === 'SI') {
                     $('#btnEnviarReprogramacion').html('<i class="bi bi-check-circle-fill text-white me-2"></i>Solicitud enviada correctamente');
-                    AlertManager.mostrar('Solicitud de reprogramación enviada correctamente', 'success', 'alertReprogramacionContainer');
+                    AlertManager.mostrar(response.Message || 'Solicitud de reprogramación enviada correctamente', 'success', 'alertReprogramacionContainer');
 
                     // Recargar tabla
                     $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
@@ -725,10 +723,14 @@ class MantenimientoManager {
                         $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
                         $('#modalSolicitarReprogramacion').modal('hide');
                     }, 2000);
+                } else if (response.Status === 'ERROR') {
+                    $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
+                    $('#btnEnviarReprogramacion').prop('disabled', false);
+                    AlertManager.mostrar(response.Message || 'Error técnico al procesar la solicitud', 'danger', 'alertReprogramacionContainer');
                 } else {
                     $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
                     $('#btnEnviarReprogramacion').prop('disabled', false);
-                    AlertManager.mostrar(response.Message || 'Error al enviar solicitud de reprogramación', 'warning', 'alertReprogramacionContainer');
+                    AlertManager.mostrar(response.Message || 'No fue posible registrar la solicitud de reprogramación', 'warning', 'alertReprogramacionContainer');
                 }
             },
             error: (xhr, status, error) => {
