@@ -740,33 +740,45 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         new agGrid.Grid(gridDiv, gridOptions);
     }
 
-    getColumnaNumerica(cellClass) {
+    getColumnaNumerica(cellClass = '') {
 
         return {
 
             editable: true,
 
+            cellEditor: 'agNumberCellEditor',
+
             cellClass: cellClass,
 
             valueParser: params => {
-
-                if (params.newValue === null || params.newValue === '')
+                if (params.newValue === null || params.newValue === undefined || params.newValue === '')
                     return null;
 
-                const valor = parseFloat(params.newValue);
+                // Convierte string a número, maneja tanto comas como puntos como separador decimal
+                let valor = params.newValue.toString().trim();
 
-                return isNaN(valor) ? null : valor;
+                // Si contiene coma y punto, asumir que la coma es separador decimal (formato latino)
+                if (valor.includes(',') && valor.includes('.')) {
+                    const lastComma = valor.lastIndexOf(',');
+                    const lastDot = valor.lastIndexOf('.');
 
+                    if (lastComma > lastDot) {
+                        // Formato latino: 1.000,50 => remover puntos y usar coma como decimal
+                        valor = valor.replace(/\./g, '').replace(',', '.');
+                    } else {
+                        // Formato inglés: 1,000.50 => remover comas
+                        valor = valor.replace(/,/g, '');
+                    }
+                } else if (valor.includes(',')) {
+                    // Solo coma: asumir separador decimal
+                    valor = valor.replace(/,/g, '.');
+                }
+
+                const numValue = parseFloat(valor);
+                return isNaN(numValue) ? null : numValue;
             },
 
-            valueFormatter: params => {
-
-                if (params.data?.id === 'TOTALES')
-                    return this.formatearNumero(params.value);
-
-                return this.formatearNumero(params.value);
-
-            }
+            valueFormatter: params => this.formatearNumero(params.value)
 
         };
 
@@ -774,11 +786,30 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
     formatearNumero(valor) {
 
-        if (valor === null || valor === undefined || valor === '')
+        if (valor === null || valor === undefined || valor === '') return '';
+
+        // Asegurar que es un número
+        const numValue = typeof valor === 'number' ? valor : parseFloat(valor);
+
+        if (isNaN(numValue)) return '';
+
+        // Formato con 2 decimales y punto como separador decimal
+        return numValue.toFixed(2);
+
+    }
+
+    formatearPorcentaje(valor) {
+
+        if (valor === null || valor === undefined || valor === '') {
             return '';
+        }
 
-        return Number(valor).toFixed(2);
+        return `${parseFloat(valor).toFixed(2)}%`;
 
+    }
+
+    generarIdTemporal() {
+        return `TMP_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     }
 
     onCellChanged(event) {
@@ -1008,45 +1039,13 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         if (!this.gridApi) return;
 
-        const totales = {};
+        const filaTotales = this.obtenerTotalesGrid();
 
-        this.columnDefs.forEach(grupo => {
-
-            if (grupo.children) {
-
-                grupo.children.forEach(col => {
-
-                    if (col.field) {
-                        totales[col.field] = 0;
-                    }
-                });
-
-            }
-
-        });
-
-        this.gridApi.forEachNode(node => {
-
-            if (node.data?.id === 'TOTALES') return;
-
-            Object.keys(totales).forEach(field => {
-
-                const valor = parseFloat(node.data[field]) || 0;
-
-                totales[field] += valor;
-
-            });
-
-        });
-
-        this.gridApi.forEachNode(node => {
+        this.gridApi.forEachNode((node) => {
 
             if (node.data?.id === 'TOTALES') {
 
-                Object.keys(totales).forEach(field => {
-                    node.data[field] = totales[field];
-                });
-
+                node.setData(filaTotales);
             }
 
         });
@@ -1054,6 +1053,182 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         this.gridApi.refreshCells({
             force: true
         });
+
+    }
+
+    obtenerTotalesGrid() {
+
+        const totales = {
+
+            id: 'TOTALES',
+            Linea: 'TOTALES',
+
+            // =====================================
+            // GENERALES (no sumar)
+            // =====================================
+
+            Mes: null,
+            Fecha: null,
+            Producto: null,
+            Turno: null,
+            Grupo: null,
+
+            // =====================================
+            // PRODUCCIÓN
+            // =====================================
+
+            PesoMinimo: 0,
+
+            TRLiberados: 0,
+            ProduccionNeta: 0,
+
+            PesoEstandar: 0,
+
+            PorcentajeSobrepeso: null,
+
+            TotalScrap: 0,
+
+            PorcentajeTotalScrap: null,
+
+            // =====================================
+            // DISPONIBILIDAD
+            // =====================================
+
+            HorasProgramadas: 0,
+
+            // =====================================
+            // TIEMPO NO DISPONIBLE
+            // =====================================
+
+            Preventivo: 0,
+
+            ControlInventarios: 0,
+
+            FaltaEnergiaElectrica: 0,
+
+            FaltaMateriaPrimaInsumos: 0,
+
+            TiempoCalentamientoCI: 0,
+
+            PreparacionLineaCambioHerramental: 0,
+
+            TiempoCalentamientoHerramental: 0,
+
+            ArranqueEstabilizacionLinea: 0,
+
+            // =====================================
+            // TIEMPO NO PRODUCTIVO
+            // =====================================
+
+            TiempoMuertoCorrectivos: 0,
+
+            TiempoMuertoHerramentales: 0,
+
+            CambioMoldeSetupExcesos: 0,
+
+            FaltaPersonal: 0,
+
+            TiempoMuertoProceso: 0,
+
+            // =====================================
+            // KPI
+            // =====================================
+
+            TiempoDisponible: 0,
+
+            TiempoProductivo: 0
+
+        };
+
+        this.gridApi.forEachNode((node) => {
+
+            if (!node.data || node.data.id === 'TOTALES') {
+                return;
+            }
+
+            // =====================================
+            // PRODUCCIÓN
+            // =====================================
+
+            totales.PesoMinimo += Number(node.data.PesoMinimo || 0);
+
+            totales.TRLiberados += Number(node.data.TRLiberados || 0);
+            totales.ProduccionNeta += Number(node.data.ProduccionNeta || 0);
+
+            totales.PesoEstandar += Number(node.data.PesoEstandar || 0);
+
+            totales.TotalScrap += Number(node.data.TotalScrap || 0);
+
+            // =====================================
+            // DISPONIBILIDAD
+            // =====================================
+
+            totales.HorasProgramadas += Number(node.data.HorasProgramadas || 0);
+
+            // =====================================
+            // TIEMPO NO DISPONIBLE
+            // =====================================
+
+            totales.Preventivo += Number(node.data.Preventivo || 0);
+
+            totales.ControlInventarios += Number(node.data.ControlInventarios || 0);
+
+            totales.FaltaEnergiaElectrica += Number(node.data.FaltaEnergiaElectrica || 0);
+
+            totales.FaltaMateriaPrimaInsumos += Number(node.data.FaltaMateriaPrimaInsumos || 0);
+
+            totales.TiempoCalentamientoCI += Number(node.data.TiempoCalentamientoCI || 0);
+
+            totales.PreparacionLineaCambioHerramental += Number(node.data.PreparacionLineaCambioHerramental || 0);
+
+            totales.TiempoCalentamientoHerramental += Number(node.data.TiempoCalentamientoHerramental || 0);
+
+            totales.ArranqueEstabilizacionLinea += Number(node.data.ArranqueEstabilizacionLinea || 0);
+
+            // =====================================
+            // TIEMPO NO PRODUCTIVO
+            // =====================================
+
+            totales.TiempoMuertoCorrectivos += Number(node.data.TiempoMuertoCorrectivos || 0);
+
+            totales.TiempoMuertoHerramentales += Number(node.data.TiempoMuertoHerramentales || 0);
+
+            totales.CambioMoldeSetupExcesos += Number(node.data.CambioMoldeSetupExcesos || 0);
+
+            totales.FaltaPersonal += Number(node.data.FaltaPersonal || 0);
+
+            totales.TiempoMuertoProceso += Number(node.data.TiempoMuertoProceso || 0);
+
+            // =====================================
+            // KPI
+            // =====================================
+
+            totales.TiempoDisponible += Number(node.data.TiempoDisponible || 0);
+
+            totales.TiempoProductivo += Number(node.data.TiempoProductivo || 0);
+
+        });
+
+        // ========================================
+        // CALCULAR PORCENTAJES EN TOTALES
+        // ========================================
+
+        if (totales.PesoEstandar > 0) {
+
+            totales.PorcentajeSobrepeso =
+                ((totales.ProduccionNeta / totales.PesoEstandar) - 1) * 100;
+        }
+
+        const totalProduccion =
+            totales.ProduccionNeta + totales.TotalScrap;
+
+        if (totalProduccion > 0) {
+
+            totales.PorcentajeTotalScrap =
+                (totales.TotalScrap / totalProduccion) * 100;
+        }
+
+        return totales;
 
     }
 
@@ -1493,7 +1668,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         const nuevaFila = {
 
-            id: Date.now(),
+            id: this.generarIdTemporal(),
 
             ID_REGISTRO: null,
 
@@ -1518,13 +1693,13 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             TRLiberados: null,
             ProduccionNeta: null,
 
-            PesoEstandar: null,
+            PesoEstandar: 0,
 
-            PorcentajeSobrepeso: null,
+            PorcentajeSobrepeso: 0,
 
             TotalScrap: null,
 
-            PorcentajeTotalScrap: null,
+            PorcentajeTotalScrap: 0,
 
             // =====================================
             // DISPONIBILIDAD
@@ -1570,9 +1745,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             // KPI
             // =====================================
 
-            TiempoDisponible: null,
+            TiempoDisponible: 0,
 
-            TiempoProductivo: null
+            TiempoProductivo: 0
 
         };
 
@@ -1611,7 +1786,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         // NUEVO REGISTRO
         // ========================================
 
-        nuevaFila.id = Date.now();
+        nuevaFila.id = this.generarIdTemporal();
 
         nuevaFila.ID_REGISTRO = null;
 
@@ -1900,7 +2075,12 @@ class ExcelExporterPeadLiso extends ExcelExporterBase {
                         valor = '';
                     }
 
-                    fila.push(valor || '');
+                    // 🔥 Si el valor es 0, mantener el 0 (no convertir a string vacío)
+                    if (valor === 0 || valor === '0') {
+                        fila.push(0);
+                    } else {
+                        fila.push(valor || '');
+                    }
                 });
             });
 

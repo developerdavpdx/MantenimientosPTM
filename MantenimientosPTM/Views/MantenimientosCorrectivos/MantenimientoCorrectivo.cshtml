@@ -400,7 +400,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="HoraInicio">
-                                        <i class="bi bi-clock-fill"></i> Hora Apertura
+                                        <i class="bi bi-clock-fill"></i> Hora Apertura OT
                                     </label>
                                     <input type="time" class="form-control-custom" id="HoraInicio" name="HoraInicio" readonly autocomplete="off">
                                 </div>
@@ -494,17 +494,24 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="HoraInicioTrabajo">
-                                        <i class="bi bi-clock-fill"></i> Hora Inicio <span class="text-danger">*</span>
+                                        <i class="bi bi-clock-fill"></i> Hora Inicio Técnico <span class="text-danger">*</span>
                                     </label>
                                     <input type="time" class="form-control-custom" id="HoraInicioTrabajo" name="HoraInicioTrabajo" required autocomplete="off">
                                     <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de inicio.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom" for="HoraFin">
-                                        <i class="bi bi-clock-history"></i> Hora Fin <span class="text-danger">*</span>
+                                        <i class="bi bi-clock-history"></i> Hora Fin Técnico <span class="text-danger">*</span>
                                     </label>
                                     <input type="time" class="form-control-custom" id="HoraFin" name="HoraFin" required autocomplete="off">
                                     <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de fin.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-custom" for="HoraCierreMan">
+                                        <i class="bi bi-clock-history"></i> Hora Cierre OT
+                                    </label>
+                                    <input type="time" class="form-control-custom" id="HoraCierreMan" name="HoraCierreMan" readonly autocomplete="off">
+                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de cierre.</div>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label-custom" for="TextoSecuencia">
@@ -580,13 +587,6 @@
                                     </label>
                                     <input funcion_destino="darFormatoNum" type="text" class="validacion form-control-custom" id="Scrap" name="Scrap" readonly autocomplete="off">
                                     <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Por favor ingrese la cantidad de scrap.</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label-custom" for="HoraCierreMan">
-                                        <i class="bi bi-clock-history"></i> Hora Cierre
-                                    </label>
-                                    <input type="time" class="form-control-custom" id="HoraCierreMan" name="HoraCierreMan" readonly autocomplete="off">
-                                    <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Seleccione la hora de cierre.</div>
                                 </div>
                                 <div id="TiempoEsperaContainer" class="col-md-6 d-none">
                                     <label class="form-label-custom" for="TiempoEspera">
@@ -754,6 +754,9 @@
                         <i class="bi bi-x-circle me-1"></i> Cancelar
                     </button>
                     <div class="d-flex gap-2">
+                        <button type="button" class="btn-modal-guardar secondary d-none" id="btnGuardarBorrador">
+                            <i class="bi bi-pencil-square me-1"></i> Guardar Borrador
+                        </button>
                         <button type="submit" class="btn-modal-guardar" id="btnGuardarOT">
                             <i class="bi bi-floppy-fill me-1"></i> Guardar
                         </button>

@@ -703,9 +703,7 @@ class EntradaMercanciaManager {
                             const tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
                             const esAdmin = tipoUsuario === "AdminMtto" || tipoUsuario === "Administrador";
 
-                            if (!esAdmin) return '';
-
-                            const dataAttrs = `
+                        const dataAttrs = `
                         data-docentry="${row.DocEntry || ''}"
                         data-docnum="${row.DocNum || ''}"
                         data-cardcode="${row.CardCode || ''}"

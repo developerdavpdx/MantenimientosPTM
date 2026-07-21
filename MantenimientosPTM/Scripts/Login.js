@@ -1,7 +1,9 @@
 ﻿// ========================================
-// GESTOR DE VALIDACIONES
+// GESTOR DE LOGIN
 // ========================================
 class ValidationManagerLogin {
+    // Flag para prevenir múltiples validaciones
+    static validacionEnProceso = false;
 
     // Inicializar formulario con jQuery
     static inicializarFormulario(formId) {
@@ -22,100 +24,122 @@ class ValidationManagerLogin {
 
     // Procesar login con jQuery AJAX
     static procesarLogin() {
-        const usuario = $('#usuario').val();
-        const password = $('#password').val();
-        const recordarme = $('#recordarme').is(':checked');
+        // Evitar que se ejecute múltiples veces
+        if (ValidationManagerLogin.validacionEnProceso) {
+            console.warn('Validación ya en proceso, ignorando esta llamada');
+            return;
+        }
 
-        AlertManager.mostrar('Iniciando sesión...', 'info');
+        ValidationManagerLogin.validacionEnProceso = true;
 
-        const btnSubmit = $('.btn-login');
-        btnSubmit.prop('disabled', true);
-        btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Iniciando...');
+        // Primero validar que el sistema no esté vencido
+        ValidationManagerLogin.validarVencimiento(function(vencido) {
+            if (vencido) {
+                // Deshabilitar interacciones antes de redirigir
+                $('body').css('pointer-events', 'none');
+                console.log('Sistema vencido, redirigiendo a /Login/Ended');
 
-        $.ajax({
-            url: '/Login/ValidaUsuario',
-            type: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Usuario': usuario,
-                'Password': password
-            },
-            success: function (data) {
-                console.log('Respuesta del servidor:', data);
+                // Redirigir a la vista de acceso vencido con delay
+                window.location.href = '/Login/Ended';
+            }
 
-                if (data.Status === 'OK') {
-                    let UserData = data.Data;
-                    if (typeof UserData === 'string') {
-                        try {
-                            UserData = JSON.parse(UserData);
-                        } catch (e) {
-                            console.warn('No se pudo parsear Data:', e);
-                        }
-                    }
-                    if (UserData[0].STATUS == "200") {
+            else {
+                const usuario = $('#usuario').val();
+                const password = $('#password').val();
+                const recordarme = $('#recordarme').is(':checked');
 
-                        //Agregar correo
-                        UserData[0].EMAIL = usuario;
+                AlertManager.mostrar('Iniciando sesión...', 'info');
 
-                        AlertManager.mostrar('¡Bienvenido! ' + data.Message, 'success');
-                        btnSubmit.addClass("text-white");
-                        btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Estamos preparando todo...');
+                const btnSubmit = $('.btn-login');
+                btnSubmit.prop('disabled', true);
+                btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Iniciando...');
 
-                        if (recordarme) {
-                            localStorage.setItem('recordarUsuario', usuario);
+                $.ajax({
+                    url: '/Login/ValidaUsuario',
+                    type: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Usuario': usuario,
+                        'Password': password
+                    },
+                    success: function (data) {
+                        console.log('Respuesta del servidor:', data);
+
+                        if (data.Status === 'OK') {
+                            let UserData = data.Data;
+                            if (typeof UserData === 'string') {
+                                try {
+                                    UserData = JSON.parse(UserData);
+                                } catch (e) {
+                                    console.warn('No se pudo parsear Data:', e);
+                                }
+                            }
+                            if (UserData[0].STATUS == "200") {
+
+                                //Agregar correo
+                                UserData[0].EMAIL = usuario;
+
+                                btnSubmit.addClass("text-white");
+                                btnSubmit.html('<span class="spinner-border spinner-border-sm me-2"></span>Estamos preparando todo...');
+
+                                if (recordarme) {
+                                    localStorage.setItem('recordarUsuario', usuario);
+                                } else {
+                                    localStorage.removeItem('recordarUsuario');
+                                }
+
+                                sessionStorage.setItem('userData', JSON.stringify(UserData));
+
+                                //Validar permisos y modulos
+                                //Validar permisos y modulos
+                                let datos_usuario = GlobalUtil.getDatosUsuario();
+                                const tipoUsuario = datos_usuario[0].TIPOUSUARIO;
+
+                                // Mapeo de perfiles a rutas
+                                const rutasPorPerfil = {
+                                    'AdminMtto': '/Equipos/GestionEquipos',
+                                    'Administrador': '/Equipos/GestionEquipos',
+                                    'TecnicoMtto': '/MantenimientosPreventivos/MantenimientoPreventivo',
+                                    'SupervisorMantenimiento': '/MantenimientosPreventivos/MantenimientoPreventivo',
+                                    'SupervisorAlmacen': '/Almacen/SolicitudRefacciones',
+                                    'Almacen': '/Almacen/SolicitudRefacciones',
+                                    'SupervisorPlaneacion': '/Planeacion/Planeacion',
+                                    'Planeacion': '/Planeacion/Planeacion',
+                                    'SupervisorProduccion': '/Produccion/ParosProduccion',
+                                    'Produccion': '/Produccion/ParosProduccion'
+                                };
+
+                                // Validar que el perfil exista
+                                if (rutasPorPerfil[tipoUsuario]) {
+                                    setTimeout(function () {
+                                        AlertManager.mostrar('¡Bienvenido! ' + data.Message, 'success');
+                                        window.location.href = rutasPorPerfil[tipoUsuario];
+                                    }, 2000);
+                                } else {
+                                    // Perfil no configurado
+                                    AlertManager.mostrar('Perfil ' + tipoUsuario + ' no configurado, contacte al administrador', 'warning');
+                                    ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
+                                    ValidationManagerLogin.validacionEnProceso = false;
+                                }
+                            }
+                            else {
+                                AlertManager.mostrar("No fue posible iniciar sesión, valida tus credenciales.", 'warning');
+                                ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
+                                ValidationManagerLogin.validacionEnProceso = false;
+                            }
                         } else {
-                            localStorage.removeItem('recordarUsuario');
+                            AlertManager.mostrar(data.Message, 'warning');
+                            ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
+                            ValidationManagerLogin.validacionEnProceso = false;
                         }
-
-                        sessionStorage.setItem('userData', JSON.stringify(UserData));
-
-                        //Validar permisos y modulos
-                        let datos_usuario = GlobalUtil.getDatosUsuario();
-
-                        //Administrador
-                        if (datos_usuario[0].TIPOUSUARIO == "AdminMtto" || datos_usuario[0].TIPOUSUARIO == "Administrador") {
-                            setTimeout(function () {
-                                window.location.href = '/Equipos/GestionEquipos';
-                            }, 1000);
-                        }
-                        //Tecnico Mtto
-                        else if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
-                            setTimeout(function () {
-                                window.location.href = '/MantenimientosPreventivos/MantenimientoPreventivo';
-                            }, 1000);
-                        }
-                        //Almacen
-                        else if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen" || datos_usuario[0].TIPOUSUARIO == "Almacen") {
-                            setTimeout(function () {
-                                window.location.href = '/Almacen/SolicitudRefacciones';
-                            }, 1000);
-                        }
-                        //Planeacion
-                        else if (datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion" || datos_usuario[0].TIPOUSUARIO == "Planeacion") {
-                            setTimeout(function () {
-                                window.location.href = '/Planeacion/Planeacion';
-                            }, 1000);
-                        }
-                        //Produccion
-                        else if (datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion" || datos_usuario[0].TIPOUSUARIO == "Produccion") {
-                            setTimeout(function () {
-                                window.location.href = '/Produccion/ParosProduccion';
-                            }, 1000);
-                        }
-                    }
-                    else {
-                        AlertManager.mostrar("No fue posible iniciar sesión, valida tus credenciales.", 'warning');
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error en la petición:', error);
+                        AlertManager.mostrar('Error de conexión. Por favor, intenta de nuevo.', 'warning');
                         ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
+                        ValidationManagerLogin.validacionEnProceso = false;
                     }
-                } else { 
-                    AlertManager.mostrar(data.Message, 'warning');
-                    ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
-                }
-            },
-            error: function (xhr, status, error) {
-                console.error('Error en la petición:', error);
-                AlertManager.mostrar('Error de conexión. Por favor, intenta de nuevo.', 'warning');
-                ValidationManagerLogin.habilitarBotonLogin(btnSubmit);
+                });
             }
         });
     }
@@ -124,6 +148,29 @@ class ValidationManagerLogin {
     static habilitarBotonLogin(btnSubmit) {
         btnSubmit.prop('disabled', false);
         btnSubmit.html('<i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión');
+    }
+
+    // Validar si el sistema está vencido
+    static validarVencimiento(callback) {
+        $.ajax({
+            url: '/Login/ObtenerFechaVencimiento',
+            type: 'GET',
+            dataType: 'json',
+            timeout: 5000, // Timeout de 5 segundos
+            success: function(data) {
+                console.log('Respuesta de vencimiento:', data);
+                if (data.Status === 'OK' && data.Vencido) {
+                    callback(true); // Sistema está vencido
+                } else {
+                    callback(false); // Sistema vigente
+                }
+            },
+            error: function(xhr, status, error) {
+                console.warn('No se pudo validar fecha de vencimiento:', error);
+                // En caso de error, permitir continuar por seguridad
+                callback(false);
+            }
+        });
     }
 
     // Limpiar validación con jQuery

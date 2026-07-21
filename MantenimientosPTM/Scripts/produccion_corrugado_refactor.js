@@ -58,6 +58,10 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
         // 🔥 CONSULTAR DATOS
         this.consultarDatos(null, null, null);
+
+        // 🔧 Inicializar tooltips
+        this.inicializarTooltips();
+
         console.log('✅ Sistema Corrugado inicializado');
     }
 
@@ -518,7 +522,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             context: {
                 datos_usuario: this.datos_usuario,
                 gestionArticulos: this.gestionArticulos,
-                URLBase: this.URLBase
+                URLBase: this.URLBase,
+                appProduccion: this
             },
             rowData: this.datosOriginales,
             components: {
@@ -678,6 +683,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 return;
             }
 
+            totales.PesoMinimo += parseFloat(node.data.PesoMinimo || 0);
             totales.TRLiberados += parseFloat(node.data.TRLiberados || 0);
             totales.ProduccionNeta += parseFloat(node.data.ProduccionNeta || 0);
 
@@ -748,7 +754,23 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
     formatearNumero(valor) {
         if (valor === null || valor === undefined || valor === '') return '';
-        return parseFloat(valor).toFixed(2);
+
+        // Asegurar que es un número
+        const numValue = typeof valor === 'number' ? valor : parseFloat(valor);
+
+        if (isNaN(numValue)) return '';
+
+        // Formato con 2 decimales y punto como separador decimal
+        return numValue.toFixed(2);
+    }
+
+    formatearPorcentaje(valor) {
+
+        if (valor === null || valor === undefined || valor === '') {
+            return '';
+        }
+
+        return `${parseFloat(valor).toFixed(2)}%`;
     }
 
     onCellChanged(event) {
@@ -761,10 +783,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         }
 
         const row = event.data;
-
-        // ========================================
-        // MES AUTOMÁTICO
-        // ========================================
 
         if (row.Fecha) {
 
@@ -788,26 +806,40 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             row.Mes = meses[fecha.getMonth()];
         }
 
-        // ========================================
-        // PESO ESTÁNDAR
-        // ========================================
+        // 🔥 UNA SOLA LLAMADA
+        this.recalcularFila(row);
+
+        event.node.setData(row);
+
+        this.cambiosPendientes.push({
+            id: row.id,
+            campo: event.colDef.field,
+            valorAnterior: event.oldValue,
+            valorNuevo: event.newValue
+        });
+
+        this.gridApi.refreshCells({
+            rowNodes: [event.node],
+            force: true
+        });
+
+        this.recalcularTotales();
+    }
+
+    recalcularFila(row) {
 
         row.PesoEstandar =
             this.calcularPesoEstandar(row);
 
-        // ========================================
-        // SOBREPESO
-        // ========================================
-
         row.PorcentajeSobrepeso =
             this.calcularSobrepeso(row);
 
-        // ========================================
-        // SCRAP
-        // ========================================
-
         row.ScrapTotal =
             this.calcularScrapTotal(row);
+
+        // 🔥 NO recalcular ScrapSinCorteSierra ni ScrapCorteSierra
+        // porque son editables por el usuario
+        // Solo recalcular los porcentajes derivados
 
         row.PorcentajeScrapSinCorte =
             this.calcularScrapSinCorte(row);
@@ -815,63 +847,35 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         row.PorcentajeScrapCorte =
             this.calcularScrapCorte(row);
 
-        // ========================================
-        // DISPONIBILIDAD
-        // ========================================
-
         row.TiempoDisponible =
             this.calcularTiempoDisponible(row);
 
-        // ========================================
-        // PRODUCTIVIDAD
-        // ========================================
-
         row.TiempoProductivo =
             this.calcularTiempoProductivo(row);
-
-        // ========================================
-        // AUDITORÍA
-        // ========================================
-
-        const cambio = {
-
-            id: row.id,
-
-            campo: event.colDef.field,
-
-            valorAnterior: event.oldValue,
-
-            valorNuevo: event.newValue
-
-        };
-
-        this.cambiosPendientes.push(cambio);
-
-        // ========================================
-        // REFRESH VISUAL PVC V2
-        // ========================================
-
-        this.gridApi.refreshCells({
-            force: true
-        });
-
-        this.gridApi.redrawRows();
-
-        // ========================================
-        // TOTALES
-        // ========================================
-
-        this.recalcularTotales();
 
     }
 
     recalcularTotales() {
 
-        const filaTotales = {
+        const filaTotales = this.obtenerTotalesGrid();
+
+        this.gridApi.forEachNode((node) => {
+
+            if (node.data.id === 'TOTALES') {
+
+                node.setData(filaTotales);
+            }
+
+        });
+    }
+
+    obtenerTotalesGrid() {
+
+        const totales = {
 
             id: 'TOTALES',
 
-            // DATOS GENERALES
+            // GENERALES
             Mes: null,
             Fecha: null,
             Linea: null,
@@ -887,15 +891,15 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             ProduccionNeta: 0,
 
             PesoEstandar: 0,
-            PorcentajeSobrepeso: 0,
+            PorcentajeSobrepeso: null,
 
             ScrapSinCorteSierra: 0,
             ScrapCorteSierra: 0,
 
             ScrapTotal: 0,
 
-            PorcentajeScrapSinCorte: 0,
-            PorcentajeScrapCorte: 0,
+            PorcentajeScrapSinCorte: null,
+            PorcentajeScrapCorte: null,
 
             KgReproceso: 0,
             Carbonato: 0,
@@ -926,71 +930,46 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
         this.gridApi.forEachNode((node) => {
 
-            if (node.data.id === 'TOTALES') {
+            if (!node.data || node.data.id === 'TOTALES') {
                 return;
             }
 
-            filaTotales.TRLiberados += parseFloat(node.data.TRLiberados || 0);
-            filaTotales.ProduccionNeta += parseFloat(node.data.ProduccionNeta || 0);
+            totales.PesoMinimo += Number(node.data.PesoMinimo || 0);
+            totales.TRLiberados += Number(node.data.TRLiberados || 0);
+            totales.ProduccionNeta += Number(node.data.ProduccionNeta || 0);
 
-            filaTotales.PesoEstandar += parseFloat(node.data.PesoEstandar || 0);
+            totales.PesoEstandar += Number(node.data.PesoEstandar || 0);
 
-            filaTotales.ScrapSinCorteSierra +=
-                parseFloat(node.data.ScrapSinCorteSierra || 0);
+            totales.ScrapSinCorteSierra += Number(node.data.ScrapSinCorteSierra || 0);
+            totales.ScrapCorteSierra += Number(node.data.ScrapCorteSierra || 0);
 
-            filaTotales.ScrapCorteSierra +=
-                parseFloat(node.data.ScrapCorteSierra || 0);
+            totales.ScrapTotal += Number(node.data.ScrapTotal || 0);
 
-            filaTotales.ScrapTotal +=
-                parseFloat(node.data.ScrapTotal || 0);
+            totales.KgReproceso += Number(node.data.KgReproceso || 0);
+            totales.Carbonato += Number(node.data.Carbonato || 0);
 
-            filaTotales.KgReproceso +=
-                parseFloat(node.data.KgReproceso || 0);
+            totales.HorasProgramadas += Number(node.data.HorasProgramadas || 0);
 
-            filaTotales.Carbonato +=
-                parseFloat(node.data.Carbonato || 0);
+            totales.MantenimientoPreventivo += Number(node.data.MantenimientoPreventivo || 0);
+            totales.ControlInventarios += Number(node.data.ControlInventarios || 0);
+            totales.FaltaEnergia += Number(node.data.FaltaEnergia || 0);
+            totales.FaltaMateriaPrima += Number(node.data.FaltaMateriaPrima || 0);
+            totales.PreparacionCambio += Number(node.data.PreparacionCambio || 0);
+            totales.ArranqueEstabilizacion += Number(node.data.ArranqueEstabilizacion || 0);
 
-            filaTotales.HorasProgramadas +=
-                parseFloat(node.data.HorasProgramadas || 0);
+            totales.TiempoMttoCorrectivosArranque += Number(node.data.TiempoMttoCorrectivosArranque || 0);
 
-            filaTotales.MantenimientoPreventivo +=
-                parseFloat(node.data.MantenimientoPreventivo || 0);
+            totales.TiempoMuertoCorrectivos += Number(node.data.TiempoMuertoCorrectivos || 0);
 
-            filaTotales.ControlInventarios +=
-                parseFloat(node.data.ControlInventarios || 0);
+            totales.CambioMoldeSetupExcesos += Number(node.data.CambioMoldeSetupExcesos || 0);
 
-            filaTotales.FaltaEnergia +=
-                parseFloat(node.data.FaltaEnergia || 0);
+            totales.TiempoMuertoArrancar += Number(node.data.TiempoMuertoArrancar || 0);
 
-            filaTotales.FaltaMateriaPrima +=
-                parseFloat(node.data.FaltaMateriaPrima || 0);
+            totales.TiempoMuertoProceso += Number(node.data.TiempoMuertoProceso || 0);
 
-            filaTotales.PreparacionCambio +=
-                parseFloat(node.data.PreparacionCambio || 0);
+            totales.TiempoDisponible += Number(node.data.TiempoDisponible || 0);
 
-            filaTotales.ArranqueEstabilizacion +=
-                parseFloat(node.data.ArranqueEstabilizacion || 0);
-
-            filaTotales.TiempoMttoCorrectivosArranque +=
-                parseFloat(node.data.TiempoMttoCorrectivosArranque || 0);
-
-            filaTotales.TiempoMuertoCorrectivos +=
-                parseFloat(node.data.TiempoMuertoCorrectivos || 0);
-
-            filaTotales.CambioMoldeSetupExcesos +=
-                parseFloat(node.data.CambioMoldeSetupExcesos || 0);
-
-            filaTotales.TiempoMuertoArrancar +=
-                parseFloat(node.data.TiempoMuertoArrancar || 0);
-
-            filaTotales.TiempoMuertoProceso +=
-                parseFloat(node.data.TiempoMuertoProceso || 0);
-
-            filaTotales.TiempoDisponible +=
-                parseFloat(node.data.TiempoDisponible || 0);
-
-            filaTotales.TiempoProductivo +=
-                parseFloat(node.data.TiempoProductivo || 0);
+            totales.TiempoProductivo += Number(node.data.TiempoProductivo || 0);
 
         });
 
@@ -998,42 +977,22 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         // PORCENTAJES TOTALES
         // ========================================
 
-        if (filaTotales.PesoEstandar > 0) {
+        if (totales.PesoEstandar > 0) {
 
-            filaTotales.PorcentajeSobrepeso =
-                ((filaTotales.ProduccionNeta /
-                    filaTotales.PesoEstandar) - 1) * 100;
-
+            totales.PorcentajeSobrepeso =
+                ((totales.ProduccionNeta / totales.PesoEstandar) - 1) * 100;
         }
 
-        if (filaTotales.ProduccionNeta > 0) {
+        if (totales.ProduccionNeta > 0) {
 
-            filaTotales.PorcentajeScrapSinCorte =
-                (filaTotales.ScrapSinCorteSierra /
-                    filaTotales.ProduccionNeta) * 100;
+            totales.PorcentajeScrapSinCorte =
+                (totales.ScrapSinCorteSierra / totales.ProduccionNeta) * 100;
 
-            filaTotales.PorcentajeScrapCorte =
-                (filaTotales.ScrapCorteSierra /
-                    filaTotales.ProduccionNeta) * 100;
-
+            totales.PorcentajeScrapCorte =
+                (totales.ScrapCorteSierra / totales.ProduccionNeta) * 100;
         }
 
-        this.gridApi.forEachNode((node) => {
-
-            if (node.data.id === 'TOTALES') {
-
-                node.setData(filaTotales);
-
-            }
-
-        });
-
-        this.gridApi.refreshCells({
-            force: true
-        });
-
-        this.gridApi.redrawRows();
-
+        return totales;
     }
 
     calcularPesoEstandar(row) {
@@ -1079,6 +1038,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
     }
 
+    // Retorna el PORCENTAJE de scrap sin corte de sierra
     calcularScrapSinCorte(row) {
 
         const scrap =
@@ -1094,6 +1054,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         return (scrap / produccion) * 100;
     }
 
+    // Retorna el PORCENTAJE de scrap con cortes de sierra
     calcularScrapCorte(row) {
 
         const scrap =
@@ -1235,6 +1196,9 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
         const datos = this.obtenerDatosGrid();
 
+        let datosJSON = JSON.stringify(datos);
+        
+
         if (datos.length === 0) {
 
             AlertManager.mostrar(
@@ -1307,10 +1271,10 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
         // ========================================
         // BOTÓN LOADING
-        // ========================================
+        // ======================================m==
         $("#btnGuardarCambios")
             .prop("disabled", true)
-            .html('<span class="spinner-border spinner-border-sm"></span> Guardando...');
+            .html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
 
         try {
 
@@ -1322,7 +1286,11 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
                 data: JSON.stringify(datos),
 
-                contentType: "application/json"
+                contentType: "application/json",
+
+                beforeSend: () => {
+                    GlobalUtil.mostrarLoader(true);
+                }
 
             });
 
@@ -1336,7 +1304,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 this.cambiosPendientes = [];
 
                 // 🔥 refrescar grid
-                this.consultarDatos(null, null, null);
+                await this.consultarDatos(null, null, null);
 
             } else {
 
@@ -1362,9 +1330,13 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 .prop("disabled", false)
                 .html('<i class="bi bi-save-fill me-1"></i>Guardar');
 
+            GlobalUtil.mostrarLoader(false);
+
         }
 
     }
+
+
 
     exportarExcel() {
         const exporter = new ExcelExporterCorrugado(this.gridApi, this.columnDefs);
@@ -1398,7 +1370,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 // PRODUCCIÓN
                 // ========================================
 
-                PesoMinimo: 3,
+                PesoMinimo: 0,
 
                 TRLiberados: null,
                 ProduccionNeta: null,
@@ -1552,7 +1524,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 // ========================================
 
                 PesoMinimo:
-                    item.PESO_MINIMO ?? 3,
+                    item.PESO_MINIMO ?? 0,
 
                 TRLiberados:
                     item.TRLIBERADOS,
@@ -1694,10 +1666,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
                 e.preventDefault();
 
-                menu.style.display = "block";
-                menu.style.left = e.pageX + "px";
-                menu.style.top = e.pageY + "px";
-
                 const rowIndex =
                     this.gridApi.getFocusedCell()?.rowIndex;
 
@@ -1725,6 +1693,39 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     eliminar.style.display = "block";
 
                 }
+
+                // ========================================
+                // MOSTRAR MENÚ CON POSICIÓN CORRECTA
+                // ========================================
+                menu.style.display = "block";
+
+                // Obtener dimensiones del menú y viewport
+                const menuRect = menu.getBoundingClientRect();
+                const menuWidth = menuRect.width || 180;
+                const menuHeight = menuRect.height || 150;
+
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+
+                let posX = e.pageX;
+                let posY = e.pageY;
+
+                // Ajustar posición X si se sale por la derecha
+                if (posX + menuWidth > viewportWidth) {
+                    posX = viewportWidth - menuWidth - 10;
+                }
+
+                // Ajustar posición Y si se sale por abajo
+                if (posY + menuHeight > viewportHeight) {
+                    posY = viewportHeight - menuHeight - 10;
+                }
+
+                // Asegurar que no se salga por la izquierda o arriba
+                posX = Math.max(10, posX);
+                posY = Math.max(10, posY);
+
+                menu.style.left = posX + "px";
+                menu.style.top = posY + "px";
 
             });
 
@@ -1768,11 +1769,15 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
     }
 
+    generarIdTemporal() {
+        return `TMP_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    }
+
     agregarFila(params) {
 
         const nuevaFila = {
 
-            id: Date.now(),
+            id: this.generarIdTemporal(),
 
             // ========================================
             // DATOS GENERALES
@@ -1790,7 +1795,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             // PRODUCCIÓN
             // ========================================
 
-            PesoMinimo: 3,
+            PesoMinimo: 0,
 
             TRLiberados: null,
             ProduccionNeta: null,
@@ -1876,62 +1881,15 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         // NUEVO REGISTRO
         // ========================================
 
-        nuevaFila.id = Date.now();
+        nuevaFila.id = this.generarIdTemporal();
 
         nuevaFila.ID_REGISTRO = null;
-
-        // ========================================
-        // RECALCULAR MES
-        // ========================================
-
-        if (nuevaFila.Fecha) {
-
-            const fecha = new Date(nuevaFila.Fecha);
-
-            const meses = [
-                'ENERO',
-                'FEBRERO',
-                'MARZO',
-                'ABRIL',
-                'MAYO',
-                'JUNIO',
-                'JULIO',
-                'AGOSTO',
-                'SEPTIEMBRE',
-                'OCTUBRE',
-                'NOVIEMBRE',
-                'DICIEMBRE'
-            ];
-
-            nuevaFila.Mes =
-                meses[fecha.getMonth()];
-
-        }
 
         // ========================================
         // RECALCULAR KPIs
         // ========================================
 
-        nuevaFila.PesoEstandar =
-            this.calcularPesoEstandar(nuevaFila);
-
-        nuevaFila.PorcentajeSobrepeso =
-            this.calcularSobrepeso(nuevaFila);
-
-        nuevaFila.ScrapTotal =
-            this.calcularScrapTotal(nuevaFila);
-
-        nuevaFila.PorcentajeScrapSinCorte =
-            this.calcularScrapSinCorte(nuevaFila);
-
-        nuevaFila.PorcentajeScrapCorte =
-            this.calcularScrapCorte(nuevaFila);
-
-        nuevaFila.TiempoDisponible =
-            this.calcularTiempoDisponible(nuevaFila);
-
-        nuevaFila.TiempoProductivo =
-            this.calcularTiempoProductivo(nuevaFila);
+        this.recalcularFila(nuevaFila);
 
         this.gridApi.applyTransaction({
 
@@ -1943,12 +1901,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         });
 
         this.recalcularTotales();
-
-        this.gridApi.refreshCells({
-            force: true
-        });
-
-        this.gridApi.redrawRows();
 
     }
 
@@ -2145,8 +2097,28 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 if (params.newValue === null || params.newValue === undefined || params.newValue === '')
                     return null;
 
-                const valor = GlobalUtil.darFormatoNum(params.newValue);
-                return valor === '' ? null : Number(valor);
+                // Convierte string a número, maneja tanto comas como puntos como separador decimal
+                let valor = params.newValue.toString().trim();
+
+                // Si contiene coma y punto, asumir que la coma es separador decimal (formato latino)
+                if (valor.includes(',') && valor.includes('.')) {
+                    const lastComma = valor.lastIndexOf(',');
+                    const lastDot = valor.lastIndexOf('.');
+
+                    if (lastComma > lastDot) {
+                        // Formato latino: 1.000,50 => remover puntos y usar coma como decimal
+                        valor = valor.replace(/\./g, '').replace(',', '.');
+                    } else {
+                        // Formato inglés: 1,000.50 => remover comas
+                        valor = valor.replace(/,/g, '');
+                    }
+                } else if (valor.includes(',')) {
+                    // Solo coma: asumir separador decimal
+                    valor = valor.replace(/,/g, '.');
+                }
+
+                const numValue = parseFloat(valor);
+                return isNaN(numValue) ? null : numValue;
             },
             valueFormatter: params => this.formatearNumero(params.value)
         };
@@ -2224,9 +2196,32 @@ class ArticuloAutocompleteEditor {
 
                 this.eInput.value = articulo.CodigoArticulo;
 
+                this.articuloSeleccionado = articulo;
+
+                const row = this.params.node.data;
+
+                row.Producto = articulo.CodigoArticulo;
+
+                row.PesoMinimo = articulo.PesoMinimo || 0;
+
+                row.DescripcionArticulo = articulo.DescripcionArticulo;
+
+                // 🔥 Recalcular KPIs de la fila
+                const app = this.params.context.appProduccion;
+
+                app.recalcularFila(row);
+
+                // 🔥 Actualizar totales
+                app.recalcularTotales();
+
                 this.eDropdown.innerHTML = '';
 
-                this.params.stopEditing(); // 🔥 cerrar editor automáticamente
+                this.params.api.refreshCells({
+                    rowNodes: [this.params.node],
+                    force: true
+                });
+
+                this.params.stopEditing();
 
             });
 
@@ -2268,7 +2263,7 @@ class ExcelExporterCorrugado extends ExcelExporterBase {
 
     getSheetName() { return 'Causas Tiempos Muertos Corrugado'; }
     getFileNamePrefix() { return 'Produccion_Corrugado'; }
-    getTextFields() { return ['Mes','Fecha','Linea','Corrugador','Producto','Turno','Grupo']; }
+    getTextFields() { return ['Mes', 'Fecha', 'Linea', 'Corrugador', 'Producto', 'Turno', 'Grupo']; }
 
     getTotalsFontColor() { return 'FF0058A1'; }
     getTotalsBorderColor() { return 'FF0058A1'; }
@@ -2355,7 +2350,12 @@ class ExcelExporterCorrugado extends ExcelExporterBase {
                         valor = '';
                     }
 
-                    fila.push(valor || '');
+                    // 🔥 Si el valor es 0, mantener el 0 (no convertir a string vacío)
+                    if (valor === 0 || valor === '0') {
+                        fila.push(0);
+                    } else {
+                        fila.push(valor || '');
+                    }
                 });
             });
 

@@ -2332,100 +2332,152 @@ namespace MantenimientosPTM.Controllers
                 // Datos de texto
                 string motivo = Request.Form["Motivo"];
                 string comentario = Request.Form["Comentario"];
-                string idSolicitud = Request.Form["IdSolicitud"];
-                int NewIdRech = 0;
-                string Error = "";
-                string Msg = "";
+                string idsSeleccionadosJson = Request.Form["IdsSeleccionados"];
 
-                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                // ✅ NUEVO: Deserializar array de IDs
+                List<int> idsSeleccionados = new List<int>();
+                if (!string.IsNullOrEmpty(idsSeleccionadosJson))
                 {
-                    { "P_ID_SALIDA",(idSolicitud , ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_MOTIVO",(motivo , ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_COMENTARIOS",(comentario , ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "O_ID",(NewIdRech , ParameterDirection.Input, HanaDbType.Integer) },
-                    { "O_ERROR",(Error , ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "O_MSG",(Msg , ParameterDirection.Input, HanaDbType.NVarChar) },
-                };
+                    try
+                    {
+                        idsSeleccionados = JsonConvert.DeserializeObject<List<int>>(idsSeleccionadosJson);
+                    }
+                    catch (Exception ex)
+                    {
+                        jsonResponse.Status = "ERROR";
+                        jsonResponse.Message = "Error al procesar los IDs seleccionados: " + ex.Message;
+                        return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                    }
+                }
 
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCInsertRechazoDev,
-                    parameters
-                );
-
-                log.Info("Resultado insert: InsertRechazoDev :");
-                log.Info(resultHana.JsonResult);
-
-                if (resultHana.JsonResult.Contains("ERROR") ||
-                    resultHana.JsonResult.Contains("Error"))
+                if (idsSeleccionados == null || idsSeleccionados.Count == 0)
                 {
                     jsonResponse.Status = "ERROR";
-                    jsonResponse.Message = "No fue posible guardar la información del rechazo";
-                    jsonResponse.Data = string.Empty;
+                    jsonResponse.Message = "No se seleccionaron solicitudes para rechazar.";
                     return Json(jsonResponse, JsonRequestBehavior.AllowGet);
                 }
 
-                dynamic result = JsonConvert.DeserializeObject(resultHana.JsonResult);
-                int idSol = result[0].IdSol;
+                // ✅ NUEVO: Procesar cada ID
+                var rechazosCreados = new List<int>();
+                var erroresGuardado = new List<string>();
 
-
-                // ── Paso 2: Crear carpeta con ese ID ──
-                string rutaBase = Server.MapPath("~/Rechazos");
-                string rutaCarpeta = Path.Combine(rutaBase, $"Rech_{idSol}");
-
-                if (!Directory.Exists(rutaCarpeta))
-                    Directory.CreateDirectory(rutaCarpeta);
-
-                // ── Paso 3: Guardar imágenes dentro de la carpeta ──
-                var imagenesGuardadas = new List<string>();
-
-                for (int i = 0; i < Request.Files.Count; i++)
+                foreach (int idSalida in idsSeleccionados)
                 {
-                    var archivo = Request.Files[i];
-                    if (archivo == null || archivo.ContentLength == 0) continue;
-
-                    // Validar archivo
-                    string extension = Path.GetExtension(archivo.FileName).ToLower();
-                    List<string> allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-                    int maxFileSize = 5 * 1024 * 1024; // 5MB
-
-                    if (!allowedExtensions.Contains(extension))
+                    try
                     {
-                        jsonResponse.Status = "ERROR";
-                        jsonResponse.Message = $"Archivo no válido: {archivo.FileName}. Extensiones permitidas: {string.Join(", ", allowedExtensions)}";
-                        return Json(jsonResponse, JsonRequestBehavior.AllowGet);
-                    }
+                        var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                        {
+                            { "P_ID_SALIDA", (idSalida, ParameterDirection.Input, HanaDbType.Integer) },
+                            { "P_MOTIVO", (motivo, ParameterDirection.Input, HanaDbType.NVarChar) },
+                            { "P_COMENTARIOS", (comentario, ParameterDirection.Input, HanaDbType.NVarChar) }
+                        };
 
-                    if (archivo.ContentLength > maxFileSize)
+                        var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                            Logic.AD.GCInsertRechazoDev,
+                            parameters
+                        );
+
+                        log.Info($"Resultado insert para ID {idSalida}: {resultHana.JsonResult}");
+
+                        if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                        {
+                            erroresGuardado.Add($"ID {idSalida}: {resultHana.JsonResult}");
+                            continue;
+                        }
+
+                        // ✅ NUEVO: Extraer ID del rechazo desde la respuesta
+                        dynamic result = JsonConvert.DeserializeObject(resultHana.JsonResult);
+                        int ID_RECHAZO = result[0].ID_RECHAZO;
+                        rechazosCreados.Add(ID_RECHAZO);
+
+                        // ── Paso 2: Crear carpeta con ese ID ──
+                        string rutaBase = Server.MapPath("~/Rechazos");
+                        string rutaCarpeta = Path.Combine(rutaBase, $"Rech_{ID_RECHAZO}");
+
+                        if (!Directory.Exists(rutaCarpeta))
+                            Directory.CreateDirectory(rutaCarpeta);
+
+                        // ── Paso 3: Guardar imágenes dentro de la carpeta ──
+                        var imagenesGuardadas = new List<string>();
+
+                        for (int i = 0; i < Request.Files.Count; i++)
+                        {
+                            var archivo = Request.Files[i];
+                            if (archivo == null || archivo.ContentLength == 0) continue;
+
+                            // Validar archivo
+                            string extension = Path.GetExtension(archivo.FileName).ToLower();
+                            List<string> allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                            int maxFileSize = 5 * 1024 * 1024; // 5MB
+
+                            if (!allowedExtensions.Contains(extension))
+                            {
+                                jsonResponse.Status = "ERROR";
+                                jsonResponse.Message = $"Archivo no válido: {archivo.FileName}. Extensiones permitidas: {string.Join(", ", allowedExtensions)}";
+                                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                            }
+
+                            if (archivo.ContentLength > maxFileSize)
+                            {
+                                jsonResponse.Status = "ERROR";
+                                jsonResponse.Message = $"Archivo {archivo.FileName} es demasiado grande. Tamaño máximo: 5MB.";
+                                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                            }
+
+                            // Sanitizar nombre y hacerlo único para evitar sobreescrituras
+                            string nombreArchivo = $"img_{i + 1}_{DateTime.Now.Ticks}{extension}";
+                            string rutaArchivo = Path.Combine(rutaCarpeta, nombreArchivo);
+
+                            archivo.SaveAs(rutaArchivo);
+                            imagenesGuardadas.Add(nombreArchivo);
+                        }
+
+                        log.Info($"Imágenes guardadas para rechazo ID {ID_RECHAZO}: {string.Join(", ", imagenesGuardadas)}");
+                    }
+                    catch (Exception exInner)
                     {
-                        jsonResponse.Status = "ERROR";
-                        jsonResponse.Message = $"Archivo {archivo.FileName} es demasiado grande. Tamaño máximo: 5MB.";
-                        return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                        erroresGuardado.Add($"ID {idSalida}: Excepción - {exInner.Message}");
+                        log.Error($"Error al procesar rechazo para ID {idSalida}: {exInner.Message}");
+                        continue;
                     }
-
-                    // Sanitizar nombre y hacerlo único para evitar sobreescrituras
-                    string nombreArchivo = $"img_{i + 1}_{DateTime.Now.Ticks}{extension}";
-                    string rutaArchivo = Path.Combine(rutaCarpeta, nombreArchivo);
-
-                    archivo.SaveAs(rutaArchivo);
-                    imagenesGuardadas.Add(nombreArchivo);
                 }
 
-                log.Info($"Imágenes guardadas: {string.Join(", ", imagenesGuardadas)}");
+                // ✅ NUEVO: Respuesta consolidada
+                if (rechazosCreados.Count == 0)
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "No fue posible guardar la información del rechazo para ningún registro.";
+                    jsonResponse.Data = string.Join(" | ", erroresGuardado);
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
 
-                jsonResponse.Status = "OK";
-                jsonResponse.Message = "Información del rechazo guardada exitosamente";
-                jsonResponse.Data = resultHana.JsonResult;
+                if (erroresGuardado.Count > 0)
+                {
+                    jsonResponse.Status = "PARCIAL";
+                    jsonResponse.Message = $"{rechazosCreados.Count} rechazo(s) guardado(s) exitosamente. {erroresGuardado.Count} con error.";
+                    jsonResponse.Data = JsonConvert.SerializeObject(new
+                    {
+                        Guardados = rechazosCreados,
+                        Errores = erroresGuardado
+                    });
+                }
+                else
+                {
+                    jsonResponse.Status = "OK";
+                    jsonResponse.Message = $"{rechazosCreados.Count} rechazo(s) guardado(s) exitosamente.";
+                    jsonResponse.Data = JsonConvert.SerializeObject(new { Guardados = rechazosCreados });
+                }
 
                 return Json(jsonResponse, JsonRequestBehavior.AllowGet);
             }
             catch (Exception ex)
             {
                 jsonResponse.Status = "ERROR";
-                jsonResponse.Message = "No fue posible guardar la informacion del rechazo: " + ex.Message;
+                jsonResponse.Message = "No fue posible guardar la información del rechazo: " + ex.Message;
                 jsonResponse.Data = string.Empty;
+                log.Error($"Error general en GuardarRechazoDevolucion: {ex.Message}");
 
                 return Json(jsonResponse, JsonRequestBehavior.AllowGet);
-
             }
         }
 

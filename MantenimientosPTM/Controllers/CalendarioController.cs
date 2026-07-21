@@ -19,7 +19,7 @@ namespace MantenimientosPTM.Controllers
 
         #region Endpoints
         [HttpGet]
-        public JsonResult GetMantenimientosCompletados(string fechaInicio = null, string fechaFin = null)
+        public JsonResult GetMantenimientosCompletados(int? Planta,string fechaInicio = null, string fechaFin = null)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
             try
@@ -53,7 +53,8 @@ namespace MantenimientosPTM.Controllers
                 var parametros = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
                 {
                     { "p_FECHA_INICIO", (dtFechaInicio.HasValue ? (object)dtFechaInicio.Value : null, ParameterDirection.Input, HanaDbType.Date) },
-                    { "p_FECHA_FIN", (dtFechaFin.HasValue ? (object)dtFechaFin.Value : null, ParameterDirection.Input, HanaDbType.Date) }
+                    { "p_FECHA_FIN", (dtFechaFin.HasValue ? (object)dtFechaFin.Value : null, ParameterDirection.Input, HanaDbType.Date) },
+                    { "p_PLANTA", (Planta != null ? (object)Planta : null, ParameterDirection.Input, HanaDbType.Integer) }
                 };
 
                 // Ejecutar el stored procedure con parámetros

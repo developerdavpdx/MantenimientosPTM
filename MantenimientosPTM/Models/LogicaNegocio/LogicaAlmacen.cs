@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using static MantenimientosPTM.AccesoDatosPlaneacion;
 
 namespace MantenimientosPTM
 {
@@ -361,9 +362,8 @@ namespace MantenimientosPTM
                         newLine["CostingCode2"] = articulo.Proceso;
                         newLine["CostingCode3"] = articulo.Gastos;
                         newLine["CostingCode4"] = articulo.Cedis;
-                        newLine["CostingCode5"] = payload.DataMovimiento.NumEmpleado;
-                        newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
-                        newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
+                        newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe; //AUTORIZA (RECIBE)
+                        newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega; //ALMACENISTA (ENTREGA)
 
 
                         // ✅ Cuenta contable si aplica
@@ -403,7 +403,7 @@ namespace MantenimientosPTM
                 dictGI["DocDueDate"] = DateTime.Now.ToString("yyyy-MM-dd");
                 dictGI["Comments"] = $"Salida de mercancía generada por interfaz PTM Mantenimientos — {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Para solicitud: {payload.Referencia} Orden Trabajo: {payload.OrdenTrabajo}";
                 dictGI["JournalMemo"] = $"Salida de mercancía para solicitud: {payload.Referencia} Orden Trabajo: {payload.OrdenTrabajo}";
-                dictGI["Reference2"] = payload.DataMovimiento.Recibe;
+                dictGI["Reference2"] = payload.DataMovimiento.Recibe; //AUTORIZA (RECIBE)
 
                 var serie = GetSerieByName(payload.Contabilizacion[0].Cedis);
 
@@ -596,9 +596,8 @@ namespace MantenimientosPTM
                                 artInfo["CostingCode2"] = articulo.Proceso;
                                 artInfo["CostingCode3"] = articulo.Gastos;
                                 artInfo["CostingCode4"] = articulo.Cedis;
-                                artInfo["CostingCode5"] = payload.DataMovimiento.NumEmpleado;
-                                artInfo["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
-                                artInfo["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
+                                artInfo["U_EMPLEADO"] = payload.DataMovimiento.Recibe; //AUTORIZA (RECIBE)
+                                artInfo["U_ALMACENISTA"] = payload.DataMovimiento.Entrega; //ALMACENISTA (ENTREGA)
                                 articulosData.Add(artInfo);
                             }
                         }
@@ -669,10 +668,8 @@ namespace MantenimientosPTM
                     newLine["CostingCode2"] = linea["CostingCode2"];
                     newLine["CostingCode3"] = linea["CostingCode3"];
                     newLine["CostingCode4"] = linea["CostingCode4"];
-                    newLine["CostingCode5"] = payload.DataMovimiento.NumEmpleado;
                     newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
                     newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
-
 
                     // Cuenta contable (opcional pero recomendable)
                     if (linea.ContainsKey("CuentaContable") && !string.IsNullOrWhiteSpace(linea["CuentaContable"]?.ToString()))
@@ -734,10 +731,10 @@ namespace MantenimientosPTM
                     //log.Info($"🔄 Actualizando tablas internas...");
                     var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
-                        { "P_DOCENTRY",     (  jsonResponse.DocEntry?.ToString() ?? string.Empty, ParameterDirection.Input, HanaDbType.Integer) },
+                        { "P_DOCENTRY",     (jsonResponse.DocEntry?.ToString() ?? string.Empty, ParameterDirection.Input, HanaDbType.Integer) },
                         { "P_FECHA_SOLICITUD", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_FOLIO", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_ORDEN_TRABAJO", (payload.Referencia, ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_ORDEN_TRABAJO", (payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_REFACCION_SOLICITADA", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_SOLICITANTE", (payload.DataMovimiento.Solicitante, ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "O_ERROR", ("", ParameterDirection.Input, HanaDbType.NVarChar) },

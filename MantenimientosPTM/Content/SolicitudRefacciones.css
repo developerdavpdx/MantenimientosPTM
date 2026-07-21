@@ -212,3 +212,60 @@
         min-width: 100px;
     }
 }
+
+/*ESTILOS RECHAZO*/
+/*ESTILOS RECHAZO*/
+
+/* Fila de devolución rechazada */
+.fila-devolucion-rechazada {
+    background-color: #ffcccc !important;
+    opacity: 0.85;
+}
+
+    .fila-devolucion-rechazada td {
+        background-color: inherit;
+        color: #8b0000;
+    }
+
+/* Tooltip personalizado para devolución rechazada */
+.tooltip-devolucion-rechazada {
+    background-color: #d32f2f;
+}
+
+    .tooltip-devolucion-rechazada .tooltip-inner {
+        background-color: #d32f2f;
+        color: #fff;
+        font-weight: 500;
+    }
+
+    .tooltip-devolucion-rechazada.bs-tooltip-top .tooltip-arrow::before,
+    .tooltip-devolucion-rechazada.bs-tooltip-bottom .tooltip-arrow::before,
+    .tooltip-devolucion-rechazada.bs-tooltip-left .tooltip-arrow::before,
+    .tooltip-devolucion-rechazada.bs-tooltip-right .tooltip-arrow::before {
+        border-color: #d32f2f;
+    }
+
+/* Icono de rechazo en la fila */
+.icono-rechazo-devolucion {
+    color: #d32f2f;
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+
+/* Badge para indicar rechazo */
+.badge-devolucion-rechazada {
+    background-color: #d32f2f !important;
+    color: #fff !important;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 4px;
+}
+
+/* Texto de justificación de rechazo */
+.texto-motivo-rechazo {
+    color: #8b0000;
+    font-size: 0.875rem;
+    font-style: italic;
+    margin-top: 0.25rem;
+}

@@ -380,11 +380,51 @@ namespace MantenimientosPTM
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
+            public decimal PESO_MINIMO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
             public decimal TRLIBERADOS { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
             public decimal PRODUCCION_NETA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PESO_ESTANDAR { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_SOBREPESO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal SCRAP_SIN_CORTE_SIERRA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal SCRAP_CORTE_SIERRA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal SCRAP_TOTAL { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_SCRAP_SIN_CORTE { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_SCRAP_CORTE { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal KG_REPROCESO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal CARBONATO { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
@@ -462,10 +502,9 @@ namespace MantenimientosPTM
             [DefaultValue("")]
             public string USUARIO { get; set; }
 
-            // PLANTA
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string PLANTA { get; set; }
+            [DefaultValue(0)]
+            public int PLANTA { get; set; }  // ← cambio a int
         }
 
         public class TiemposMuertosProduccionPeadLiso

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Web.Mvc;
+using System.Configuration;
 
 namespace MantenimientosPTM.Controllers
 {
@@ -10,6 +11,44 @@ namespace MantenimientosPTM.Controllers
         public ActionResult Login()
         {
             return View();
+        }
+        public ActionResult Ended()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        public JsonResult ObtenerFechaVencimiento()
+        {
+            try
+            {
+                string fechaVencimientoConfig = ConfigurationManager.AppSettings["FechaVencimiento"];
+
+                if (string.IsNullOrEmpty(fechaVencimientoConfig))
+                {
+                    return Json(new { Status = "ERROR", Message = "Configuración de fecha no disponible", FechaVencimiento = "", Vencido = false }, JsonRequestBehavior.AllowGet);
+                }
+
+                if (!DateTime.TryParse(fechaVencimientoConfig, out DateTime fechaVencimiento))
+                {
+                    return Json(new { Status = "ERROR", Message = "Formato de fecha inválido", FechaVencimiento = "", Vencido = false }, JsonRequestBehavior.AllowGet);
+                }
+
+                DateTime hoy = DateTime.Now;
+                bool vencido = hoy > fechaVencimiento;
+
+                return Json(new
+                {
+                    Status = "OK",
+                    FechaVencimiento = fechaVencimiento.ToString("dd/MM/yyyy"),
+                    Vencido = vencido,
+                    Message = vencido ? "El acceso al sistema ha vencido" : "Sistema vigente"
+                }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { Status = "ERROR", Message = "Error al obtener fecha de vencimiento: " + ex.Message, FechaVencimiento = "", Vencido = false }, JsonRequestBehavior.AllowGet);
+            }
         }
 
         [HttpGet]

@@ -146,6 +146,8 @@ class CalendarManager {
                 day: 'Día'
             },
             showNonCurrentDates: true,
+            dayMaxEventRows: false, // ✅ Mostrar TODOS los eventos sin límite
+            dayMaxEvents: false,    // ✅ No limitar eventos por día
             events: [], // ✅ Inicialmente vacío, se carga después
             datesSet: (info) => this.actualizarTitulo(info),
             dateClick: (info) => this.handleDateClick(info),
@@ -164,7 +166,7 @@ class CalendarManager {
     }
 
     // ✅ Función para obtener mantenimientos completados del SP
-    obtenerMantenimientosAnuales(fechaInicio = null, fechaFin = null) {
+    obtenerMantenimientosAnuales(Planta,fechaInicio = null, fechaFin = null) {
         return new Promise((resolve, reject) => {
             // Si no se proporcionan fechas, usar el año actual
             if (!fechaInicio || !fechaFin) {
@@ -177,6 +179,7 @@ class CalendarManager {
                 url: `/${this.URLBase}/GetMantenimientosCompletados`,
                 type: 'GET',
                 data: {
+                    planta: Planta,
                     fechaInicio: fechaInicio,
                     fechaFin: fechaFin
                 },
@@ -231,10 +234,10 @@ class CalendarManager {
             // Determinar color según tipo
             const colorEvento = colores[item.TIPO_MANTENIMIENTO] || '#6c757d';
 
-            // Formatear fechas
+            // Formatear fechas - con fallback: FECHA_COMPLETADO → HORA_APERTURA → fecha actual
             const fechaInicio = new Date(item.FECHA_INICIO);
             const fechaFin = new Date(item.FECHA_FIN);
-            const fechaCompletado = new Date(item.FECHA_COMPLETADO);
+            const fechaCompletado = new Date(item.FECHA_COMPLETADO || item.HORA_APERTURA || new Date());
 
             // ✅ SOLO pintar el día que fue completado (no rango)
             const fechaCompletadoStr = fechaCompletado.toISOString().split('T')[0];
@@ -282,7 +285,7 @@ class CalendarManager {
         GlobalUtil.mostrarLoader(true);
 
         try {
-            const datosHana = await this.obtenerMantenimientosAnuales(fechaInicio, fechaFin);
+            const datosHana = await this.obtenerMantenimientosAnuales(this.datos_usuario[0].PLANTA,fechaInicio, fechaFin);
 
             if (datosHana && datosHana.length > 0) {
                 const eventosCalendario = this.transformarEventosCalendario(datosHana);

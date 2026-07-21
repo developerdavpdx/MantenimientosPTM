@@ -2,6 +2,9 @@
     // ✅ VARIABLE GLOBAL PARA ALMACENAR ARCHIVOS
     window.imagenesRutina = [];
 
+    // 🔥 NUEVO: Array global para rastrear URLs de imágenes eliminadas (existentes)
+    window.imagenesRutinaEliminadas = [];
+
     $.fn.imageUploader = function (options) {
         const settings = $.extend({
             maxFileSize: 5 * 1024 * 1024,
@@ -137,17 +140,19 @@
             $previewArea.append($preview);
         }
 
-        // 🔥 NUEVO: Agregar preview de imágenes existentes (solo visualización)
+        // 🔥 NUEVO: Agregar preview de imágenes existentes (modo editable con delete)
+        // Usa URL como data-id para evitar conflictos de índices
         function addExistingImagePreview(url, filename) {
-            const index = uploadedFiles.length;
+            // 🔥 Usar URL como ID único en base64 para evitar conflictos
+            const urlId = btoa(url).replace(/[^a-zA-Z0-9]/g, '');
 
             const $preview = $(`
-                <div class="preview-item preview-existing" data-index="${index}" data-url="${url}">
+                <div class="preview-item preview-existing" data-url="${url}" data-url-id="${urlId}">
                     <img src="${url}" alt="${filename}">
                     <div class="preview-overlay">
                         <div class="file-name">${filename}</div>
                         <div class="file-size">Archivo existente</div>
-                        <button class="view-btn" data-url="${url}">👁️ Ver</button>
+                        <button class="delete-btn-existing" data-url="${url}">Eliminar</button>
                     </div>
                 </div>
             `);
@@ -155,8 +160,39 @@
             $previewArea.append($preview);
         }
 
+        // 🔥 Eliminar imagen existente (por URL)
+        $previewArea.on('click', '.delete-btn-existing', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const urlToDelete = $(this).data('url');
+            const $preview = $(`.preview-item[data-url="${urlToDelete}"]`);
+
+            // 🔥 Marcar como eliminada en el array global
+            if (!window.imagenesRutinaEliminadas.includes(urlToDelete)) {
+                window.imagenesRutinaEliminadas.push(urlToDelete);
+                console.log(`✅ Marcada para eliminar: ${urlToDelete}`);
+            }
+
+            // 🔥 Agregar overlay visual de "Eliminada"
+            $preview.addClass('marked-for-deletion');
+            $preview.find('.preview-overlay').append(`
+                <div class="deletion-badge">
+                    <i class="bi bi-trash"></i> Marcada para eliminar
+                </div>
+            `);
+
+            // 🔥 Deshabilitar botón
+            $preview.find('.delete-btn-existing').prop('disabled', true).css('opacity', '0.5');
+
+            // Remover de window.imagenesRutina
+            window.imagenesRutina = window.imagenesRutina.filter(img => img !== urlToDelete);
+
+            console.log(`📍 URL en lista de eliminadas: ${window.imagenesRutinaEliminadas.length}`);
+        });
+
         // Eliminar imagen
         $previewArea.on('click', '.delete-btn', function (e) {
+            e.preventDefault();
             e.stopPropagation();
             const index = $(this).data('index');
 
@@ -175,14 +211,6 @@
             if (uploadedFiles.length === 0) {
                 $clearAll.hide();
             }
-        });
-
-        // 🔥 NUEVO: Ver imagen existente en nueva pestaña
-        $previewArea.on('click', '.view-btn', function (e) {
-            e.preventDefault(); // ✅ AGREGAR ESTO
-            e.stopPropagation();
-            const url = $(this).data('url');
-            window.open(url, '_blank');
         });
 
         // Limpiar todo
@@ -219,18 +247,19 @@
 
         // 🔥 EXPONER MÉTODOS PÚBLICOS
         this.loadExistingImages = function (imageUrls) {
-            $previewArea.empty(); // Limpiar previews anteriores
-            uploadedFiles = [];
-            window.imagenesRutina = [];
+            // 🔥 Resetear lista de eliminadas cada vez que carguemos nuevas imágenes
+            window.imagenesRutinaEliminadas = [];
+
+            // 🔥 NO limpiar - solo agregar imágenes existentes al preview
+            // $previewArea.empty(); ← Comentado para no borrar lo que ya está
 
             if (imageUrls && imageUrls.length > 0) {
                 imageUrls.forEach(url => {
                     const filename = url.split('/').pop();
+                    // 🔥 Usar URL como ID único (no usar índices de array)
                     addExistingImagePreview(url, filename);
                 });
                 $clearAll.show();
-            } else {
-                $clearAll.hide();
             }
         };
 
@@ -251,6 +280,11 @@
 
             // Limpiar input file
             $fileInput.val('');
+        };
+
+        // 🔥 MÉTODO: Obtener lista de imágenes marcadas para eliminar
+        this.getDeletedImages = function () {
+            return window.imagenesRutinaEliminadas || [];
         };
 
         this.clearAll = function () {

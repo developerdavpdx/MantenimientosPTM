@@ -1,0 +1,499 @@
+﻿@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Acceso Vencido - PTM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ptm-bg-1: #0b0e10;
+            --ptm-bg-2: #14181b;
+            --ptm-blue-light: #29a0de;
+            --ptm-blue-mid: #1877c4;
+            --ptm-blue-dark: #0a5fa0;
+            --ptm-steel-light: #aab4bc;
+            --ptm-steel-mid: #565f66;
+            --ptm-steel-dark: #23272b;
+            --ptm-line: rgba(41,160,222,0.16);
+            --ptm-ok: #37c281;
+            --ptm-warn: #f0a52c;
+            --ptm-danger: #e2574c;
+            --ptm-rust-1: #8a4a24;
+            --ptm-rust-2: #b5652f;
+            --ptm-rust-3: #5c331a;
+            --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+            --stencil: 'Oswald', 'Segoe UI', system-ui, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at 15% 15%, rgba(41,160,222,0.07), transparent 42%), radial-gradient(circle at 88% 85%, rgba(24,119,196,0.09), transparent 46%), linear-gradient(180deg, var(--ptm-bg-1), var(--ptm-bg-2));
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #dfe3e8;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+            /* Chapa estriada de piso de planta, muy sutil, detrás de todo */
+            body::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.018) 0px, rgba(255,255,255,0.018) 2px, transparent 2px, transparent 10px);
+                pointer-events: none;
+            }
+
+            body::after {
+                content: "";
+                position: absolute;
+                inset: -50px;
+                background-image: linear-gradient(rgba(41,160,222,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(41,160,222,0.045) 1px, transparent 1px);
+                background-size: 42px 42px;
+                animation: gridDrift 34s linear infinite;
+                pointer-events: none;
+                mask-image: radial-gradient(circle at 50% 40%, rgba(0,0,0,0.5), transparent 70%);
+            }
+
+        @@keyframes gridDrift {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(42px, 42px);
+            }
+        }
+
+        .card-panel {
+            position: relative;
+            width: 100%;
+            max-width: 460px;
+            background: repeating-linear-gradient(115deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 5px), linear-gradient(160deg, #2a2f34 0%, #17191c 55%, #101214 100%);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 3px;
+            padding: 0 0 26px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -1px 0 rgba(0,0,0,0.6);
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(18px);
+            animation: panelRise .7s cubic-bezier(.2,.8,.2,1) .05s forwards;
+        }
+
+        @@keyframes panelRise {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Cinta de peligro superior */
+        .hazard-strip {
+            position: relative;
+            height: 22px;
+            background: repeating-linear-gradient(-45deg, #171a1c 0 10px, #f0a52c 10px 20px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-bottom: 1px solid rgba(0,0,0,0.5);
+        }
+
+            .hazard-strip span {
+                background: var(--ptm-bg-1);
+                color: var(--ptm-warn);
+                font-family: var(--mono);
+                font-size: 9.5px;
+                font-weight: 700;
+                letter-spacing: .18em;
+                padding: 1px 10px;
+                text-transform: uppercase;
+                border-radius: 2px;
+            }
+
+        .plate-body {
+            padding: 32px 38px 0;
+        }
+
+        /* Barrido de luz continuo, sube y baja en loop */
+        .card-panel .scan {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 90px;
+            top: -90px;
+            background: linear-gradient(180deg, transparent, rgba(41,160,222,0.14), transparent);
+            animation: scanSweep 3.4s ease-in-out .6s infinite alternate;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        @@keyframes scanSweep {
+            0% {
+                top: -90px;
+            }
+
+            100% {
+                top: 105%;
+            }
+        }
+
+        /* Tornillos con cabeza cruzada, esquinas de la placa */
+        .bolt {
+            position: absolute;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 32% 30%, #9aa2a9, #4a5158 55%, #26292c 100%);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(0,0,0,0.4);
+            opacity: 0;
+            animation: boltIn .4s ease-out .55s forwards;
+            z-index: 3;
+        }
+
+            .bolt::before, .bolt::after {
+                content: "";
+                position: absolute;
+                background: rgba(20,22,24,0.75);
+                top: 50%;
+                left: 50%;
+            }
+
+            .bolt::before {
+                width: 8px;
+                height: 1.6px;
+                transform: translate(-50%, -50%) rotate(18deg);
+            }
+
+            .bolt::after {
+                width: 1.6px;
+                height: 8px;
+                transform: translate(-50%, -50%) rotate(18deg);
+            }
+
+            .bolt.tl {
+                top: 34px;
+                left: 14px;
+            }
+
+            .bolt.tr {
+                top: 34px;
+                right: 14px;
+                animation-delay: .62s;
+            }
+
+            .bolt.bl {
+                bottom: 14px;
+                left: 14px;
+                animation-delay: .69s;
+            }
+
+            .bolt.br {
+                bottom: 14px;
+                right: 14px;
+                animation-delay: .76s;
+            }
+
+        @@keyframes boltIn {
+            from {
+                opacity: 0;
+                transform: scale(.3) rotate(-40deg);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) rotate(18deg);
+            }
+        }
+
+        /* --- Óxido / desgaste en las esquinas --- */
+        .rust-corner {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0;
+            mix-blend-mode: multiply;
+            background: radial-gradient(ellipse at 28% 26%, rgba(138,74,36,0.65), transparent 52%), radial-gradient(ellipse at 62% 55%, rgba(181,101,47,0.45), transparent 48%), radial-gradient(ellipse at 40% 78%, rgba(92,51,26,0.55), transparent 44%), radial-gradient(ellipse at 75% 20%, rgba(120,64,30,0.35), transparent 40%);
+            filter: blur(.3px) saturate(1.1);
+            animation: rustIn 1s ease-out .9s forwards;
+        }
+
+            .rust-corner::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background-image: radial-gradient(circle at 22% 34%, rgba(20,14,10,0.35) 0, rgba(20,14,10,0.35) 1px, transparent 1.5px), radial-gradient(circle at 48% 62%, rgba(20,14,10,0.3) 0, rgba(20,14,10,0.3) 1px, transparent 1.5px), radial-gradient(circle at 68% 40%, rgba(20,14,10,0.3) 0, rgba(20,14,10,0.3) 1px, transparent 1.5px), radial-gradient(circle at 34% 82%, rgba(20,14,10,0.28) 0, rgba(20,14,10,0.28) 1px, transparent 1.5px);
+                mix-blend-mode: multiply;
+            }
+
+            .rust-corner.tl {
+                top: 0;
+                left: 0;
+                border-radius: 0 0 70% 0 / 0 0 60% 0;
+            }
+
+                .rust-corner.tl::before {
+                    content: "";
+                    position: absolute;
+                    top: 100%;
+                    left: 18px;
+                    width: 3px;
+                    height: 22px;
+                    background: linear-gradient(180deg, rgba(138,74,36,0.5), transparent);
+                    filter: blur(.4px);
+                }
+
+            .rust-corner.tr {
+                top: 0;
+                right: 0;
+                border-radius: 0 0 0 70% / 0 0 0 60%;
+            }
+
+                .rust-corner.tr::before {
+                    content: "";
+                    position: absolute;
+                    top: 100%;
+                    right: 20px;
+                    width: 3px;
+                    height: 16px;
+                    background: linear-gradient(180deg, rgba(138,74,36,0.45), transparent);
+                    filter: blur(.4px);
+                }
+
+            .rust-corner.bl {
+                bottom: 0;
+                left: 0;
+                border-radius: 0 70% 0 0 / 0 60% 0 0;
+            }
+
+            .rust-corner.br {
+                bottom: 0;
+                right: 0;
+                border-radius: 70% 0 0 0 / 60% 0 0 0;
+            }
+
+        @@keyframes rustIn {
+            to {
+                opacity: .85;
+            }
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            .rust-corner {
+                animation: none;
+                opacity: .85;
+            }
+        }
+
+        .status-strip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--ptm-danger);
+            font-weight: 600;
+            margin-bottom: 24px;
+            font-family: var(--mono);
+        }
+
+            .status-strip .dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--ptm-danger);
+                box-shadow: 0 0 0 0 rgba(226,87,76,0.6);
+                animation: pulse 2s infinite;
+                flex: none;
+            }
+
+        @@keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(226,87,76,0.45);
+            }
+
+            70% {
+                box-shadow: 0 0 0 8px rgba(226,87,76,0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(226,87,76,0);
+            }
+        }
+
+        .logo-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+            .logo-wrap img {
+                height: 36px;
+                width: auto;
+                filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+            }
+
+        h1.title {
+            font-family: var(--stencil);
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: #f2f4f6;
+            margin-bottom: 6px;
+            letter-spacing: .03em;
+            text-transform: uppercase;
+            text-align: center;
+            text-shadow: 0 1px 0 rgba(0,0,0,0.6), 0 -1px 0 rgba(255,255,255,0.04);
+        }
+
+        .nameplate {
+            text-align: center;
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .16em;
+            color: var(--ptm-steel-mid);
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        p.subtitle {
+            color: var(--ptm-steel-light);
+            font-size: 0.94rem;
+            line-height: 1.55;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .divider-line {
+            position: relative;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--ptm-line), transparent);
+            margin: 0 0 20px;
+        }
+
+        .support-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(180deg, #262b30, #1a1d20);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 3px;
+            color: var(--ptm-blue-light);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -2px 0 rgba(0,0,0,0.4);
+            transition: background .2s ease, border-color .2s ease, transform .12s ease, box-shadow .12s ease;
+        }
+
+            .support-link:hover {
+                background: linear-gradient(180deg, #2c3238, #1e2124);
+                border-color: rgba(41,160,222,0.4);
+                color: #eaf5fc;
+            }
+
+            .support-link:active {
+                transform: translateY(1px);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), inset 0 1px 2px rgba(0,0,0,0.5);
+            }
+
+            .support-link:focus-visible {
+                outline: 2px solid var(--ptm-blue-light);
+                outline-offset: 2px;
+            }
+
+        .footer-tag {
+            text-align: center;
+            font-size: 0.68rem;
+            color: #4a5560;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            margin-top: 20px;
+            font-family: var(--mono);
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            .status-strip .dot,
+            body::after {
+                animation: none;
+            }
+
+            .card-panel,
+            .bolt {
+                animation: none;
+                opacity: 1;
+                transform: none;
+            }
+
+                .card-panel .scan {
+                    display: none;
+                }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card-panel">
+        <div class="scan"></div>
+        <div class="hazard-strip"><span>Acceso Restringido</span></div>
+
+        <div class="bolt tl"></div>
+        <div class="bolt tr"></div>
+        <div class="bolt bl"></div>
+        <div class="bolt br"></div>
+
+        <div class="rust-corner tl"></div>
+        <div class="rust-corner tr"></div>
+        <div class="rust-corner bl"></div>
+        <div class="rust-corner br"></div>
+
+        <div class="plate-body">
+            <div class="logo-wrap">
+                <img src="~/Content/Images/LogoPTM.png" alt="PTM">
+            </div>
+
+            <div class="status-strip">
+                <span class="dot"></span>
+                Sesión bloqueada
+            </div>
+
+            <h1 class="title">Tu acceso ha vencido</h1>
+            <p class="subtitle">
+                Tu cuenta ya no tiene permisos activos para ingresar al Sistema Integral de Mantenimientos PTM.
+            </p>
+
+            <div class="divider-line"></div>
+
+            <a href="/" class="support-link">                
+            <i class="bi-arrow-clockwise"></i>Reintentar
+            </a>
+
+            <div class="footer-tag">PTM · Sistema Integral de Mantenimientos</div>
+        </div>
+    </div>
+
+</body>
+</html>

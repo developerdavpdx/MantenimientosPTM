@@ -314,32 +314,47 @@ class GestionFirmas {
         tiposArray.forEach(tipo => this.deshabilitarFirma(tipo, true));
     }
 
-    async _cargarFirmaFromDB(tipo, ruta, nombre) {
+    async _cargarFirmaFromDB(tipo, ruta, nombre, disabled = true) {
         if (!ruta) return;
 
         const key = this._mapTipo(tipo);
         const pad = await this._ensurePad(key);
         if (!pad) return;
 
-        const canvas = pad.canvas;
-        const ctx = canvas.getContext("2d");
-
         pad.clear();
 
         await new Promise((resolve) => {
             const img = new Image();
+            img.crossOrigin = 'anonymous';
             img.onload = () => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                resolve();
+                try {
+                    // 🔥 Convertir imagen a canvas y luego a DataURL
+                    const canvas = document.createElement('canvas');
+                    canvas.width = pad.canvas.width;
+                    canvas.height = pad.canvas.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // ✅ Cargar a través de SignaturePad (así lo reconoce como no vacío)
+                    const dataURL = canvas.toDataURL('image/png');
+                    pad.fromDataURL(dataURL);
+
+                    resolve();
+                } catch (e) {
+                    console.warn('Error procesando firma:', e);
+                    resolve();
+                }
             };
             img.onerror = () => { console.warn("Error cargando firma:", ruta); resolve(); };
-            img.src = ruta;
+            // 🔥 Cache buster: agregar timestamp para evitar caché del navegador
+            const rutaConTimestamp = ruta.includes('?') ? `${ruta}&t=${Date.now()}` : `${ruta}?t=${Date.now()}`;
+            img.src = rutaConTimestamp;
         });
 
         $(`#nombre${key}`).val(nombre || '');
         $(`#placeholder${key}`).hide();
-        this._bloquearFirma(key);
+        if (disabled)
+            this._bloquearFirma(key);
     }
 
     _bloquearFirma(tipo) {
@@ -377,24 +392,45 @@ class GestionFirmas {
         });
     }
 
-    async queueFirma(tipo, ruta, nombre) {
+    _desbloquearFirmaParaEdicion(tipo) {
+        const key = this._mapTipo(tipo);
+        const pad = this.signaturePads[key];
+
+        if (!pad) {
+            console.warn(`❌ Pad no disponible para desbloquear: ${key}`);
+            return;
+        }
+
+        const container = $(`#firma${key}Container`);
+        const canvas = document.getElementById(`canvas${key}`);
+        const nombreInput = $(`#nombre${key}`);
+
+        if (pad && pad.on) pad.on();
+        container.find('button').show();
+        nombreInput.prop('readonly', false);
+        if (canvas) $(canvas).css({ 'pointer-events': 'auto', 'cursor': 'crosshair', 'opacity': '1' });
+        container.removeClass('firma-readonly');
+        container.removeClass('firma-deshabilitada');
+    }
+
+    async queueFirma(tipo, ruta, nombre, disabled = true) {
         if (!tipo) return;
         if (!ruta) return;
         if (this._firmasInicializadas) {
-            await this._cargarFirmaFromDB(tipo, ruta, nombre);
+            await this._cargarFirmaFromDB(tipo, ruta, nombre, disabled);
             return;
         }
         if (!this._firmasPendientes) this._firmasPendientes = [];
         const existe = this._firmasPendientes.some(f => f.tipo === tipo);
         if (existe) return;
-        this._firmasPendientes.push({ tipo, ruta, nombre });
+        this._firmasPendientes.push({ tipo, ruta, nombre, disabled });
     }
 
     async _procesarFirmasPendientes() {
         if (!this._firmasPendientes || this._firmasPendientes.length === 0) return;
         console.log('🖋️ Procesando firmas pendientes...');
         for (const f of this._firmasPendientes) {
-            await this._cargarFirmaFromDB(f.tipo, f.ruta, f.nombre);
+            await this._cargarFirmaFromDB(f.tipo, f.ruta, f.nombre, f.disabled);
         }
         this._firmasPendientes = null;
     }
@@ -2769,11 +2805,28 @@ class SessionManager {
 
         //Validar permisos y modulos
         let datos_usuario = GlobalUtil.getDatosUsuario();
-        //Estatablecer el nombre de usuario
-        $("#UserName").text(datos_usuario[0].NOMBRECOMPLETO);
+
+        // Mapeo de tipos de usuario a etiquetas legibles
+        const mapeoPerfiles = {
+            'TecnicoMtto': 'Técnico Mantenimiento',
+            'SupervisorMantenimiento': 'Supervisor Mantenimiento',
+            'SupervisorAlmacen': 'Supervisor Almacén',
+            'Almacen': 'Almacén',
+            'SupervisorPlaneacion': 'Supervisor Planeación',
+            'Planeacion': 'Planeación',
+            'SupervisorProduccion': 'Supervisor Producción',
+            'Produccion': 'Producción'
+        };
+
+        // Obtener el perfil legible
+        const tipoUsuario = datos_usuario[0].TIPOUSUARIO;
+        const perfilLegible = mapeoPerfiles[tipoUsuario] || tipoUsuario;
+
+        // Establecer el nombre de usuario con perfil
+        $("#UserName").text(`${datos_usuario[0].NOMBRECOMPLETO} (${perfilLegible})`);
 
         //TECNICO MTTO
-        if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+        if (tipoUsuario === "TecnicoMtto") {
             $("#GestionEquiposURL").addClass("d-none"); //GESTION EQUIPOS
             $("#CalendarioManttoURL").addClass("d-none"); //CALENDARIO MANTEMINIENTOS COMPLETADOS
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
@@ -2781,9 +2834,16 @@ class SessionManager {
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
             $("#MetricasURL").addClass("d-none"); //METRICAS
         }
+        //SUPERVISOR MANTENIMIENTO
+        if (tipoUsuario === "SupervisorMantenimiento") {
+            $("#GestionEquiposURL").addClass("d-none"); //GESTION EQUIPOS
+            $("#AlmacenURL").addClass("d-none"); //ALMACEN
+            $("#PlaneacionURL").addClass("d-none"); //PLANEACION
+            $("#ProduccionURL").addClass("d-none"); //PRODUCCION
+        }
 
         //ALMACEN
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorAlmacen" || datos_usuario[0].TIPOUSUARIO == "Almacen") {
+        if (tipoUsuario === "SupervisorAlmacen" || tipoUsuario === "Almacen") {
             $("#MantenimientosMainContainer").addClass("d-none"); //MANTENIMIENTOS 
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
@@ -2791,7 +2851,7 @@ class SessionManager {
         }
 
         //PLANEACION
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion" || datos_usuario[0].TIPOUSUARIO == "Planeacion") {
+        if (tipoUsuario === "SupervisorPlaneacion" || tipoUsuario === "Planeacion") {
             $("#MantenimientosMainContainer").addClass("d-none"); //MANTENIMIENTOS 
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
@@ -2799,10 +2859,9 @@ class SessionManager {
         }
 
         //PRODUCCION
-        if (datos_usuario[0].TIPOUSUARIO == "SupervisorProduccion" || datos_usuario[0].TIPOUSUARIO == "Produccion") {
+        if (tipoUsuario === "SupervisorProduccion" || tipoUsuario === "Produccion") {
             $("#GestionEquiposURL").addClass("d-none"); //GESTION EQUIPOS
-            $("#MCProgramarURL").addClass("d-none"); //GESTION EQUIPOS
-            $("#CalendarioManttoURL").addClass("d-none"); //GESTION EQUIPOS
+            $("#CalendarioManttoURL").addClass("d-none"); //CALENDARIO MANTENIMIENTO URL
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#MetricasURL").addClass("d-none"); //METRICAS
@@ -4547,7 +4606,12 @@ class ExcelExporterBase {
                     if (node.data.id === 'TOTALES' && textFields.includes(col.field)) {
                         valor = '';
                     }
-                    fila.push(valor || '');
+                    // 🔥 Si el valor es 0, mantener el 0 (no convertir a string vacío)
+                    if (valor === 0 || valor === '0') {
+                        fila.push(0);
+                    } else {
+                        fila.push(valor || '');
+                    }
                 });
             });
             worksheet.addRow(fila);
@@ -4699,3 +4763,4 @@ $(document).ready(function () {
 
     console.log('✅ Global.js cargado correctamente');
 });
+
