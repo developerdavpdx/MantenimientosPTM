@@ -151,6 +151,11 @@ class MantenimientosPreventivoApp {
         // Generar órdenes
         $('#btnGenerarOrdenes').on('click', () => this.mantenimientoManager.generarOrdenes());
 
+        // 🔥 NUEVO: Solicitar reprogramación (SupervisorPlaneacion)
+        $(document).on('click', '.btn-solicitar-reprogramacion', (e) => {
+            this.mantenimientoManager.abrirModalReprogramacion($(e.currentTarget));
+        });
+
         // Solicitar refacción
         $(document).on('click', '.btn-solicitar-refaccion', (e) => {
             this.mantenimientoManager.abrirModalRefaccion($(e.currentTarget));
@@ -166,6 +171,9 @@ class MantenimientosPreventivoApp {
 
         // Guardar refacción
         $('#formSolicitarRefaccion').on('submit', (e) => this.mantenimientoManager.enviarSolicitudRefaccion(e));
+
+        // 🔥 Reprogramación - enviar solicitud
+        $('#formReprogramacion').on('submit', (e) => this.mantenimientoManager.enviarSolicitudReprogramacion(e));
 
         // ✅ CORRECTO - Debes pasar "e" como parámetro
         $('#formOrdenMantenimiento').on('submit', (e) => this.mantenimientoManager.guardarOT(e));
@@ -585,19 +593,156 @@ class MantenimientoManager {
         this.gestionTecnicos = gestionTecnicos;
         this.gestionFirmas = gestionFirmas;
         this.datos_usuario = datos_usuario;
-        this.appReferencia = appReferencia; // ✅ Referencia a la app para acceder a gestionArticulosMP
+        this.appReferencia = appReferencia;
         this.checklistManager = new ChecklistManager();
+
+        // ✅ NUEVOS: Datos del botón guardados en el constructor
+        this.datosBotón = {
+            idEquipo: "",
+            numeroOrden: "",
+            nombreEquipo: "",
+            numeroDocPmCalidad: "",
+            area: "",
+            lineaProduccion: "",
+            fechaInicioMantenimiento: "",
+            fechaFinMantenimiento: "",
+            idPeriodicidad: "",
+            periodicidadMantenimiento: ""
+        };
+
+        // ✅ IDs y referencias globales
         this.ID_EQUIPO = "";
         this.ID_MANTENIMIENTO = "";
         this.ID_EQUIPO_PDF = "";
         this.PLANTA_PDF = "";
-        this.pdfTemporalRutina = null; // ✅ PDF temporal que se guarda al presionar "Guardar"
+        this.pdfTemporalRutina = null;
+    }
+
+    // ============================
+    // GUARDAR DATOS DEL BOTÓN
+    // ============================
+    guardarDatosDelBoton(btn) {
+        this.datosBotón = {
+            idEquipo: btn.data('idequipo'),
+            numeroOrden: btn.data('numeroorden'),
+            nombreEquipo: btn.data('nombreequipo'),
+            numeroDocPmCalidad: btn.data('numerodocpmcalidad'),
+            area: btn.data('area'),
+            lineaProduccion: btn.data('lineaproduccion'),
+            fechaInicioMantenimiento: btn.data('fechainiciomantenimiento'),
+            fechaFinMantenimiento: btn.data('fechafinmantenimiento'),
+            idPeriodicidad: btn.data('idperiodicidad'),
+            periodicidadMantenimiento: btn.data('periodicidadmantenimiento')
+        };
+    }
+
+    // ============================
+    // REPROGRAMACIÓN DE MANTENIMIENTO
+    // ============================
+    abrirModalReprogramacion(btn) {
+
+        // Limpiar validación
+        ValidationManager.limpiarValidacion('#formReprogramacion');
+
+        // ✅ GUARDAR DATOS DEL BOTÓN EN EL CONSTRUCTOR
+        this.guardarDatosDelBoton(btn);
+
+        // ✅ USAR DATOS GUARDADOS
+        const convertirFecha = (fecha) => {
+            if (!fecha || fecha.trim() === '') return '';
+            const partes = fecha.split('/');
+            if (partes.length !== 3) return fecha;
+            const [dia, mes, anio] = partes;
+            return `${anio}-${mes}-${dia}`;
+        };
+
+        // Llenar datos en el modal
+        let Equipo = `${this.datosBotón.nombreEquipo} ${this.datosBotón.numeroDocPmCalidad}`;
+        $('#ReprogramacionIdEquipo').val(this.datosBotón.idEquipo);
+        $('#ReprogramacionNumeroOrden').val(this.datosBotón.numeroOrden);
+        $('#ReprogramacionEquipo').val(Equipo);
+        $('#ReprogramacionArea').val(this.datosBotón.area);
+        $('#ReprogramacionLinea').val(this.datosBotón.lineaProduccion);
+        $('#ReprogramacionPeriodicidad').val(this.datosBotón.periodicidadMantenimiento);
+        $('#ReprogramacionFechaActualInicio').val(convertirFecha(this.datosBotón.fechaInicioMantenimiento));
+        $('#ReprogramacionFechaActualFin').val(convertirFecha(this.datosBotón.fechaFinMantenimiento));
+
+        // Limpiar campos de reprogramación
+        $('#ReprogramacionFechaNovaInicio').val('');
+        $('#ReprogramacionFechaNovaFin').val('');
+        $('#ReprogramacionMotivo').val('');
+
+        // Mostrar modal
+        $('#modalSolicitarReprogramacion').modal('show');
+    }
+
+    enviarSolicitudReprogramacion(e) {
+        e.preventDefault();
+
+        // Validar formulario
+        if (!ValidationManager.validarFormulario('#formReprogramacion')) {
+            AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', 'alertReprogramacionContainer');
+            return false;
+        }
+
+        // ✅ USAR DATOS GUARDADOS EN EL CONSTRUCTOR
+        const datos = {
+            IdEquipo: this.datosBotón.idEquipo,
+            NumeroOrden: this.datosBotón.numeroOrden,
+            FechaActualInicio: $('#ReprogramacionFechaActualInicio').val(),
+            FechaActualFin: $('#ReprogramacionFechaActualFin').val(),
+            FechaNuevaInicio: $('#ReprogramacionFechaNovaInicio').val(),
+            FechaNovaFin: $('#ReprogramacionFechaNovaFin').val(),
+            Motivo: $('#ReprogramacionMotivo').val(),
+            UsuarioSolicita: this.datos_usuario[0].EMAIL,
+            IdPeriodicidad: this.datosBotón.idPeriodicidad,
+            Planta: this.datos_usuario[0].PLANTA
+        };
+
+        $('#btnEnviarReprogramacion').html('<span class="spinner-border spinner-border-sm me-2"></span>Enviando...').prop('disabled', true);
+
+        let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+
+        $.ajax({
+            url: `/${this.URLBase}/SolicitarReprogramacion`,
+            type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Rol-Usuario': TipoUsuario
+            },
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(datos),
+            dataType: 'json',
+            success: (response) => {
+                if (response.Status === 'SI') {
+                    $('#btnEnviarReprogramacion').html('<i class="bi bi-check-circle-fill text-white me-2"></i>Solicitud enviada correctamente');
+                    AlertManager.mostrar('Solicitud de reprogramación enviada correctamente', 'success', 'alertReprogramacionContainer');
+
+                    // Recargar tabla
+                    $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+
+                    setTimeout(() => {
+                        $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
+                        $('#modalSolicitarReprogramacion').modal('hide');
+                    }, 2000);
+                } else {
+                    $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
+                    $('#btnEnviarReprogramacion').prop('disabled', false);
+                    AlertManager.mostrar(response.Message || 'Error al enviar solicitud de reprogramación', 'warning', 'alertReprogramacionContainer');
+                }
+            },
+            error: (xhr, status, error) => {
+                $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
+                $('#btnEnviarReprogramacion').prop('disabled', false);
+                AlertManager.mostrar('Error al conectar con el servidor', 'warning', 'alertReprogramacionContainer');
+            }
+        });
     }
 
     inicializar() {
         this.inicializarTooltips();
         //Solo si es admin
-        if (this.datos_usuario[0].TIPOUSUARIO == "AdminMtto" || this.datos_usuario[0].TIPOUSUARIO == "Administrador") {
+        if (this.datos_usuario[0].TIPOUSUARIO == "AdminMtto" || this.datos_usuario[0].TIPOUSUARIO == "Administrador" || this.datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion") {
             this.llenarMantenimientosPorRango();
         }
         EquiposUtil.llenarLineas(this.datos_usuario[0].PLANTA, "none", "FiltroLinea");
@@ -799,6 +944,7 @@ class MantenimientoManager {
                             const esTecnico = tipoUsuario === "TecnicoMtto";
                             const esSupProduccion = tipoUsuario === "Produccion" || tipoUsuario === "SupervisorProduccion";
                             const esSupMantenimiento = tipoUsuario === "SupervisorMantenimiento";
+                            const esSupervisorPlaneacion = tipoUsuario === "SupervisorPlaneacion";
                             const tieneRefacciones = data.TieneRefacciones;
 
                             const estatusOrden = row.EstatusOrden || '';
@@ -811,6 +957,18 @@ class MantenimientoManager {
 
                             const btnDisabled = (color, icon, tooltip) =>
                                 btn(color, 'disabled', icon, tooltip).replace('<button', '<button disabled');
+
+                            // 🔥 SI ES SupervisorPlaneacion → MOSTRAR SOLO BOTÓN DE REPROGRAMACIÓN
+                            if (esSupervisorPlaneacion) {
+                                const reprogramBtn = btn(
+                                    'btn-warning',
+                                    'btn-solicitar-reprogramacion',
+                                    'calendar2-check',
+                                    'Solicitar Reprogramación',
+                                    dataAttrs
+                                );
+                                return reprogramBtn;
+                            }
 
                             let refaccionBtn = '';
                             let caratulaBtn = '';
@@ -1733,7 +1891,7 @@ class MantenimientoManager {
             // ========================================
             // 🔥 1️0 FIRMAS
             // ========================================
-            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo, (data.estatusOrden == 2 ? false: true));
+            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo, (data.estatusOrden == 2 ? false : true));
             this.gestionFirmas.queueFirma('superviso', data.firmaSuperviso, data.nombreSuperviso);
             this.gestionFirmas.queueFirma('mantenimiento', data.firmaMantenimiento, data.nombreMantenimiento);
 
@@ -2058,7 +2216,7 @@ class MantenimientoManager {
     // ========================================
     // 👨‍💼 CONFIGURAR VISTA ADMIN (PREVENTIVO)
     // ========================================
-    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaSuperviso,FirmaMantenimiento, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad, ComentariosRutina) {
+    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaSuperviso, FirmaMantenimiento, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad, ComentariosRutina) {
 
 
         //Cambiar títulos de firma dependiendo la planta
@@ -2204,7 +2362,7 @@ class MantenimientoManager {
         else this.gestionFirmas.deshabilitarFirma("Realizo", true);
 
         if (FirmaMantenimiento != "") this.gestionFirmas._bloquearFirma("Mantenimiento", true);
-        
+
 
         //BOTON BORRADOR
         $('#btnGuardarBorrador').addClass('d-none').prop('disabled', true);

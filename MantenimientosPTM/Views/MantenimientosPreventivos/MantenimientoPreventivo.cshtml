@@ -319,6 +319,135 @@
 </div>
 
 <!-- ══════════════════════════════════════════════
+     MODAL SOLICITAR REPROGRAMACIÓN DE MANTENIMIENTO
+═══════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalSolicitarReprogramacion" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <!-- ── Header ── -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-calendar2-check"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Solicitar Reprogramación</div>
+                        <div class="modal-subtitle-custom">Mantenimiento Preventivo</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- ── Body ── -->
+            <form id="formReprogramacion" class="needs-validation" novalidate autocomplete="on">
+                <div class="modal-body-custom">
+
+                    <!-- Sección 1: Información Actual -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-info-circle-fill me-2"></i>Información Actual
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="ReprogramacionEquipo">
+                                    <i class="bi bi-gear-fill"></i> Equipo
+                                </label>
+                                <input type="text" class="form-control-custom" id="ReprogramacionEquipo" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="ReprogramacionArea">
+                                    <i class="bi bi-diagram-3"></i> Proceso
+                                </label>
+                                <input type="text" class="form-control-custom" id="ReprogramacionArea" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="ReprogramacionLinea">
+                                    <i class="bi bi-arrow-repeat"></i> Línea
+                                </label>
+                                <input type="text" class="form-control-custom" id="ReprogramacionLinea" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="ReprogramacionPeriodicidad">
+                                    <i class="bi bi-calendar-event"></i> Periodicidad
+                                </label>
+                                <input type="text" class="form-control-custom" id="ReprogramacionPeriodicidad" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 2: Fechas Actuales -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-calendar-check me-2"></i>Fechas Programadas Actualmente
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="ReprogramacionFechaActualInicio">
+                                    <i class="bi bi-calendar2-check"></i> Fecha Inicio
+                                </label>
+                                <input type="date" class="form-control-custom" id="ReprogramacionFechaActualInicio" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-custom" for="ReprogramacionFechaActualFin">
+                                    <i class="bi bi-calendar2-x"></i> Fecha Fin
+                                </label>
+                                <input type="date" class="form-control-custom" id="ReprogramacionFechaActualFin" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="divider-custom">
+
+                    <!-- Sección 3: Justificación -->
+                    <div class="mb-4">
+                        <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
+                            <i class="bi bi-chat-left-text-fill me-2"></i>Motivo de la Reprogramación
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label-custom" for="ReprogramacionMotivo">
+                                    <i class="bi bi-pencil-square"></i> Justificación <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control-custom validacion" id="ReprogramacionMotivo" name="ReprogramacionMotivo"
+                                          rows="3" required placeholder="Describa el motivo por el cual solicita la reprogramación..."
+                                          autocomplete="on"></textarea>
+                                <div class="modal-error-msg invalid-feedback">
+                                    <img src="~/Content/Images/alerta.gif" width="24" class="me-2"> Describa el motivo de la reprogramación.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerta Container -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div id="alertReprogramacionContainer"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ── Footer ── -->
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn-modal-guardar" id="btnEnviarReprogramacion">
+                        <i class="bi bi-send-fill me-1"></i> Enviar Solicitud
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
      MODAL ORDEN DE MANTENIMIENTO
 ══════════════════════════════════════════════ -->
 <div class="modal fade" id="modalOrdenMantenimiento" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
@@ -771,7 +900,7 @@
      MODAL ACTUALIZACIÓN DE DATOS — MANTENIMIENTOS PREVENTIVOS
 ═══════════════════════════════════════════════════ -->
 <div class="modal fade actualizacionDatosModal" id="actualizacionDatosModal" tabindex="-1" aria-hidden="true"
-     data-bs-backdrop="static" data-bs-keyboard="false" >
+     data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
 
