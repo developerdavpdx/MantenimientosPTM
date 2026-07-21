@@ -136,6 +136,7 @@ class CalendarManager {
         this._navegandoCalendario = false;
         this._cargaInicial = true;
         this.todosLosPlanes = [];
+        this.todosLosMantenimientos = [];
         this.todosLosParos = [];
 
 
@@ -174,9 +175,13 @@ class CalendarManager {
             // ✅ AGREGA ESTO:
             eventContent: (arg) => {
                 const props = arg.event.extendedProps;
-                return props._tipo === 'paro'
-                    ? this._buildParoChip(arg)
-                    : this._buildPlanChip(arg);
+                if (props._tipo === 'paro') {
+                    return this._buildParoChip(arg);
+                } else if (props._tipo === 'mantenimiento') {
+                    return this._buildMantenimientoChip(arg);
+                } else {
+                    return this._buildPlanChip(arg);
+                }
             },
             eventClick: (info) => this.handleEventClick(info),
         });
@@ -258,6 +263,37 @@ class CalendarManager {
                     <div class="chip-sub">${duracion}</div>
                 </div>
                 <span class="chip-badge ${badgeClass}">${estatusLabel}</span>
+            </div>
+        </div>
+    `;
+        return { html };
+    }
+
+    // ✅ Chip para mantenimientos preventivos
+    _buildMantenimientoChip(arg) {
+        const props = arg.event.extendedProps;
+        const linea = props.line || 'default';
+        const titulo = props.equipment || 'Sin nombre';
+        const periodicidad = props.periodicidad || 'No especificada';
+        const marcador = props._marcador || 'inicio';
+
+        const icono = marcador === 'inicio'
+            ? '<i class="bi bi-tools" style="color:#10b981; font-size:0.9rem;"></i>'
+            : '<i class="bi bi-check-circle-fill" style="color:#06b6d4; font-size:0.9rem;"></i>';
+
+        const colorClass = this.getColorClass(linea);
+        const badgeLabel = marcador === 'inicio' ? 'Inicio' : 'Fin';
+
+        const html = `
+        <div class="cal-event-chip ${colorClass}" title="MTT ${titulo}">
+            <div class="chip-stripe" style="background-color:#10b981;"></div>
+            <div class="chip-body">
+                ${icono}
+                <div class="chip-text">
+                    <div class="chip-title">MTT ${titulo}</div>
+                    <div class="chip-sub">🔧 ${periodicidad}</div>
+                </div>
+                <span class="chip-badge chip-badge-O">Preventivo</span>
             </div>
         </div>
     `;
@@ -357,6 +393,7 @@ class CalendarManager {
             });
         });
     }
+
     // ✅ Función para obtener mantenimientos preventivos del SP
     obtenerMantenimientosPreventivos() {
         return new Promise((resolve, reject) => {
@@ -506,6 +543,76 @@ class CalendarManager {
 
         return eventos;
     }
+
+    // ✅ Transformar mantenimientos preventivos → formato FullCalendar
+    transformarMantenimientosCalendario(datosMantenimientos) {
+        const eventos = [];
+
+        datosMantenimientos.forEach((data) => {
+            // Convertir fechas desde formato DD/MM/YYYY
+            const convertirFecha = (fechaStr) => {
+                if (!fechaStr) return null;
+                const [dia, mes, anio] = fechaStr.split('/');
+                return new Date(`${anio}-${mes}-${dia}T00:00:00`);
+            };
+
+            let fechaInicio = convertirFecha(data.FechaInicioMantenimiento);
+            let fechaFin = convertirFecha(data.FechaFinMantenimiento);
+
+            // Validación: si algo falla, usar fecha de referencia o ignorar
+            if (!fechaInicio || isNaN(fechaInicio)) {
+                console.warn('⚠️ Fecha de inicio inválida para equipo:', data.NombreEquipo);
+                return; // Saltar este registro
+            }
+            if (!fechaFin || isNaN(fechaFin)) {
+                fechaFin = fechaInicio; // Si falta fin, usar inicio
+            }
+
+            const extendedProps = {
+                id_mantenimiento: data.IdEquipo,
+                id_equipo: data.IdEquipo,
+                equipment: data.NombreEquipo,
+                description: data.DescripcionEquipo,
+                area: data.Area,
+                line: data.IdLineaProduccion,
+                type: 'Mantenimiento Preventivo',
+                tipo: 'Mantenimiento Preventivo',
+                periodicidad: data.PeriodicidadMantenimiento,
+                fechaInicio: fechaInicio.toLocaleDateString('es-ES'),
+                fechaFin: fechaFin.toLocaleDateString('es-ES'),
+                periodoMantenimiento: `${fechaInicio.toLocaleDateString('es-ES')} al ${fechaFin.toLocaleDateString('es-ES')}`,
+                status: 'O', // Preventivos generalmente están en estado abierto/programado
+                numero_doc: data.NumeroDocPmCalidad || '',
+                centro_costos: data.CentroCostos || '',
+                mes_mantenimiento: data.MesMantenimiento || '',
+                color_evento: '#10b981' // Verde para diferenciarlo de los planes (azul)
+            };
+
+            // ── Evento INICIO del mantenimiento ──
+            eventos.push({
+                id: `${data.IdEquipo}-mtto-inicio-${data.IdEquipoPeriodicidad}`,
+                title: `MTT ${data.NombreEquipo}`,
+                start: fechaInicio,
+                end: fechaInicio,
+                allDay: true,
+                color: 'transparent',
+                extendedProps: { ...extendedProps, _marcador: 'inicio', _tipo: 'mantenimiento' }
+            });
+
+            // ── Evento FIN del mantenimiento ──
+            eventos.push({
+                id: `${data.IdEquipo}-mtto-fin-${data.IdEquipoPeriodicidad}`,
+                title: `MTT ${data.NombreEquipo}`,
+                start: fechaFin,
+                end: fechaFin,
+                allDay: true,
+                color: 'transparent',
+                extendedProps: { ...extendedProps, _marcador: 'fin', _tipo: 'mantenimiento' }
+            });
+        });
+
+        return eventos;
+    }
     // ✅ Transformar paros → formato FullCalendar
     transformarParosCalendario(datosHana) {
         const eventos = [];
@@ -554,20 +661,28 @@ class CalendarManager {
         GlobalUtil.mostrarLoader(true);
 
         try {
-            // ✅ Ambas peticiones en paralelo — un solo loader
-            const [datosPlanes /*datosParos*/] = await Promise.all([
+            // ✅ Tres peticiones en paralelo — un solo loader
+            const [datosPlanes/*datosMantenimientos,datosParos*/] = await Promise.all([
                 this.obtenerPlanesProduccion()
+                // this.obtenerMantenimientosPreventivos()
                 // this.obtenerParosProduccion()
             ]);
 
             this.calendar.removeAllEvents();
 
-            // ── Planes ──
+            // ── Planes de Producción ──
             if (datosPlanes && datosPlanes.length > 0) {
                 const eventosPlanes = this.transformarEventosCalendario(datosPlanes);
                 this.todosLosPlanes = eventosPlanes;
                 eventosPlanes.forEach(e => this.calendar.addEvent(e));
             }
+
+            // ── Mantenimientos Preventivos ──
+            // if (datosMantenimientos && datosMantenimientos.length > 0) {
+            //     const eventosMantenimientos = this.transformarMantenimientosCalendario(datosMantenimientos);
+            //     this.todosLosMantenimientos = eventosMantenimientos;
+            //     eventosMantenimientos.forEach(e => this.calendar.addEvent(e));
+            // }
 
             // ── Paros ──
             // if (datosParos && datosParos.length > 0) {
@@ -577,15 +692,17 @@ class CalendarManager {
             // }
 
             // todosLosEventos sigue funcionando para cargarLineasProduccion
-            this.todosLosEventos = [...this.todosLosPlanes, ...this.todosLosParos];
+            this.todosLosEventos = [...this.todosLosPlanes, ...this.todosLosMantenimientos, ...this.todosLosParos];
 
             const totalPlanes = datosPlanes?.length || 0;
+            // const totalMantenimientos = datosMantenimientos?.length || 0;
             // const totalParos = datosParos?.length || 0;
 
             const labelPlanes = totalPlanes === 1 ? 'plan cargado' : 'planes cargados';
+            // const labelMantenimientos = totalMantenimientos === 1 ? 'mantenimiento cargado' : 'mantenimientos cargados';
             // const labelParos = totalParos === 1 ? 'paro cargado' : 'paros cargados';
 
-            AlertManager.mostrar(`${totalPlanes} ${labelPlanes} <br/>`, 'success');
+            AlertManager.mostrar(`${totalPlanes} ${labelPlanes}`, 'success');
 
         } catch (error) {
             console.error('❌ Error al cargar calendario:', error);
