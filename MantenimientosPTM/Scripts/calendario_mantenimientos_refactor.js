@@ -156,6 +156,31 @@ class CalendarManager {
                 return arg.event.extendedProps.tipo === 'Preventivo'
                     ? 'evento-preventivo'
                     : 'evento-correctivo';
+            },
+           
+            // 👇 Inicializar el tooltip
+            eventDidMount: (info) => {
+                $(info.el).tooltip({
+                    html: true,
+                    placement: 'top',
+                    container: 'body',
+                    title: `
+                        <div>
+                            <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">
+                                ℹ️ <b>Información del mantenimiento</b>
+                            </div>
+
+                            <b>Equipo:</b> ${info.event.extendedProps.equipment}<br>
+                            <b>Área:</b> ${info.event.extendedProps.areaDescripcion}<br>
+                            <b>Línea:</b> ${info.event.extendedProps.lineaDescripcion}<br>
+                            <b>${info.event.extendedProps.tipo === 'Correctivo' ? 'Fecha:' : 'Periodo:'}</b>
+                            ${info.event.extendedProps.tipo === 'Correctivo'
+                                            ? info.event.extendedProps.fechaInicio
+                                            : info.event.extendedProps.periodoMantenimiento
+                            }
+                        </div>
+                    `
+                });
             }
         });
 
@@ -255,7 +280,9 @@ class CalendarManager {
                     equipment: item.NOMBRE_EQUIPO,
                     description: item.DESCRIPCION_EQUIPO,
                     area: item.AREA,
+                    areaDescripcion: item.AREA_DESCRIPCION,
                     line: item.LINEA_PRODUCCION,
+                    lineaDescripcion: item.LINEA_DESCRIPCION,
                     type: item.TIPO_MANTENIMIENTO,
                     tipo: item.TIPO_MANTENIMIENTO,
                     fechaInicio: fechaInicio.toLocaleDateString('es-ES'),
@@ -440,13 +467,13 @@ class CalendarManager {
         // Información del Equipo
         $('#modalEquipment').text(props.equipment);
         $('#modalDescription').text(props.description);
-        $('#modalLine').text(props.line || 'No especificada');
-        $('#modalArea').text(props.area || 'No especificada');
+        $('#modalLine').text(props.lineaDescripcion || 'No especificada');
+        $('#modalArea').text(props.areaDescripcion || 'No especificada');
         $('#modalUbicacionTecnica').text(props.ubicacion_tecnica);
 
         // Fechas y Duración
         $('#modalFechaCompletado').text(props.fechaCompletado);
-        $('#modalPeriodoMantenimiento').text(props.periodoMantenimiento);
+        $('#modalPeriodoMantenimiento').text(props.tipo === 'Correctivo' ? "N/A" : props.periodoMantenimiento);
         $('#modalDuracion').text(props.duracion_hrs + ' hrs');
 
         // Técnicos Asignados
