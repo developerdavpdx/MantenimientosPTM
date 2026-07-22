@@ -27,7 +27,8 @@
     background: linear-gradient(135deg, #ffffff 0%, #f7fafd 60%, var(--modal-primary-light) 100%);
     border: 1px solid #ccc;
     width: 600px;
-    max-height: 250px;
+    min-height:250px;
+    max-height: 280px;
     overflow-y: auto;
     z-index: 999999;
     font-size: 13px;
