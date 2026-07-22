@@ -219,6 +219,7 @@ class MantenimientosPreventivoApp {
             const horas = diffMs / (1000 * 60 * 60);
 
             $("#DuracionHrs").val(horas.toFixed(2));
+           
         });
 
         $("#FiltroArea")
@@ -1382,7 +1383,10 @@ class MantenimientoManager {
                 $("#HoraFin").attr("readonly", false);
 
             $("#TextoSecuencia").val(data.textoSecuencia || '').attr("readonly", false);
-            $("#DuracionHrs").val(data.duracionHrs || '');
+            //$("#DuracionHrs").val(data.duracionHrs || '');
+            $("#DuracionHrs").val(
+                this.calcularDiferenciaHoras(data.horaInicioTime, data.horaFinTime)
+            );
 
             // ========================================
             // 8️ IDS
@@ -1412,7 +1416,7 @@ class MantenimientoManager {
                     if (typeof this.configurarVistaTecnico === "function") {
                         this.configurarVistaTecnico(data.MaquinaDetenida,
                             data.horaApertura,
-                            data.horaCierre,
+                            data.horaCierreMan,
                             data.horaInicio,
                             data.horaFin,
                             data.estatusOrden,
@@ -1437,7 +1441,7 @@ class MantenimientoManager {
                             data.firmaSuperviso,
                             data.firmaMantenimiento,
                             data.horaApertura,
-                            data.horaCierre,
+                            data.horaCierreMan,
                             data.horaInicio,
                             data.horaFin
                         );
@@ -1461,7 +1465,7 @@ class MantenimientoManager {
                             data.firmaMantenimiento,
                             data.firmaSuperviso,
                             data.horaApertura,
-                            data.horaCierre,
+                            data.horaCierreMan,
                             data.horaInicio,
                             data.horaFin
                         );
@@ -1487,7 +1491,7 @@ class MantenimientoManager {
                             data.firmaMantenimiento,
                             data.firmaSuperviso,
                             data.horaApertura,
-                            data.horaCierre,
+                            data.horaCierreMan,
                             data.horaInicio,
                             data.horaFin
                         );
@@ -2433,23 +2437,51 @@ class MantenimientoManager {
     }
 
     calcularDiferenciaHoras(horaInicio, horaFin) {
-        const parseFecha = (fechaStr) => {
-            const [fecha, hora] = fechaStr.split(' ');
-            const [dia, mes, anio] = fecha.split('/');
-            return new Date(`${anio}-${mes}-${dia}T${hora}`);
-        };
+        // const parseFecha = (fechaStr) => {
+        //     const [fecha, hora] = fechaStr.split(' ');
+        //     const [dia, mes, anio] = fecha.split('/');
+        //     return new Date(`${anio}-${mes}-${dia}T${hora}`);
+        // };
 
-        const inicio = parseFecha(horaInicio);
-        const fin = parseFecha(horaFin);
+        // const inicio = parseFecha(horaInicio);
+        // const fin = parseFecha(horaFin);
 
-        if (isNaN(inicio) || isNaN(fin)) return null;
+        // if (isNaN(inicio) || isNaN(fin)) return null;
 
-        const diffMs = fin - inicio;
+        // const diffMs = fin - inicio;
 
-        const horas = diffMs / (1000 * 60 * 60);
+        // const horas = diffMs / (1000 * 60 * 60);
 
-        return horas.toFixed(2);
+        // return horas.toFixed(2);
+
+        if (!horaInicio || !horaFin)
+            return null;
+
+        // Si viene fecha y hora, nos quedamos solo con la hora
+        horaInicio = horaInicio.includes(' ') ? horaInicio.split(' ')[1] : horaInicio;
+        horaFin = horaFin.includes(' ') ? horaFin.split(' ')[1] : horaFin;
+
+        const [h1, m1] = horaInicio.split(':').map(Number);
+        const [h2, m2] = horaFin.split(':').map(Number);
+
+        let inicioMin = h1 * 60 + m1;
+        let finMin = h2 * 60 + m2;
+
+        // Si cruza medianoche
+        if (finMin < inicioMin) {
+            finMin += 24 * 60;
+        }
+
+        const diferencia = finMin - inicioMin;
+
+        const horas = Math.floor(diferencia / 60);
+        const minutos = diferencia % 60;
+
+        return `${horas}.${String(minutos).padStart(2, '0')}`;
+
     }
+
+   
 }
 
 // GestionFirmas se ha movido a Scripts/Global.js para evitar duplicación.
