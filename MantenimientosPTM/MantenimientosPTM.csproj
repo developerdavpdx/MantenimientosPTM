@@ -18,8 +18,10 @@
     <UseIISExpress>true</UseIISExpress>
     <Use64BitIISExpress />
     <IISExpressSSLPort>44377</IISExpressSSLPort>
-    <IISExpressAnonymousAuthentication>enabled</IISExpressAnonymousAuthentication>
-    <IISExpressWindowsAuthentication>disabled</IISExpressWindowsAuthentication>
+    <IISExpressAnonymousAuthentication>
+    </IISExpressAnonymousAuthentication>
+    <IISExpressWindowsAuthentication>
+    </IISExpressWindowsAuthentication>
     <IISExpressUseClassicPipelineMode />
     <UseGlobalApplicationHostFile />
     <NuGetPackageImportStamp>
@@ -163,6 +165,7 @@
     <Compile Include="Models\AccesoDatos\AccesoDatosEquipos.cs" />
     <Compile Include="Models\AccesoDatos\AccesoDatosPTM.cs" />
     <Compile Include="Models\AccesoDatos\LoginServiceLayer.cs" />
+    <Compile Include="Models\Dto\EliminarParoProduccionDTO.cs" />
     <Compile Include="Models\Dto\PlanProduccionDto.cs" />
     <Compile Include="Models\Dto\PTMRequestDTO.cs" />
     <Compile Include="Models\Dto\PTMResponseDTO.cs" />

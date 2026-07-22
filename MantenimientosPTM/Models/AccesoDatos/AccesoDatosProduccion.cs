@@ -87,6 +87,14 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGuardarTiemposMuertosPeadLiso\"";
             }
         }
+        public string GCEliminarParoProduccion
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminaParoProduccion\"";
+            }
+        }
+
         #endregion
 
         #region AditionalClassModel

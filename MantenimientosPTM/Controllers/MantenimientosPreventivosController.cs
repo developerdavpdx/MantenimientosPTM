@@ -138,6 +138,9 @@ namespace MantenimientosPTM.Controllers
                     mantenimientos = JsonConvert.DeserializeObject<List<AccesoDatosMantenimientosPreventivos.MantenimientoRangoLIST>>(resultHana.JsonResult);
                 }
 
+                var pendientes = mantenimientos
+                    .Where(m => m.FueReprogramado == "SI")
+                    .ToList();
                 // ✅ Total de registros (ya vienen filtrados desde HANA)
                 int totalRegistrosFiltrados = mantenimientos.Count();
 
@@ -400,7 +403,7 @@ namespace MantenimientosPTM.Controllers
                     var resultado = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultHana.JsonResult);
                     var idOtDetalle = resultado[0]["ID_OT_DETALLE"].ToString();
 
-                    string mensaje = esBorrador 
+                    string mensaje = esBorrador
                         ? "Borrador de orden de trabajo guardado correctamente"
                         : "Orden de trabajo guardada correctamente con firmas digitales";
 
@@ -466,7 +469,7 @@ namespace MantenimientosPTM.Controllers
                 // Ruta completa del archivo
                 string rutaCompleta = Path.Combine(carpetaOrden, nombreArchivo);
 
-                if(System.IO.File.Exists(rutaCompleta))
+                if (System.IO.File.Exists(rutaCompleta))
                     System.IO.File.Delete(rutaCompleta);
 
                 if (!System.IO.File.Exists(rutaCompleta))
@@ -943,6 +946,256 @@ namespace MantenimientosPTM.Controllers
                 return Json(jsonResponse);
             }
         }
+
+        [HttpPost]
+        public JsonResult SolicitarReprogramacion()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+
+            try
+            {
+                // Leer el cuerpo de la solicitud JSON
+                Request.InputStream.Position = 0;
+
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    // Deserializar datos de reprogramación usando DTO
+                    var datos = JsonConvert.DeserializeObject<AccesoDatosMantenimientosPreventivos.SolicitarReprogramacionDTO>(jsonData);
+
+                    // Validar campos requeridos
+                    if (datos == null || 
+                        datos.IdEquipo <= 0 ||
+                        string.IsNullOrEmpty(datos.FechaActualInicio) ||
+                        string.IsNullOrEmpty(datos.FechaActualFin) ||
+                        string.IsNullOrEmpty(datos.Motivo) ||
+                        string.IsNullOrEmpty(datos.UsuarioSolicita) ||
+                        datos.IdPeriodicidad <= 0 ||
+                        !datos.Planta.HasValue || datos.Planta <= 0)
+                    {
+                        throw new Exception("Por favor, complete correctamente todos los campos requeridos.");
+                    }
+
+                    // Convertir fechas
+                    DateTime fechaInicio;
+                    DateTime fechaFin;
+
+                    if (!DateTime.TryParse(datos.FechaActualInicio, out fechaInicio))
+                        throw new Exception("Formato de fecha de inicio inválido.");
+
+                    if (!DateTime.TryParse(datos.FechaActualFin, out fechaFin))
+                        throw new Exception("Formato de fecha de fin inválido.");
+
+                    if (fechaInicio >= fechaFin)
+                        throw new Exception("La fecha de inicio no puede ser mayor o igual a la fecha de fin.");
+
+                    // Construir parámetros para el stored procedure
+                    var parametros = new
+                    {
+                        p_ID_SOLIICTUD = datos.IdSolicitud,
+                        p_ID_EQUIPO = datos.IdEquipo,
+                        p_NUMERO_ORDEN = string.IsNullOrEmpty(datos.NumeroOrden) ? (object)DBNull.Value : datos.NumeroOrden,
+                        p_MOTIVO = datos.Motivo,
+                        p_USUARIO_SOLICITA = datos.UsuarioSolicita,
+                        p_ID_PERIODICIDAD = datos.IdPeriodicidad,
+                        p_PLANTA = datos.Planta.Value
+                    };
+
+                    // Convertir a parámetros HANA
+                    var hanaParameters = Logic.GlobalCommands.ConvertToHanaParameters(parametros, false, null);
+
+                    // Ejecutar stored procedure
+                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCSolicitarReprogramacion,
+                        hanaParameters
+                    );
+
+                    // Evaluar resultado deserializando la respuesta JSON del stored
+                    if (resultHana.JsonResult != null && !string.IsNullOrEmpty(resultHana.JsonResult))
+                    {
+                        try
+                        {
+                            // Parsear como JArray ya que viene en formato: [{"ID_SOLICITUD":3,"ESTATUS":"SI"}]
+                            var jsonArray = JArray.Parse(resultHana.JsonResult);
+
+                            if (jsonArray != null && jsonArray.Count > 0)
+                            {
+                                var firstItem = jsonArray[0];
+                                string estatus = firstItem["ESTATUS"]?.ToString();
+                                int idSolicitud = Convert.ToInt32(firstItem["ID_SOLICITUD"]?.ToString() ?? "0");
+
+                                if (estatus == "SI")
+                                {
+                                    jsonResponse.Status = "SI";
+                                    jsonResponse.Message = $"Solicitud de reprogramación registrada correctamente. ID: {idSolicitud}";
+                                    jsonResponse.Data = idSolicitud.ToString();
+
+                                    // Notificar cambios en tiempo real (SignalR)
+                                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                                    context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+                                }
+                                else
+                                {
+                                    jsonResponse.Status = "NO";
+                                    jsonResponse.Message = "No fue posible registrar la solicitud de reprogramación.";
+                                    jsonResponse.Data = string.Empty;
+                                }
+                            }
+                            else
+                            {
+                                jsonResponse.Status = "NO";
+                                jsonResponse.Message = "No se recibieron datos de la solicitud.";
+                                jsonResponse.Data = string.Empty;
+                            }
+                        }
+                        catch (Exception exJson)
+                        {
+                            jsonResponse.Status = "NO";
+                            jsonResponse.Message = $"Error al procesar la respuesta del servidor: {exJson.Message}";
+                            jsonResponse.Data = string.Empty;
+                        }
+                    }
+                    else
+                    {
+                        jsonResponse.Status = "NO";
+                        jsonResponse.Message = "No se obtuvo respuesta del servidor.";
+                        jsonResponse.Data = string.Empty;
+                    }
+                }
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al procesar la solicitud de reprogramación: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult AceptarReprogramacion()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+
+            try
+            {
+                Request.InputStream.Position = 0;
+
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    var datos = JsonConvert.DeserializeObject<AccesoDatosMantenimientosPreventivos.AceptarReprogramacionDTO>(jsonData);
+
+                    if (datos == null ||
+                        datos.IdSolicitudPendiente <= 0 ||
+                        string.IsNullOrEmpty(datos.UsuarioAcepta) ||
+                        string.IsNullOrEmpty(datos.Accion))
+                    {
+                        throw new Exception("Por favor, complete correctamente todos los campos requeridos.");
+                    }
+
+                    if (datos.Accion != "ACEPTAR" && datos.Accion != "RECHAZAR")
+                        throw new Exception("Acción no válida. Debe ser 'ACEPTAR' o 'RECHAZAR'.");
+
+                    string nuevoEstatus = datos.Accion == "ACEPTAR" ? "Aceptada" : "Rechazada";
+
+                    // ✅ Solo mandamos lo necesario para resolver: ID_SOLICITUD + ESTATUS.
+                    // El resto va en null para que el MERGE no toque esos campos.
+                    var parametros = new
+                    {
+                        p_ID_SOLICITUD = datos.IdSolicitudPendiente,
+                        p_ID_EQUIPO = (int?)null,
+                        p_NUMERO_ORDEN = (string)null,
+                        p_MOTIVO = (string)null,
+                        p_USUARIO_SOLICITA = (string)null,
+                        p_ID_PERIODICIDAD = (int?)null,
+                        p_PLANTA = (int?)null,
+                        p_ESTATUS = nuevoEstatus
+                    };
+
+                    var hanaParameters = Logic.GlobalCommands.ConvertToHanaParameters(parametros, false, null);
+
+                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCSolicitarReprogramacion,   // ✅ mismo stored que usas para crear/editar
+                        hanaParameters
+                    );
+
+                    if (resultHana.JsonResult != null && !string.IsNullOrEmpty(resultHana.JsonResult))
+                    {
+                        try
+                        {
+                            var jsonArray = JArray.Parse(resultHana.JsonResult);
+
+                            if (jsonArray != null && jsonArray.Count > 0)
+                            {
+                                var firstItem = jsonArray[0];
+                                string estatusActual = firstItem["ESTATUS_ACTUAL"]?.ToString();
+
+                                // ✅ Validamos que el estatus en BD realmente quedó como lo pedimos.
+                                // Si ya estaba resuelta (Aceptada/Rechazada previamente), el MERGE no la tocó
+                                // y ESTATUS_ACTUAL no va a coincidir con nuevoEstatus.
+                                if (estatusActual == nuevoEstatus)
+                                {
+                                    jsonResponse.Status = "SI";
+                                    jsonResponse.Message = datos.Accion == "ACEPTAR"
+                                        ? "Reprogramación aceptada correctamente."
+                                        : "Reprogramación rechazada correctamente.";
+                                    jsonResponse.Data = string.Empty;
+
+                                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                                    context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+                                }
+                                else
+                                {
+                                    jsonResponse.Status = "NO";
+                                    jsonResponse.Message = "No fue posible procesar la solicitud. Es posible que ya haya sido resuelta previamente.";
+                                    jsonResponse.Data = string.Empty;
+                                }
+                            }
+                            else
+                            {
+                                jsonResponse.Status = "NO";
+                                jsonResponse.Message = "No se recibieron datos de la respuesta.";
+                                jsonResponse.Data = string.Empty;
+                            }
+                        }
+                        catch (Exception exJson)
+                        {
+                            jsonResponse.Status = "NO";
+                            jsonResponse.Message = $"Error al procesar la respuesta del servidor: {exJson.Message}";
+                            jsonResponse.Data = string.Empty;
+                        }
+                    }
+                    else
+                    {
+                        jsonResponse.Status = "NO";
+                        jsonResponse.Message = "No se obtuvo respuesta del servidor.";
+                        jsonResponse.Data = string.Empty;
+                    }
+                }
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al procesar la solicitud de aceptación/rechazo: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+
+        // 🔥 NUEVO: 
         #endregion
     }
 }

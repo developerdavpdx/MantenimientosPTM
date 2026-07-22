@@ -151,9 +151,14 @@ class MantenimientosPreventivoApp {
         // Generar órdenes
         $('#btnGenerarOrdenes').on('click', () => this.mantenimientoManager.generarOrdenes());
 
-        // Solicitar refacción
-        $(document).on('click', '.btn-solicitar-refaccion', (e) => {
-            this.mantenimientoManager.abrirModalRefaccion($(e.currentTarget));
+        // 🔥 NUEVO: Solicitar reprogramación (SupervisorPlaneacion)
+        $(document).on('click', '.btn-solicitar-reprogramacion', (e) => {
+            this.mantenimientoManager.abrirModalReprogramacion($(e.currentTarget));
+        });
+
+        // 🔥 NUEVO: ACEPTAR reprogramación solicitada por (SupervisorPlaneacion)
+        $(document).on('click', '.btn-aceptar-reprogramacion', (e) => {
+            this.mantenimientoManager.aceptarReprogramacion($(e.currentTarget));
         });
 
         // Carátula online
@@ -166,6 +171,9 @@ class MantenimientosPreventivoApp {
 
         // Guardar refacción
         $('#formSolicitarRefaccion').on('submit', (e) => this.mantenimientoManager.enviarSolicitudRefaccion(e));
+
+        // 🔥 Reprogramación - enviar solicitud
+        $('#formReprogramacion').on('submit', (e) => this.mantenimientoManager.enviarSolicitudReprogramacion(e));
 
         // ✅ CORRECTO - Debes pasar "e" como parámetro
         $('#formOrdenMantenimiento').on('submit', (e) => this.mantenimientoManager.guardarOT(e));
@@ -585,19 +593,300 @@ class MantenimientoManager {
         this.gestionTecnicos = gestionTecnicos;
         this.gestionFirmas = gestionFirmas;
         this.datos_usuario = datos_usuario;
-        this.appReferencia = appReferencia; // ✅ Referencia a la app para acceder a gestionArticulosMP
+        this.appReferencia = appReferencia;
         this.checklistManager = new ChecklistManager();
+
+        // ✅ NUEVOS: Datos del botón guardados en el constructor
+        this.datosBotón = {
+            idEquipo: "",
+            numeroOrden: "",
+            nombreEquipo: "",
+            numeroDocPmCalidad: "",
+            area: "",
+            lineaProduccion: "",
+            fechaInicioMantenimiento: "",
+            fechaFinMantenimiento: "",
+            idPeriodicidad: "",
+            periodicidadMantenimiento: ""
+        };
+
+        // ✅ IDs y referencias globales
         this.ID_EQUIPO = "";
         this.ID_MANTENIMIENTO = "";
         this.ID_EQUIPO_PDF = "";
         this.PLANTA_PDF = "";
-        this.pdfTemporalRutina = null; // ✅ PDF temporal que se guarda al presionar "Guardar"
+        this.pdfTemporalRutina = null;
+    }
+
+    // ============================
+    // GUARDAR DATOS DEL BOTÓN
+    // ============================
+    guardarDatosDelBoton(btn) {
+        this.datosBotón = {
+            idEquipo: btn.data('idequipo'),
+            numeroOrden: btn.data('numeroorden'),
+            nombreEquipo: btn.data('nombreequipo'),
+            numeroDocPmCalidad: btn.data('numerodocpmcalidad'),
+            area: btn.data('area'),
+            lineaProduccion: btn.data('lineaproduccion'),
+            fechaInicioMantenimiento: btn.data('fechainiciomantenimiento'),
+            fechaFinMantenimiento: btn.data('fechafinmantenimiento'),
+            idPeriodicidad: btn.data('idperiodicidad'),
+            periodicidadMantenimiento: btn.data('periodicidadmantenimiento'),
+            // ✅ v4: para el flujo de reprogramación
+            fueReprogramado: btn.data('fuereprogramado'),
+            tieneSolicitudPendiente: btn.data('tienesolicitudpendiente'),
+            idSolicitudPendiente: btn.data('idsolicitudpendiente')
+        };
+    }
+
+    // ============================
+    // REPROGRAMACIÓN DE MANTENIMIENTO
+    // ============================
+    abrirModalReprogramacion(btn) {
+
+        // Limpiar validación
+        ValidationManager.limpiarValidacion('#formReprogramacion');
+
+        // ✅ GUARDAR DATOS DEL BOTÓN EN EL CONSTRUCTOR
+        this.guardarDatosDelBoton(btn);
+
+        // ✅ USAR DATOS GUARDADOS
+        const convertirFecha = (fecha) => {
+            if (!fecha || fecha.trim() === '') return '';
+            const partes = fecha.split('/');
+            if (partes.length !== 3) return fecha;
+            const [dia, mes, anio] = partes;
+            return `${anio}-${mes}-${dia}`;
+        };
+
+        // Llenar datos en el modal
+        let Equipo = `${this.datosBotón.nombreEquipo} ${this.datosBotón.numeroDocPmCalidad}`;
+        $('#ReprogramacionIdEquipo').val(this.datosBotón.idEquipo);
+        $('#ReprogramacionNumeroOrden').val(this.datosBotón.numeroOrden);
+        $('#ReprogramacionEquipo').val(Equipo);
+        $('#ReprogramacionArea').val(this.datosBotón.area);
+        $('#ReprogramacionLinea').val(this.datosBotón.lineaProduccion);
+        $('#ReprogramacionPeriodicidad').val(this.datosBotón.periodicidadMantenimiento);
+        $('#ReprogramacionFechaActualInicio').val(convertirFecha(this.datosBotón.fechaInicioMantenimiento));
+        $('#ReprogramacionFechaActualFin').val(convertirFecha(this.datosBotón.fechaFinMantenimiento));
+
+        // Limpiar campos de reprogramación
+        $('#ReprogramacionFechaNovaInicio').val('');
+        $('#ReprogramacionFechaNovaFin').val('');
+        $('#ReprogramacionMotivo').val('');
+
+        // Mostrar modal
+        $('#modalSolicitarReprogramacion').modal('show');
+    }
+
+    enviarSolicitudReprogramacion(e) {
+        e.preventDefault();
+
+        // Validar formulario
+        if (!ValidationManager.validarFormulario('#formReprogramacion')) {
+            AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', 'alertReprogramacionContainer');
+            return false;
+        }
+
+        // ✅ USAR DATOS GUARDADOS EN EL CONSTRUCTOR
+        const datos = {
+            IdEquipo: this.datosBotón.idEquipo,
+            NumeroOrden: this.datosBotón.numeroOrden,
+            FechaActualInicio: $('#ReprogramacionFechaActualInicio').val(),
+            FechaActualFin: $('#ReprogramacionFechaActualFin').val(),
+            Motivo: $('#ReprogramacionMotivo').val(),
+            UsuarioSolicita: this.datos_usuario[0].EMAIL,
+            IdPeriodicidad: this.datosBotón.idPeriodicidad,
+            Planta: this.datos_usuario[0].PLANTA,
+            // ✅ v4: para el flujo de reprogramación
+            FueReprogramado: this.datosBotón.fueReprogramado,
+            TieneSolicitudPendiente: this.datosBotón.tieneSolicitudPendiente,
+            IdSolicitudPendiente: this.datosBotón.idSolicitudPendiente
+        };
+
+        $('#btnEnviarReprogramacion').html('<span class="spinner-border spinner-border-sm me-2"></span>Enviando...').prop('disabled', true);
+
+        let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+
+        $.ajax({
+            url: `/${this.URLBase}/SolicitarReprogramacion`,
+            type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Rol-Usuario': TipoUsuario
+            },
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(datos),
+            dataType: 'json',
+            success: (response) => {
+                if (response.Status === 'SI') {
+                    $('#btnEnviarReprogramacion').html('<i class="bi bi-check-circle-fill text-white me-2"></i>Solicitud enviada correctamente');
+                    AlertManager.mostrar(response.Message || 'Solicitud de reprogramación enviada correctamente', 'success', 'alertReprogramacionContainer');
+
+                    // Recargar tabla
+                    $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+
+                    setTimeout(() => {
+                        $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
+                        $('#modalSolicitarReprogramacion').modal('hide');
+                    }, 2000);
+                } else if (response.Status === 'ERROR') {
+                    $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
+                    $('#btnEnviarReprogramacion').prop('disabled', false);
+                    AlertManager.mostrar(response.Message || 'Error técnico al procesar la solicitud', 'danger', 'alertReprogramacionContainer');
+                } else {
+                    $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
+                    $('#btnEnviarReprogramacion').prop('disabled', false);
+                    AlertManager.mostrar(response.Message || 'No fue posible registrar la solicitud de reprogramación', 'warning', 'alertReprogramacionContainer');
+                }
+            },
+            error: (xhr, status, error) => {
+                $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
+                $('#btnEnviarReprogramacion').prop('disabled', false);
+                AlertManager.mostrar('Error al conectar con el servidor', 'warning', 'alertReprogramacionContainer');
+            }
+        });
+    }
+
+    aceptarReprogramacion(btn) {
+        // Obtener datos del botón
+        this.guardarDatosDelBoton(btn);
+
+        // Obtener info de la fila
+        const nombreEquipo = `${this.datosBotón.nombreEquipo} ${this.datosBotón.numeroDocPmCalidad}`;
+        const numeroOrden = this.datosBotón.numeroOrden || 'S/N';
+        const area = this.datosBotón.area || '';
+        const linea = this.datosBotón.lineaProduccion || '';
+        const periodo = this.datosBotón.periodicidadMantenimiento || '';
+
+        // Mostrar confirmación con opciones de Aceptar/Rechazar
+        ReprogramacionConfirmManager.mostrar({
+            titulo: '¿Aceptar reprogramación?',
+            mensaje: `
+            <div style="text-align:left; font-size:0.95rem; line-height:1.6;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:180px;"><i class="bi bi-hash me-2" style="color:#1195d0;"></i><strong>Orden:</strong> ${numeroOrden}</div>
+                    <div style="min-width:200px;"><i class="bi bi-tools me-2" style="color:#1195d0;"></i><strong>Equipo:</strong> ${nombreEquipo}</div>
+                </div>
+                <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:160px;"><i class="bi bi-diagram-3-fill me-2" style="color:#1195d0;"></i><strong>Área:</strong> ${area}</div>
+                    <div style="min-width:160px;"><i class="bi bi-diagram-3 me-2" style="color:#1195d0;"></i><strong>Línea:</strong> ${linea}</div>
+                    <div style="min-width:180px;"><i class="bi bi-calendar-event me-2" style="color:#1195d0;"></i><strong>Período:</strong> ${periodo}</div>
+                </div>
+                <hr style="margin:10px 0;">
+                <div style="font-size:0.85rem;color:#fff7d6;">
+                    <strong>Importante:</strong> esta decisión aplica los ajustes correspondientes al mantenimiento.
+                </div>
+            </div>
+            `,
+            onSi: () => {
+                this.procesarAceptarReprogramacion();
+            },
+            onNo: () => {
+                this.procesarRechazarReprogramacion();
+            }
+        });
+    }
+
+    procesarAceptarReprogramacion() {
+        GlobalUtil.mostrarLoader(true);
+
+        const datos = {
+            IdEquipo: this.datosBotón.idEquipo,
+            NumeroOrden: this.datosBotón.numeroOrden,
+            IdPeriodicidad: this.datosBotón.idPeriodicidad,
+            Planta: this.datos_usuario[0].PLANTA,
+            UsuarioAcepta: this.datos_usuario[0].EMAIL,
+            Accion: 'ACEPTAR',
+            // ✅ v4: para el flujo de reprogramación
+            FueReprogramado: this.datosBotón.fueReprogramado,
+            TieneSolicitudPendiente: this.datosBotón.tieneSolicitudPendiente,
+            IdSolicitudPendiente: this.datosBotón.idSolicitudPendiente
+        };
+
+        $.ajax({
+            url: `/${this.URLBase}/AceptarReprogramacion`,
+            type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Rol-Usuario': this.datos_usuario[0].TIPOUSUARIO
+            },
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(datos),
+            dataType: 'json',
+            success: (response) => {
+                GlobalUtil.mostrarLoader(false);
+
+                if (response.Status === 'SI') {
+                    AlertManager.mostrar(response.Message || 'Reprogramación aceptada correctamente', 'success');
+
+                    // Recargar tabla
+                    $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                } else if (response.Status === 'ERROR') {
+                    AlertManager.mostrar(response.Message || 'Error al procesar la aceptación', 'danger');
+                } else {
+                    AlertManager.mostrar(response.Message || 'No fue posible aceptar la reprogramación', 'warning');
+                }
+            },
+            error: (xhr, status, error) => {
+                GlobalUtil.mostrarLoader(false);
+                AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+            }
+        });
+    }
+
+    procesarRechazarReprogramacion() {
+        GlobalUtil.mostrarLoader(true);
+
+        const datos = {
+            IdEquipo: this.datosBotón.idEquipo,
+            NumeroOrden: this.datosBotón.numeroOrden,
+            IdPeriodicidad: this.datosBotón.idPeriodicidad,
+            Planta: this.datos_usuario[0].PLANTA,
+            UsuarioAcepta: this.datos_usuario[0].EMAIL,
+            Accion: 'RECHAZAR',
+            // ✅ v4: para el flujo de reprogramación
+            FueReprogramado: this.datosBotón.fueReprogramado,
+            TieneSolicitudPendiente: this.datosBotón.tieneSolicitudPendiente,
+            IdSolicitudPendiente: this.datosBotón.idSolicitudPendiente
+        };
+
+        $.ajax({
+            url: `/${this.URLBase}/AceptarReprogramacion`,
+            type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Rol-Usuario': this.datos_usuario[0].TIPOUSUARIO
+            },
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(datos),
+            dataType: 'json',
+            success: (response) => {
+                GlobalUtil.mostrarLoader(false);
+
+                if (response.Status === 'SI') {
+                    AlertManager.mostrar(response.Message || 'Reprogramación rechazada correctamente', 'success');
+
+                    // Recargar tabla
+                    $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                } else if (response.Status === 'ERROR') {
+                    AlertManager.mostrar(response.Message || 'Error al procesar el rechazo', 'danger');
+                } else {
+                    AlertManager.mostrar(response.Message || 'No fue posible rechazar la reprogramación', 'warning');
+                }
+            },
+            error: (xhr, status, error) => {
+                GlobalUtil.mostrarLoader(false);
+                AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+            }
+        });
     }
 
     inicializar() {
         this.inicializarTooltips();
         //Solo si es admin
-        if (this.datos_usuario[0].TIPOUSUARIO == "AdminMtto" || this.datos_usuario[0].TIPOUSUARIO == "Administrador") {
+        if (this.datos_usuario[0].TIPOUSUARIO == "AdminMtto" || this.datos_usuario[0].TIPOUSUARIO == "Administrador" || this.datos_usuario[0].TIPOUSUARIO == "SupervisorPlaneacion") {
             this.llenarMantenimientosPorRango();
         }
         EquiposUtil.llenarLineas(this.datos_usuario[0].PLANTA, "none", "FiltroLinea");
@@ -799,6 +1088,7 @@ class MantenimientoManager {
                             const esTecnico = tipoUsuario === "TecnicoMtto";
                             const esSupProduccion = tipoUsuario === "Produccion" || tipoUsuario === "SupervisorProduccion";
                             const esSupMantenimiento = tipoUsuario === "SupervisorMantenimiento";
+                            const esSupervisorPlaneacion = tipoUsuario === "SupervisorPlaneacion";
                             const tieneRefacciones = data.TieneRefacciones;
 
                             const estatusOrden = row.EstatusOrden || '';
@@ -812,39 +1102,103 @@ class MantenimientoManager {
                             const btnDisabled = (color, icon, tooltip) =>
                                 btn(color, 'disabled', icon, tooltip).replace('<button', '<button disabled');
 
+                            // 🔥 SI ES SupervisorPlaneacion → MOSTRAR SOLO BOTÓN DE REPROGRAMACIÓN
+                            // ✅ CON CONDICIONES: NUMERO_ORDEN no vacío, FUE_REPROGRAMADO = 'NO' y TIENE_SOLICITUD_PENDIENTE = 'NO'
+                            if (esSupervisorPlaneacion) {
+                                const numeroOrden = row.NumeroOrden || '';
+                                const fueReprogramado = row.FueReprogramado || 'SI';
+                                const tieneSolicitudPendiente = row.TieneSolicitudPendiente || 'SI';
+
+                                // Validar todas las condiciones
+                                const puedeReprogramar = 
+                                    numeroOrden !== '' && 
+                                    fueReprogramado === 'NO' && 
+                                    tieneSolicitudPendiente === 'NO';
+
+                                if (puedeReprogramar) {
+                                    const reprogramBtn = btn(
+                                        'btn-warning',
+                                        'btn-solicitar-reprogramacion',
+                                        'calendar2-check',
+                                        'Solicitar Reprogramación',
+                                        dataAttrs
+                                    );
+                                    return reprogramBtn;
+                                } else {
+                                    // Mostrar botón deshabilitado con razón
+                                    let razonDeshabilitado = 'No disponible';
+                                    if (numeroOrden === '') {
+                                        razonDeshabilitado = 'Orden de trabajo sin número';
+                                    } else if (fueReprogramado === 'SI') {
+                                        razonDeshabilitado = 'Ya fue reprogramado';
+                                    } else if (tieneSolicitudPendiente === 'SI') {
+                                        razonDeshabilitado = 'Solicitud pendiente';
+                                    }
+
+                                    return btnDisabled(
+                                        'btn-secondary',
+                                        'calendar2-x',
+                                        razonDeshabilitado
+                                    );
+                                }
+                            }
+
                             let refaccionBtn = '';
                             let caratulaBtn = '';
                             let impresionBtn = '';
                             let listRefBtn = '';
+                            let aceptarReprogramacionBtn = '';
+
+                            // 🔴 VERIFICAR SI HAY SOLICITUD PENDIENTE
+                            const tieneSolicitudPendiente = row.TieneSolicitudPendiente || 'NO';
+                            const tieneSolicitudPendienteFlag = tieneSolicitudPendiente === 'SI';
+
+                            // 🔵 SI HAY SOLICITUD PENDIENTE Y ES ADMIN → MOSTRAR BOTÓN DE ACEPTAR
+                            if (esAdmin && tieneSolicitudPendienteFlag) {
+                                aceptarReprogramacionBtn = btn(
+                                    'btn-ptm-light',
+                                    'btn-aceptar-reprogramacion',
+                                    'check-circle',
+                                    'Aceptar Reprogramación',
+                                    dataAttrs
+                                );
+                            }
 
                             if (estatusOrden && estatusOrden !== '') {
 
-                                if (estatusOrden == 3 || estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI") {
+                                // 🔴 SI HAY SOLICITUD PENDIENTE, DESHABILITAR TODOS LOS BOTONES
+                                if (tieneSolicitudPendienteFlag) {
                                     refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
+                                    caratulaBtn = btnDisabled('secondary', 'eye', 'Carátula(OT)');
+                                    impresionBtn = btnDisabled('secondary', 'printer', 'Impresión(OT)');
+                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
                                 } else {
-                                    refaccionBtn = btn('btn-ptm-primary', 'btn-solicitar-refaccion', 'tools', 'Solicitar Refacción', dataAttrs);
-                                }
-
-
-                                caratulaBtn = btn('btn-ptm-mid', 'btn-caratula-online', 'eye', 'Carátula(OT)', dataAttrs);
-
-
-                                if (!esTecnico) {
-                                    if (estatusOrden == 4 || ordenFinalizada === "SI") {
-                                        impresionBtn = btnDisabled('secondary', 'printer', 'Impresión(OT)');
+                                    // LÓGICA NORMAL
+                                    if (estatusOrden == 3 || estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI") {
+                                        refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
                                     } else {
-                                        impresionBtn = btn('btn-ptm-light', 'btn-impresion-online', 'printer', 'Impresión(OT)', dataAttrs);
+                                        refaccionBtn = btn('btn-ptm-primary', 'btn-solicitar-refaccion', 'tools', 'Solicitar Refacción', dataAttrs);
+                                    }
+
+                                    caratulaBtn = btn('btn-ptm-mid', 'btn-caratula-online', 'eye', 'Carátula(OT)', dataAttrs);
+
+                                    if (!esTecnico) {
+                                        if (estatusOrden == 4 || ordenFinalizada === "SI") {
+                                            impresionBtn = btnDisabled('secondary', 'printer', 'Impresión(OT)');
+                                        } else {
+                                            impresionBtn = btn('btn-ptm-light', 'btn-impresion-online', 'printer', 'Impresión(OT)', dataAttrs);
+                                        }
+                                    }
+
+                                    // 🔧 LISTADO DE REFACCIÓNES
+                                    if (tieneRefacciones === "SI") {
+                                        listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Historial de Refacciones', dataAttrs);
+                                    } else {
+                                        listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
                                     }
                                 }
 
-                                // 🔧 LISTADO DE REFACCIÓNES
-                                if (tieneRefacciones === "SI") {
-                                    listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Historial de Refacciones', dataAttrs);
-                                } else {
-                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
-                                }
-
-                                return `${refaccionBtn}${caratulaBtn}${impresionBtn}${listRefBtn}`;
+                                return `${aceptarReprogramacionBtn}${refaccionBtn}${caratulaBtn}${impresionBtn}${listRefBtn}`;
 
                             } else {
 
@@ -856,7 +1210,7 @@ class MantenimientoManager {
                                     refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
                                 }
 
-                                return `${refaccionBtn}${caratulaBtn}`;
+                                return `${aceptarReprogramacionBtn}${refaccionBtn}${caratulaBtn}`;
                             }
                         }
                     },
@@ -1115,6 +1469,16 @@ class MantenimientoManager {
                         diaFinMant: data.DiaFinMant,
                         tipoMantenimiento: data.TipoMantenimiento
                     });
+
+                    // 🔴 PINTAR FILA SI HAY SOLICITUD PENDIENTE DE REPROGRAMACIÓN
+                    if (data.TieneSolicitudPendiente === 'SI') {
+                        $(row).addClass('reprogramacion-pendiente');
+                    }
+
+                    // 🟢 PINTAR FILA SI YA FUE REPROGRAMADO
+                    if (data.FueReprogramado === 'SI') {
+                        $(row).addClass('mantenimiento-reprogramado');
+                    }
                 },
                 drawCallback: function () {
 
@@ -1242,7 +1606,12 @@ class MantenimientoManager {
             nombresuperviso: row.NombreSuperviso,
             firmamantenimiento: row.FirmaMantenimiento,
             tieneRefacciones: row.TieneRefacciones,
-            nombremantenimiento: row.NombreMantenimiento
+            nombremantenimiento: row.NombreMantenimiento,
+
+            // ✅ v4: para el flujo de reprogramación
+            fuereprogramado: row.FueReprogramado,
+            tienesolicitudpendiente: row.TieneSolicitudPendiente,
+            idsolicitudpendiente: row.IdSolicitudPendiente
         };
 
         return Object.entries(map)
@@ -1733,7 +2102,7 @@ class MantenimientoManager {
             // ========================================
             // 🔥 1️0 FIRMAS
             // ========================================
-            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo, (data.estatusOrden == 2 ? false: true));
+            this.gestionFirmas.queueFirma('realizo', data.firmaRealizo, data.nombreRealizo, (data.estatusOrden == 2 ? false : true));
             this.gestionFirmas.queueFirma('superviso', data.firmaSuperviso, data.nombreSuperviso);
             this.gestionFirmas.queueFirma('mantenimiento', data.firmaMantenimiento, data.nombreMantenimiento);
 
@@ -2058,7 +2427,7 @@ class MantenimientoManager {
     // ========================================
     // 👨‍💼 CONFIGURAR VISTA ADMIN (PREVENTIVO)
     // ========================================
-    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaSuperviso,FirmaMantenimiento, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad, ComentariosRutina) {
+    configurarVistaAdministrador(EstatusOrden, FirmaTecnico, FirmaSuperviso, FirmaMantenimiento, NumeroOrden, IdEquipo, Planta, IdEquipoPeriodicidad, ComentariosRutina) {
 
 
         //Cambiar títulos de firma dependiendo la planta
@@ -2204,7 +2573,7 @@ class MantenimientoManager {
         else this.gestionFirmas.deshabilitarFirma("Realizo", true);
 
         if (FirmaMantenimiento != "") this.gestionFirmas._bloquearFirma("Mantenimiento", true);
-        
+
 
         //BOTON BORRADOR
         $('#btnGuardarBorrador').addClass('d-none').prop('disabled', true);
