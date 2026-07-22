@@ -958,12 +958,13 @@ class ProduccionManager {
 
                             this.llenarTablaParos();
                         } else {
-                            console.log("Entró al else");
 
                             AlertManager.mostrar(
                                 response.Message,
                                 'warning'
                             );
+
+                            GlobalUtil.mostrarLoader(false, "Cargando paros por favor espere...");
                         }
                     },
                     error: (xhr, status, error) => {

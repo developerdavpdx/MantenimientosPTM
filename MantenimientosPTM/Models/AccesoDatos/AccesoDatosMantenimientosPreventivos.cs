@@ -370,6 +370,7 @@ namespace MantenimientosPTM
         // ✅ Puedes ponerla en tu carpeta de Models o DTOs
         public class EmpleadoDTO
         {
+            public string CODIGO_EMPLEADO { get; set; }  // ✅ String porque Code es NVARCHAR
             public string NOMINA { get; set; }  // ✅ String porque Code es NVARCHAR
             public string NOMBRE_COMPLETO { get; set; }
             public string NOMBRE { get; set; }

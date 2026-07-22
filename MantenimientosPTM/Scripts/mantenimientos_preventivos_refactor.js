@@ -151,6 +151,11 @@ class MantenimientosPreventivoApp {
         // Generar órdenes
         $('#btnGenerarOrdenes').on('click', () => this.mantenimientoManager.generarOrdenes());
 
+        // Solicitar refacción
+        $(document).on('click', '.btn-solicitar-refaccion', (e) => {
+            this.mantenimientoManager.abrirModalRefaccion($(e.currentTarget));
+        });
+
         // 🔥 NUEVO: Solicitar reprogramación (SupervisorPlaneacion)
         $(document).on('click', '.btn-solicitar-reprogramacion', (e) => {
             this.mantenimientoManager.abrirModalReprogramacion($(e.currentTarget));
@@ -410,8 +415,9 @@ class MantenimientosPreventivoApp {
         // ✅ Cambiar TODAS las function() por arrow functions
         $('#BuscarTecnico').on('input', (e) => {  // ⬅️ Agrega parámetro 'e'
             const query = $(e.target).val().trim();  // ⬅️ Usa e.target, no this
+            let planta = this.datos_usuario[0].PLANTA;
             if (query.length >= 2) {
-                this.gestionTecnicos.buscarTecnicos(query);
+                this.gestionTecnicos.buscarTecnicos(query,planta);
             } else {
                 this.gestionTecnicos.ocultarSugerencias();
             }
@@ -2461,15 +2467,36 @@ class MantenimientoManager {
         $("#nombreMantenimiento").val(this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase()).attr('readonly', true);
 
         // bloquear correctamente
-        if (FirmaTecnico != "")
-            this.gestionFirmas._bloquearFirma("Realizo", true);
-        else
-            this.gestionFirmas.deshabilitarFirma("Realizo", true);
+        // if (FirmaTecnico != "")
+        //     this.gestionFirmas._bloquearFirma("Realizo", true);
+        // else
+        //     this.gestionFirmas.deshabilitarFirma("Realizo", true);
 
-        if (FirmaSuperviso != "")
-            this.gestionFirmas._bloquearFirma("Superviso", true);
-        else
-            this.gestionFirmas.deshabilitarFirma("Superviso", true);
+        // if (FirmaSuperviso != "")
+        //     this.gestionFirmas._bloquearFirma("Superviso", true);
+        // else
+        //     this.gestionFirmas.deshabilitarFirma("Superviso", true);
+
+
+        // 🔥 FIRMAS
+        this._configureFirmas({
+            showRealizo: true,
+            showSuperviso: true,
+            showMantenimiento: true,
+            nombreSuperviso: this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase(),
+            bloquearRealizo: (FirmaTecnico != ""),
+            bloquearSuperviso: (FirmaSuperviso != ""),
+            bloquearMantenimiento: (FirmaMantenimiento != ""),
+            deshabilitarRealizo: (FirmaTecnico != ""),
+            deshabilitarSuperviso: (FirmaSuperviso == ""),
+            deshabilitarMantenimiento: (FirmaMantenimiento != "")
+        });
+
+        // // bloquear correctamente (ya manejado por helper en la mayoría de casos)
+        // if (FirmaTecnico != "") this.gestionFirmas._bloquearFirma("Realizo", true);
+        // else this.gestionFirmas.deshabilitarFirma("Realizo", true);
+
+         if (FirmaMantenimiento != "") this.gestionFirmas._bloquearFirma("Mantenimiento", true);
 
         //BOTON BORRADOR
         $('#btnGuardarBorrador').addClass('d-none').prop('disabled', true);
@@ -2565,7 +2592,10 @@ class MantenimientoManager {
             nombreSuperviso: this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase(),
             bloquearRealizo: (FirmaTecnico != ""),
             bloquearSuperviso: false,
-            bloquearMantenimiento: (FirmaMantenimiento != "")
+            bloquearMantenimiento: (FirmaMantenimiento != ""),
+            deshabilitarRealizo: (FirmaTecnico != ""),
+            deshabilitarSuperviso: (FirmaSuperviso != ""),
+            deshabilitarMantenimiento: (FirmaMantenimiento == "")
         });
 
         // bloquear correctamente (ya manejado por helper en la mayoría de casos)
@@ -2686,7 +2716,7 @@ class MantenimientoManager {
     // ============================
     // Helper: configurar firmas (mostrar, bloquear y nombres)
     // ============================
-    _configureFirmas({ showRealizo = true, showSuperviso = true, showMantenimiento = true, nombreRealizo = null, nombreSuperviso = null, nombreMantenimiento = null, bloquearRealizo = false, bloquearSuperviso = false, bloquearMantenimiento = false } = {}) {
+    _configureFirmas({ showRealizo = true, showSuperviso = true, showMantenimiento = true, nombreRealizo = null, nombreSuperviso = null, nombreMantenimiento = null, bloquearRealizo = false, bloquearSuperviso = false, bloquearMantenimiento = false, deshabilitarRealizo = false, deshabilitarSuperviso = false, deshabilitarMantenimiento = false } = {}) {
         if (showRealizo) this.gestionFirmas.mostrarFirma('Realizo', true);
         else this.gestionFirmas.mostrarFirma('Realizo', false);
 
@@ -2700,14 +2730,17 @@ class MantenimientoManager {
         if (nombreSuperviso) $("#nombreSuperviso").val(nombreSuperviso).attr('readonly', true);
         if (nombreMantenimiento) $("#nombreMantenimiento").val(nombreMantenimiento).attr('readonly', true);
 
+        // ✅ Lógica de Realizo
         if (bloquearRealizo) this.gestionFirmas._bloquearFirma('Realizo');
-        else this.gestionFirmas.deshabilitarFirma('Realizo', true);
+        else if (deshabilitarRealizo) this.gestionFirmas.deshabilitarFirma('Realizo', true);
 
+        // ✅ Lógica de Superviso
         if (bloquearSuperviso) this.gestionFirmas._bloquearFirma('Superviso');
-        else this.gestionFirmas.deshabilitarFirma('Superviso', true);
+        else if (deshabilitarSuperviso) this.gestionFirmas.deshabilitarFirma('Superviso', true);
 
+        // ✅ Lógica de Mantenimiento
         if (bloquearMantenimiento) this.gestionFirmas._bloquearFirma('Mantenimiento');
-        else this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
+        else if (deshabilitarMantenimiento) this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
     }
 
     async guardarOT(e) {
