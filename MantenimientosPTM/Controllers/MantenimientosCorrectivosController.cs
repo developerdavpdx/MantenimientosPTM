@@ -123,6 +123,7 @@ namespace MantenimientosPTM.Controllers
                 string FiltroOrdenTrabajo = Request.Form["FiltroOrdenTrabajo"];
                 string FiltroPlanta = Request.Form["FiltroPlanta"];
                 string FiltroEstatusOT = Request.Form["FiltroEstatusOT"];
+                string FiltroSincronizadosPVC = Request.Form["FiltroSincronizadosPVC"];
 
                 if (FiltroArea != string.Empty || FiltroLinea != string.Empty || FiltroOrdenTrabajo != string.Empty)
                     AditionalFilter = true;
@@ -155,7 +156,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_FILTRO_ORDEN", (string.IsNullOrEmpty(FiltroOrdenTrabajo) ? (object)null : FiltroOrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_ESTATUS", (string.IsNullOrEmpty(FiltroEstatusOT) ? (object)null : FiltroEstatusOT, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_FILTRO_BUSQUEDA", (string.IsNullOrEmpty(FiltroBusqueda) ? (object)null : FiltroBusqueda, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FILTRO_BUSQUEDA", (string.IsNullOrEmpty(FiltroBusqueda) ? (object)null : FiltroBusqueda, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_EXCLUIR_SINCRONIZADOS_PVC", (string.IsNullOrEmpty(FiltroSincronizadosPVC) ? (object)null : FiltroSincronizadosPVC, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -774,7 +776,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarEmpleados(string query)
+        public JsonResult BuscarEmpleados(int? planta, string query)
         {
             try
             {
@@ -787,7 +789,8 @@ namespace MantenimientosPTM.Controllers
                 // ✅ Preparar parámetros para el SP
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure
