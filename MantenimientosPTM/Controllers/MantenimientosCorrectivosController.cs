@@ -774,7 +774,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarEmpleados(string query)
+        public JsonResult BuscarEmpleados(int? planta, string query)
         {
             try
             {
@@ -787,7 +787,8 @@ namespace MantenimientosPTM.Controllers
                 // ✅ Preparar parámetros para el SP
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure

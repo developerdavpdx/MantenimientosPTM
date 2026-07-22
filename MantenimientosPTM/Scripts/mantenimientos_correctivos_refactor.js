@@ -248,8 +248,9 @@ class MantenimientosPreventivoApp {
         // ✅ Cambiar TODAS las function() por arrow functions
         $('#BuscarTecnico').on('input', (e) => {  // ⬅️ Agrega parámetro 'e'
             const query = $(e.target).val().trim();  // ⬅️ Usa e.target, no this
+            let planta = this.datos_usuario[0].PLANTA;
             if (query.length >= 2) {
-                this.gestionTecnicos.buscarTecnicos(query);
+                this.gestionTecnicos.buscarTecnicos(query, planta);
             } else {
                 this.gestionTecnicos.ocultarSugerencias();
             }
