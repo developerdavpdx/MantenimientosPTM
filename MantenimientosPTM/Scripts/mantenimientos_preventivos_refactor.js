@@ -2487,7 +2487,7 @@ class MantenimientoManager {
             bloquearRealizo: (FirmaTecnico != ""),
             bloquearSuperviso: (FirmaSuperviso != ""),
             bloquearMantenimiento: (FirmaMantenimiento != ""),
-            deshabilitarRealizo: (FirmaTecnico != ""),
+            deshabilitarRealizo: (FirmaTecnico == ""),
             deshabilitarSuperviso: (FirmaSuperviso == ""),
             deshabilitarMantenimiento: (FirmaMantenimiento != "")
         });
@@ -2593,7 +2593,7 @@ class MantenimientoManager {
             bloquearRealizo: (FirmaTecnico != ""),
             bloquearSuperviso: false,
             bloquearMantenimiento: (FirmaMantenimiento != ""),
-            deshabilitarRealizo: (FirmaTecnico != ""),
+            deshabilitarRealizo: (FirmaTecnico == ""),
             deshabilitarSuperviso: (FirmaSuperviso != ""),
             deshabilitarMantenimiento: (FirmaMantenimiento == "")
         });
