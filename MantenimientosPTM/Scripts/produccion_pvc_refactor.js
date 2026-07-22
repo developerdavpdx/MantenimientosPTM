@@ -46,6 +46,8 @@ class UIManager {
 class GestionProduccionPVC extends GestionProduccionBase {
     constructor(datos_usuario, URLBase) {
         super(datos_usuario, URLBase, 110);
+        this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos";
+        this.ID_AREA_CORRECTIVOS = 1; // 🔥 PVC
     }
 
     async inicializar() {
@@ -182,30 +184,34 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 }
             });
 
+            let hayDatosOriginales = false;
+
             if (response.Status === "OK") {
 
                 const datos = JSON.parse(response.Data);
-
-                this.cargarDatosGrid(datos);
+                hayDatosOriginales = this.cargarDatosGrid(datos);
 
             } else {
 
-                AlertManager.mostrar(
-                    response.Message,
-                    "info"
-                );
-
-                this.cargarDatosGrid(null);
+                AlertManager.mostrar(response.Message, "info");
+                hayDatosOriginales = this.cargarDatosGrid(null);
             }
+
+            // 🔥 Correctivos se agregan ANTES de pintar totales
+            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, linea);
+
+            // 🔥 Si no hay datos originales NI correctivos, mostramos el placeholder vacío
+            if (!hayDatosOriginales && !seAgregaronCorrectivos) {
+                this.gridApi.setRowData(this.datosOriginales);
+            }
+
+            // 🔥 AHORA sí, una sola vez, al final de todo
+            this.agregarFilaTotales();
 
         } catch (error) {
 
             console.error(error);
-
-            AlertManager.mostrar(
-                "Error al consultar datos",
-                "danger"
-            );
+            AlertManager.mostrar("Error al consultar datos", "danger");
 
         } finally {
             setTimeout(() => {
@@ -220,21 +226,20 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
     cargarDatosGrid(datos) {
 
+        // 🔥 Ya NO agrega la fila de totales aquí — eso se decide al final en consultarDatos
+
         if (datos != null) {
+
             const datosFormateados = datos.map(item => ({
-
                 id: item.ID_REGISTRO || Date.now(),
-
                 ID_REGISTRO: item.ID_REGISTRO,
-
+                OTMC: item.OTMC,   // 🔥 recuerda incluirlo también aquí
                 Fecha: item.FECHA,
                 Linea: item.LINEA,
                 Producto: item.PRODUCTO,
                 Turno: item.TURNO,
                 TRIP: item.TRIP,
-
                 HorasProgramadas: item.HORAS_PROGRAMADAS,
-
                 MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
                 ControlInventarios: item.CONTROL_INVENTARIOS,
                 FaltaMateriaInsumos: item.FALTA_MATERIA_INSUMOS,
@@ -244,20 +249,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION_HR,
                 Mes: item.MES || (
                     item.FECHA
-                        ? [
-                            'ENERO',
-                            'FEBRERO',
-                            'MARZO',
-                            'ABRIL',
-                            'MAYO',
-                            'JUNIO',
-                            'JULIO',
-                            'AGOSTO',
-                            'SEPTIEMBRE',
-                            'OCTUBRE',
-                            'NOVIEMBRE',
-                            'DICIEMBRE'
-                        ][new Date(item.FECHA).getMonth()]
+                        ? ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'][new Date(item.FECHA).getMonth()]
                         : null
                 ),
                 PesoMinimo: item.PESO_MINIMO || 0,
@@ -267,7 +259,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
                 TotalScrapKg: item.TOTAL_SCRAP_KG,
                 PorcentajeScrap: item.PORCENTAJE_SCRAP,
-
                 MttoCorrectivos: item.MTTO_CORRECTIVOS,
                 FallaElectrica: item.FALLA_ELECTRICA,
                 Servicios: item.SERVICIOS,
@@ -278,24 +269,20 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 FaltaMaterial: item.FALTA_MATERIAL,
                 FaltaPersonal: item.FALTA_PERSONAL,
                 FaltaRefacciones: item.FALTA_REFACCIONES,
-
                 TiempoDisponible: item.TIEMPO_DISPONIBLE,
                 TiempoProductivo: item.TIEMPO_PRODUCTIVO
-
             }));
 
-            // 🔥 Aquí va la opción 4
             if (datosFormateados.length > 0) {
                 this.gridApi.setRowData(datosFormateados);
-            } else {
-                this.gridApi.setRowData(this.datosOriginales);
+                return true; // 🔥 sí había datos
             }
         }
-        else {
-            this.gridApi.setRowData(this.datosOriginales);
-        }
 
-        this.agregarFilaTotales();
+        // 🔥 Sin datos: limpiamos el grid, SIN placeholder todavía
+        // (el placeholder se decide después, en consultarDatos, según si llegaron correctivos)
+        this.gridApi.setRowData([]);
+        return false;
     }
 
     // ========================================
@@ -308,48 +295,39 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             GlobalUtil.mostrarLoader(true);
 
-            // ⚠️ Ajusta esta URL al controller/ruta real donde vive
-            // GetMantenimientosCorrectivosPendientes
             const response = await $.ajax({
-                url: `/MantenimientoCorrectivo/GetMantenimientosCorrectivosPendientes`,
+                url: `/${this.URLBaseMantenimientosCorrectivos}/GetMantenimientosCorrectivosPendientes`,
                 type: "POST",
                 data: {
                     draw: 1,
-                    length: 999999,   // 🔥 traemos todo en una sola página
+                    length: 999999,
                     start: 0,
                     "search[value]": "",
                     FiltroSolicitud: "",
                     FiltroFechaInicio: fechaInicio,
                     FiltroFechaFin: fechaFin,
-                    FiltroArea: "",
+                    FiltroArea: this.ID_AREA_CORRECTIVOS,
                     FiltroLinea: linea || "",
                     FiltroOrdenTrabajo: "",
                     FiltroPlanta: this.datos_usuario[0].PLANTA,
                     FiltroEstatusOT: "4",
-                    FiltroExcluirSincronizadosPVC: "S" // 🔥 solo aquí lo mandamos// 🔥 cerrado
+                    FiltroExcluirSincronizadosPVC: "S" // 🔥 nombre correcto, el que usa el SP
                 }
             });
 
             const correctivos = response.data || [];
 
             if (correctivos.length === 0) {
-                AlertManager.mostrar(
-                    "No se encontraron correctivos cerrados en ese rango",
-                    "info"
-                );
-                return;
+                return false; // 🔥 nada que agregar
             }
 
-            this.agregarCorrectivosAlGrid(correctivos);
+            return this.agregarCorrectivosAlGrid(correctivos); // 🔥 ahora retorna bool
 
         } catch (error) {
 
             console.error(error);
-
-            AlertManager.mostrar(
-                "Error al consultar mantenimientos correctivos",
-                "danger"
-            );
+            AlertManager.mostrar("Error al consultar mantenimientos correctivos", "danger");
+            return false;
 
         } finally {
             GlobalUtil.mostrarLoader(false);
@@ -358,37 +336,65 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
     agregarCorrectivosAlGrid(correctivos) {
 
-        const filasNuevas = correctivos.map(item => {
+        const otmcYaEnGrid = new Set();
 
-            const nuevaFila = this.crearFilaVacia(); // ver helper abajo
+        this.gridApi.forEachNode(node => {
+            if (node.data?.OTMC) {
+                otmcYaEnGrid.add(node.data.OTMC);
+            }
+        });
+
+        const correctivosNuevos = correctivos.filter(
+            item => !otmcYaEnGrid.has(item.NumeroOrden)
+        );
+
+        if (correctivosNuevos.length === 0) {
+            return false; // 🔥 nada nuevo
+        }
+
+        const filasNuevas = [];
+        const lineasNoEncontradas = [];
+
+        correctivosNuevos.forEach(item => {
+
+            const nuevaFila = this.crearFilaVacia();
 
             nuevaFila.id = this.generarIdTemporal();
-
-            // ⚠️ Confirma los nombres reales de propiedades del JSON
-            // (dependen de cómo esté definida MantenimientoCorrectivoRangoLIST)
+            nuevaFila.OTMC = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
-            nuevaFila.Linea = item.LineaProduccion;
             nuevaFila.MttoCorrectivos = parseFloat(item.DuracionHrs) || 0;
 
-            // Calcular Mes automáticamente igual que en onCellChanged
+            const lineaEncontrada = this.listaLineas.find(
+                l => String(l.value) === String(item.IdLineaProduccion)
+            );
+
+            if (lineaEncontrada) {
+                nuevaFila.Linea = lineaEncontrada.label;
+            } else {
+                nuevaFila.Linea = null;
+                lineasNoEncontradas.push(item.NumeroOrden);
+            }
+
             if (nuevaFila.Fecha) {
-                const meses = [
-                    'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
-                ];
+                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
                 nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
             }
 
             this.recalcularFila(nuevaFila);
 
-            return nuevaFila;
+            filasNuevas.push(nuevaFila);
         });
 
-        this.gridApi.applyTransaction({
-            add: filasNuevas
-        });
+        this.gridApi.applyTransaction({ add: filasNuevas }); // 🔥 ya no hay TOTALES en el grid aún, así que esto es seguro
 
-        this.recalcularTotales();
+        if (lineasNoEncontradas.length > 0) {
+            AlertManager.mostrar(
+                `Las siguientes órdenes no tienen línea reconocida y quedaron sin línea asignada: ${lineasNoEncontradas.join(', ')}`,
+                "warning"
+            );
+        }
+
+        return true; // 🔥 sí se agregaron filas
     }
 
     // 🔥 Convierte "DD/MM/YYYY HH24:MI:SS" (formato que regresa el SP de correctivos)
@@ -1129,7 +1135,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         const datos = [];
 
-        // Helper para redondear a N decimales
         const redondear = (valor, decimales = 2) => {
             if (valor === null || valor === undefined || isNaN(valor)) return 0;
             return Math.round(valor * Math.pow(10, decimales)) / Math.pow(10, decimales);
@@ -1141,6 +1146,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
                 datos.push({
                     ID_REGISTRO: node.data.ID_REGISTRO || null,
+                    OTMC: node.data.OTMC || null,   // 🔥 NUEVO — sin esto se pierde el número de orden
                     FECHA: node.data.Fecha,
                     LINEA: node.data.Linea,
                     PRODUCTO: node.data.Producto,
@@ -1490,7 +1496,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         try {
 
-            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, null, 1);
+            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, 1, 1);
 
             this.listaLineas = lineas;
 
