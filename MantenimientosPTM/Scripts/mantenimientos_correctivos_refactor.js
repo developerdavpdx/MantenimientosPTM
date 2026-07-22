@@ -248,8 +248,9 @@ class MantenimientosPreventivoApp {
         // ✅ Cambiar TODAS las function() por arrow functions
         $('#BuscarTecnico').on('input', (e) => {  // ⬅️ Agrega parámetro 'e'
             const query = $(e.target).val().trim();  // ⬅️ Usa e.target, no this
+            let planta = this.datos_usuario[0].PLANTA;
             if (query.length >= 2) {
-                this.gestionTecnicos.buscarTecnicos(query);
+                this.gestionTecnicos.buscarTecnicos(query, planta);
             } else {
                 this.gestionTecnicos.ocultarSugerencias();
             }
@@ -2026,10 +2027,23 @@ class MantenimientoManager {
         // 🔥 SI NO ES STATUS 4: PERMITIR EDICIÓN
         // ========================================
         else {
+            // ACTIVAR CAMPOS
+            $("#BusquedaTecnicosContainer").removeClass("d-none");
+
+            // DESACTIVAR CAMPOS
+            $("#TiempoEsperaContainer").addClass("d-none");
+            $("#TiempoReparacionContainer").addClass("d-none");
+            $("#TiempoMuertoContainer").addClass("d-none");
+
+            // READONLY Y DISABLED
+            $('#BuscarTecnico, #fileInput').prop('readonly', false).prop('disabled', false);
+
+
             // REQUIRED
             $('#EvidenciaOrdenTrabajo input:not(#fileInput)').prop('required', true);
             $('#CierreOrdenTrabajo input:not(#BuscarTecnico)').prop('required', true);
             $('#BuscarTecnico, #fileInput').prop('required', false);
+            $('#MaquinaDetenidaToggle').prop('required', false);
 
             // UPLOADER
             $('#previewArea').empty();
@@ -2045,6 +2059,7 @@ class MantenimientoManager {
             // CAMPOS EDITABLES
             $("#Scrap").removeAttr('readonly').prop('required', true);
             $("#HoraCierreMan").removeAttr('readonly').prop('required', true);
+
         }
 
         // 🔥 FIRMAS - TECNICO SOLO PUEDE FIRMAR EN REALIZO
