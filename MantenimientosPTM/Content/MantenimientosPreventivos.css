@@ -845,4 +845,161 @@ textarea.form-control-document {
     font-weight: 600;
 }
 
+/* 🔴 FILA CON SOLICITUD DE REPROGRAMACIÓN PENDIENTE */
+.reprogramacion-pendiente {
+    background: linear-gradient(90deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0.05) 100%) !important;
+    border-left: 5px solid #ffc107 !important;
+    box-shadow: inset 0 0 6px rgba(255, 193, 7, 0.2);
+    position: relative;
+}
+
+.reprogramacion-pendiente td {
+    background: rgba(255, 193, 7, 0.02);
+    vertical-align: middle;
+}
+
+/* Badge flotante en la esquina superior izquierda de la fila */
+.reprogramacion-pendiente td:nth-child(3) {
+    position: relative;
+}
+
+.reprogramacion-pendiente td:nth-child(3)::before {
+    content: '⚠️ REPROGRAMACIÓN PENDIENTE';
+    position: absolute;
+    top: -25px;
+    left: -5px;
+    background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+    color: #000;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 4px;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4);
+    text-align: center;
+    line-height: 1.2;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* ✅ MOSTRAR BADGE AL PASAR EL MOUSE */
+.reprogramacion-pendiente:hover td:nth-child(3)::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+.reprogramacion-pendiente td:nth-child(3)::after {
+    content: '';
+    display: none;
+}
+
+/* 🟢 BOTÓN DE ACEPTAR REPROGRAMACIÓN */
+.btn-aceptar-reprogramacion {
+    border: 1px solid #218838;
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+
+.btn-aceptar-reprogramacion:hover {
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.5);
+    transform: translateY(-1px);
+}
+
+.btn-aceptar-reprogramacion:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+
+.btn-aceptar-reprogramacion.disabled,
+.btn-aceptar-reprogramacion[disabled] {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    border-color: #545b62;
+    opacity: 0.65;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Animación pulse para highlight */
+@keyframes pulse-warning {
+    0% {
+        box-shadow: inset 0 0 0 0 rgba(255, 193, 7, 0.7);
+    }
+    70% {
+        box-shadow: inset 0 0 10px rgba(255, 193, 7, 0.3);
+    }
+    100% {
+        box-shadow: inset 0 0 0 0 rgba(255, 193, 7, 0.7);
+    }
+}
+
+.reprogramacion-pendiente {
+    animation: pulse-warning 2s infinite;
+}
+
+/* 🟢 ALERTA PARA MANTENIMIENTO YA REPROGRAMADO */
+.mantenimiento-reprogramado {
+    position: relative;
+}
+
+.mantenimiento-reprogramado td {
+    position: relative;
+    overflow: visible;
+}
+
+.mantenimiento-reprogramado td:nth-child(3)::before {
+    content: '✅ REPROGRAMADO';
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+    color: #fff;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 5px;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+    box-shadow: 0 3px 10px rgba(0, 120, 212, 0.6);
+    text-align: center;
+    line-height: 1.2;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    pointer-events: none;
+}
+
+/* ✅ MOSTRAR BADGE AL PASAR EL MOUSE */
+.mantenimiento-reprogramado:hover td:nth-child(3)::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+.mantenimiento-reprogramado td:nth-child(3)::after {
+    content: '';
+    display: none;
+}
+
+/* Animación pulse para mantenimiento reprogramado */
+@keyframes pulse-success {
+    0% {
+        box-shadow: inset 0 0 0 0 rgba(0, 120, 212, 0.9);
+    }
+    70% {
+        box-shadow: inset 0 0 20px rgba(0, 120, 212, 0.5);
+    }
+    100% {
+        box-shadow: inset 0 0 0 0 rgba(0, 120, 212, 0.9);
+    }
+}
+
+.mantenimiento-reprogramado {
+    animation: pulse-success 2s infinite;
+}
+
 /* Cuando el banner indica máquina detenida, impedir interacción con el switch vía CSS

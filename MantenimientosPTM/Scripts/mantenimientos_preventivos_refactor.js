@@ -156,9 +156,9 @@ class MantenimientosPreventivoApp {
             this.mantenimientoManager.abrirModalReprogramacion($(e.currentTarget));
         });
 
-        // Solicitar refacción
-        $(document).on('click', '.btn-solicitar-refaccion', (e) => {
-            this.mantenimientoManager.abrirModalRefaccion($(e.currentTarget));
+        // 🔥 NUEVO: ACEPTAR reprogramación solicitada por (SupervisorPlaneacion)
+        $(document).on('click', '.btn-aceptar-reprogramacion', (e) => {
+            this.mantenimientoManager.aceptarReprogramacion($(e.currentTarget));
         });
 
         // Carátula online
@@ -632,7 +632,11 @@ class MantenimientoManager {
             fechaInicioMantenimiento: btn.data('fechainiciomantenimiento'),
             fechaFinMantenimiento: btn.data('fechafinmantenimiento'),
             idPeriodicidad: btn.data('idperiodicidad'),
-            periodicidadMantenimiento: btn.data('periodicidadmantenimiento')
+            periodicidadMantenimiento: btn.data('periodicidadmantenimiento'),
+            // ✅ v4: para el flujo de reprogramación
+            fueReprogramado: btn.data('fuereprogramado'),
+            tieneSolicitudPendiente: btn.data('tienesolicitudpendiente'),
+            idSolicitudPendiente: btn.data('idsolicitudpendiente')
         };
     }
 
@@ -694,7 +698,11 @@ class MantenimientoManager {
             Motivo: $('#ReprogramacionMotivo').val(),
             UsuarioSolicita: this.datos_usuario[0].EMAIL,
             IdPeriodicidad: this.datosBotón.idPeriodicidad,
-            Planta: this.datos_usuario[0].PLANTA
+            Planta: this.datos_usuario[0].PLANTA,
+            // ✅ v4: para el flujo de reprogramación
+            FueReprogramado: this.datosBotón.fueReprogramado,
+            TieneSolicitudPendiente: this.datosBotón.tieneSolicitudPendiente,
+            IdSolicitudPendiente: this.datosBotón.idSolicitudPendiente
         };
 
         $('#btnEnviarReprogramacion').html('<span class="spinner-border spinner-border-sm me-2"></span>Enviando...').prop('disabled', true);
@@ -737,6 +745,140 @@ class MantenimientoManager {
                 $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
                 $('#btnEnviarReprogramacion').prop('disabled', false);
                 AlertManager.mostrar('Error al conectar con el servidor', 'warning', 'alertReprogramacionContainer');
+            }
+        });
+    }
+
+    aceptarReprogramacion(btn) {
+        // Obtener datos del botón
+        this.guardarDatosDelBoton(btn);
+
+        // Obtener info de la fila
+        const nombreEquipo = `${this.datosBotón.nombreEquipo} ${this.datosBotón.numeroDocPmCalidad}`;
+        const numeroOrden = this.datosBotón.numeroOrden || 'S/N';
+        const area = this.datosBotón.area || '';
+        const linea = this.datosBotón.lineaProduccion || '';
+        const periodo = this.datosBotón.periodicidadMantenimiento || '';
+
+        // Mostrar confirmación con opciones de Aceptar/Rechazar
+        ReprogramacionConfirmManager.mostrar({
+            titulo: '¿Aceptar reprogramación?',
+            mensaje: `
+            <div style="text-align:left; font-size:0.95rem; line-height:1.6;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:180px;"><i class="bi bi-hash me-2" style="color:#1195d0;"></i><strong>Orden:</strong> ${numeroOrden}</div>
+                    <div style="min-width:200px;"><i class="bi bi-tools me-2" style="color:#1195d0;"></i><strong>Equipo:</strong> ${nombreEquipo}</div>
+                </div>
+                <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:160px;"><i class="bi bi-diagram-3-fill me-2" style="color:#1195d0;"></i><strong>Área:</strong> ${area}</div>
+                    <div style="min-width:160px;"><i class="bi bi-diagram-3 me-2" style="color:#1195d0;"></i><strong>Línea:</strong> ${linea}</div>
+                    <div style="min-width:180px;"><i class="bi bi-calendar-event me-2" style="color:#1195d0;"></i><strong>Período:</strong> ${periodo}</div>
+                </div>
+                <hr style="margin:10px 0;">
+                <div style="font-size:0.85rem;color:#fff7d6;">
+                    <strong>Importante:</strong> esta decisión aplica los ajustes correspondientes al mantenimiento.
+                </div>
+            </div>
+            `,
+            onSi: () => {
+                this.procesarAceptarReprogramacion();
+            },
+            onNo: () => {
+                this.procesarRechazarReprogramacion();
+            }
+        });
+    }
+
+    procesarAceptarReprogramacion() {
+        GlobalUtil.mostrarLoader(true);
+
+        const datos = {
+            IdEquipo: this.datosBotón.idEquipo,
+            NumeroOrden: this.datosBotón.numeroOrden,
+            IdPeriodicidad: this.datosBotón.idPeriodicidad,
+            Planta: this.datos_usuario[0].PLANTA,
+            UsuarioAcepta: this.datos_usuario[0].EMAIL,
+            Accion: 'ACEPTAR',
+            // ✅ v4: para el flujo de reprogramación
+            FueReprogramado: this.datosBotón.fueReprogramado,
+            TieneSolicitudPendiente: this.datosBotón.tieneSolicitudPendiente,
+            IdSolicitudPendiente: this.datosBotón.idSolicitudPendiente
+        };
+
+        $.ajax({
+            url: `/${this.URLBase}/AceptarReprogramacion`,
+            type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Rol-Usuario': this.datos_usuario[0].TIPOUSUARIO
+            },
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(datos),
+            dataType: 'json',
+            success: (response) => {
+                GlobalUtil.mostrarLoader(false);
+
+                if (response.Status === 'SI') {
+                    AlertManager.mostrar(response.Message || 'Reprogramación aceptada correctamente', 'success');
+
+                    // Recargar tabla
+                    $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                } else if (response.Status === 'ERROR') {
+                    AlertManager.mostrar(response.Message || 'Error al procesar la aceptación', 'danger');
+                } else {
+                    AlertManager.mostrar(response.Message || 'No fue posible aceptar la reprogramación', 'warning');
+                }
+            },
+            error: (xhr, status, error) => {
+                GlobalUtil.mostrarLoader(false);
+                AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+            }
+        });
+    }
+
+    procesarRechazarReprogramacion() {
+        GlobalUtil.mostrarLoader(true);
+
+        const datos = {
+            IdEquipo: this.datosBotón.idEquipo,
+            NumeroOrden: this.datosBotón.numeroOrden,
+            IdPeriodicidad: this.datosBotón.idPeriodicidad,
+            Planta: this.datos_usuario[0].PLANTA,
+            UsuarioAcepta: this.datos_usuario[0].EMAIL,
+            Accion: 'RECHAZAR',
+            // ✅ v4: para el flujo de reprogramación
+            FueReprogramado: this.datosBotón.fueReprogramado,
+            TieneSolicitudPendiente: this.datosBotón.tieneSolicitudPendiente,
+            IdSolicitudPendiente: this.datosBotón.idSolicitudPendiente
+        };
+
+        $.ajax({
+            url: `/${this.URLBase}/AceptarReprogramacion`,
+            type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Rol-Usuario': this.datos_usuario[0].TIPOUSUARIO
+            },
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(datos),
+            dataType: 'json',
+            success: (response) => {
+                GlobalUtil.mostrarLoader(false);
+
+                if (response.Status === 'SI') {
+                    AlertManager.mostrar(response.Message || 'Reprogramación rechazada correctamente', 'success');
+
+                    // Recargar tabla
+                    $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                } else if (response.Status === 'ERROR') {
+                    AlertManager.mostrar(response.Message || 'Error al procesar el rechazo', 'danger');
+                } else {
+                    AlertManager.mostrar(response.Message || 'No fue posible rechazar la reprogramación', 'warning');
+                }
+            },
+            error: (xhr, status, error) => {
+                GlobalUtil.mostrarLoader(false);
+                AlertManager.mostrar('Error al conectar con el servidor', 'warning');
             }
         });
     }
@@ -961,50 +1103,102 @@ class MantenimientoManager {
                                 btn(color, 'disabled', icon, tooltip).replace('<button', '<button disabled');
 
                             // 🔥 SI ES SupervisorPlaneacion → MOSTRAR SOLO BOTÓN DE REPROGRAMACIÓN
+                            // ✅ CON CONDICIONES: NUMERO_ORDEN no vacío, FUE_REPROGRAMADO = 'NO' y TIENE_SOLICITUD_PENDIENTE = 'NO'
                             if (esSupervisorPlaneacion) {
-                                const reprogramBtn = btn(
-                                    'btn-warning',
-                                    'btn-solicitar-reprogramacion',
-                                    'calendar2-check',
-                                    'Solicitar Reprogramación',
-                                    dataAttrs
-                                );
-                                return reprogramBtn;
+                                const numeroOrden = row.NumeroOrden || '';
+                                const fueReprogramado = row.FueReprogramado || 'SI';
+                                const tieneSolicitudPendiente = row.TieneSolicitudPendiente || 'SI';
+
+                                // Validar todas las condiciones
+                                const puedeReprogramar = 
+                                    numeroOrden !== '' && 
+                                    fueReprogramado === 'NO' && 
+                                    tieneSolicitudPendiente === 'NO';
+
+                                if (puedeReprogramar) {
+                                    const reprogramBtn = btn(
+                                        'btn-warning',
+                                        'btn-solicitar-reprogramacion',
+                                        'calendar2-check',
+                                        'Solicitar Reprogramación',
+                                        dataAttrs
+                                    );
+                                    return reprogramBtn;
+                                } else {
+                                    // Mostrar botón deshabilitado con razón
+                                    let razonDeshabilitado = 'No disponible';
+                                    if (numeroOrden === '') {
+                                        razonDeshabilitado = 'Orden de trabajo sin número';
+                                    } else if (fueReprogramado === 'SI') {
+                                        razonDeshabilitado = 'Ya fue reprogramado';
+                                    } else if (tieneSolicitudPendiente === 'SI') {
+                                        razonDeshabilitado = 'Solicitud pendiente';
+                                    }
+
+                                    return btnDisabled(
+                                        'btn-secondary',
+                                        'calendar2-x',
+                                        razonDeshabilitado
+                                    );
+                                }
                             }
 
                             let refaccionBtn = '';
                             let caratulaBtn = '';
                             let impresionBtn = '';
                             let listRefBtn = '';
+                            let aceptarReprogramacionBtn = '';
+
+                            // 🔴 VERIFICAR SI HAY SOLICITUD PENDIENTE
+                            const tieneSolicitudPendiente = row.TieneSolicitudPendiente || 'NO';
+                            const tieneSolicitudPendienteFlag = tieneSolicitudPendiente === 'SI';
+
+                            // 🔵 SI HAY SOLICITUD PENDIENTE Y ES ADMIN → MOSTRAR BOTÓN DE ACEPTAR
+                            if (esAdmin && tieneSolicitudPendienteFlag) {
+                                aceptarReprogramacionBtn = btn(
+                                    'btn-ptm-light',
+                                    'btn-aceptar-reprogramacion',
+                                    'check-circle',
+                                    'Aceptar Reprogramación',
+                                    dataAttrs
+                                );
+                            }
 
                             if (estatusOrden && estatusOrden !== '') {
 
-                                if (estatusOrden == 3 || estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI") {
+                                // 🔴 SI HAY SOLICITUD PENDIENTE, DESHABILITAR TODOS LOS BOTONES
+                                if (tieneSolicitudPendienteFlag) {
                                     refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
+                                    caratulaBtn = btnDisabled('secondary', 'eye', 'Carátula(OT)');
+                                    impresionBtn = btnDisabled('secondary', 'printer', 'Impresión(OT)');
+                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
                                 } else {
-                                    refaccionBtn = btn('btn-ptm-primary', 'btn-solicitar-refaccion', 'tools', 'Solicitar Refacción', dataAttrs);
-                                }
-
-
-                                caratulaBtn = btn('btn-ptm-mid', 'btn-caratula-online', 'eye', 'Carátula(OT)', dataAttrs);
-
-
-                                if (!esTecnico) {
-                                    if (estatusOrden == 4 || ordenFinalizada === "SI") {
-                                        impresionBtn = btnDisabled('secondary', 'printer', 'Impresión(OT)');
+                                    // LÓGICA NORMAL
+                                    if (estatusOrden == 3 || estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI") {
+                                        refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
                                     } else {
-                                        impresionBtn = btn('btn-ptm-light', 'btn-impresion-online', 'printer', 'Impresión(OT)', dataAttrs);
+                                        refaccionBtn = btn('btn-ptm-primary', 'btn-solicitar-refaccion', 'tools', 'Solicitar Refacción', dataAttrs);
+                                    }
+
+                                    caratulaBtn = btn('btn-ptm-mid', 'btn-caratula-online', 'eye', 'Carátula(OT)', dataAttrs);
+
+                                    if (!esTecnico) {
+                                        if (estatusOrden == 4 || ordenFinalizada === "SI") {
+                                            impresionBtn = btnDisabled('secondary', 'printer', 'Impresión(OT)');
+                                        } else {
+                                            impresionBtn = btn('btn-ptm-light', 'btn-impresion-online', 'printer', 'Impresión(OT)', dataAttrs);
+                                        }
+                                    }
+
+                                    // 🔧 LISTADO DE REFACCIÓNES
+                                    if (tieneRefacciones === "SI") {
+                                        listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Historial de Refacciones', dataAttrs);
+                                    } else {
+                                        listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
                                     }
                                 }
 
-                                // 🔧 LISTADO DE REFACCIÓNES
-                                if (tieneRefacciones === "SI") {
-                                    listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Historial de Refacciones', dataAttrs);
-                                } else {
-                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
-                                }
-
-                                return `${refaccionBtn}${caratulaBtn}${impresionBtn}${listRefBtn}`;
+                                return `${aceptarReprogramacionBtn}${refaccionBtn}${caratulaBtn}${impresionBtn}${listRefBtn}`;
 
                             } else {
 
@@ -1016,7 +1210,7 @@ class MantenimientoManager {
                                     refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
                                 }
 
-                                return `${refaccionBtn}${caratulaBtn}`;
+                                return `${aceptarReprogramacionBtn}${refaccionBtn}${caratulaBtn}`;
                             }
                         }
                     },
@@ -1275,6 +1469,16 @@ class MantenimientoManager {
                         diaFinMant: data.DiaFinMant,
                         tipoMantenimiento: data.TipoMantenimiento
                     });
+
+                    // 🔴 PINTAR FILA SI HAY SOLICITUD PENDIENTE DE REPROGRAMACIÓN
+                    if (data.TieneSolicitudPendiente === 'SI') {
+                        $(row).addClass('reprogramacion-pendiente');
+                    }
+
+                    // 🟢 PINTAR FILA SI YA FUE REPROGRAMADO
+                    if (data.FueReprogramado === 'SI') {
+                        $(row).addClass('mantenimiento-reprogramado');
+                    }
                 },
                 drawCallback: function () {
 
@@ -1402,7 +1606,12 @@ class MantenimientoManager {
             nombresuperviso: row.NombreSuperviso,
             firmamantenimiento: row.FirmaMantenimiento,
             tieneRefacciones: row.TieneRefacciones,
-            nombremantenimiento: row.NombreMantenimiento
+            nombremantenimiento: row.NombreMantenimiento,
+
+            // ✅ v4: para el flujo de reprogramación
+            fuereprogramado: row.FueReprogramado,
+            tienesolicitudpendiente: row.TieneSolicitudPendiente,
+            idsolicitudpendiente: row.IdSolicitudPendiente
         };
 
         return Object.entries(map)

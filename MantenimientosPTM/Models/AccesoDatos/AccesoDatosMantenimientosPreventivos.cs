@@ -80,6 +80,13 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOSolicitarReprogramacion\"";
             }
         }
+        public string GCAceptarReprogramacion
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOAceptarReprogramacion\"";
+            }
+        }
         #endregion
 
         #region AditionalClassModel
@@ -246,9 +253,21 @@ namespace MantenimientosPTM
 
             [JsonProperty("NOMBRE_MANTENIMIENTO")]
             public string NombreMantenimiento { get; set; }
+
             [JsonProperty("TIENE_REFACCIONES")]
             public string TieneRefacciones { get; set; }
-            // Usuario
+
+            // ✅ v3: indica si esta ocurrencia ya tiene una reprogramación Aceptada aplicada
+            [JsonProperty("FUE_REPROGRAMADO")]
+            public string FueReprogramado { get; set; }
+
+            [JsonProperty("TIENE_SOLICITUD_PENDIENTE")]
+            public string TieneSolicitudPendiente { get; set; }
+
+            // ✅ v4: ID de la solicitud pendiente, para poder aceptarla/rechazarla desde el front
+            [JsonProperty("ID_SOLICITUD_PENDIENTE")]
+            public int IdSolicitudPendiente { get; set; }
+
             [JsonProperty("USUARIO")]
             public string UsuarioGenero { get; set; }
         }
@@ -455,6 +474,37 @@ namespace MantenimientosPTM
 
             [JsonProperty("ESTATUS")]
             public string Estatus { get; set; }
+        }
+
+        public class AceptarReprogramacionDTO
+        {
+            [JsonProperty("IdEquipo")]
+            public int IdEquipo { get; set; }
+
+            [JsonProperty("NumeroOrden")]
+            public string NumeroOrden { get; set; }
+
+            [JsonProperty("IdPeriodicidad")]
+            public int IdPeriodicidad { get; set; }
+
+            [JsonProperty("Planta")]
+            public int? Planta { get; set; }
+
+            [JsonProperty("UsuarioAcepta")]
+            public string UsuarioAcepta { get; set; }
+
+            [JsonProperty("Accion")]
+            public string Accion { get; set; }
+
+            // ✅ v4: para el flujo de reprogramación
+            [JsonProperty("FueReprogramado")]
+            public string FueReprogramado { get; set; }
+
+            [JsonProperty("TieneSolicitudPendiente")]
+            public string TieneSolicitudPendiente { get; set; }
+
+            [JsonProperty("IdSolicitudPendiente")]
+            public int? IdSolicitudPendiente { get; set; }
         }
 
         //NUEVO

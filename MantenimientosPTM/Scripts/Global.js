@@ -46,6 +46,25 @@ class ConfirmManager {
 
 }
 
+class ReprogramacionConfirmManager {
+    static mostrar({ titulo, mensaje, onSi, onNo }) {
+        $('#modalReprogramacionTitulo').text(titulo);
+        $('#modalReprogramacionMensaje').html(mensaje);
+
+        $('#modalReprogramacionBtnSi').off('click').on('click', () => {
+            $('#modalConfirmarReprogramacion').modal('hide');
+            onSi();
+        });
+
+        $('#modalReprogramacionBtnNo').off('click').on('click', () => {
+            $('#modalConfirmarReprogramacion').modal('hide');
+            onNo();
+        });
+
+        $('#modalConfirmarReprogramacion').modal('show');
+    }
+}
+
 
 // ========================================
 // GESTION DE FIRMAS DIGITALES (centralizada)

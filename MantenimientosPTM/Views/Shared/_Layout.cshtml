@@ -371,6 +371,39 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Confirmación Reprogramación -->
+    <div class="modal fade" id="modalConfirmarReprogramacion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+            <div class="modal-content" style="background:#1e2a3a; border:1px solid #1195d030; border-radius:16px;">
+                <div class="modal-body p-4 text-center">
+                    <!-- Ícono -->
+                    <div style="width:64px;height:64px;background:#1195d020;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+                        <i class="bi bi-calendar-event-fill" style="color:#1195d0;font-size:1.6rem;"></i>
+                    </div>
+                    <!-- Título -->
+                    <h5 id="modalReprogramacionTitulo" style="color:#f1f5f9;font-weight:700;margin-bottom:0.5rem;">
+                        ¿Aceptar reprogramación?
+                    </h5>
+                    <!-- Mensaje -->
+                    <div id="modalReprogramacionMensaje" style="color:#94a3b8;font-size:0.9rem;margin-bottom:1.5rem;">
+                    </div>
+                    <!-- Botones -->
+                    <div class="d-flex gap-2 justify-content-center flex-wrap">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="button" id="modalReprogramacionBtnNo" class="btn px-4 btn-filtro-aplicar">
+                            <i class="bi bi-x-lg me-1"></i> No
+                        </button>
+                        <button type="button" id="modalReprogramacionBtnSi" class="btn px-4 btn-filtro-aplicar">
+                            <i class="bi bi-check-lg me-1"></i> Sí
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

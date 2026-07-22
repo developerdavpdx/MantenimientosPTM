@@ -138,6 +138,9 @@ namespace MantenimientosPTM.Controllers
                     mantenimientos = JsonConvert.DeserializeObject<List<AccesoDatosMantenimientosPreventivos.MantenimientoRangoLIST>>(resultHana.JsonResult);
                 }
 
+                var pendientes = mantenimientos
+                    .Where(m => m.FueReprogramado == "SI")
+                    .ToList();
                 // ✅ Total de registros (ya vienen filtrados desde HANA)
                 int totalRegistrosFiltrados = mantenimientos.Count();
 
@@ -1070,6 +1073,123 @@ namespace MantenimientosPTM.Controllers
             {
                 jsonResponse.Status = "ERROR";
                 jsonResponse.Message = "Error al procesar la solicitud de reprogramación: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult AceptarReprogramacion()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+
+            try
+            {
+                Request.InputStream.Position = 0;
+
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    var datos = JsonConvert.DeserializeObject<AccesoDatosMantenimientosPreventivos.AceptarReprogramacionDTO>(jsonData);
+
+                    if (datos == null ||
+                        datos.IdSolicitudPendiente <= 0 ||
+                        string.IsNullOrEmpty(datos.UsuarioAcepta) ||
+                        string.IsNullOrEmpty(datos.Accion))
+                    {
+                        throw new Exception("Por favor, complete correctamente todos los campos requeridos.");
+                    }
+
+                    if (datos.Accion != "ACEPTAR" && datos.Accion != "RECHAZAR")
+                        throw new Exception("Acción no válida. Debe ser 'ACEPTAR' o 'RECHAZAR'.");
+
+                    string nuevoEstatus = datos.Accion == "ACEPTAR" ? "Aceptada" : "Rechazada";
+
+                    // ✅ Solo mandamos lo necesario para resolver: ID_SOLICITUD + ESTATUS.
+                    // El resto va en null para que el MERGE no toque esos campos.
+                    var parametros = new
+                    {
+                        p_ID_SOLICITUD = datos.IdSolicitudPendiente,
+                        p_ID_EQUIPO = (int?)null,
+                        p_NUMERO_ORDEN = (string)null,
+                        p_MOTIVO = (string)null,
+                        p_USUARIO_SOLICITA = (string)null,
+                        p_ID_PERIODICIDAD = (int?)null,
+                        p_PLANTA = (int?)null,
+                        p_ESTATUS = nuevoEstatus
+                    };
+
+                    var hanaParameters = Logic.GlobalCommands.ConvertToHanaParameters(parametros, false, null);
+
+                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCSolicitarReprogramacion,   // ✅ mismo stored que usas para crear/editar
+                        hanaParameters
+                    );
+
+                    if (resultHana.JsonResult != null && !string.IsNullOrEmpty(resultHana.JsonResult))
+                    {
+                        try
+                        {
+                            var jsonArray = JArray.Parse(resultHana.JsonResult);
+
+                            if (jsonArray != null && jsonArray.Count > 0)
+                            {
+                                var firstItem = jsonArray[0];
+                                string estatusActual = firstItem["ESTATUS_ACTUAL"]?.ToString();
+
+                                // ✅ Validamos que el estatus en BD realmente quedó como lo pedimos.
+                                // Si ya estaba resuelta (Aceptada/Rechazada previamente), el MERGE no la tocó
+                                // y ESTATUS_ACTUAL no va a coincidir con nuevoEstatus.
+                                if (estatusActual == nuevoEstatus)
+                                {
+                                    jsonResponse.Status = "SI";
+                                    jsonResponse.Message = datos.Accion == "ACEPTAR"
+                                        ? "Reprogramación aceptada correctamente."
+                                        : "Reprogramación rechazada correctamente.";
+                                    jsonResponse.Data = string.Empty;
+
+                                    string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                                    var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                                    context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+                                }
+                                else
+                                {
+                                    jsonResponse.Status = "NO";
+                                    jsonResponse.Message = "No fue posible procesar la solicitud. Es posible que ya haya sido resuelta previamente.";
+                                    jsonResponse.Data = string.Empty;
+                                }
+                            }
+                            else
+                            {
+                                jsonResponse.Status = "NO";
+                                jsonResponse.Message = "No se recibieron datos de la respuesta.";
+                                jsonResponse.Data = string.Empty;
+                            }
+                        }
+                        catch (Exception exJson)
+                        {
+                            jsonResponse.Status = "NO";
+                            jsonResponse.Message = $"Error al procesar la respuesta del servidor: {exJson.Message}";
+                            jsonResponse.Data = string.Empty;
+                        }
+                    }
+                    else
+                    {
+                        jsonResponse.Status = "NO";
+                        jsonResponse.Message = "No se obtuvo respuesta del servidor.";
+                        jsonResponse.Data = string.Empty;
+                    }
+                }
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al procesar la solicitud de aceptación/rechazo: " + ex.Message;
                 jsonResponse.Data = string.Empty;
                 return Json(jsonResponse);
             }
