@@ -50,6 +50,8 @@ $(document).ready(function () {
 class GestionProduccionPeadLiso extends GestionProduccionBase {
     constructor(datos_usuario, URLBase) {
         super(datos_usuario, URLBase, 0);
+        this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos"; // 🔥 NUEVO
+        this.ID_AREA_CORRECTIVOS = 9; // 🔥 NUEVO — Pead Liso
     }
 
     async inicializar() {
@@ -217,22 +219,28 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             });
 
+            let hayDatosOriginales = false;
+
             if (response.Status === "OK") {
 
                 const datos = JSON.parse(response.Data);
+                hayDatosOriginales = this.cargarDatosGrid(datos);
 
-                this.cargarDatosGrid(datos);
+            } else {
 
+                AlertManager.mostrar(response.Message, "info");
+                hayDatosOriginales = this.cargarDatosGrid(null);
             }
-            else {
 
-                AlertManager.mostrar(
-                    response.Message,
-                    "info"
-                );
+            // 🔥 NUEVO: correctivos ANTES de pintar totales
+            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, linea);
 
-                this.cargarDatosGrid(null);
+            if (!hayDatosOriginales && !seAgregaronCorrectivos) {
+                this.gridApi.setRowData(this.datosOriginales);
             }
+
+            // 🔥 Totales una sola vez, al final
+            this.agregarFilaTotales();
 
         } catch (error) {
 
@@ -267,6 +275,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 id: item.ID_REGISTRO || Date.now(),
 
                 ID_REGISTRO: item.ID_REGISTRO,
+                OTMC: item.OTMC, // 🔥 NUEVO
 
                 Mes: item.MES,
 
@@ -295,56 +304,187 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
                 ControlInventarios: item.CONTROL_INVENTARIOS,
 
-                FaltaEnergiaElectrica:
-                    item.FALTA_ENERGIA_ELECTRICA,
+                FaltaEnergiaElectrica: item.FALTA_ENERGIA_ELECTRICA,
 
-                FaltaMateriaPrimaInsumos:
-                    item.FALTA_MATERIA_PRIMA_INSUMOS,
+                FaltaMateriaPrimaInsumos: item.FALTA_MATERIA_PRIMA_INSUMOS,
 
-                TiempoCalentamientoCI:
-                    item.TIEMPO_CALENTAMIENTO_CI,
+                TiempoCalentamientoCI: item.TIEMPO_CALENTAMIENTO_CI,
 
-                PreparacionLineaCambioHerramental:
-                    item.PREPARACION_LINEA_CAMBIO_HERRAMENTAL,
+                PreparacionLineaCambioHerramental: item.PREPARACION_LINEA_CAMBIO_HERRAMENTAL,
 
-                TiempoCalentamientoHerramental:
-                    item.TIEMPO_CALENTAMIENTO_HERRAMENTAL,
+                TiempoCalentamientoHerramental: item.TIEMPO_CALENTAMIENTO_HERRAMENTAL,
 
-                ArranqueEstabilizacionLinea:
-                    item.ARRANQUE_ESTABILIZACION_LINEA,
+                ArranqueEstabilizacionLinea: item.ARRANQUE_ESTABILIZACION_LINEA,
 
-                TiempoMuertoCorrectivos:
-                    item.TIEMPO_MUERTO_CORRECTIVOS,
+                TiempoMuertoCorrectivos: item.TIEMPO_MUERTO_CORRECTIVOS,
 
-                TiempoMuertoHerramentales:
-                    item.TIEMPO_MUERTO_HERRAMENTALES,
+                TiempoMuertoHerramentales: item.TIEMPO_MUERTO_HERRAMENTALES,
 
-                CambioMoldeSetupExcesos:
-                    item.CAMBIO_MOLDE_SETUP_EXCESOS,
+                CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
 
-                FaltaPersonal:
-                    item.FALTA_PERSONAL,
+                FaltaPersonal: item.FALTA_PERSONAL,
 
-                TiempoMuertoProceso:
-                    item.TIEMPO_MUERTO_PROCESO,
+                TiempoMuertoProceso: item.TIEMPO_MUERTO_PROCESO,
 
-                TiempoDisponible:
-                    item.TIEMPO_DISPONIBLE,
+                TiempoDisponible: item.TIEMPO_DISPONIBLE,
 
-                TiempoProductivo:
-                    item.TIEMPO_PRODUCTIVO
+                TiempoProductivo: item.TIEMPO_PRODUCTIVO
 
             }));
 
             this.gridApi.setRowData(datosFormateados);
-
-        } else {
-
-            this.gridApi.setRowData(this.datosOriginales);
+            return true; // 🔥 sí había datos
 
         }
 
-        this.agregarFilaTotales();
+        this.gridApi.setRowData([]);
+        return false; // 🔥 NUEVO — ya no llama agregarFilaTotales aquí
+    }
+
+    // ========================================
+    // 🔥 NUEVO: Traer correctivos cerrados y agregarlos al grid
+    // ========================================
+
+    async traerCorrectivosCerrados(fechaInicio, fechaFin, linea) {
+
+        try {
+
+            GlobalUtil.mostrarLoader(true);
+
+            const response = await $.ajax({
+                url: `/${this.URLBaseMantenimientosCorrectivos}/GetMantenimientosCorrectivosPendientes`,
+                type: "POST",
+                data: {
+                    draw: 1,
+                    length: 999999,
+                    start: 0,
+                    "search[value]": "",
+                    FiltroSolicitud: "",
+                    FiltroFechaInicio: fechaInicio,
+                    FiltroFechaFin: fechaFin,
+                    FiltroArea: this.ID_AREA_CORRECTIVOS, // 🔥 9 = Pead Liso
+                    FiltroLinea: linea || "",
+                    FiltroOrdenTrabajo: "",
+                    FiltroPlanta: this.datos_usuario[0].PLANTA,
+                    FiltroEstatusOT: "4",
+                    FiltroExcluirSincronizadosPVC: "S" // ⚠️ ver nota abajo
+                }
+            });
+
+            const correctivos = response.data || [];
+
+            if (correctivos.length === 0) {
+                return false;
+            }
+
+            return this.agregarCorrectivosAlGrid(correctivos);
+
+        } catch (error) {
+
+            console.error(error);
+            AlertManager.mostrar("Error al consultar mantenimientos correctivos", "danger");
+            return false;
+
+        } finally {
+            GlobalUtil.mostrarLoader(false);
+        }
+    }
+
+    agregarCorrectivosAlGrid(correctivos) {
+
+        const otmcYaEnGrid = new Set();
+
+        this.gridApi.forEachNode(node => {
+            if (node.data?.OTMC) {
+                otmcYaEnGrid.add(node.data.OTMC);
+            }
+        });
+
+        const correctivosNuevos = correctivos.filter(
+            item => !otmcYaEnGrid.has(item.NumeroOrden)
+        );
+
+        if (correctivosNuevos.length === 0) {
+            return false;
+        }
+
+        const filasNuevas = [];
+        const lineasNoEncontradas = [];
+
+        correctivosNuevos.forEach(item => {
+
+            const nuevaFila = this.crearFilaVacia();
+
+            nuevaFila.id = this.generarIdTemporal();
+            nuevaFila.OTMC = item.NumeroOrden;
+            nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
+            nuevaFila.TiempoMuertoCorrectivos = parseFloat(item.DuracionHrs) || 0; // 🔥 campo distinto a PVC
+
+            const lineaEncontrada = this.listaLineas.find(
+                l => String(l.value) === String(item.IdLineaProduccion)
+            );
+
+            if (lineaEncontrada) {
+                nuevaFila.Linea = lineaEncontrada.label;
+            } else {
+                nuevaFila.Linea = null;
+                lineasNoEncontradas.push(item.NumeroOrden);
+            }
+
+            if (nuevaFila.Fecha) {
+                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+                nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+            }
+
+            this.recalcularFila(nuevaFila);
+
+            filasNuevas.push(nuevaFila);
+        });
+
+        this.gridApi.applyTransaction({ add: filasNuevas });
+
+        if (lineasNoEncontradas.length > 0) {
+            AlertManager.mostrar(
+                `Las siguientes órdenes no tienen línea reconocida y quedaron sin línea asignada: ${lineasNoEncontradas.join(', ')}`,
+                "warning"
+            );
+        }
+
+        return true;
+    }
+
+    parsearFechaCorrectivo(fechaTexto) {
+
+        if (!fechaTexto) return null;
+
+        const [fechaParte] = fechaTexto.split(' ');
+        const [dia, mes, anio] = fechaParte.split('/');
+
+        if (!dia || !mes || !anio) return null;
+
+        return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+    }
+
+    // 🔥 Template de fila vacía, ajustado a los campos de Pead Liso
+    crearFilaVacia() {
+        return {
+            id: null,
+            ID_REGISTRO: null,
+            OTMC: null,
+            Mes: null, Fecha: null, Linea: null, Producto: null, Turno: null, Grupo: null,
+            PesoMinimo: 0,
+            TRLiberados: null, ProduccionNeta: null,
+            PesoEstandar: 0, PorcentajeSobrepeso: 0,
+            TotalScrap: null, PorcentajeTotalScrap: 0,
+            HorasProgramadas: null,
+            Preventivo: null, ControlInventarios: null,
+            FaltaEnergiaElectrica: null, FaltaMateriaPrimaInsumos: null,
+            TiempoCalentamientoCI: null, PreparacionLineaCambioHerramental: null,
+            TiempoCalentamientoHerramental: null, ArranqueEstabilizacionLinea: null,
+            TiempoMuertoCorrectivos: null, TiempoMuertoHerramentales: null,
+            CambioMoldeSetupExcesos: null, FaltaPersonal: null, TiempoMuertoProceso: null,
+            TiempoDisponible: 0, TiempoProductivo: 0
+        };
     }
 
     inicializarGrid() {
@@ -1319,6 +1459,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             datos.push({
 
                 ID_REGISTRO: fila.ID_REGISTRO || null,
+                OTMC: fila.OTMC ?? null, // 🔥 NUEVO
 
                 // =====================================
                 // GENERALES
