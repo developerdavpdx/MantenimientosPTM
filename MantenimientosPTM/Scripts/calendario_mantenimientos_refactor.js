@@ -46,7 +46,8 @@ class GestionEventosApp {
                     null
                 );
             });
-
+        // ✅ Cargar líneas de producción para el filtro
+        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, null, "FiltroArea");
         console.log('✅ Sistema Completo de Gestión de Eventos inicializado correctamente');
     }
 
@@ -191,7 +192,8 @@ class CalendarManager {
     }
 
     // ✅ Función para obtener mantenimientos completados del SP
-    obtenerMantenimientosAnuales(Planta,fechaInicio = null, fechaFin = null) {
+    obtenerMantenimientosAnuales(tipoMant = null, proceso = null, lineaProd = null, Planta, fechaInicio = null, fechaFin = null) {
+       
         return new Promise((resolve, reject) => {
             // Si no se proporcionan fechas, usar el año actual
             if (!fechaInicio || !fechaFin) {
@@ -204,6 +206,9 @@ class CalendarManager {
                 url: `/${this.URLBase}/GetMantenimientosCompletados`,
                 type: 'GET',
                 data: {
+                    tipoMant: tipoMant,
+                    proceso: proceso,
+                    lineaProd: lineaProd,
                     planta: Planta,
                     fechaInicio: fechaInicio,
                     fechaFin: fechaFin
@@ -234,7 +239,11 @@ class CalendarManager {
                     } else if (data.Status === 'warning') {
                         AlertManager.mostrar('Error: ' + data.Message, 'warning');
                         reject(data.Message);
+                    } else if (data.Status === 'ERROR') {
+                        AlertManager.mostrar('Error: ' + data.Message, 'warning');
+                        reject(data.Message);
                     }
+
                 },
                 error: function (xhr, status, error) {
                     console.error('❌ Error AJAX:', error);
@@ -307,12 +316,12 @@ class CalendarManager {
     }
 
     // ✅ Cargar eventos reales desde HANA
-    async cargarEventosReales(fechaInicio = null, fechaFin = null) {
+    async cargarEventosReales(tipoMant = null, proceso = null, lineaProd = null, fechaInicio = null, fechaFin = null) {
         // ✅ Mostrar loader
         GlobalUtil.mostrarLoader(true);
 
-        try {
-            const datosHana = await this.obtenerMantenimientosAnuales(this.datos_usuario[0].PLANTA,fechaInicio, fechaFin);
+        try { 
+            const datosHana = await this.obtenerMantenimientosAnuales(tipoMant, proceso, lineaProd, this.datos_usuario[0].PLANTA,fechaInicio, fechaFin);
 
             if (datosHana && datosHana.length > 0) {
                 const eventosCalendario = this.transformarEventosCalendario(datosHana);
@@ -339,8 +348,7 @@ class CalendarManager {
                 AlertManager.mostrar('No hay mantenimientos completados en el período seleccionado', 'info');
             }
 
-            // ✅ Cargar líneas de producción para el filtro
-            EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, null, "FiltroArea");
+           
 
         } catch (error) {
             console.error('❌ Error al cargar mantenimientos:', error);
@@ -354,46 +362,59 @@ class CalendarManager {
     // ✅ Aplicar filtros
     aplicarFiltros() {
         const tipoMant = $('#FiltroTipoMantenimiento').val();
+        const proceso = $('#FiltroArea').val();
         const lineaProd = $('#FiltroLineaProduccion').val();
         const fechaInicio = $('#FiltroFechaInicio').val();
         const fechaFin = $('#FiltroFechaFin').val();
 
+        //this.cargarEventosReales(tipoMant, proceso, lineaProd, fechaInicio, fechaFin);
+
         // Si hay filtros de fecha, recargar desde el servidor
         if (fechaInicio && fechaFin) {
-            this.cargarEventosReales(fechaInicio, fechaFin);
+            this.cargarEventosReales(tipoMant, proceso, lineaProd, fechaInicio, fechaFin);
+            return;
+        }
+
+        // Si hay otros filtros sin fecha, igual recargar desde servidor
+        if (tipoMant || proceso || lineaProd) {
+            this.cargarEventosReales(tipoMant, proceso, lineaProd, null, null);
             return;
         }
 
         // Filtrar eventos localmente
-        let eventosFiltrados = [...this.todosLosEventos];
+        // let eventosFiltrados = [...this.todosLosEventos];
 
-        if (tipoMant) {
-            eventosFiltrados = eventosFiltrados.filter(e =>
-                e.extendedProps.tipo === tipoMant
-            );
-        }
+        // if (tipoMant) {
+        //     eventosFiltrados = eventosFiltrados.filter(e =>
+        //         e.extendedProps.tipo === tipoMant
+        //     );
+        // }
 
-        if (lineaProd) {
-            eventosFiltrados = eventosFiltrados.filter(e =>
-                e.extendedProps.line === lineaProd
-            );
-        }
+        // if (lineaProd) {
+        //     eventosFiltrados = eventosFiltrados.filter(e =>
+        //         e.extendedProps.line === lineaProd
+        //     );
+        // }
+
+        // Si no hay ningún filtro, cargar todo (año actual por default)
+        this.cargarEventosReales(null, null, null, null, null);
 
         // Actualizar calendario
-        this.calendar.removeAllEvents();
-        eventosFiltrados.forEach(evento => {
-            this.calendar.addEvent(evento);
-        });
+        // this.calendar.removeAllEvents();
+        // eventosFiltrados.forEach(evento => {
+        //     this.calendar.addEvent(evento);
+        // });
 
-        AlertManager.mostrar(
-            `Filtros aplicados: ${eventosFiltrados.length} mantenimientos encontrados`,
-            'info'
-        );
+        // AlertManager.mostrar(
+        //     `Filtros aplicados: ${eventosFiltrados.length} mantenimientos encontrados`,
+        //     'info'
+        // );
     }
 
     // ✅ Limpiar filtros
     limpiarFiltros() {
         $('#FiltroTipoMantenimiento').val('');
+        $('#FiltroArea').val('');
         $('#FiltroLineaProduccion').val('');
         $('#FiltroFechaInicio').val('');
         $('#FiltroFechaFin').val('');
@@ -477,7 +498,7 @@ class CalendarManager {
         $('#modalDuracion').text(props.duracion_hrs + ' hrs');
 
         // Técnicos Asignados
-        $('#modalTecnicos').text(props.tecnicos_nombres);
+        // $('#modalTecnicos').text(props.tecnicos_nombres);
 
         // ✅ Observaciones - Mostrar según el tipo de mantenimiento
         const tieneTextoSecuencia = props.texto_secuencia && props.texto_secuencia.trim() !== '';
