@@ -46,6 +46,8 @@ $(document).ready(function () {
 class GestionProduccionCorrugado extends GestionProduccionBase {
     constructor(datos_usuario, URLBase) {
         super(datos_usuario, URLBase, 110);
+        this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos"; // 🔥 NUEVO
+        this.ID_AREA_CORRECTIVOS = (datos_usuario[0].PLANTA == "1" ? 7 : 7); // 🔥 PVC REVISAR PARA PLANTA 2
     }
 
     async inicializar() {
@@ -601,138 +603,174 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
     agregarFilaTotales() {
 
-        const totales = {
+        // 🔥 NUEVO: evitar agregar TOTALES duplicado
+        let existeTotales = false;
 
-            id: 'TOTALES',
-
-            // ========================================
-            // DATOS GENERALES
-            // ========================================
-
-            Mes: null,
-            Fecha: null,
-            Linea: null,
-            Corrugador: null,
-            Producto: null,
-            Turno: null,
-            Grupo: null,
-
-            // ========================================
-            // PRODUCCIÓN
-            // ========================================
-
-            PesoMinimo: 0,
-
-            TRLiberados: 0,
-            ProduccionNeta: 0,
-
-            PesoEstandar: 0,
-            PorcentajeSobrepeso: 0,
-
-            ScrapSinCorteSierra: 0,
-            ScrapCorteSierra: 0,
-
-            ScrapTotal: 0,
-
-            PorcentajeScrapSinCorte: 0,
-            PorcentajeScrapCorte: 0,
-
-            KgReproceso: 0,
-            Carbonato: 0,
-
-            // ========================================
-            // DISPONIBILIDAD
-            // ========================================
-
-            HorasProgramadas: 0,
-
-            // ========================================
-            // TIEMPO NO DISPONIBLE
-            // ========================================
-
-            MantenimientoPreventivo: 0,
-            ControlInventarios: 0,
-            FaltaEnergia: 0,
-            FaltaMateriaPrima: 0,
-            PreparacionCambio: 0,
-            ArranqueEstabilizacion: 0,
-
-            TiempoMttoCorrectivosArranque: 0,
-
-            // ========================================
-            // TIEMPO NO PRODUCTIVO
-            // ========================================
-
-            TiempoMuertoCorrectivos: 0,
-            CambioMoldeSetupExcesos: 0,
-            TiempoMuertoArrancar: 0,
-            TiempoMuertoProceso: 0,
-
-            // ========================================
-            // KPIS
-            // ========================================
-
-            TiempoDisponible: 0,
-            TiempoProductivo: 0
-
-        };
-
-        this.gridApi.forEachNode((node) => {
-
-            if (node.data.id === 'TOTALES') {
-                return;
+        this.gridApi.forEachNode(node => {
+            if (node.data?.id === 'TOTALES') {
+                existeTotales = true;
             }
-
-            totales.PesoMinimo += parseFloat(node.data.PesoMinimo || 0);
-            totales.TRLiberados += parseFloat(node.data.TRLiberados || 0);
-            totales.ProduccionNeta += parseFloat(node.data.ProduccionNeta || 0);
-
-            totales.PesoEstandar += parseFloat(node.data.PesoEstandar || 0);
-
-            totales.ScrapSinCorteSierra += parseFloat(node.data.ScrapSinCorteSierra || 0);
-            totales.ScrapCorteSierra += parseFloat(node.data.ScrapCorteSierra || 0);
-
-            totales.ScrapTotal += parseFloat(node.data.ScrapTotal || 0);
-
-            totales.KgReproceso += parseFloat(node.data.KgReproceso || 0);
-            totales.Carbonato += parseFloat(node.data.Carbonato || 0);
-
-            totales.HorasProgramadas += parseFloat(node.data.HorasProgramadas || 0);
-
-            totales.MantenimientoPreventivo += parseFloat(node.data.MantenimientoPreventivo || 0);
-            totales.ControlInventarios += parseFloat(node.data.ControlInventarios || 0);
-            totales.FaltaEnergia += parseFloat(node.data.FaltaEnergia || 0);
-            totales.FaltaMateriaPrima += parseFloat(node.data.FaltaMateriaPrima || 0);
-            totales.PreparacionCambio += parseFloat(node.data.PreparacionCambio || 0);
-            totales.ArranqueEstabilizacion += parseFloat(node.data.ArranqueEstabilizacion || 0);
-
-            totales.TiempoMttoCorrectivosArranque +=
-                parseFloat(node.data.TiempoMttoCorrectivosArranque || 0);
-
-            totales.TiempoMuertoCorrectivos +=
-                parseFloat(node.data.TiempoMuertoCorrectivos || 0);
-
-            totales.CambioMoldeSetupExcesos +=
-                parseFloat(node.data.CambioMoldeSetupExcesos || 0);
-
-            totales.TiempoMuertoArrancar +=
-                parseFloat(node.data.TiempoMuertoArrancar || 0);
-
-            totales.TiempoMuertoProceso +=
-                parseFloat(node.data.TiempoMuertoProceso || 0);
-
-            totales.TiempoDisponible +=
-                parseFloat(node.data.TiempoDisponible || 0);
-
-            totales.TiempoProductivo +=
-                parseFloat(node.data.TiempoProductivo || 0);
-
         });
+
+        if (existeTotales) {
+            this.recalcularTotales(); // ya existe, solo recalculamos
+            return;
+        }
+
+        const totales = this.obtenerTotalesGrid(); // 🔥 reutilizamos el método que ya calcula todo
 
         this.gridApi.applyTransaction({
             add: [totales]
         });
 
+    }
+
+    // ========================================
+    // 🔥 NUEVO: Traer correctivos cerrados y agregarlos al grid
+    // ========================================
+
+    async traerCorrectivosCerrados(fechaInicio, fechaFin, linea) {
+
+        try {
+
+            GlobalUtil.mostrarLoader(true);
+
+            const response = await $.ajax({
+                url: `/${this.URLBaseMantenimientosCorrectivos}/GetMantenimientosCorrectivosPendientes`,
+                type: "POST",
+                data: {
+                    draw: 1,
+                    length: 999999,
+                    start: 0,
+                    "search[value]": "",
+                    FiltroSolicitud: "",
+                    FiltroFechaInicio: fechaInicio,
+                    FiltroFechaFin: fechaFin,
+                    FiltroArea: this.ID_AREA_CORRECTIVOS, // 🔥 7 = Corrugado
+                    FiltroLinea: linea || "",
+                    FiltroOrdenTrabajo: "",
+                    FiltroPlanta: this.datos_usuario[0].PLANTA,
+                    FiltroEstatusOT: "4",
+                    FiltroExcluirSincronizadosPEADCORR: "S" // ⚠️ nuevo parámetro, falta agregarlo al SP
+                }
+            });
+
+            const correctivos = response.data || [];
+
+            if (correctivos.length === 0) {
+                return false;
+            }
+
+            return this.agregarCorrectivosAlGrid(correctivos);
+
+        } catch (error) {
+
+            console.error(error);
+            AlertManager.mostrar("Error al consultar mantenimientos correctivos", "danger");
+            return false;
+
+        } finally {
+            GlobalUtil.mostrarLoader(false);
+        }
+    }
+
+    agregarCorrectivosAlGrid(correctivos) {
+
+        const otmcYaEnGrid = new Set();
+
+        this.gridApi.forEachNode(node => {
+            if (node.data?.OTMC) {
+                otmcYaEnGrid.add(node.data.OTMC);
+            }
+        });
+
+        const correctivosNuevos = correctivos.filter(
+            item => !otmcYaEnGrid.has(item.NumeroOrden)
+        );
+
+        if (correctivosNuevos.length === 0) {
+            return false;
+        }
+
+        const filasNuevas = [];
+        const lineasNoEncontradas = [];
+
+        correctivosNuevos.forEach(item => {
+
+            const nuevaFila = this.crearFilaVacia();
+
+            nuevaFila.id = this.generarIdTemporal();
+            nuevaFila.OTMC = item.NumeroOrden;
+            nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
+            nuevaFila.TiempoMuertoCorrectivos = parseFloat(item.DuracionHrs) || 0;
+
+            const lineaEncontrada = this.listaLineas.find(
+                l => String(l.value) === String(item.IdLineaProduccion)
+            );
+
+            if (lineaEncontrada) {
+                nuevaFila.Linea = lineaEncontrada.label;
+            } else {
+                nuevaFila.Linea = null;
+                lineasNoEncontradas.push(item.NumeroOrden);
+            }
+
+            if (nuevaFila.Fecha) {
+                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+                nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+            }
+
+            this.recalcularFila(nuevaFila);
+
+            filasNuevas.push(nuevaFila);
+        });
+
+        this.gridApi.applyTransaction({ add: filasNuevas });
+
+        if (lineasNoEncontradas.length > 0) {
+            AlertManager.mostrar(
+                `Las siguientes órdenes no tienen línea reconocida y quedaron sin línea asignada: ${lineasNoEncontradas.join(', ')}`,
+                "warning"
+            );
+        }
+
+        return true;
+    }
+
+    parsearFechaCorrectivo(fechaTexto) {
+
+        if (!fechaTexto) return null;
+
+        const [fechaParte] = fechaTexto.split(' ');
+        const [dia, mes, anio] = fechaParte.split('/');
+
+        if (!dia || !mes || !anio) return null;
+
+        return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+    }
+
+    // 🔥 Template de fila vacía, ajustado a los campos de Corrugado
+    crearFilaVacia() {
+        return {
+            id: null,
+            ID_REGISTRO: null,
+            OTMC: null,
+            Mes: null, Fecha: null, Linea: null, Corrugador: null, Producto: null, Turno: null, Grupo: null,
+            PesoMinimo: 0,
+            TRLiberados: null, ProduccionNeta: null,
+            PesoEstandar: 0, PorcentajeSobrepeso: 0,
+            ScrapSinCorteSierra: null, ScrapCorteSierra: null,
+            ScrapTotal: 0, PorcentajeScrapSinCorte: 0, PorcentajeScrapCorte: 0,
+            KgReproceso: null, Carbonato: null,
+            HorasProgramadas: null,
+            MantenimientoPreventivo: null, ControlInventarios: null,
+            FaltaEnergia: null, FaltaMateriaPrima: null,
+            PreparacionCambio: null, ArranqueEstabilizacion: null,
+            TiempoMttoCorrectivosArranque: null,
+            TiempoMuertoCorrectivos: null, CambioMoldeSetupExcesos: null,
+            TiempoMuertoArrancar: null, TiempoMuertoProceso: null,
+            TiempoDisponible: 0, TiempoProductivo: 0
+        };
     }
 
     ajustarAlturaGrid() {
@@ -1452,29 +1490,28 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 }
             });
 
+            let hayDatosOriginales = false;
+
             if (response.Status === "OK") {
 
                 const datos = JSON.parse(response.Data);
-
-                this.cargarDatosGrid(datos);
-
-                setTimeout(() => {
-                    GlobalUtil.mostrarLoader(false);
-                }, 1000);
+                hayDatosOriginales = this.cargarDatosGrid(datos);
 
             } else {
 
-                AlertManager.mostrar(
-                    response.Message,
-                    "info"
-                );
-
-                this.cargarDatosGrid(null);
-
-                setTimeout(() => {
-                    GlobalUtil.mostrarLoader(false);
-                }, 1000);
+                AlertManager.mostrar(response.Message, "info");
+                hayDatosOriginales = this.cargarDatosGrid(null);
             }
+
+            // 🔥 NUEVO: correctivos ANTES de pintar totales
+            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, linea);
+
+            if (!hayDatosOriginales && !seAgregaronCorrectivos) {
+                this.gridApi.setRowData(this.datosOriginales);
+            }
+
+            // 🔥 Totales una sola vez, al final
+            this.agregarFilaTotales();
 
         } catch (error) {
 
@@ -1505,10 +1542,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 id: item.ID_REGISTRO || Date.now(),
 
                 ID_REGISTRO: item.ID_REGISTRO,
-
-                // ========================================
-                // DATOS GENERALES
-                // ========================================
+                OTMC: item.OTMC, // 🔥 NUEVO
 
                 Mes: item.MES,
 
@@ -1519,115 +1553,52 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 Turno: item.TURNO,
                 Grupo: item.GRUPO,
 
-                // ========================================
-                // PRODUCCIÓN
-                // ========================================
+                PesoMinimo: item.PESO_MINIMO ?? 0,
 
-                PesoMinimo:
-                    item.PESO_MINIMO ?? 0,
+                TRLiberados: item.TRLIBERADOS,
+                ProduccionNeta: item.PRODUCCION_NETA,
 
-                TRLiberados:
-                    item.TRLIBERADOS,
+                PesoEstandar: item.PESO_ESTANDAR,
+                PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
 
-                ProduccionNeta:
-                    item.PRODUCCION_NETA,
+                ScrapSinCorteSierra: item.SCRAP_SIN_CORTE_SIERRA,
+                ScrapCorteSierra: item.SCRAP_CORTE_SIERRA,
+                ScrapTotal: item.SCRAP_TOTAL,
 
-                PesoEstandar:
-                    item.PESO_ESTANDAR,
+                PorcentajeScrapSinCorte: item.PORCENTAJE_SCRAP_SIN_CORTE,
+                PorcentajeScrapCorte: item.PORCENTAJE_SCRAP_CORTE,
 
-                PorcentajeSobrepeso:
-                    item.PORCENTAJE_SOBREPESO,
+                KgReproceso: item.KG_REPROCESO,
+                Carbonato: item.CARBONATO,
 
-                ScrapSinCorteSierra:
-                    item.SCRAP_SIN_CORTE_SIERRA,
+                HorasProgramadas: item.HORAS_PROGRAMADAS,
 
-                ScrapCorteSierra:
-                    item.SCRAP_CORTE_SIERRA,
+                MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
+                ControlInventarios: item.CONTROL_INVENTARIOS,
+                FaltaEnergia: item.FALTA_ENERGIA,
+                FaltaMateriaPrima: item.FALTA_MATERIA_PRIMA,
+                PreparacionCambio: item.PREPARACION_CAMBIO,
+                ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION,
 
-                ScrapTotal:
-                    item.SCRAP_TOTAL,
+                TiempoMttoCorrectivosArranque: item.TIEMPO_MTTO_CORRECTIVOS_ARRANQUE,
 
-                PorcentajeScrapSinCorte:
-                    item.PORCENTAJE_SCRAP_SIN_CORTE,
+                TiempoMuertoCorrectivos: item.TIEMPO_MUERTO_CORRECTIVOS,
+                CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
+                TiempoMuertoArrancar: item.TIEMPO_MUERTO_ARRANCAR,
+                TiempoMuertoProceso: item.TIEMPO_MUERTO_PROCESO,
 
-                PorcentajeScrapCorte:
-                    item.PORCENTAJE_SCRAP_CORTE,
-
-                KgReproceso:
-                    item.KG_REPROCESO,
-
-                Carbonato:
-                    item.CARBONATO,
-
-                // ========================================
-                // DISPONIBILIDAD
-                // ========================================
-
-                HorasProgramadas:
-                    item.HORAS_PROGRAMADAS,
-
-                // ========================================
-                // TIEMPO NO DISPONIBLE
-                // ========================================
-
-                MantenimientoPreventivo:
-                    item.MANTENIMIENTO_PREVENTIVO,
-
-                ControlInventarios:
-                    item.CONTROL_INVENTARIOS,
-
-                FaltaEnergia:
-                    item.FALTA_ENERGIA,
-
-                FaltaMateriaPrima:
-                    item.FALTA_MATERIA_PRIMA,
-
-                PreparacionCambio:
-                    item.PREPARACION_CAMBIO,
-
-                ArranqueEstabilizacion:
-                    item.ARRANQUE_ESTABILIZACION,
-
-                TiempoMttoCorrectivosArranque:
-                    item.TIEMPO_MTTO_CORRECTIVOS_ARRANQUE,
-
-                // ========================================
-                // TIEMPO NO PRODUCTIVO
-                // ========================================
-
-                TiempoMuertoCorrectivos:
-                    item.TIEMPO_MUERTO_CORRECTIVOS,
-
-                CambioMoldeSetupExcesos:
-                    item.CAMBIO_MOLDE_SETUP_EXCESOS,
-
-                TiempoMuertoArrancar:
-                    item.TIEMPO_MUERTO_ARRANCAR,
-
-                TiempoMuertoProceso:
-                    item.TIEMPO_MUERTO_PROCESO,
-
-                // ========================================
-                // KPIS
-                // ========================================
-
-                TiempoDisponible:
-                    item.TIEMPO_DISPONIBLE,
-
-                TiempoProductivo:
-                    item.TIEMPO_PRODUCTIVO
+                TiempoDisponible: item.TIEMPO_DISPONIBLE,
+                TiempoProductivo: item.TIEMPO_PRODUCTIVO
 
             }));
 
             this.gridApi.setRowData(datosFormateados);
-
-        } else {
-
-            this.gridApi.setRowData(this.datosOriginales);
+            return true; // 🔥 sí había datos
 
         }
 
-        this.agregarFilaTotales();
+        this.gridApi.setRowData([]);
+        return false; // 🔥 NUEVO — ya no llama agregarFilaTotales aquí
     }
 
     formatearRangoFechas(fechaInicio, fechaFin) {
@@ -1641,12 +1612,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
     async cargarLineas() {
 
         try {
-
-            const lineas =
-                await EquiposUtil.obtenerLineas(
-                    this.datos_usuario[0].PLANTA, null, 1
-                );
-
+            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, (this.datos_usuario[0].PLANTA == "1" ? 7 : 7), 1); // 🔥 REVISAR PLANTA 2
             this.listaLineas = lineas;
 
         } catch (error) {
@@ -1938,147 +1904,65 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
         const datos = [];
 
+        // 🔥 NUEVO — mismo helper que PVC
+        const redondear = (valor, decimales = 2) => {
+            if (valor === null || valor === undefined || isNaN(valor)) return 0;
+            return Math.round(valor * Math.pow(10, decimales)) / Math.pow(10, decimales);
+        };
+
         this.gridApi.forEachNode((node) => {
 
             if (node.data.id !== 'TOTALES') {
 
                 datos.push({
 
-                    ID_REGISTRO:
-                        node.data.ID_REGISTRO || null,
+                    ID_REGISTRO: node.data.ID_REGISTRO || null,
+                    OTMC: node.data.OTMC || null, // 🔥 NUEVO
 
-                    // ========================================
-                    // DATOS GENERALES
-                    // ========================================
+                    MES: node.data.Mes,
+                    FECHA: node.data.Fecha,
+                    LINEA: node.data.Linea,
+                    CORRUGADOR: node.data.Corrugador,
+                    PRODUCTO: node.data.Producto,
+                    TURNO: node.data.Turno,
+                    GRUPO: node.data.Grupo,
 
-                    MES:
-                        node.data.Mes,
+                    PESO_MINIMO: redondear(node.data.PesoMinimo, 2),
+                    TRLIBERADOS: redondear(node.data.TRLiberados, 2),
+                    PRODUCCION_NETA: redondear(node.data.ProduccionNeta, 2),
+                    PESO_ESTANDAR: redondear(node.data.PesoEstandar, 2),
+                    PORCENTAJE_SOBREPESO: redondear(node.data.PorcentajeSobrepeso, 2),
 
-                    FECHA:
-                        node.data.Fecha,
+                    SCRAP_SIN_CORTE_SIERRA: redondear(node.data.ScrapSinCorteSierra, 2),
+                    SCRAP_CORTE_SIERRA: redondear(node.data.ScrapCorteSierra, 2),
+                    SCRAP_TOTAL: redondear(node.data.ScrapTotal, 2),
+                    PORCENTAJE_SCRAP_SIN_CORTE: redondear(node.data.PorcentajeScrapSinCorte, 2),
+                    PORCENTAJE_SCRAP_CORTE: redondear(node.data.PorcentajeScrapCorte, 2),
 
-                    LINEA:
-                        node.data.Linea,
+                    KG_REPROCESO: redondear(node.data.KgReproceso, 2),
+                    CARBONATO: redondear(node.data.Carbonato, 2),
 
-                    CORRUGADOR:
-                        node.data.Corrugador,
+                    HORAS_PROGRAMADAS: redondear(node.data.HorasProgramadas, 2),
 
-                    PRODUCTO:
-                        node.data.Producto,
+                    MANTENIMIENTO_PREVENTIVO: redondear(node.data.MantenimientoPreventivo, 2),
+                    CONTROL_INVENTARIOS: redondear(node.data.ControlInventarios, 2),
+                    FALTA_ENERGIA: redondear(node.data.FaltaEnergia, 2),
+                    FALTA_MATERIA_PRIMA: redondear(node.data.FaltaMateriaPrima, 2),
+                    PREPARACION_CAMBIO: redondear(node.data.PreparacionCambio, 2),
+                    ARRANQUE_ESTABILIZACION: redondear(node.data.ArranqueEstabilizacion, 2),
 
-                    TURNO:
-                        node.data.Turno,
+                    TIEMPO_MTTO_CORRECTIVOS_ARRANQUE: redondear(node.data.TiempoMttoCorrectivosArranque, 2),
 
-                    GRUPO:
-                        node.data.Grupo,
+                    TIEMPO_MUERTO_CORRECTIVOS: redondear(node.data.TiempoMuertoCorrectivos, 2),
+                    CAMBIO_MOLDE_SETUP_EXCESOS: redondear(node.data.CambioMoldeSetupExcesos, 2),
+                    TIEMPO_MUERTO_ARRANCAR: redondear(node.data.TiempoMuertoArrancar, 2),
+                    TIEMPO_MUERTO_PROCESO: redondear(node.data.TiempoMuertoProceso, 2),
 
-                    // ========================================
-                    // PRODUCCIÓN
-                    // ========================================
+                    TIEMPO_DISPONIBLE: redondear(node.data.TiempoDisponible, 2),
+                    TIEMPO_PRODUCTIVO: redondear(node.data.TiempoProductivo, 2),
 
-                    PESO_MINIMO:
-                        node.data.PesoMinimo || 0,
-
-                    TRLIBERADOS:
-                        node.data.TRLiberados || 0,
-
-                    PRODUCCION_NETA:
-                        node.data.ProduccionNeta || 0,
-
-                    PESO_ESTANDAR:
-                        node.data.PesoEstandar || 0,
-
-                    PORCENTAJE_SOBREPESO:
-                        node.data.PorcentajeSobrepeso || 0,
-
-                    SCRAP_SIN_CORTE_SIERRA:
-                        node.data.ScrapSinCorteSierra || 0,
-
-                    SCRAP_CORTE_SIERRA:
-                        node.data.ScrapCorteSierra || 0,
-
-                    SCRAP_TOTAL:
-                        node.data.ScrapTotal || 0,
-
-                    PORCENTAJE_SCRAP_SIN_CORTE:
-                        node.data.PorcentajeScrapSinCorte || 0,
-
-                    PORCENTAJE_SCRAP_CORTE:
-                        node.data.PorcentajeScrapCorte || 0,
-
-                    KG_REPROCESO:
-                        node.data.KgReproceso || 0,
-
-                    CARBONATO:
-                        node.data.Carbonato || 0,
-
-                    // ========================================
-                    // DISPONIBILIDAD
-                    // ========================================
-
-                    HORAS_PROGRAMADAS:
-                        node.data.HorasProgramadas || 0,
-
-                    // ========================================
-                    // TIEMPO NO DISPONIBLE
-                    // ========================================
-
-                    MANTENIMIENTO_PREVENTIVO:
-                        node.data.MantenimientoPreventivo || 0,
-
-                    CONTROL_INVENTARIOS:
-                        node.data.ControlInventarios || 0,
-
-                    FALTA_ENERGIA:
-                        node.data.FaltaEnergia || 0,
-
-                    FALTA_MATERIA_PRIMA:
-                        node.data.FaltaMateriaPrima || 0,
-
-                    PREPARACION_CAMBIO:
-                        node.data.PreparacionCambio || 0,
-
-                    ARRANQUE_ESTABILIZACION:
-                        node.data.ArranqueEstabilizacion || 0,
-
-                    TIEMPO_MTTO_CORRECTIVOS_ARRANQUE:
-                        node.data.TiempoMttoCorrectivosArranque || 0,
-
-                    // ========================================
-                    // TIEMPO NO PRODUCTIVO
-                    // ========================================
-
-                    TIEMPO_MUERTO_CORRECTIVOS:
-                        node.data.TiempoMuertoCorrectivos || 0,
-
-                    CAMBIO_MOLDE_SETUP_EXCESOS:
-                        node.data.CambioMoldeSetupExcesos || 0,
-
-                    TIEMPO_MUERTO_ARRANCAR:
-                        node.data.TiempoMuertoArrancar || 0,
-
-                    TIEMPO_MUERTO_PROCESO:
-                        node.data.TiempoMuertoProceso || 0,
-
-                    // ========================================
-                    // KPIS
-                    // ========================================
-
-                    TIEMPO_DISPONIBLE:
-                        node.data.TiempoDisponible || 0,
-
-                    TIEMPO_PRODUCTIVO:
-                        node.data.TiempoProductivo || 0,
-
-                    // ========================================
-                    // AUDITORÍA
-                    // ========================================
-
-                    USUARIO:
-                        this.datos_usuario[0].EMAIL,
-
-                    PLANTA:
-                        this.datos_usuario[0].PLANTA
+                    USUARIO: this.datos_usuario[0].EMAIL,
+                    PLANTA: this.datos_usuario[0].PLANTA
 
                 });
             }

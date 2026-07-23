@@ -51,7 +51,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
     constructor(datos_usuario, URLBase) {
         super(datos_usuario, URLBase, 0);
         this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos"; // 🔥 NUEVO
-        this.ID_AREA_CORRECTIVOS = 9; // 🔥 NUEVO — Pead Liso
+        this.ID_AREA_CORRECTIVOS = (datos_usuario[0].PLANTA == "1" ? 9 : 14); // 🔥 PVC
     }
 
     async inicializar() {
@@ -367,7 +367,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     FiltroOrdenTrabajo: "",
                     FiltroPlanta: this.datos_usuario[0].PLANTA,
                     FiltroEstatusOT: "4",
-                    FiltroExcluirSincronizadosPVC: "S" // ⚠️ ver nota abajo
+                    FiltroExcluirSincronizadosPEADLISO: "S" // ⚠️ ver nota abajo
                 }
             });
 
@@ -1450,6 +1450,12 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         const datos = [];
 
+        // 🔥 NUEVO — mismo helper que PVC
+        const redondear = (valor, decimales = 2) => {
+            if (valor === null || valor === undefined || isNaN(valor)) return 0;
+            return Math.round(valor * Math.pow(10, decimales)) / Math.pow(10, decimales);
+        };
+
         this.gridApi.forEachNode(node => {
 
             if (node.data?.id === 'TOTALES') return;
@@ -1459,115 +1465,44 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             datos.push({
 
                 ID_REGISTRO: fila.ID_REGISTRO || null,
-                OTMC: fila.OTMC ?? null, // 🔥 NUEVO
-
-                // =====================================
-                // GENERALES
-                // =====================================
+                OTMC: fila.OTMC ?? null,
 
                 MES: fila.Mes,
-
                 FECHA: fila.Fecha,
                 LINEA: fila.Linea,
                 PRODUCTO: fila.Producto,
                 TURNO: fila.Turno,
                 GRUPO: fila.Grupo,
 
-                // =====================================
-                // PRODUCCIÓN
-                // =====================================
+                PESO_MINIMO: redondear(fila.PesoMinimo, 2),
+                TRLIBERADOS: redondear(fila.TRLiberados, 2),
+                PRODUCCION_NETA: redondear(fila.ProduccionNeta, 2),
+                PESO_ESTANDAR: redondear(fila.PesoEstandar, 2),
+                PORCENTAJE_SOBREPESO: redondear(fila.PorcentajeSobrepeso, 2),
+                TOTAL_SCRAP: redondear(fila.TotalScrap, 2),
+                PORCENTAJE_TOTAL_SCRAP: redondear(fila.PorcentajeTotalScrap, 2),
 
-                PESO_MINIMO:
-                    fila.PesoMinimo ?? 0,
+                HORAS_PROGRAMADAS: redondear(fila.HorasProgramadas, 2),
 
-                TRLIBERADOS:
-                    fila.TRLiberados ?? 0,
+                PREVENTIVO: redondear(fila.Preventivo, 2),
+                CONTROL_INVENTARIOS: redondear(fila.ControlInventarios, 2),
+                FALTA_ENERGIA_ELECTRICA: redondear(fila.FaltaEnergiaElectrica, 2),
+                FALTA_MATERIA_PRIMA_INSUMOS: redondear(fila.FaltaMateriaPrimaInsumos, 2),
+                TIEMPO_CALENTAMIENTO_CI: redondear(fila.TiempoCalentamientoCI, 2),
+                PREPARACION_LINEA_CAMBIO_HERRAMENTAL: redondear(fila.PreparacionLineaCambioHerramental, 2),
+                TIEMPO_CALENTAMIENTO_HERRAMENTAL: redondear(fila.TiempoCalentamientoHerramental, 2),
+                ARRANQUE_ESTABILIZACION_LINEA: redondear(fila.ArranqueEstabilizacionLinea, 2),
 
-                PRODUCCION_NETA:
-                    fila.ProduccionNeta ?? 0,
+                TIEMPO_MUERTO_CORRECTIVOS: redondear(fila.TiempoMuertoCorrectivos, 2),
+                TIEMPO_MUERTO_HERRAMENTALES: redondear(fila.TiempoMuertoHerramentales, 2),
+                CAMBIO_MOLDE_SETUP_EXCESOS: redondear(fila.CambioMoldeSetupExcesos, 2),
+                FALTA_PERSONAL: redondear(fila.FaltaPersonal, 2),
+                TIEMPO_MUERTO_PROCESO: redondear(fila.TiempoMuertoProceso, 2),
 
-                PESO_ESTANDAR:
-                    fila.PesoEstandar ?? 0,
-
-                PORCENTAJE_SOBREPESO:
-                    fila.PorcentajeSobrepeso ?? 0,
-
-                TOTAL_SCRAP:
-                    fila.TotalScrap ?? 0,
-
-                PORCENTAJE_TOTAL_SCRAP:
-                    fila.PorcentajeTotalScrap ?? 0,
-
-                // =====================================
-                // DISPONIBILIDAD
-                // =====================================
-
-                HORAS_PROGRAMADAS:
-                    fila.HorasProgramadas ?? 0,
-
-                // =====================================
-                // TIEMPO NO DISPONIBLE
-                // =====================================
-
-                PREVENTIVO:
-                    fila.Preventivo ?? 0,
-
-                CONTROL_INVENTARIOS:
-                    fila.ControlInventarios ?? 0,
-
-                FALTA_ENERGIA_ELECTRICA:
-                    fila.FaltaEnergiaElectrica ?? 0,
-
-                FALTA_MATERIA_PRIMA_INSUMOS:
-                    fila.FaltaMateriaPrimaInsumos ?? 0,
-
-                TIEMPO_CALENTAMIENTO_CI:
-                    fila.TiempoCalentamientoCI ?? 0,
-
-                PREPARACION_LINEA_CAMBIO_HERRAMENTAL:
-                    fila.PreparacionLineaCambioHerramental ?? 0,
-
-                TIEMPO_CALENTAMIENTO_HERRAMENTAL:
-                    fila.TiempoCalentamientoHerramental ?? 0,
-
-                ARRANQUE_ESTABILIZACION_LINEA:
-                    fila.ArranqueEstabilizacionLinea ?? 0,
-
-                // =====================================
-                // TIEMPO NO PRODUCTIVO
-                // =====================================
-
-                TIEMPO_MUERTO_CORRECTIVOS:
-                    fila.TiempoMuertoCorrectivos ?? 0,
-
-                TIEMPO_MUERTO_HERRAMENTALES:
-                    fila.TiempoMuertoHerramentales ?? 0,
-
-                CAMBIO_MOLDE_SETUP_EXCESOS:
-                    fila.CambioMoldeSetupExcesos ?? 0,
-
-                FALTA_PERSONAL:
-                    fila.FaltaPersonal ?? 0,
-
-                TIEMPO_MUERTO_PROCESO:
-                    fila.TiempoMuertoProceso ?? 0,
-
-                // =====================================
-                // KPI
-                // =====================================
-
-                TIEMPO_DISPONIBLE:
-                    fila.TiempoDisponible ?? 0,
-
-                TIEMPO_PRODUCTIVO:
-                    fila.TiempoProductivo ?? 0,
-
-                // =====================================
-                // AUDITORÍA
-                // =====================================
+                TIEMPO_DISPONIBLE: redondear(fila.TiempoDisponible, 2),
+                TIEMPO_PRODUCTIVO: redondear(fila.TiempoProductivo, 2),
 
                 USUARIO: this.datos_usuario[0].EMAIL,
-
                 PLANTA: this.datos_usuario[0].PLANTA
 
             });
@@ -1695,7 +1630,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         try {
 
-            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA);
+            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, (this.datos_usuario[0].PLANTA == "1" ? 9 : 9), 1); //REVISAR PARA PLANTA 2 QUE LINEAS
 
             this.listaLineas = lineas;
 

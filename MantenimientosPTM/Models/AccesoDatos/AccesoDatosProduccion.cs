@@ -360,6 +360,11 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public int? ID_REGISTRO { get; set; }
 
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string OTMC { get; set; }
+
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string MES { get; set; }
@@ -524,6 +529,11 @@ namespace MantenimientosPTM
         {
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public int? ID_REGISTRO { get; set; }
+
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string OTMC { get; set; }
 
             // ============================================
             // GENERALES
