@@ -177,3 +177,67 @@
     font-size: .875rem;
     max-width: 300px;
 }
+
+/* ========================================
+   DIFERENCIACIÓN DE FILAS POR ORIGEN
+   ======================================== */
+
+/* Filas de CORRECTIVOS - Borde izquierdo naranja */
+.row-correctivo {
+    border-left: 4px solid #ff9800 !important;
+    background-color: #fff3e0 !important;
+}
+
+    .row-correctivo:hover {
+        background-color: #ffe0b2 !important;
+    }
+
+/* Filas de PRODUCTOS TERMINADOS - Borde izquierdo verde */
+.row-producto-terminado {
+    border-left: 4px solid #4caf50 !important;
+    background-color: #f1f8e9 !important;
+}
+
+    .row-producto-terminado:hover {
+        background-color: #dcedc8 !important;
+    }
+
+/* Filas ORIGINALES - Borde izquierdo azul */
+.row-original {
+    border-left: 4px solid #2196f3 !important;
+}
+
+/* Badge para indicar origen */
+.badge-origen {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.badge-origen-correctivo {
+    background-color: #ff9800;
+    color: white;
+}
+
+.badge-origen-producto {
+    background-color: #4caf50;
+    color: white;
+}
+
+.badge-origen-original {
+    background-color: #2196f3;
+    color: white;
+}
+
+/* Indicador visual en la celda OTMC o similar */
+.celda-otmc-marker::before {
+    content: "🔧 ";
+    margin-right: 4px;
+}
+
+.celda-producto-marker::before {
+    content: "📦 ";
+    margin-right: 4px;
+}
