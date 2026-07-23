@@ -1002,7 +1002,8 @@ namespace MantenimientosPTM.Controllers
                         p_MOTIVO = datos.Motivo,
                         p_USUARIO_SOLICITA = datos.UsuarioSolicita,
                         p_ID_PERIODICIDAD = datos.IdPeriodicidad,
-                        p_PLANTA = datos.Planta.Value
+                        p_PLANTA = datos.Planta.Value,
+                        p_ESTATUS = "Creada"
                     };
 
                     // Convertir a parámetros HANA
@@ -1025,7 +1026,7 @@ namespace MantenimientosPTM.Controllers
                             if (jsonArray != null && jsonArray.Count > 0)
                             {
                                 var firstItem = jsonArray[0];
-                                string estatus = firstItem["ESTATUS"]?.ToString();
+                                string estatus = firstItem["ESTATUS_ACTUAL"]?.ToString();
                                 int idSolicitud = Convert.ToInt32(firstItem["ID_SOLICITUD"]?.ToString() ?? "0");
 
                                 if (estatus == "SI")
