@@ -47,7 +47,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
     constructor(datos_usuario, URLBase) {
         super(datos_usuario, URLBase, 110);
         this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos";
-        this.ID_AREA_CORRECTIVOS = 1; // 🔥 PVC
+        this.ID_AREA_CORRECTIVOS = (datos_usuario[0].PLANTA == "1" ? 1 : 14); // 🔥 PVC
     }
 
     async inicializar() {
@@ -1496,7 +1496,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         try {
 
-            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, 1, 1);
+            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, (this.datos_usuario[0].PLANTA == "1" ? 1 : 14), 1);
 
             this.listaLineas = lineas;
 
