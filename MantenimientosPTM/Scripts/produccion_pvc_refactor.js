@@ -167,7 +167,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
     }
 
-
     cargarDatosGrid(datos) {
 
         // 🔥 Ya NO agrega la fila de totales aquí — eso se decide al final en consultarDatos
@@ -178,6 +177,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 id: item.ID_REGISTRO || Date.now(),
                 ID_REGISTRO: item.ID_REGISTRO,
                 OTMC: item.OTMC,   // 🔥 recuerda incluirlo también aquí
+                ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,   // 🔥 recuerda incluirlo también aquí
                 Fecha: item.FECHA,
                 Linea: item.LINEA,
                 Producto: item.PRODUCTO,
@@ -229,7 +229,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
         return false;
     }
 
-    async consultarDatos(fechaInicio, fechaFin, linea) {
+    async consultarDatos(fechaInicio, fechaFin, FiltroTurno, linea) {
 
         try {
 
@@ -261,7 +261,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             // ✅ NUEVO: Productos terminados se agregan también
             let PLANTA = this.datos_usuario[0].PLANTA;
-            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, 'PPVC');
+            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PPVC');
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
 
             // 🔥 Si no hay datos originales, correctivos NI productos terminados, mostramos placeholder
@@ -371,6 +371,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             // ✅ NUEVO: Marcar como correctivo
             nuevaFila._origen = 'CORRECTIVO';
             nuevaFila._marcador = '🔧';
+            nuevaFila._rowClass = 'row-correctivo';
 
             const lineaEncontrada = this.listaLineas.find(
                 l => String(l.value) === String(item.IdLineaProduccion)
@@ -441,7 +442,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
     // ========================================
     // 🔥 NUEVO: Obtener Producto Terminado
     // ========================================
-    async ObtenerProductoTerminado(planta, proceso) {
+    async ObtenerProductoTerminado(planta, FiltroTurno, proceso) {
 
         try {
 
@@ -453,6 +454,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 type: "GET",
                 headers: {
                     "Planta": planta || this.datos_usuario[0].PLANTA,
+                    "Turno" : FiltroTurno || null,
                     "Proceso": proceso || ""
                 },
                 dataType: 'json'
@@ -507,11 +509,28 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 return false;
             }
 
+            // 🔥 Anti-duplicados: igual que OTMC pero con ID_PRODUCTO_TERMINADO
+            const idsYaEnGrid = new Set();
+
+            this.gridApi.forEachNode(node => {
+                if (node.data?.ID_PRODUCTO_TERMINADO) {
+                    idsYaEnGrid.add(String(node.data.ID_PRODUCTO_TERMINADO));
+                }
+            });
+
+            const productosNuevos = productosTerminados.filter(
+                item => !idsYaEnGrid.has(String(item.Id))
+            );
+
+            if (productosNuevos.length === 0) {
+                return false; // ya están todos en el grid
+            }
+
             const filasNuevas = [];
             const lineasNoEncontradas = [];
             let filasAgregadas = 0;
 
-            productosTerminados.forEach(item => {
+            productosNuevos.forEach(item => {  // 🔥 iterar sobre productosNuevos, no productosTerminados
 
                 const fecha = this.parsearFechaProductoTerminado(item.FechaPesaje);
                 if (!fecha) {
@@ -526,8 +545,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
                 const nuevaFila = this.crearFilaVacia();
 
+                nuevaFila.ID_PRODUCTO_TERMINADO = item.Id;
                 nuevaFila.id = this.generarIdTemporal();
-
                 nuevaFila.Fecha = fecha;
                 nuevaFila.Producto = item.Codigo || '';
                 nuevaFila.Turno = String(item.Turno || '') || '';
@@ -536,9 +555,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 nuevaFila.PorcentajeScrap = parseFloat(item.ScrapPt) || 0;
                 nuevaFila.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
 
-                // ✅ NUEVO: Marcar como producto terminado
                 nuevaFila._origen = 'PRODUCTO_TERMINADO';
                 nuevaFila._marcador = '📦';
+                nuevaFila._rowClass = 'row-producto-terminado';
 
                 const lineaEncontrada = this.listaLineas.find(
                     l => String(l.value) === String(item.Id_Linea)
@@ -577,10 +596,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
             return filasAgregadas > 0;
 
         } catch (error) {
-
             console.error("Error al agregar productos terminados:", error);
             return false;
-
         }
     }
 
@@ -633,9 +650,21 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         field: 'Mes',
                         headerName: 'Mes',
                         editable: false,
-                        width: 100,
+                        width: 120,
                         cellClass: 'celda-gris',
-                        pinned: 'left'
+                        pinned: 'left',
+                        // ✅ NUEVO: Renderer para mostrar emoji + mes
+                        cellRenderer: params => {
+                            if (!params.value || params.data?.id === 'TOTALES') {
+                                return params.value || '';
+                            }
+
+                            const emoji = params.data?._marcador || '';
+
+                            return emoji
+                                ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px;">${emoji}</span><span>${params.value}</span></div>`
+                                : params.value;
+                        }
                     },
 
                     {
@@ -998,7 +1027,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         'PorcentajeSobrepeso',
                         'PorcentajeScrap',
                         'TiempoDisponible',
-                        'TiempoProductivo'
+                        'TiempoProductivo',
+                        'Mes'  // ✅ NUEVO: No editable si queremos que muestre emoji
                     ];
 
                     if (readonlyFields.includes(params.colDef.field)) {
@@ -1032,7 +1062,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 this.gridColumnApi = params.columnApi;
             },
 
-            // ✅ NUEVO: Aplicar estilos según origen
             getRowStyle: params => {
 
                 if (params.data && params.data.id === 'TOTALES') {
@@ -1045,22 +1074,38 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     };
                 }
 
-                // ✅ Estilos según origen
-                if (params.data?._origen === 'CORRECTIVO') {
-                    return {
-                        borderLeft: '4px solid #ff9800',
-                        backgroundColor: '#fff3e0'
-                    };
-                }
-
-                if (params.data?._origen === 'PRODUCTO_TERMINADO') {
-                    return {
-                        borderLeft: '4px solid #4caf50',
-                        backgroundColor: '#f1f8e9'
-                    };
-                }
-
                 return null;
+            },
+
+            getRowClass: params => {
+
+                if (params.data?.id === 'TOTALES') {
+                    return '';
+                }
+
+                if (params.data?._rowClass) {
+                    return params.data._rowClass;
+                }
+
+                return '';
+            },
+
+            // ✅ NUEVO: Cell renderer global para mostrar emojis
+            processCellForClipboard: params => {
+                // Para que el emoji no se copie en el portapapeles
+                if (params.column.field === 'Mes') {
+                    return params.value;
+                }
+                return params.value;
+            },
+
+            // ✅ Renderer personalizado para el Mes
+            cellRenderer: {
+                'mesRenderer': function (params) {
+                    if (!params.value) return '';
+                    const emoji = params.data?._marcador || '';
+                    return emoji ? `<span style="font-size: 14px; margin-right: 4px;">${emoji}</span><span>${params.value}</span>` : params.value;
+                }
             }
         };
 
@@ -1190,8 +1235,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             const fechaInicio = $('#FiltroFechaInicio').val();
             const fechaFin = $('#FiltroFechaFin').val();
+            const filtroTurno = $('#FiltroTurno').val();
 
-            this.consultarDatos(fechaInicio, fechaFin, null);
+            this.consultarDatos(fechaInicio, fechaFin,filtroTurno, null);
 
         });
 
@@ -1349,7 +1395,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
                 datos.push({
                     ID_REGISTRO: node.data.ID_REGISTRO || null,
-                    OTMC: node.data.OTMC || null,   // 🔥 NUEVO — sin esto se pierde el número de orden
+                    OTMC: node.data.OTMC || null,
+                    ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null, // ✅ NUEVO: Identificador del producto
                     FECHA: node.data.Fecha,
                     LINEA: node.data.Linea,
                     PRODUCTO: node.data.Producto,

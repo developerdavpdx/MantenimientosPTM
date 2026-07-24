@@ -1236,6 +1236,7 @@ namespace MantenimientosPTM.Controllers
             {
                 string plantaHeader = Request.Headers["Planta"];
                 string proceso = Request.Headers["Proceso"];
+                string FiltroTurno = Request.Headers["Turno"];
 
                 if (string.IsNullOrEmpty(plantaHeader) || string.IsNullOrEmpty(proceso))
                 {
@@ -1250,10 +1251,10 @@ namespace MantenimientosPTM.Controllers
 
                 int numplanta = int.Parse(plantaHeader);
                 int turno = 0;
-                DateTime TurnoStar;
-                DateTime TurnoEnd;
-                DateTime TurnoScrapStar;
-                DateTime TurnoScrapEnd;
+                DateTime TurnoStar = DateTime.Now;
+                DateTime TurnoEnd = DateTime.Now;
+                DateTime TurnoScrapStar = DateTime.Now;
+                DateTime TurnoScrapEnd = DateTime.Now;
 
                 DateTime horaInicioTurno = DateTime.Today.AddHours(4.5).AddSeconds(1);
                 DateTime horaFinTurno = DateTime.Today.AddHours(16.5);
@@ -1263,7 +1264,7 @@ namespace MantenimientosPTM.Controllers
                 List<ReportesProdTerm> reportesProdTerm = new List<ReportesProdTerm>();
 
                 // Asignar turno y rangos de fechas
-                if (horaActual >= horaInicioTurno && horaActual <= horaFinTurno)
+                if ((horaActual >= horaInicioTurno && horaActual <= horaFinTurno) || (FiltroTurno == "1"))
                 {
                     turno = 1;
 
@@ -1272,7 +1273,7 @@ namespace MantenimientosPTM.Controllers
                     TurnoScrapStar = DateTime.Today.AddHours(5).AddMinutes(45).AddSeconds(1);
                     TurnoScrapEnd = DateTime.Today.AddHours(17).AddMinutes(45);
                 }
-                else
+                else if (FiltroTurno == "2" || FiltroTurno == "null")
                 {
                     turno = 2;
 

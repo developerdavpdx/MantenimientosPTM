@@ -205,6 +205,11 @@ namespace MantenimientosPTM
             [DefaultValue("")]
             public string OTMC { get; set; }
 
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string ID_PRODUCTO_TERMINADO { get; set; }
+
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public DateTime? FECHA { get; set; }
 
