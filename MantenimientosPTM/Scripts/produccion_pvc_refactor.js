@@ -47,7 +47,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
     constructor(datos_usuario, URLBase) {
         super(datos_usuario, URLBase, 110);
         this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos";
+        this.URLBaseMantenimientosPreventivos = "MantenimientosPreventivos";
         this.ID_AREA_CORRECTIVOS = (datos_usuario[0].PLANTA == "1" ? 1 : 14); // 🔥 PVC
+        this.ID_AREA_PREVENTIVOS = (datos_usuario[0].PLANTA == "1" ? 1 : 14); // 🔥 PVC
     }
 
     async inicializar() {
@@ -177,6 +179,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 id: item.ID_REGISTRO || Date.now(),
                 ID_REGISTRO: item.ID_REGISTRO,
                 OTMC: item.OTMC,   // 🔥 recuerda incluirlo también aquí
+                OTMP: item.OTMP,   // 🔥 NUEVO: Preventivos también
                 ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,   // 🔥 recuerda incluirlo también aquí
                 Fecha: item.FECHA,
                 Linea: item.LINEA,
@@ -259,13 +262,16 @@ class GestionProduccionPVC extends GestionProduccionBase {
             // 🔥 Correctivos se agregan ANTES de pintar totales
             const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, linea);
 
+            // 🔥 NUEVO: Preventivos se agregan también
+            const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
+
             // ✅ NUEVO: Productos terminados se agregan también
             let PLANTA = this.datos_usuario[0].PLANTA;
             const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PPVC');
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
 
-            // 🔥 Si no hay datos originales, correctivos NI productos terminados, mostramos placeholder
-            if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronProductosTerminados) {
+            // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
+            if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
                 this.gridApi.setRowData(this.datosOriginales);
             }
 
@@ -404,6 +410,154 @@ class GestionProduccionPVC extends GestionProduccionBase {
         }
 
         return true;
+    }
+
+    // ========================================
+    // 🔥 NUEVO: Traer preventivos cerrados y agregarlos al grid
+    // ========================================
+
+    async traerPreventivosCerrados(fechaInicio, fechaFin, linea) {
+
+        try {
+
+            GlobalUtil.mostrarLoader(true);
+
+            const response = await $.ajax({
+                url: `/${this.URLBaseMantenimientosPreventivos}/GetMantenimientosPorRango`,
+                type: "POST",
+                data: {
+                    draw: 1,
+                    length: 999999,
+                    start: 0,
+                    "search[value]": "",
+                    FiltroFechaInicio: fechaInicio,
+                    FiltroFechaFin: fechaFin,
+                    FiltroArea: this.ID_AREA_PREVENTIVOS,
+                    FiltroLinea: linea || "",
+                    FiltroOrdenTrabajo: "",
+                    FiltroPeriodicidad: "",
+                    FiltroPlanta: this.datos_usuario[0].PLANTA,
+                    FiltroEstatusOT: "4",
+                    FiltroUsuario: "",
+                    FiltroTipoUsuario: this.datos_usuario[0].TIPO_USUARIO,
+                    FiltroExcluirSincronizadosPVC: "S"  // 🔥 Excluir PVC
+                }
+            });
+
+            const preventivos = response.data || [];
+
+            if (preventivos.length === 0) {
+                return false; // 🔥 nada que agregar
+            }
+
+            return this.agregarPreventivoAlGrid(preventivos); // 🔥 ahora retorna bool
+
+        } catch (error) {
+
+            console.error(error);
+            AlertManager.mostrar("Error al consultar mantenimientos preventivos", "danger");
+            return false;
+
+        } finally {
+            GlobalUtil.mostrarLoader(false);
+        }
+    }
+
+    agregarPreventivoAlGrid(preventivos) {
+
+        const otmpYaEnGrid = new Set();
+
+        this.gridApi.forEachNode(node => {
+            if (node.data?.OTMP) {
+                otmpYaEnGrid.add(node.data.OTMP);
+            }
+        });
+
+        const preventivosNuevos = preventivos.filter(
+            item => !otmpYaEnGrid.has(item.NumeroOrden)
+        );
+
+        if (preventivosNuevos.length === 0) {
+            return false;
+        }
+
+        const filasNuevas = [];
+        const lineasNoEncontradas = [];
+
+        preventivosNuevos.forEach(item => {
+
+            const nuevaFila = this.crearFilaVacia();
+
+            nuevaFila.id = this.generarIdTemporal();
+            nuevaFila.OTMP = item.NumeroOrden;
+            nuevaFila.Fecha = this.parsearFechaPreventivo(item.FechaInicioMantenimiento);
+            nuevaFila.MantenimientoPreventivo = parseFloat(item.DuracionHrs) || 0;
+
+            // ✅ NUEVO: Marcar como preventivo
+            nuevaFila._origen = 'PREVENTIVO';
+            nuevaFila._marcador = '🛠️';
+            nuevaFila._rowClass = 'row-preventivo';
+
+            const lineaEncontrada = this.listaLineas.find(
+                l => String(l.value) === String(item.IdLineaProduccion)
+            );
+
+            if (lineaEncontrada) {
+                nuevaFila.Linea = lineaEncontrada.label;
+            } else {
+                nuevaFila.Linea = null;
+                lineasNoEncontradas.push(item.NumeroOrden);
+            }
+
+            if (nuevaFila.Fecha) {
+                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+                nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+            }
+
+            this.recalcularFila(nuevaFila);
+
+            filasNuevas.push(nuevaFila);
+        });
+
+        this.gridApi.applyTransaction({ add: filasNuevas });
+
+        if (lineasNoEncontradas.length > 0) {
+            AlertManager.mostrar(
+                `Las siguientes órdenes no tienen línea reconocida y quedaron sin línea asignada: ${lineasNoEncontradas.join(', ')}`,
+                "warning"
+            );
+        }
+
+        return true;
+    }
+
+    // 🔥 Convierte fecha del preventivo
+    // FechaInicioMantenimiento viene en formato "DD/MM/YYYY" desde el SP
+    parsearFechaPreventivo(fechaTexto) {
+
+        if (!fechaTexto) return null;
+
+        try {
+            // Si es un ISO date (YYYY-MM-DD o con T)
+            if (fechaTexto.includes('-')) {
+                const fecha = new Date(fechaTexto);
+                if (isNaN(fecha.getTime())) return null;
+
+                const ano = fecha.getFullYear();
+                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                const dia = String(fecha.getDate()).padStart(2, '0');
+                return `${ano}-${mes}-${dia}`;
+            }
+
+            // Si es formato DD/MM/YYYY
+            const [dia, mes, anio] = fechaTexto.split('/');
+            if (!dia || !mes || !anio) return null;
+
+            return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`; // YYYY-MM-DD
+        } catch (error) {
+            console.error("Error al parsear fecha preventivo:", error);
+            return null;
+        }
     }
 
     // 🔥 Convierte "DD/MM/YYYY HH24:MI:SS" (formato que regresa el SP de correctivos)
@@ -1396,6 +1550,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 datos.push({
                     ID_REGISTRO: node.data.ID_REGISTRO || null,
                     OTMC: node.data.OTMC || null,
+                    OTMP: node.data.OTMP || null, // 🔥 NUEVO: Preventivos
                     ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null, // ✅ NUEVO: Identificador del producto
                     FECHA: node.data.Fecha,
                     LINEA: node.data.Linea,
