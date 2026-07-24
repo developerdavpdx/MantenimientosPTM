@@ -94,6 +94,8 @@ class ValidationManagerLogin {
                                 //Validar permisos y modulos
                                 let datos_usuario = GlobalUtil.getDatosUsuario();
                                 const tipoUsuario = datos_usuario[0].TIPOUSUARIO;
+                                const userWeb = datos_usuario[0].USUARIOWEB;
+
 
                                 // Mapeo de perfiles a rutas
                                 const rutasPorPerfil = {

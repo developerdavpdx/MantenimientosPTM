@@ -378,6 +378,9 @@ namespace MantenimientosPTM
             public string APELLIDO { get; set; }
             public string PUESTO { get; set; }
             public string DEPARTAMENTO { get; set; }
+            public string PLANTA { get; set; }
+            public string USUARIOWEB { get; set; }
+            public string TIPOUSUARIO { get; set; }
         }
 
         public class EquipoDTO
