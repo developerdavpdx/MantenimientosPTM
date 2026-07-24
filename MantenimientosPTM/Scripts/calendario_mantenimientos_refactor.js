@@ -41,7 +41,7 @@ class GestionEventosApp {
                 EquiposUtil.llenarLineas(
                     this.datos_usuario[0].PLANTA,
                     Area,
-                    1,
+                    null,
                     "FiltroLineaProduccion",
                     null
                 );
@@ -161,6 +161,17 @@ class CalendarManager {
            
             // 👇 Inicializar el tooltip
             eventDidMount: (info) => {
+
+                //Se obtiene el estatus para mostrarlo en el tooltip
+                const keyTooltip = `${info.event.extendedProps.orden_trabajo_finalizada}-${info.event.extendedProps.id_status}`;
+
+                const tiposMap = {
+                    'NO-2': 'Liberado',
+                    'NO-3': 'En espera de refacción',
+                    'NO-4': 'En proceso de firmas',
+                    'SI-4': 'Terminado'
+                };
+
                 $(info.el).tooltip({
                     html: true,
                     placement: 'top',
@@ -174,6 +185,7 @@ class CalendarManager {
                             <b>Equipo:</b> ${info.event.extendedProps.equipment}<br>
                             <b>Área:</b> ${info.event.extendedProps.areaDescripcion}<br>
                             <b>Línea:</b> ${info.event.extendedProps.lineaDescripcion}<br>
+                            <b>Estatus:</b> ${tiposMap[keyTooltip] || 'Sin estatus'}<br>
                             <b>${info.event.extendedProps.tipo === 'Correctivo' ? 'Fecha:' : 'Periodo:'}</b>
                             ${info.event.extendedProps.tipo === 'Correctivo'
                                             ? info.event.extendedProps.fechaInicio
@@ -298,7 +310,9 @@ class CalendarManager {
                     fechaFin: fechaFin.toLocaleDateString('es-ES'),
                     fechaCompletado: fechaCompletado.toLocaleDateString('es-ES'),
                     periodoMantenimiento: `${fechaInicio.toLocaleDateString('es-ES')} al ${fechaFin.toLocaleDateString('es-ES')}`,
+                    id_status: item.ID_ESTATUS,
                     status: item.ESTATUS,
+                    orden_trabajo_finalizada: item.ORDEN_TRABAJO_FINALIZADA,
                     solicitante: item.SOLICITANTE || 'No especificado',
                     ubicacion_tecnica: item.UBICACION_TECNICA || 'No especificada',
                     duracion_hrs: item.DURACION_HRS || 0,
@@ -338,14 +352,14 @@ class CalendarManager {
                 });
 
                 AlertManager.mostrar(
-                    `Se cargaron ${eventosCalendario.length} mantenimientos completados`,
+                    `Se cargaron ${eventosCalendario.length} mantenimientos`,
                     'success'
                 );
                 console.log('✅ Eventos cargados:', eventosCalendario.length);
             } else {
                 this.todosLosEventos = [];
                 this.calendar.removeAllEvents();
-                AlertManager.mostrar('No hay mantenimientos completados en el período seleccionado', 'info');
+                AlertManager.mostrar('No hay mantenimientos en el período seleccionado', 'info');
             }
 
            
@@ -482,7 +496,28 @@ class CalendarManager {
         const badgeColorTipo = props.tipo === 'Preventivo' ? 'bg-success' : 'bg-danger';
         $('#modalType').removeClass('bg-info bg-success bg-danger').addClass(badgeColorTipo).text(props.type);
 
-        $('#modalStatus').text(props.status);
+        const colorMap = {
+            'NO-2': 'bg-primary',   // Liberado
+            'NO-3': 'bg-warning',    // En espera de refacción
+            'NO-4': 'bg-dark',   // En proceso de firmas
+            'SI-4': 'bg-success'    // Terminado
+        };
+
+        const tiposMap = {
+            'NO-2': 'Liberado',
+            'NO-3': 'En espera de refacción',  
+            'NO-4': 'En proceso de firmas',
+            'SI-4': 'Terminado'
+        };
+
+        const key = `${props.orden_trabajo_finalizada}-${props.id_status}`;
+
+
+        $('#modalStatus')
+            .removeClass('bg-success bg-warning bg-danger bg-primary bg-secondary bg-dark')
+            .text(tiposMap[key] || 'Sin estatus')
+            .addClass(colorMap[key] || 'bg-secondary');
+
         $('#modalSolicitante').text(props.solicitante);
 
         // Información del Equipo
@@ -498,7 +533,7 @@ class CalendarManager {
         $('#modalDuracion').text(props.duracion_hrs + ' hrs');
 
         // Técnicos Asignados
-        // $('#modalTecnicos').text(props.tecnicos_nombres);
+        $('#modalTecnicos').text(props.tecnicos_nombres);
 
         // ✅ Observaciones - Mostrar según el tipo de mantenimiento
         const tieneTextoSecuencia = props.texto_secuencia && props.texto_secuencia.trim() !== '';

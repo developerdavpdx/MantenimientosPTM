@@ -79,7 +79,7 @@ namespace MantenimientosPTM.Controllers
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
                         Status = "NO",
-                        Message = $"No se encontraron mantenimientos completados entre {dtFechaInicio?.ToString("dd/MM/yyyy")} y {dtFechaFin?.ToString("dd/MM/yyyy")}.",
+                        Message = $"No se encontraron mantenimientos entre {dtFechaInicio?.ToString("dd/MM/yyyy")} y {dtFechaFin?.ToString("dd/MM/yyyy")}.",
                         Data = string.Empty
                     };
                 }
@@ -88,7 +88,7 @@ namespace MantenimientosPTM.Controllers
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
                         Status = "ERROR",
-                        Message = "No fue posible obtener los mantenimientos completados: " + resultHana.JsonResult,
+                        Message = "No fue posible obtener los mantenimientos: " + resultHana.JsonResult,
                         Data = string.Empty
                     };
                 }
