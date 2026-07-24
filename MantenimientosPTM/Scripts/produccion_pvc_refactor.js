@@ -834,7 +834,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         width: 120,
                         cellClass: 'celda-gris',
                         pinned: 'left',
-                        // ✅ NUEVO: Renderer para mostrar emoji + mes + tooltip
+                        // ✅ NUEVO: Renderer para mostrar emoji + mes + tooltip + punto pulsante
                         cellRenderer: params => {
                             if (!params.value || params.data?.id === 'TOTALES') {
                                 return params.value || '';
@@ -842,6 +842,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
                             const emoji = params.data?._marcador || '';
                             const origen = params.data?._origen;
+                            const idRegistro = params.data?.ID_REGISTRO;
 
                             // 🔥 Mapa de tooltips según origen
                             const tooltipTexts = {
@@ -855,8 +856,13 @@ class GestionProduccionPVC extends GestionProduccionBase {
                                 ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
                                 : '';
 
+                            // 🔥 NUEVO: Mostrar punto pulsante si es un registro nuevo (sin ID_REGISTRO)
+                            const puntoPulsante = !idRegistro && (origen === 'CORRECTIVO' || origen === 'PREVENTIVO' || origen === 'PRODUCTO_TERMINADO')
+                                ? `<span class="punto-pulso punto-pulso-margin-left"></span>`
+                                : '';
+
                             return emoji
-                                ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px; cursor: help;" ${tooltipAttr}>${emoji}</span><span>${params.value}</span></div>`
+                                ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px; cursor: help;" ${tooltipAttr}>${emoji}</span><span>${params.value}</span>${puntoPulsante}</div>`
                                 : params.value;
                         }
                     },

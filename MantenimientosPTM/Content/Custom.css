@@ -1029,6 +1029,10 @@ footer {
     animation: pulso 1.5s infinite;
 }
 
+.punto-pulso-margin-left {
+    margin-left: 20px;
+}
+
 @keyframes pulso {
     0%, 100% {
         opacity: 1;
