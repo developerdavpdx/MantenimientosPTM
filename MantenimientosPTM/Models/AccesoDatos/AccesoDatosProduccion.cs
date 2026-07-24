@@ -204,6 +204,10 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string OTMC { get; set; }
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string OTMP { get; set; }
 
             // 🔥 NUEVO
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]

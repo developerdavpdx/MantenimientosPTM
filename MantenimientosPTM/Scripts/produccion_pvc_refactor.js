@@ -175,59 +175,82 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         if (datos != null) {
 
-            const datosFormateados = datos.map(item => ({
-                id: item.ID_REGISTRO || Date.now(),
-                ID_REGISTRO: item.ID_REGISTRO,
-                OTMC: item.OTMC,   // 🔥 recuerda incluirlo también aquí
-                OTMP: item.OTMP,   // 🔥 NUEVO: Preventivos también
-                ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,   // 🔥 recuerda incluirlo también aquí
-                Fecha: item.FECHA,
-                Linea: item.LINEA,
-                Producto: item.PRODUCTO,
-                Turno: item.TURNO,
-                TRIP: item.TRIP,
-                HorasProgramadas: item.HORAS_PROGRAMADAS,
-                MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
-                ControlInventarios: item.CONTROL_INVENTARIOS,
-                FaltaMateriaInsumos: item.FALTA_MATERIA_INSUMOS,
-                CambioMolde: item.CAMBIO_MOLDE_HR,
-                Calentamiento: item.CALENTAMIENTO_HR,
-                ParoArranqueNoProgramado: item.PARO_ARRANQUE_NO_PROGRAMADO,
-                ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION_HR,
-                Mes: item.MES || (
-                    item.FECHA
-                        ? ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'][new Date(item.FECHA).getMonth()]
-                        : null
-                ),
-                PesoMinimo: item.PESO_MINIMO || 0,
-                TRFabricados: item.TR_FABRICADOS,
-                ProduccionNetaReal: item.PRODUCCION_NETA_REAL,
-                PesoEstandar: item.PESO_ESTANDAR,
-                PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
-                TotalScrapKg: item.TOTAL_SCRAP_KG,
-                PorcentajeScrap: item.PORCENTAJE_SCRAP,
-                MttoCorrectivos: item.MTTO_CORRECTIVOS,
-                FallaElectrica: item.FALLA_ELECTRICA,
-                Servicios: item.SERVICIOS,
-                CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
-                Herramental: item.HERRAMENTAL,
-                FallaOperacion: item.FALLA_OPERACION,
-                LimpiezaTanque: item.LIMPIEZA_TANQUE,
-                FaltaMaterial: item.FALTA_MATERIAL,
-                FaltaPersonal: item.FALTA_PERSONAL,
-                FaltaRefacciones: item.FALTA_REFACCIONES,
-                TiempoDisponible: item.TIEMPO_DISPONIBLE,
-                TiempoProductivo: item.TIEMPO_PRODUCTIVO
-            }));
+            const datosFormateados = datos.map(item => {
+
+                const fila = {
+                    id: item.ID_REGISTRO || Date.now(),
+                    ID_REGISTRO: item.ID_REGISTRO,
+                    OTMC: item.OTMC,
+                    OTMP: item.OTMP,
+                    ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
+                    Fecha: item.FECHA,
+                    Linea: item.LINEA,
+                    Producto: item.PRODUCTO,
+                    Turno: item.TURNO,
+                    TRIP: item.TRIP,
+                    HorasProgramadas: item.HORAS_PROGRAMADAS,
+                    MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
+                    ControlInventarios: item.CONTROL_INVENTARIOS,
+                    FaltaMateriaInsumos: item.FALTA_MATERIA_INSUMOS,
+                    CambioMolde: item.CAMBIO_MOLDE_HR,
+                    Calentamiento: item.CALENTAMIENTO_HR,
+                    ParoArranqueNoProgramado: item.PARO_ARRANQUE_NO_PROGRAMADO,
+                    ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION_HR,
+                    Mes: item.MES || (
+                        item.FECHA
+                            ? ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'][new Date(item.FECHA).getMonth()]
+                            : null
+                    ),
+                    PesoMinimo: item.PESO_MINIMO || 0,
+                    TRFabricados: item.TR_FABRICADOS,
+                    ProduccionNetaReal: item.PRODUCCION_NETA_REAL,
+                    PesoEstandar: item.PESO_ESTANDAR,
+                    PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
+                    TotalScrapKg: item.TOTAL_SCRAP_KG,
+                    PorcentajeScrap: item.PORCENTAJE_SCRAP,
+                    MttoCorrectivos: item.MTTO_CORRECTIVOS,
+                    FallaElectrica: item.FALLA_ELECTRICA,
+                    Servicios: item.SERVICIOS,
+                    CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
+                    Herramental: item.HERRAMENTAL,
+                    FallaOperacion: item.FALLA_OPERACION,
+                    LimpiezaTanque: item.LIMPIEZA_TANQUE,
+                    FaltaMaterial: item.FALTA_MATERIAL,
+                    FaltaPersonal: item.FALTA_PERSONAL,
+                    FaltaRefacciones: item.FALTA_REFACCIONES,
+                    TiempoDisponible: item.TIEMPO_DISPONIBLE,
+                    TiempoProductivo: item.TIEMPO_PRODUCTIVO
+                };
+
+                // 🔥 NUEVO: Identificar origen y asignar emoji
+                if (item.OTMC && item.OTMC.toString().trim() !== '') {
+                    // Es un correctivo guardado en DB
+                    fila._origen = 'CORRECTIVO';
+                    fila._marcador = '🔧';
+                    fila._rowClass = 'row-correctivo';
+                } else if (item.OTMP && item.OTMP.toString().trim() !== '') {
+                    // Es un preventivo guardado en DB
+                    fila._origen = 'PREVENTIVO';
+                    fila._marcador = '🛠️';
+                    fila._rowClass = 'row-preventivo';
+                } else if (item.ID_PRODUCTO_TERMINADO && item.ID_PRODUCTO_TERMINADO.toString().trim() !== '') {
+                    // Es un producto terminado guardado en DB
+                    fila._origen = 'PRODUCTO_TERMINADO';
+                    fila._marcador = '📦';
+                    fila._rowClass = 'row-producto-terminado';
+                }
+
+                return fila;
+            });
 
             if (datosFormateados.length > 0) {
                 this.gridApi.setRowData(datosFormateados);
+                this.inicializarTooltipsGrid(); // 🔥
                 return true; // 🔥 sí había datos
             }
         }
 
         // 🔥 Sin datos: limpiamos el grid, SIN placeholder todavía
-        // (el placeholder se decide después, en consultarDatos, según si llegaron correctivos)
         this.gridApi.setRowData([]);
         return false;
     }
@@ -401,6 +424,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
         });
 
         this.gridApi.applyTransaction({ add: filasNuevas });
+        this.inicializarTooltipsGrid(); // 🔥 NUEVO
 
         if (lineasNoEncontradas.length > 0) {
             AlertManager.mostrar(
@@ -520,6 +544,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
         });
 
         this.gridApi.applyTransaction({ add: filasNuevas });
+        this.inicializarTooltipsGrid(); // 🔥 NUEVO
+
 
         if (lineasNoEncontradas.length > 0) {
             AlertManager.mostrar(
@@ -737,6 +763,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             if (filasNuevas.length > 0) {
                 this.gridApi.applyTransaction({ add: filasNuevas });
+                this.inicializarTooltipsGrid(); // 🔥 NUEVO
                 console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados al grid`);
             }
 
@@ -807,16 +834,29 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         width: 120,
                         cellClass: 'celda-gris',
                         pinned: 'left',
-                        // ✅ NUEVO: Renderer para mostrar emoji + mes
+                        // ✅ NUEVO: Renderer para mostrar emoji + mes + tooltip
                         cellRenderer: params => {
                             if (!params.value || params.data?.id === 'TOTALES') {
                                 return params.value || '';
                             }
 
                             const emoji = params.data?._marcador || '';
+                            const origen = params.data?._origen;
+
+                            // 🔥 Mapa de tooltips según origen
+                            const tooltipTexts = {
+                                'CORRECTIVO': 'Mantenimiento Correctivo',
+                                'PREVENTIVO': 'Mantenimiento Preventivo',
+                                'PRODUCTO_TERMINADO': 'Producto Terminado'
+                            };
+
+                            const tooltipText = tooltipTexts[origen] || '';
+                            const tooltipAttr = tooltipText
+                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
+                                : '';
 
                             return emoji
-                                ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px;">${emoji}</span><span>${params.value}</span></div>`
+                                ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px; cursor: help;" ${tooltipAttr}>${emoji}</span><span>${params.value}</span></div>`
                                 : params.value;
                         }
                     },
@@ -1211,9 +1251,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
             onCellValueChanged: (event) => this.onCellChanged(event),
 
             onGridReady: (params) => {
-
                 this.gridApi = params.api;
                 this.gridColumnApi = params.columnApi;
+                this.inicializarTooltipsGrid(); // 🔥 NUEVO
             },
 
             getRowStyle: params => {
@@ -1265,6 +1305,21 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         new agGrid.Grid(gridDiv, gridOptions);
 
+    }
+
+    inicializarTooltipsGrid() {
+        // 🔥 Esperar a que el DOM se renderice antes de inicializar tooltips
+        setTimeout(() => {
+            const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltipElements.forEach(el => {
+                // Destruir tooltip anterior si existe
+                const existingTooltip = bootstrap.Tooltip.getInstance(el);
+                if (existingTooltip) existingTooltip.dispose();
+
+                // Crear nuevo tooltip
+                new bootstrap.Tooltip(el);
+            });
+        }, 100);
     }
 
     agregarFilaTotales() {
@@ -1901,7 +1956,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         try {
 
-            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, (this.datos_usuario[0].PLANTA == "1" ? 1 : 14), 1);
+            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, (this.datos_usuario[0].PLANTA == "1" ? 1 : 14), null);
 
             this.listaLineas = lineas;
 

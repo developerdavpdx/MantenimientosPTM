@@ -183,13 +183,9 @@
    DIFERENCIACIÓN DE FILAS POR ORIGEN
    ======================================== */
 
-/* ========================================
-   DIFERENCIACIÓN DE FILAS POR ORIGEN
-   ======================================== */
-
 /* Filas de CORRECTIVOS - Borde izquierdo naranja */
 .ag-theme-alpine .ag-row.row-correctivo {
-    border-left: 2px solid #ff9800 !important;
+    /*border-left: 2px solid #ff9800 !important;*/
     background-color: #fff3e0 !important;
 }
 
@@ -199,7 +195,7 @@
 
 /* Filas de PRODUCTOS TERMINADOS - Borde izquierdo verde */
 .ag-theme-alpine .ag-row.row-producto-terminado {
-    border-left: 2px solid #4caf50 !important;
+    /*border-left: 2px solid #4caf50 !important;*/
     background-color: #f1f8e9 !important;
 }
 
@@ -209,7 +205,7 @@
 
 /* Filas ORIGINALES - Borde izquierdo azul (sin marcado especial) */
 .ag-theme-alpine .ag-row.row-original {
-    border-left: 2px solid #2196f3 !important;
+    /*border-left: 2px solid #2196f3 !important;*/
 }
 
 /* Badge para indicar origen en la primera celda */

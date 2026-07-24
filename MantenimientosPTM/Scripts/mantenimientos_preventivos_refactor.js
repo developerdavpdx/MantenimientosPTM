@@ -3558,7 +3558,7 @@ class MantenimientoManager {
             }
 
             const respuestas = this.obtenerRespuestasRutina();
-            const comentarios = $('#ComentariosRutina').val();
+            const comentarios = $('#ComentariosRutina').val() || $('#Comentarios').val();
 
             // Validar que todas las actividades estén respondidas
             const sinResponder = respuestas.filter(r => r.estado === null);
