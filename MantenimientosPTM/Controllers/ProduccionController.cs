@@ -51,6 +51,10 @@ namespace MantenimientosPTM.Controllers
         {
             return View();
         }
+        public ActionResult Produccion_iny()
+        {
+            return View();
+        }
         #endregion
 
         #region Endpoints
@@ -632,6 +636,87 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        [HttpGet]
+        public JsonResult GetTiemposMuertosINY(
+        string FiltroFechaInicio,
+        string FiltroFechaFin,
+        string FiltroLinea)
+            {
+                GlobalCommands.JsonResponseMtto jsonResponse;
+
+                try
+                {
+                    // ── Fechas: si no vienen, default al mes actual ───────────────────────
+                    DateTime dtFechaInicio;
+                    DateTime dtFechaFin;
+
+                    if (string.IsNullOrEmpty(FiltroFechaInicio) || string.IsNullOrEmpty(FiltroFechaFin))
+                    {
+                        DateTime hoy = DateTime.Now;
+                        dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1);
+                        dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1);
+                    }
+                    else
+                    {
+                        dtFechaInicio = DateTime.Parse(FiltroFechaInicio);
+                        dtFechaFin = DateTime.Parse(FiltroFechaFin);
+                    }
+
+                    var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+            {
+                { "P_FECHA_INICIO", (dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                { "P_FECHA_FIN", (dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) }
+            };
+
+                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCConsultarTiemposMuertosINY,
+                        parameters
+                    );
+
+                    if (resultHana.JsonResult == "[]")
+                    {
+                        jsonResponse = new GlobalCommands.JsonResponseMtto()
+                        {
+                            Status = "NO",
+                            Message = "No se encontraron registros de tiempos muertos INY, se mostrará la plantilla por default.",
+                            Data = string.Empty
+                        };
+                    }
+                    else if (resultHana.JsonResult.Contains("Error"))
+                    {
+                        jsonResponse = new GlobalCommands.JsonResponseMtto()
+                        {
+                            Status = "ERROR",
+                            Message = "Error al consultar tiempos muertos INY: " + resultHana.JsonResult,
+                            Data = string.Empty
+                        };
+                    }
+                    else
+                    {
+                        jsonResponse = new GlobalCommands.JsonResponseMtto()
+                        {
+                            Status = "OK",
+                            Message = "Datos obtenidos correctamente.",
+                            Data = resultHana.JsonResult
+                        };
+                    }
+
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+                catch (Exception ex)
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "ERROR",
+                        Message = "Error al consultar tiempos muertos INY: " + ex.ToString(),
+                        Data = string.Empty
+                    };
+
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+            }
+
         [HttpPost]
         public JsonResult GuardarTiemposMuertosCorrugado()
         {
@@ -818,6 +903,63 @@ namespace MantenimientosPTM.Controllers
 
                 jsonResponse.Status = "SI";
                 jsonResponse.Message = "Registros guardados correctamente.";
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al guardar: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult GuardarTiemposMuertosINY()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            List<AccesoDatosProduccion.TiemposMuertosProduccionINY> RequestData;
+
+            try
+            {
+                Request.InputStream.Position = 0;
+
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    RequestData = JsonConvert.DeserializeObject<List<AccesoDatosProduccion.TiemposMuertosProduccionINY>>(jsonData);
+                }
+
+                foreach (var registro in RequestData)
+                {
+                    var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(registro, true, null);
+
+                    var parameters = allparameters.ToDictionary(p => p.Key, p => p.Value);
+
+                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCGuardarTiemposMuertosINY,
+                        parameters
+                    );
+
+                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                    {
+                        jsonResponse.Status = "NO";
+                        jsonResponse.Message = $"Error al guardar registros INY: {resultHana.JsonResult}";
+                        jsonResponse.Data = string.Empty;
+
+                        return Json(jsonResponse);
+                    }
+                }
+
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = "Registros INY guardados correctamente.";
                 jsonResponse.Data = string.Empty;
 
                 return Json(jsonResponse);

@@ -95,6 +95,10 @@ namespace MantenimientosPTM
             }
         }
 
+        public string GCConsultarTiemposMuertosINY = "NOMBRE_DEL_SP_CONSULTA_INY";
+
+        public string GCGuardarTiemposMuertosINY = "NOMBRE_DEL_SP_GUARDAR_INY";
+
         #endregion
 
         #region AditionalClassModel
@@ -732,6 +736,44 @@ namespace MantenimientosPTM
             public decimal KgPproducto { get; set; }
             public string Item { get; set; }
             public string HorasTrabajo { get; set; } //
+        }
+
+        public class TiemposMuertosProduccionINY
+        {
+            public int? ID_REGISTRO { get; set; }
+            public string OTMC { get; set; }
+            public string OTMP { get; set; }
+            public string ID_PRODUCTO_TERMINADO { get; set; }
+            public DateTime? FECHA { get; set; }
+            public string LINEA { get; set; }
+            public string INYECTORA { get; set; }
+            public string PRODUCTO { get; set; }
+            public string DESCRIPCION { get; set; }
+            public string OP { get; set; }
+            public string TURNO { get; set; }
+            public string GRUPO { get; set; }
+            public decimal TR_LIBERADOS { get; set; }
+            public decimal PRODUCCION_NETA { get; set; }
+            public decimal SCRAP_SIN_COLADA { get; set; }
+            public decimal SCRAP_COLADA { get; set; }
+            public decimal TOTAL_SCRAP { get; set; }
+            public decimal HORAS_PROGRAMADAS { get; set; }
+            public decimal PREVENTIVO { get; set; }
+            public decimal CONTROL_INVENTARIOS { get; set; }
+            public decimal FALTA_MATERIA_PRIMA { get; set; }
+            public decimal PREPARACION_LINEA { get; set; }
+            public decimal TIEMPO_MUERTO_CORRECTIVOS { get; set; }
+            public decimal TIEMPO_MUERTO_HERRAMENTALES { get; set; }
+            public decimal TIEMPO_MUERTO_ARRANQUES { get; set; }
+            public decimal FALLA_MATERIAL { get; set; }
+            public decimal FALTA_PERSONAL { get; set; }
+            public decimal FALLA_ELECTRICA { get; set; }
+            public decimal TIEMPO_MUERTO_PROCESO { get; set; }
+            public decimal TIEMPO_DISPONIBLE { get; set; }
+            public decimal TIEMPO_PRODUCTIVO { get; set; }
+            public decimal PORCENTAJE_DISPONIBILIDAD { get; set; }
+            public string USUARIO { get; set; }
+            public string PLANTA { get; set; }
         }
 
         #endregion
