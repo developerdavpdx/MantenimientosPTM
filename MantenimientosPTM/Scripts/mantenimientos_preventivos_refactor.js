@@ -414,10 +414,12 @@ class MantenimientosPreventivoApp {
 
         // ✅ Cambiar TODAS las function() por arrow functions
         $('#BuscarTecnico').on('input', (e) => {  // ⬅️ Agrega parámetro 'e'
-            const query = $(e.target).val().trim();  // ⬅️ Usa e.target, no this
+           const query = $(e.target).val().trim();  // ⬅️ Usa e.target, no this
             let planta = this.datos_usuario[0].PLANTA;
+            let usuarioWeb = this.datos_usuario[0].USUARIOWEB;
+            let tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
             if (query.length >= 2) {
-                this.gestionTecnicos.buscarTecnicos(query,planta);
+                this.gestionTecnicos.buscarTecnicos(query, planta, usuarioWeb, tipoUsuario);
             } else {
                 this.gestionTecnicos.ocultarSugerencias();
             }
@@ -3558,7 +3560,7 @@ class MantenimientoManager {
             }
 
             const respuestas = this.obtenerRespuestasRutina();
-            const comentarios = $('#ComentariosRutina').val();
+            const comentarios = $('#ComentariosRutina').val() || $('#Comentarios').val();
 
             // Validar que todas las actividades estén respondidas
             const sinResponder = respuestas.filter(r => r.estado === null);

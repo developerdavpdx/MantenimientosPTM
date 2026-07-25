@@ -156,10 +156,10 @@ namespace MantenimientosPTM
 
         public class ParoProduccionSS
         {
-            public int ID_PARO { get; set; }
-            public int LINEA_PRODUCCION { get; set; }
+            public int? ID_PARO { get; set; }
+            public int? LINEA_PRODUCCION { get; set; }
             public string LINEA_PRODUCCION_DESC { get; set; }
-            public int PLANTA { get; set; }
+            public int? PLANTA { get; set; }
             public string USUARIO { get; set; }
             public string COMENTARIOS { get; set; }
             public string ESTATUS { get; set; }
@@ -199,6 +199,20 @@ namespace MantenimientosPTM
         {
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public int? ID_REGISTRO { get; set; }
+
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string OTMC { get; set; }
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string OTMP { get; set; }
+
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string ID_PRODUCTO_TERMINADO { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public DateTime? FECHA { get; set; }
@@ -354,6 +368,11 @@ namespace MantenimientosPTM
         {
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public int? ID_REGISTRO { get; set; }
+
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string OTMC { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
@@ -520,6 +539,11 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public int? ID_REGISTRO { get; set; }
 
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string OTMC { get; set; }
+
             // ============================================
             // GENERALES
             // ============================================
@@ -670,6 +694,26 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string PLANTA { get; set; }
+        }
+
+        public class ReportesProdTerm
+        {
+            public int Id_Linea { get; set; }
+            public int Turno { get; set; }
+            public string Codigo { get; set; }
+            public int AtadosTarimas { get; set; }
+            public int NumTubos { get; set; }
+            public decimal PesoTotal { get; set; }
+            public decimal PUnitEstandar { get; set; }
+            public decimal PUnitReal { get; set; }
+            public decimal SobrePeso { get; set; }
+            public decimal Scrap { get; set; }
+            public decimal Eficiencia { get; set; }
+            public decimal ScrapPt { get; set; }
+            public decimal ScrapTotal { get; set; }
+            public decimal KgPproducto { get; set; }
+            public string Item { get; set; }
+            public string HorasTrabajo { get; set; } //
         }
 
         #endregion

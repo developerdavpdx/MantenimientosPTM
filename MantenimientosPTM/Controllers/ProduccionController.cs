@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -1029,7 +1030,7 @@ namespace MantenimientosPTM.Controllers
         {
             // Obtener logo en base64
             logoPath = ObtenerRutaLogo();
-            string logoCid = "logoPTM"; 
+            string logoCid = "logoPTM";
 
 
             string html = @"
@@ -1151,7 +1152,7 @@ namespace MantenimientosPTM.Controllers
                 </html>
 
             ";
-                        return html;
+            return html;
         }
 
         // ========================================
@@ -1187,9 +1188,9 @@ namespace MantenimientosPTM.Controllers
         [HttpPut]
         public JsonResult EliminarParoProduccion(EliminarParoProduccionDTO request)
         {
-           
+
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
-                       
+
             try
             {
                 var parameters = Logic.GlobalCommands.ConvertToHanaParameters(request, true, null);
@@ -1223,6 +1224,152 @@ namespace MantenimientosPTM.Controllers
                 jsonResponse.Message = "No fue posible eliminar el registro de paro producción: " + ex.Message;
                 jsonResponse.Data = string.Empty;
                 return Json(jsonResponse);
+            }
+        }
+
+        // GET: /TuControlador/GetAllPt
+        [HttpGet]
+        public JsonResult GetProductoTerminadoNewScale()
+        {
+            GlobalCommands.JsonResponseMtto jsonResponse;
+            try
+            {
+                string plantaHeader = Request.Headers["Planta"];
+                string proceso = Request.Headers["Proceso"];
+                string FiltroTurno = Request.Headers["Turno"];
+
+                if (string.IsNullOrEmpty(plantaHeader) || string.IsNullOrEmpty(proceso))
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "ERROR",
+                        Message = "Headers 'Planta' y 'Proceso' son requeridos.",
+                        Data = string.Empty
+                    };
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+
+                int numplanta = int.Parse(plantaHeader);
+                int turno = 0;
+                DateTime TurnoStar = DateTime.Now;
+                DateTime TurnoEnd = DateTime.Now;
+                DateTime TurnoScrapStar = DateTime.Now;
+                DateTime TurnoScrapEnd = DateTime.Now;
+
+                DateTime horaInicioTurno = DateTime.Today.AddHours(4.5).AddSeconds(1);
+                DateTime horaFinTurno = DateTime.Today.AddHours(16.5);
+                DateTime horaActual = DateTime.Now;
+
+                string JSONstringSp = string.Empty;
+                List<ReportesProdTerm> reportesProdTerm = new List<ReportesProdTerm>();
+
+                // Asignar turno y rangos de fechas
+                if ((horaActual >= horaInicioTurno && horaActual <= horaFinTurno) || (FiltroTurno == "1"))
+                {
+                    turno = 1;
+
+                    TurnoStar = DateTime.Today.AddHours(4.5).AddSeconds(1);
+                    TurnoEnd = DateTime.Today.AddHours(16.5);
+                    TurnoScrapStar = DateTime.Today.AddHours(5).AddMinutes(45).AddSeconds(1);
+                    TurnoScrapEnd = DateTime.Today.AddHours(17).AddMinutes(45);
+                }
+                else if (FiltroTurno == "2" || FiltroTurno == "null")
+                {
+                    turno = 2;
+
+                    TurnoStar = DateTime.Today.AddHours(16.5).AddSeconds(1);
+                    TurnoEnd = DateTime.Today.AddDays(1).AddHours(4.5);
+                    TurnoScrapStar = DateTime.Today.AddHours(17).AddMinutes(45).AddSeconds(1);
+                    TurnoScrapEnd = DateTime.Today.AddDays(1).AddHours(5).AddMinutes(45);
+
+                    // Madrugada: ajustar al día anterior
+                    if (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
+                       (horaActual.Hour == 4 && horaActual.Minute <= 30))
+                    {
+                        TurnoStar = TurnoStar.AddDays(-1);
+                        TurnoEnd = TurnoEnd.AddDays(-1);
+                        TurnoScrapStar = TurnoScrapStar.AddDays(-1);
+                        TurnoScrapEnd = TurnoScrapEnd.AddDays(-1);
+                    }
+                }
+
+                double horas = (horaActual - horaInicioTurno).TotalHours;
+                int horasT = Convert.ToInt32(horas);
+                string ConectionStringSQL = ConfigurationManager.ConnectionStrings["SQLConnection"].ConnectionString;
+
+                using (SqlConnection cnn = new SqlConnection(ConectionStringSQL))
+                {
+                    if (cnn.State == ConnectionState.Closed)
+                        cnn.Open();
+
+                    using (SqlCommand command = new SqlCommand())
+                    {
+                        command.Connection = cnn;
+                        command.CommandText = "Sppdx_ObtenerProductosTerminados";
+                        command.CommandType = CommandType.StoredProcedure;
+
+                        command.Parameters.AddWithValue("@turno", turno);
+                        command.Parameters.AddWithValue("@proceso", proceso);
+                        command.Parameters.AddWithValue("@FechaTurnoInicio", TurnoStar);
+                        command.Parameters.AddWithValue("@FechaTurnoFin", TurnoEnd);
+                        command.Parameters.AddWithValue("@Horas", horasT == 0 ? 1 : horasT);
+                        command.Parameters.AddWithValue("@Planta", numplanta);
+                        command.Parameters.AddWithValue("@FechaTurnoInicioScrap", TurnoScrapStar);
+                        command.Parameters.AddWithValue("@FechaTurnoFinScrap", TurnoScrapEnd);
+
+                        using (SqlDataAdapter da = new SqlDataAdapter(command))
+                        using (DataSet ds = new DataSet())
+                        {
+                            da.Fill(ds);
+                            DataTable tabla1 = ds.Tables[0];
+
+                            using (tabla1)
+                            {
+                                // Agregar columna Turno con el valor calculado, replicado en todas las filas
+                                tabla1.Columns.Add("Turno", typeof(int));
+                                foreach (DataRow row in tabla1.Rows)
+                                {
+                                    row["Turno"] = turno;
+                                }
+
+                                JSONstringSp = JsonConvert.SerializeObject(tabla1);
+                                reportesProdTerm = JsonConvert.DeserializeObject<List<ReportesProdTerm>>(JSONstringSp);
+                            }
+                        }
+                    }
+                }
+
+                // Armar respuesta homologada
+                if (reportesProdTerm == null || reportesProdTerm.Count == 0)
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "NO",
+                        Message = "No se encontraron registros, se mostrará la plantilla por default.",
+                        Data = string.Empty
+                    };
+                }
+                else
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "OK",
+                        Message = "Datos obtenidos correctamente.",
+                        Data = JSONstringSp
+                    };
+                }
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse = new GlobalCommands.JsonResponseMtto()
+                {
+                    Status = "ERROR",
+                    Message = "Error al consultar: " + ex.ToString(),
+                    Data = string.Empty
+                };
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
             }
         }
 

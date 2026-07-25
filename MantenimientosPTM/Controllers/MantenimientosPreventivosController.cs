@@ -77,6 +77,9 @@ namespace MantenimientosPTM.Controllers
                 string FiltroEstatusOT = Request.Form["FiltroEstatusOT"];
                 string FiltroUsuario = Request.Form["FiltroUsuario"];
                 string FiltroTipoUsuario = Request.Form["FiltroTipoUsuario"];
+                string FiltroExcluirSincronizadosPVC = Request.Form["FiltroExcluirSincronizadosPVC"];
+                string FiltroExcluirSincronizadosPEADLISO = Request.Form["FiltroExcluirSincronizadosPEADLISO"];
+                string FiltroExcluirSincronizadosPEADCORR = Request.Form["FiltroExcluirSincronizadosPEADCORR"];
 
                 //Limpiar para tecnico
                 if (FiltroTipoUsuario == "TecnicoMtto")
@@ -122,7 +125,10 @@ namespace MantenimientosPTM.Controllers
                     { "P_FILTRO_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_ESTATUS", (string.IsNullOrEmpty(FiltroEstatusOT) ? (object)null : FiltroEstatusOT, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_BUSQUEDA", (string.IsNullOrEmpty(FiltroBusqueda) ? (object)null : FiltroBusqueda, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_USUARIO", (string.IsNullOrEmpty(FiltroUsuario) ? (object)null : FiltroUsuario, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_USUARIO", (string.IsNullOrEmpty(FiltroUsuario) ? (object)null : FiltroUsuario, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_EXCLUIR_SINCRONIZADOS_PVC", (string.IsNullOrEmpty(FiltroExcluirSincronizadosPVC) ? (object)null : FiltroExcluirSincronizadosPVC, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_EXCLUIR_SINCRONIZADOS_PEADLISO", (string.IsNullOrEmpty(FiltroExcluirSincronizadosPEADLISO) ? (object)null : FiltroExcluirSincronizadosPEADLISO, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_EXCLUIR_SINCRONIZADOS_CORRUGADO ", (string.IsNullOrEmpty(FiltroExcluirSincronizadosPEADCORR) ? (object)null : FiltroExcluirSincronizadosPEADCORR, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -607,7 +613,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarEmpleados(int? planta,string query)
+        public JsonResult BuscarEmpleados(int? planta,string query, string usuarioWeb, string tipoUsuario)
         {
             try
             {
@@ -621,7 +627,9 @@ namespace MantenimientosPTM.Controllers
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
                     { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) }
+                    { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_USUARIOWEB", (usuarioWeb, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TIPOUSUARIO", (tipoUsuario, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure
@@ -1002,7 +1010,8 @@ namespace MantenimientosPTM.Controllers
                         p_MOTIVO = datos.Motivo,
                         p_USUARIO_SOLICITA = datos.UsuarioSolicita,
                         p_ID_PERIODICIDAD = datos.IdPeriodicidad,
-                        p_PLANTA = datos.Planta.Value
+                        p_PLANTA = datos.Planta.Value,
+                        p_ESTATUS = "Creada"
                     };
 
                     // Convertir a parámetros HANA
@@ -1025,7 +1034,7 @@ namespace MantenimientosPTM.Controllers
                             if (jsonArray != null && jsonArray.Count > 0)
                             {
                                 var firstItem = jsonArray[0];
-                                string estatus = firstItem["ESTATUS"]?.ToString();
+                                string estatus = firstItem["ESTATUS_ACTUAL"]?.ToString();
                                 int idSolicitud = Convert.ToInt32(firstItem["ID_SOLICITUD"]?.ToString() ?? "0");
 
                                 if (estatus == "SI")

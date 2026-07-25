@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Web.Mvc;
 
 namespace MantenimientosPTM.Controllers
@@ -19,7 +20,13 @@ namespace MantenimientosPTM.Controllers
 
         #region Endpoints
         [HttpGet]
-        public JsonResult GetMantenimientosCompletados(int? Planta,string fechaInicio = null, string fechaFin = null)
+        public JsonResult GetMantenimientosCompletados(
+            string tipoMant = null, 
+            int? proceso = null,
+            int? lineaProd = null,
+            int? Planta = null, 
+            string fechaInicio = null, 
+            string fechaFin = null)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
             try
@@ -52,9 +59,13 @@ namespace MantenimientosPTM.Controllers
                 // Crear parámetros en el formato correcto para HANA
                 var parametros = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
                 {
+                    {"p_TIPOMANTENIMIENTO", (string.IsNullOrWhiteSpace(tipoMant) ? null : (object)tipoMant, ParameterDirection.Input, HanaDbType.VarChar)},
+                    { "p_PROCESO", (proceso != null ? (object)proceso : null, ParameterDirection.Input, HanaDbType.Integer) },
+                    { "p_LINEAPROD", (lineaProd != null ? (object)lineaProd : null, ParameterDirection.Input, HanaDbType.Integer) },
                     { "p_FECHA_INICIO", (dtFechaInicio.HasValue ? (object)dtFechaInicio.Value : null, ParameterDirection.Input, HanaDbType.Date) },
                     { "p_FECHA_FIN", (dtFechaFin.HasValue ? (object)dtFechaFin.Value : null, ParameterDirection.Input, HanaDbType.Date) },
-                    { "p_PLANTA", (Planta != null ? (object)Planta : null, ParameterDirection.Input, HanaDbType.Integer) }
+                    { "p_PLANTA", (Planta != null ? (object)Planta : null, ParameterDirection.Input, HanaDbType.Integer) },
+
                 };
 
                 // Ejecutar el stored procedure con parámetros
@@ -68,7 +79,7 @@ namespace MantenimientosPTM.Controllers
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
                         Status = "NO",
-                        Message = $"No se encontraron mantenimientos completados entre {dtFechaInicio?.ToString("dd/MM/yyyy")} y {dtFechaFin?.ToString("dd/MM/yyyy")}.",
+                        Message = $"No se encontraron mantenimientos entre {dtFechaInicio?.ToString("dd/MM/yyyy")} y {dtFechaFin?.ToString("dd/MM/yyyy")}.",
                         Data = string.Empty
                     };
                 }
@@ -77,7 +88,7 @@ namespace MantenimientosPTM.Controllers
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
                         Status = "ERROR",
-                        Message = "No fue posible obtener los mantenimientos completados: " + resultHana.JsonResult,
+                        Message = "No fue posible obtener los mantenimientos: " + resultHana.JsonResult,
                         Data = string.Empty
                     };
                 }

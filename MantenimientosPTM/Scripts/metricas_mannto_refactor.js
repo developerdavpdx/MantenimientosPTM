@@ -127,6 +127,45 @@ class MetricasManager {
         // Cargar métricas iniciales
         this.cargarTodasLasMetricas();
         console.log('✅ MetricasManager inicializado correctamente');
+
+        this.inicializarGraficaOEE();
+        this.cargarTodasLasMetricas();
+    }
+
+
+    
+    inicializarGraficaOEE() {
+        const ctx = document.getElementById('oeeDonutChart');
+        if (!ctx) return;
+        this.oeeDonutChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Disponibilidad', 'Rendimiento', 'Calidad'],
+                datasets: [{
+                    data: [0, 0, 0],
+                    backgroundColor: ['#2a78d6', '#1baf7a', '#eda100'],
+                    borderWidth: 3,
+                    borderColor: 'transparent'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: { legend: { display: false } },
+                animation: { duration: 600 }
+            }
+        });
+    }
+
+
+    actualizarGraficaOEE(disponibilidad, rendimiento, calidad) {
+        if (!this.oeeDonutChart) return;
+        this.oeeDonutChart.data.datasets[0].data = [disponibilidad, rendimiento, calidad];
+        this.oeeDonutChart.update();
+        document.getElementById('lbl-disp-oee').textContent = disponibilidad.toFixed(1) + '%';
+        document.getElementById('lbl-rend-oee').textContent = rendimiento.toFixed(1) + '%';
+        document.getElementById('lbl-cal-oee').textContent = calidad.toFixed(1) + '%';
     }
 
     cargarTodasLasMetricas() {
@@ -222,6 +261,23 @@ class MetricasManager {
                     UIManager.actualizarMetrica('oee', m.DISPONIBILIDAD + '%');
 
                     UIManager.actualizarMetrica('mantenimientos', m.TOTAL_FALLAS);
+
+                    //Inicializamos la carga de graficas OEE
+                    // const dispVal = parseFloat(m.DISPONIBILIDAD) || 0;
+                    // const rendVal = parseFloat(m.RENDIMIENTO) || 0;  // asegúrate que el backend lo mande
+                    // const calVal = parseFloat(m.CALIDAD) || 0;  // ídem
+                    // const oeeVal = ((dispVal / 100) * (rendVal / 100) * (calVal / 100) * 100).toFixed(1);
+
+                    // document.getElementById('metric-oee').textContent = oeeVal + '%';
+                    // this.actualizarGraficaOEE(dispVal, rendVal, calVal);
+                    // En el success del AJAX, reemplaza las líneas de rendVal y calVal:
+                    const dispVal = parseFloat(m.DISPONIBILIDAD) || 0;
+                    const rendVal = 85.0;  // estático temporal
+                    const calVal = 91.0;  // estático temporal
+                    const oeeVal = ((dispVal / 100) * (rendVal / 100) * (calVal / 100) * 100).toFixed(1);
+
+                    document.getElementById('metric-oee').textContent = oeeVal + '%';
+                    this.actualizarGraficaOEE(dispVal, rendVal, calVal);
 
                 } else {
                     AlertManager.mostrar(response.Message, 'warning');

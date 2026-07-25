@@ -481,12 +481,12 @@ class GestionTecnicos {
         console.log('✅ GestionTecnicos inicializado correctamente');
     }
 
-    async buscarTecnicos(query,planta) {
+    async buscarTecnicos(query, planta, usuarioWeb, tipoUsuario) {
         try {
             const response = await $.ajax({
                 url: `/${this.URLBase}/BuscarEmpleados`,
                 method: 'GET',
-                data: {planta:planta, query: query },
+                data: { planta: planta, query: query, usuarioWeb: usuarioWeb, tipoUsuario: tipoUsuario },
                 dataType: 'json'
             });
 
@@ -514,6 +514,7 @@ class GestionTecnicos {
                         <div class="sugerencia-nomina">📛 #${tecnico.NOMINA || 'S/A'}</div>
                         <div class="sugerencia-nombre">👷 ${tecnico.NOMBRE_COMPLETO}</div>
                         <div class="sugerencia-puesto">🏭 ${tecnico.DEPARTAMENTO || 'N/A'}</div>
+                        <div class="sugerencia-puesto">📍 PLANTA: ${tecnico.PLANTA || 'N/A'}</div>
                     </div>
                 `);
 
