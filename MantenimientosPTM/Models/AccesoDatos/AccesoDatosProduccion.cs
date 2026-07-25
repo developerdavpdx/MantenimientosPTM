@@ -373,6 +373,15 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string OTMC { get; set; }
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string OTMP { get; set; }
+
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string ID_PRODUCTO_TERMINADO { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
@@ -543,6 +552,15 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string OTMC { get; set; }
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string OTMP { get; set; }
+
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string ID_PRODUCTO_TERMINADO { get; set; }
 
             // ============================================
             // GENERALES

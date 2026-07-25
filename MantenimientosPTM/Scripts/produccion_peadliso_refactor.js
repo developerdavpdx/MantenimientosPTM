@@ -270,9 +270,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 id: item.ID_REGISTRO || Date.now(),
 
                 ID_REGISTRO: item.ID_REGISTRO,
-                OTMC: item.OTMC, // 🔥 NUEVO
-                OTMP: item.OTMP,// 🔥 NUEVO
-                ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,// 🔥 NUEVO
+                OTMC: item.OTMC,
+                OTMP: item.OTMP,
+                ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
 
                 Mes: item.MES,
 
@@ -325,17 +325,33 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
                 TiempoDisponible: item.TIEMPO_DISPONIBLE,
 
-                TiempoProductivo: item.TIEMPO_PRODUCTIVO
+                TiempoProductivo: item.TIEMPO_PRODUCTIVO,
+
+                // ✅ NUEVO: Identificar origen de datos de BD
+                ...(item.OTMC && item.OTMC.toString().trim() !== '' ? {
+                    _origen: 'CORRECTIVO',
+                    _marcador: '🔧',
+                    _rowClass: 'row-correctivo'
+                } : item.OTMP && item.OTMP.toString().trim() !== '' ? {
+                    _origen: 'PREVENTIVO',
+                    _marcador: '🛠️',
+                    _rowClass: 'row-preventivo'
+                } : item.ID_PRODUCTO_TERMINADO && item.ID_PRODUCTO_TERMINADO.toString().trim() !== '' ? {
+                    _origen: 'PRODUCTO_TERMINADO',
+                    _marcador: '📦',
+                    _rowClass: 'row-producto-terminado'
+                } : {})
 
             }));
 
             this.gridApi.setRowData(datosFormateados);
-            return true; // 🔥 sí había datos
+            this.inicializarTooltipsGrid(); // 🔥 AGREGAR ESTA LÍNEA
+            return true;
 
         }
 
         this.gridApi.setRowData([]);
-        return false; // 🔥 NUEVO — ya no llama agregarFilaTotales aquí
+        return false;
     }
 
     // ========================================
@@ -415,7 +431,12 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             nuevaFila.id = this.generarIdTemporal();
             nuevaFila.OTMC = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
-            nuevaFila.TiempoMuertoCorrectivos = parseFloat(item.DuracionHrs) || 0; // 🔥 campo distinto a PVC
+            nuevaFila.TiempoMuertoCorrectivos = parseFloat(item.DuracionHrs) || 0;
+
+            // ✅ NUEVO: Marcar como correctivo
+            nuevaFila._origen = 'CORRECTIVO';
+            nuevaFila._marcador = '🔧';
+            nuevaFila._rowClass = 'row-correctivo';
 
             const lineaEncontrada = this.listaLineas.find(
                 l => String(l.value) === String(item.IdLineaProduccion)
@@ -439,8 +460,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         });
 
         this.gridApi.applyTransaction({ add: filasNuevas });
-        this.inicializarTooltipsGrid(); // 🔥 AGREGAR ESTA LÍNEA
-
+        this.inicializarTooltipsGrid();
 
         if (lineasNoEncontradas.length > 0) {
             AlertManager.mostrar(
@@ -535,6 +555,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         cellClass: 'celda-gris',
                         pinned: 'left',
                         // ✅ NUEVO: Renderer para mostrar emoji + mes + tooltip + punto pulsante
+                        // En el cellRenderer del campo 'Mes' en inicializarGrid() de PEAD Liso
                         cellRenderer: params => {
                             if (!params.value || params.data?.id === 'TOTALES') {
                                 return params.value || '';
@@ -544,7 +565,6 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                             const origen = params.data?._origen;
                             const idRegistro = params.data?.ID_REGISTRO;
 
-                            // 🔥 Mapa de tooltips según origen
                             const tooltipTexts = {
                                 'CORRECTIVO': 'Mantenimiento Correctivo',
                                 'PREVENTIVO': 'Mantenimiento Preventivo',
@@ -556,14 +576,14 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                                 ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
                                 : '';
 
-                            // 🔥 NUEVO: Mostrar punto pulsante si es un registro nuevo (sin ID_REGISTRO)
                             const puntoPulsante = !idRegistro && (origen === 'CORRECTIVO' || origen === 'PREVENTIVO' || origen === 'PRODUCTO_TERMINADO')
                                 ? `<span class="punto-pulso punto-pulso-margin-left"></span>`
                                 : '';
 
+                            // 🔥 IGUAL QUE PVC: sin emoji, devuelve solo el valor plano
                             return emoji
                                 ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px; cursor: help;" ${tooltipAttr}>${emoji}</span><span>${params.value}</span>${puntoPulsante}</div>`
-                                : `<div style="display: flex; align-items: center; gap: 4px;"><span>${params.value}</span>${puntoPulsante}</div>`;
+                                : params.value;
                         }
                     },
                     {
@@ -872,13 +892,21 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 sortable: true,
                 filter: true,
                 resizable: true,
+                // CORRECTO
                 editable: (params) => {
+                    if (params.data?.id === 'TOTALES') return false;
 
-                    if (params.data?.id === 'TOTALES') {
-                        return false;
-                    }
+                    const readonlyFields = [
+                        'PesoMinimo',
+                        'PesoEstandar',
+                        'PorcentajeSobrepeso',
+                        'PorcentajeTotalScrap',
+                        'TiempoDisponible',
+                        'TiempoProductivo',
+                        'Mes'
+                    ];
 
-                    return true;
+                    return !readonlyFields.includes(params.colDef.field);
                 },
                 wrapHeaderText: true,
                 autoHeaderHeight: true
@@ -905,6 +933,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 this.gridColumnApi = params.columnApi;
 
                 this.agregarFilaTotales();
+                this.inicializarTooltipsGrid(); // 🔥 AGREGAR
 
                 setTimeout(() => {
                     this.gridApi.sizeColumnsToFit();
@@ -925,6 +954,11 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
                 }
 
+            },
+            getRowClass: params => {
+                if (params.data?.id === 'TOTALES') return '';
+                if (params.data?._rowClass) return params.data._rowClass;
+                return '';
             }
 
         };
@@ -960,7 +994,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             nuevaFila.id = this.generarIdTemporal();
             nuevaFila.OTMP = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaPreventivo(item.FechaInicioMantenimiento);
-            nuevaFila.Preventivo = parseFloat(item.DuracionHrs) || 0; // 🔥 Campo específico PEAD LISO
+            nuevaFila.Preventivo = parseFloat(item.DuracionHrs) || 0;
 
             // ✅ NUEVO: Marcar como preventivo
             nuevaFila._origen = 'PREVENTIVO';
@@ -989,8 +1023,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         });
 
         this.gridApi.applyTransaction({ add: filasNuevas });
-        this.inicializarTooltipsGrid(); // 🔥 AGREGAR ESTA LÍNEA
-
+        this.inicializarTooltipsGrid();
 
         if (lineasNoEncontradas.length > 0) {
             AlertManager.mostrar(
@@ -1101,7 +1134,6 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 return false;
             }
 
-            // 🔥 Anti-duplicados: igual que OTMC pero con ID_PRODUCTO_TERMINADO
             const idsYaEnGrid = new Set();
 
             this.gridApi.forEachNode(node => {
@@ -1115,14 +1147,14 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             );
 
             if (productosNuevos.length === 0) {
-                return false; // ya están todos en el grid
+                return false;
             }
 
             const filasNuevas = [];
             const lineasNoEncontradas = [];
             let filasAgregadas = 0;
 
-            productosNuevos.forEach(item => {  // 🔥 iterar sobre productosNuevos, no productosTerminados
+            productosNuevos.forEach(item => {
 
                 const fecha = this.parsearFechaProductoTerminado(item.FechaPesaje);
                 if (!fecha) {
@@ -1142,11 +1174,12 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 nuevaFila.Fecha = fecha;
                 nuevaFila.Producto = item.Codigo || '';
                 nuevaFila.Turno = String(item.Turno || '') || '';
-                nuevaFila.TRLiberados = parseFloat(item.NumTubos) || 0; // 🔥 Campo específico PEAD LISO
-                nuevaFila.ProduccionNeta = parseFloat(item.PesoTotal) || 0; // 🔥 Campo específico PEAD LISO
-                nuevaFila.PorcentajeTotalScrap = parseFloat(item.ScrapPt) || 0; // 🔥 Campo específico PEAD LISO
-                nuevaFila.TotalScrap = parseFloat(item.ScrapTotal) || 0; // 🔥 Campo específico PEAD LISO
+                nuevaFila.TRLiberados = parseFloat(item.NumTubos) || 0;
+                nuevaFila.ProduccionNeta = parseFloat(item.PesoTotal) || 0;
+                nuevaFila.PorcentajeTotalScrap = parseFloat(item.ScrapPt) || 0;
+                nuevaFila.TotalScrap = parseFloat(item.ScrapTotal) || 0;
 
+                // ✅ NUEVO: Marcar como producto terminado
                 nuevaFila._origen = 'PRODUCTO_TERMINADO';
                 nuevaFila._marcador = '📦';
                 nuevaFila._rowClass = 'row-producto-terminado';
@@ -1175,7 +1208,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             if (filasNuevas.length > 0) {
                 this.gridApi.applyTransaction({ add: filasNuevas });
-                this.inicializarTooltipsGrid(); // 🔥 AGREGAR ESTA LÍNEA
+                this.inicializarTooltipsGrid();
                 console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados al grid`);
             }
 
@@ -1850,7 +1883,8 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
                 ID_REGISTRO: fila.ID_REGISTRO || null,
                 OTMC: fila.OTMC ?? null,
-
+                OTMP: fila.OTMP ?? null,                        // 🔥 AGREGAR
+                ID_PRODUCTO_TERMINADO: fila.ID_PRODUCTO_TERMINADO || null,  // 🔥 AGREGAR
                 MES: fila.Mes,
                 FECHA: fila.Fecha,
                 LINEA: fila.Linea,

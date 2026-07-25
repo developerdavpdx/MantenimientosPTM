@@ -124,7 +124,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                         field: 'Mes',
                         headerName: 'Mes',
                         editable: false,
-                        width: 110,
+                        width: 150,
                         pinned: 'left',
                         cellClass: 'celda-gris',
                         // ✅ NUEVO: Renderer para mostrar emoji + mes + tooltip + punto pulsante
@@ -2365,7 +2365,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
                     ID_REGISTRO: node.data.ID_REGISTRO || null,
                     OTMC: node.data.OTMC || null, // 🔥 NUEVO
-
+                    OTMP: node.data.OTMP || null,                          // 🔥 AGREGAR
+                    ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null, // 🔥 AGREGAR
                     MES: node.data.Mes,
                     FECHA: node.data.Fecha,
                     LINEA: node.data.Linea,
