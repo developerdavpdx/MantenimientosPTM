@@ -2837,13 +2837,20 @@ class SessionManager {
             'SupervisorProduccion': 'Supervisor Producción',
             'Produccion': 'Producción'
         };
+        // Mapeo de plantas
+        const mapeoPlantas = {
+            '1': 'P1',
+            '2': 'P2'
+        };
 
         // Obtener el perfil legible
         const tipoUsuario = datos_usuario[0].TIPOUSUARIO;
+        const planta = datos_usuario[0].PLANTA;
         const perfilLegible = mapeoPerfiles[tipoUsuario] || tipoUsuario;
+        const plantaLegible = mapeoPlantas[planta] || planta;
 
         // Establecer el nombre de usuario con perfil
-        $("#UserName").text(`${datos_usuario[0].NOMBRECOMPLETO} (${perfilLegible})`);
+        $("#UserName").text(`${datos_usuario[0].NOMBRECOMPLETO} (${perfilLegible} ${plantaLegible})`);
 
         //TECNICO MTTO
         if (tipoUsuario === "TecnicoMtto") {
