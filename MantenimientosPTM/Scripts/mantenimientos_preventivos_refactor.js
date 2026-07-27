@@ -1123,7 +1123,7 @@ class MantenimientoManager {
                                     fueReprogramado === 'NO' && 
                                     tieneSolicitudPendiente === 'NO';
 
-                                if (puedeReprogramar) {
+                                if (puedeReprogramar && estatusOrden == 2) {
                                     const reprogramBtn = btn(
                                         'btn-warning',
                                         'btn-solicitar-reprogramacion',
@@ -1182,6 +1182,7 @@ class MantenimientoManager {
                                     listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
                                 } else {
                                     // LÓGICA NORMAL
+
                                     if (estatusOrden == 3 || estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI") {
                                         refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
                                     } else {
