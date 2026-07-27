@@ -92,6 +92,14 @@ class MantenimientosPreventivoApp {
 
         // Carátula online
         $(document).on('click', '.btn-caratula-online', (e) => {
+            //Asignamos como data atributos las areas del tecnico     
+            let areaTecnica = $(e.currentTarget).data('areatecnica');
+            let area = $(e.currentTarget).data('area');
+            $('#BuscarTecnico')
+                .attr('data-areatecnica', areaTecnica)
+                .attr('data-area', area);
+
+            //Se dispara el evento de abrir modal
             this.mantenimientoManager.abrirModalCaratulaOnline($(e.currentTarget));
         });
 
@@ -249,11 +257,50 @@ class MantenimientosPreventivoApp {
         $('#BuscarTecnico').on('input', (e) => {  // ⬅️ Agrega parámetro 'e'
             const query = $(e.target).val().trim();  // ⬅️ Usa e.target, no this
             let planta = this.datos_usuario[0].PLANTA;
-            if (query.length >= 2) {
-                this.gestionTecnicos.buscarTecnicos(query, planta);
+            let posicion = "";
+
+            //Manejo de logica para busqueda de posición de tecnicos
+            let areaTecnica = $(e.target).attr('data-areatecnica');
+            let area = $(e.target).attr('data-area');
+
+            if (areaTecnica == "MANTENIMIENTO HERRAMENTALES") {
+                switch (true) {
+                    case area.includes("PVC"):
+                        // Entra al case si es una area de PVC
+                        posicion = 95; //TEC HERR PVC
+                        this.parametersBuscarTecnica(query, planta, posicion)
+                        break;
+
+                    case area.includes("PEAD"):
+                        // Entra al case si es una area de PEAD LISO O CORR
+                        posicion = 101;
+                        this.parametersBuscarTecnica(query, planta, posicion)
+                        break;
+                                            
+                }
             } else {
-                this.gestionTecnicos.ocultarSugerencias();
+                switch (true) {
+                    case area.includes("PVC"):
+                        // Entra al case si es una area de PVC
+                        posicion = 3;
+                        this.parametersBuscarTecnica(query, planta, posicion)
+                        break;
+
+                    case area.includes("PEAD"):
+                        // Entra al case si es una area de PEAD LISO O CORR
+                        posicion = 100;
+                        this.parametersBuscarTecnica(query, planta, posicion)
+                        break;
+
+                    case area.includes("PE/INY"):
+                        // Entra al case si es una area de PEAD LISO O CORR
+                        posicion = 82;
+                        this.parametersBuscarTecnica(query, planta, posicion)
+                        break;
+                }
             }
+
+
         });
 
         $('#btnAgregarTecnico').on('click', () => {  // ⬅️ Arrow function
@@ -295,6 +342,15 @@ class MantenimientosPreventivoApp {
             $(this).val(valor);
         });
 
+    }
+
+    parametersBuscarTecnica(query, planta, posicion) {
+
+        if (query.length >= 2) {
+            this.gestionTecnicos.buscarTecnicos(query, planta, posicion);
+        } else {
+            this.gestionTecnicos.ocultarSugerencias();
+        }
     }
 
     configurarEventosImpresion() {
@@ -1031,6 +1087,7 @@ class MantenimientoManager {
             descripcionequipo: row.DescripcionEquipo,
             idarea: row.Idarea,
             area: row.Area,
+            areaTecnica: row.AreaTecnica,
             idlineaproduccion: row.IdLineaProduccion,
             lineaproduccion: row.LineaProduccion,
             centrocostos: row.CentroCostos,

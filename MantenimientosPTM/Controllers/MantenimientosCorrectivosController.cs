@@ -12,6 +12,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Web.Mvc;
+using static MantenimientosPTM.AccesoDatosEquipos;
 
 namespace MantenimientosPTM.Controllers
 {
@@ -780,7 +781,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarEmpleados(int? planta, string query, string usuarioWeb, string tipoUsuario)
+        public JsonResult BuscarEmpleados(int? planta, string query, int posicion, string usuarioWeb, string tipoUsuario)
         {
             try
             {
@@ -795,6 +796,7 @@ namespace MantenimientosPTM.Controllers
                 {
                     { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_POSICION", (posicion, ParameterDirection.Input, HanaDbType.Integer) },
                     { "P_USUARIOWEB", (usuarioWeb, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_TIPOUSUARIO", (tipoUsuario, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };

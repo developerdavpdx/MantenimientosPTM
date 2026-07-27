@@ -124,6 +124,10 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string UsuarioCreacion { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string AreaTecnicaR { get; set; }
         }
         public class MantenimientoCorrectivoRangoLIST
         {
@@ -150,6 +154,8 @@ namespace MantenimientosPTM
 
             [JsonProperty("AREA")]
             public string Area { get; set; }
+            [JsonProperty("AREA_TECNICA")]
+            public string AreaTecnica { get; set; }
 
             [JsonProperty("ID_LINEA_PRODUCCION")]
             public string IdLineaProduccion { get; set; }
