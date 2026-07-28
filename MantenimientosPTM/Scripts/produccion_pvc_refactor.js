@@ -325,9 +325,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
             const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
 
             // ✅ NUEVO: Productos terminados se agregan también
-            // let PLANTA = this.datos_usuario[0].PLANTA;
-            // const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PPVC');
-            const seAgregaronProductosTerminados = false; //await this.agregarProductosTerminadosAlGrid(productosTerminados);
+            let PLANTA = this.datos_usuario[0].PLANTA;
+            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PPVC');
+            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
 
             // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
@@ -734,36 +734,25 @@ class GestionProduccionPVC extends GestionProduccionBase {
     // 🔥 NUEVO: Traer productos terminados y agregarlos al grid
     // ========================================
     async agregarProductosTerminadosAlGrid(productosTerminados) {
-
         try {
-
             if (!productosTerminados || productosTerminados.length === 0) {
                 return false;
             }
 
-            // 🔥 Anti-duplicados: igual que OTMC pero con ID_PRODUCTO_TERMINADO
-            const idsYaEnGrid = new Set();
-
+            // 🔥 Mapear nodos existentes por ID_PRODUCTO_TERMINADO
+            const nodosExistentes = new Map();
             this.gridApi.forEachNode(node => {
                 if (node.data?.ID_PRODUCTO_TERMINADO) {
-                    idsYaEnGrid.add(String(node.data.ID_PRODUCTO_TERMINADO));
+                    nodosExistentes.set(String(node.data.ID_PRODUCTO_TERMINADO), node);
                 }
             });
 
-            const productosNuevos = productosTerminados.filter(
-                item => !idsYaEnGrid.has(String(item.Id))
-            );
-
-            if (productosNuevos.length === 0) {
-                return false; // ya están todos en el grid
-            }
-
             const filasNuevas = [];
+            const filasActualizadas = [];
             const lineasNoEncontradas = [];
             let filasAgregadas = 0;
 
-            productosNuevos.forEach(item => {  // 🔥 iterar sobre productosNuevos, no productosTerminados
-
+            productosTerminados.forEach(item => {  // 🔥 iterar sobre productosTerminados directamente
                 const fecha = this.parsearFechaProductoTerminado(item.FechaPesaje);
                 if (!fecha) {
                     console.warn(`⚠️ Producto ${item.Codigo} tiene fecha inválida, será omitido`);
@@ -775,48 +764,79 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     return;
                 }
 
-                const nuevaFila = this.crearFilaVacia();
-
-                nuevaFila.ID_PRODUCTO_TERMINADO = item.Id;
-                nuevaFila.id = this.generarIdTemporal();
-                nuevaFila.Fecha = fecha;
-                nuevaFila.Producto = item.Codigo || '';
-                nuevaFila.Turno = String(item.Turno || '') || '';
-                nuevaFila.TRFabricados = parseFloat(item.NumTubos) || 0;
-                nuevaFila.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
-                nuevaFila.PorcentajeScrap = parseFloat(item.ScrapPt) || 0;
-                nuevaFila.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
-
-                nuevaFila._origen = 'PRODUCTO_TERMINADO';
-                nuevaFila._marcador = '📦';
-                nuevaFila._rowClass = 'row-producto-terminado';
-
                 const lineaEncontrada = this.listaLineas.find(
                     l => String(l.value) === String(item.Id_Linea)
                 );
 
-                if (lineaEncontrada) {
-                    nuevaFila.Linea = lineaEncontrada.label;
-                } else {
-                    nuevaFila.Linea = null;
+                if (!lineaEncontrada) {
                     lineasNoEncontradas.push(`${item.Codigo} (Línea ${item.Id_Linea})`);
                 }
 
-                if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+                const nodoExistente = nodosExistentes.get(String(item.Id));
+
+                if (nodoExistente) {
+                    // 🔥 YA EXISTE: actualizar los datos de la fila sin duplicar
+                    const dataActualizada = { ...nodoExistente.data };
+
+                    dataActualizada.Fecha = fecha;
+                    dataActualizada.Producto = item.Codigo || '';
+                    dataActualizada.Turno = String(item.Turno || '');
+                    dataActualizada.TRFabricados = parseFloat(item.NumTubos) || 0;
+                    dataActualizada.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
+                    dataActualizada.PorcentajeScrap = parseFloat(item.ScrapPt) || 0;
+                    dataActualizada.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
+                    dataActualizada.Linea = lineaEncontrada ? lineaEncontrada.label : null;
+                    dataActualizada.Mes = meses[new Date(fecha).getMonth()];
+                    dataActualizada._origen = 'PRODUCTO_TERMINADO';
+                    dataActualizada._marcador = '📦';
+                    dataActualizada._rowClass = 'row-producto-terminado';
+
+                    this.recalcularFila(dataActualizada);
+
+                    filasActualizadas.push({ rowNode: nodoExistente, data: dataActualizada });
+
+                } else {
+                    // 🔥 NO EXISTE: crear fila nueva
+                    const nuevaFila = this.crearFilaVacia();
+
+                    nuevaFila.ID_PRODUCTO_TERMINADO = item.Id;
+                    nuevaFila.id = this.generarIdTemporal();
+                    nuevaFila.Fecha = fecha;
+                    nuevaFila.Producto = item.Codigo || '';
+                    nuevaFila.Turno = String(item.Turno || '');
+                    nuevaFila.TRFabricados = parseFloat(item.NumTubos) || 0;
+                    nuevaFila.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
+                    nuevaFila.PorcentajeScrap = parseFloat(item.ScrapPt) || 0;
+                    nuevaFila.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
+                    nuevaFila.Linea = lineaEncontrada ? lineaEncontrada.label : null;
+                    nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+                    nuevaFila._origen = 'PRODUCTO_TERMINADO';
+                    nuevaFila._marcador = '📦';
+                    nuevaFila._rowClass = 'row-producto-terminado';
+
+                    this.recalcularFila(nuevaFila);
+
+                    filasNuevas.push(nuevaFila);
+                    filasAgregadas++;
                 }
-
-                this.recalcularFila(nuevaFila);
-
-                filasNuevas.push(nuevaFila);
-                filasAgregadas++;
             });
 
+            // 🔥 Aplicar actualizaciones usando applyTransaction update
+            if (filasActualizadas.length > 0) {
+                this.gridApi.applyTransaction({
+                    update: filasActualizadas.map(f => f.data)
+                });
+                console.log(`🔄 Se actualizaron ${filasActualizadas.length} productos terminados en el grid`);
+            }
+
+            // 🔥 Agregar filas nuevas
             if (filasNuevas.length > 0) {
                 this.gridApi.applyTransaction({ add: filasNuevas });
-                this.inicializarTooltipsGrid(); // 🔥 NUEVO
                 console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados al grid`);
+                this.inicializarTooltipsGrid();
             }
 
             if (lineasNoEncontradas.length > 0) {
@@ -826,7 +846,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 );
             }
 
-            return filasAgregadas > 0;
+            return filasAgregadas > 0 || filasActualizadas.length > 0;
 
         } catch (error) {
             console.error("Error al agregar productos terminados:", error);
@@ -834,30 +854,25 @@ class GestionProduccionPVC extends GestionProduccionBase {
         }
     }
 
-    // ✅ Convertir fecha del producto terminado (ISO format)
     parsearFechaProductoTerminado(fechaISO) {
-
         if (!fechaISO) return null;
 
         try {
-            // fechaISO viene como: "2026-07-23T13:53:08.467"
-            const fecha = new Date(fechaISO);
+            // 🔥 Tomar directo la parte de fecha del string sin pasar por Date()
+            const partesFecha = fechaISO.split('T')[0]; // "2026-07-28"
 
-            // ✅ VALIDAR: Rechazar fechas inválidas (1900-01-01)
-            if (isNaN(fecha.getTime())) return null;
+            if (!partesFecha) return null;
 
-            // Rechazar si es fecha default (1900)
-            if (fecha.getFullYear() < 2000) {
+            const [ano, mes, dia] = partesFecha.split('-');
+            if (!ano || !mes || !dia) return null;
+
+            // Rechazar fechas anteriores al 2000
+            if (parseInt(ano) < 2000) {
                 console.warn(`⚠️ Fecha inválida detectada: ${fechaISO}`);
                 return null;
             }
 
-            // Retornar en formato YYYY-MM-DD para que el grid lo entienda
-            const ano = fecha.getFullYear();
-            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-            const dia = String(fecha.getDate()).padStart(2, '0');
-
-            return `${ano}-${mes}-${dia}`;
+            return `${ano}-${mes}-${dia}`; // YYYY-MM-DD directo, sin new Date()
 
         } catch (error) {
             console.error("Error al parsear fecha:", error);
@@ -934,7 +949,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         },
                         valueFormatter: params => {
                             if (!params.value) return '';
-                            return new Date(params.value).toLocaleDateString('es-MX');
+                            return new Date(params.value + 'T00:00:00').toLocaleDateString('es-MX');
                         }
                     },
 

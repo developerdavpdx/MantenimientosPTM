@@ -1405,37 +1405,71 @@ namespace MantenimientosPTM.Controllers
                 string JSONstringSp = string.Empty;
                 List<ReportesProdTerm> reportesProdTerm = new List<ReportesProdTerm>();
 
-                // Asignar turno y rangos de fechas
-                if ((horaActual >= horaInicioTurno && horaActual <= horaFinTurno) || (FiltroTurno == "1"))
+                if (FiltroTurno == null || FiltroTurno == "null")
                 {
-                    turno = 1;
 
-                    TurnoStar = DateTime.Today.AddHours(4.5).AddSeconds(1);
-                    TurnoEnd = DateTime.Today.AddHours(16.5);
-                    TurnoScrapStar = DateTime.Today.AddHours(5).AddMinutes(45).AddSeconds(1);
-                    TurnoScrapEnd = DateTime.Today.AddHours(17).AddMinutes(45);
-                }
-                else if (FiltroTurno == "2" || FiltroTurno == "null")
-                {
-                    turno = 2;
-
-                    TurnoStar = DateTime.Today.AddHours(16.5).AddSeconds(1);
-                    TurnoEnd = DateTime.Today.AddDays(1).AddHours(4.5);
-                    TurnoScrapStar = DateTime.Today.AddHours(17).AddMinutes(45).AddSeconds(1);
-                    TurnoScrapEnd = DateTime.Today.AddDays(1).AddHours(5).AddMinutes(45);
-
-                    // Madrugada: ajustar al día anterior
-                    if (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
-                       (horaActual.Hour == 4 && horaActual.Minute <= 30))
+                    // Asignar turno y rangos de fechas
+                    if (horaActual >= horaInicioTurno && horaActual <= horaFinTurno)
                     {
-                        TurnoStar = TurnoStar.AddDays(-1);
-                        TurnoEnd = TurnoEnd.AddDays(-1);
-                        TurnoScrapStar = TurnoScrapStar.AddDays(-1);
-                        TurnoScrapEnd = TurnoScrapEnd.AddDays(-1);
+                        turno = 1;
+
+                        TurnoStar = DateTime.Today.AddHours(4.5).AddSeconds(1);
+                        TurnoEnd = DateTime.Today.AddHours(16.5);
+                        TurnoScrapStar = DateTime.Today.AddHours(5).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = DateTime.Today.AddHours(17).AddMinutes(45);
+                    }
+                    else
+                    {
+                        turno = 2;
+
+                        TurnoStar = DateTime.Today.AddHours(16.5).AddSeconds(1);
+                        TurnoEnd = DateTime.Today.AddDays(1).AddHours(4.5);
+                        TurnoScrapStar = DateTime.Today.AddHours(17).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = DateTime.Today.AddDays(1).AddHours(5).AddMinutes(45);
+
+                        // Madrugada: ajustar al día anterior
+                        if (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
+                           (horaActual.Hour == 4 && horaActual.Minute <= 30))
+                        {
+                            TurnoStar = TurnoStar.AddDays(-1);
+                            TurnoEnd = TurnoEnd.AddDays(-1);
+                            TurnoScrapStar = TurnoScrapStar.AddDays(-1);
+                            TurnoScrapEnd = TurnoScrapEnd.AddDays(-1);
+                        }
+                    }
+                }
+                else {
+                    if (FiltroTurno == "1")
+                    {
+                        turno = 1;
+
+                        TurnoStar = DateTime.Today.AddHours(4.5).AddSeconds(1);
+                        TurnoEnd = DateTime.Today.AddHours(16.5);
+                        TurnoScrapStar = DateTime.Today.AddHours(5).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = DateTime.Today.AddHours(17).AddMinutes(45);
+                    }
+                    else
+                    {
+                        turno = 2;
+
+                        TurnoStar = DateTime.Today.AddHours(16.5).AddSeconds(1);
+                        TurnoEnd = DateTime.Today.AddDays(1).AddHours(4.5);
+                        TurnoScrapStar = DateTime.Today.AddHours(17).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = DateTime.Today.AddDays(1).AddHours(5).AddMinutes(45);
+
+                        // Madrugada: ajustar al día anterior
+                        if (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
+                           (horaActual.Hour == 4 && horaActual.Minute <= 30))
+                        {
+                            TurnoStar = TurnoStar.AddDays(-1);
+                            TurnoEnd = TurnoEnd.AddDays(-1);
+                            TurnoScrapStar = TurnoScrapStar.AddDays(-1);
+                            TurnoScrapEnd = TurnoScrapEnd.AddDays(-1);
+                        }
                     }
                 }
 
-                double horas = (horaActual - horaInicioTurno).TotalHours;
+                    double horas = (horaActual - horaInicioTurno).TotalHours;
                 int horasT = Convert.ToInt32(horas);
                 string ConectionStringSQL = ConfigurationManager.ConnectionStrings["SQLConnection"].ConnectionString;
 

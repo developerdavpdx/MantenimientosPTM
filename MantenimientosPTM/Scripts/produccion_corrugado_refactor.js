@@ -708,9 +708,9 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
 
             // ✅ NUEVO: Productos terminados se agregan también
-            // let PLANTA = this.datos_usuario[0].PLANTA;
-            // const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PCORR');
-            const seAgregaronProductosTerminados = true; //await this.agregarProductosTerminadosAlGrid(productosTerminados);
+            let PLANTA = this.datos_usuario[0].PLANTA;
+            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PCORR');
+            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
 
             // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
