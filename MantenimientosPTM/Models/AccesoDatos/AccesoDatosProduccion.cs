@@ -208,6 +208,7 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string OTMC { get; set; }
+
             // 🔥 NUEVO
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
@@ -270,6 +271,7 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
             public decimal PORCENTAJE_SCRAP { get; set; }
+
             // Disponibilidad
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -358,15 +360,61 @@ namespace MantenimientosPTM
             [DefaultValue(0)]
             public decimal TIEMPO_PRODUCTIVO { get; set; }
 
+            // 🔥 NUEVO - KPIs calculados
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal KG_HR_LINEA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal KG_HR_PRODUCTO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal OBJETIVO_EFICIENCIA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal DISPONIBILIDAD_PORCENTAJE { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal KG_POR_TIEMPO_DISPONIBLE { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal KG_NETOS_HR_REALES { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_RENDIMIENTO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_CALIDAD { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_OEE { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_EFICIENCIA_PRODUCTO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal EFICIENCIA_OPERATIVA { get; set; }
+
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string USUARIO { get; set; }
 
-            // PLANTA
+            // ⚠️ CORREGIDO: en el JSON viene como número entero (ej. 1), no como string
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue("")]
-            public string PLANTA { get; set; }
+            [DefaultValue(0)]
+            public int PLANTA { get; set; }
         }
+
 
         public class TiemposMuertosProduccionCorrugado
         {
@@ -533,6 +581,51 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
             public decimal TIEMPO_PRODUCTIVO { get; set; }
+
+            // 🔥 NUEVO - KPIs calculados
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal KG_HR_LINEA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal KG_HR_PRODUCTO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal OBJETIVO_EFICIENCIA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal DISPONIBILIDAD_PORCENTAJE { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal KG_POR_TIEMPO_DISPONIBLE { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal KG_NETOS_HR_REALES { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_RENDIMIENTO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_CALIDAD { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_OEE { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal PORCENTAJE_EFICIENCIA_PRODUCTO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal EFICIENCIA_OPERATIVA { get; set; }
 
             // ========================================
             // AUDITORÍA
@@ -704,6 +797,51 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
             public decimal? TIEMPO_PRODUCTIVO { get; set; }
+
+            // 🔥 NUEVO - KPIs calculados
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? KG_HR_LINEA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? KG_HR_PRODUCTO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? OBJETIVO_EFICIENCIA { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? DISPONIBILIDAD_PORCENTAJE { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? KG_POR_TIEMPO_DISPONIBLE { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? KG_NETOS_HR_REALES { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? PORCENTAJE_RENDIMIENTO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? PORCENTAJE_CALIDAD { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? PORCENTAJE_OEE { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? PORCENTAJE_EFICIENCIA_PRODUCTO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal? EFICIENCIA_OPERATIVA { get; set; }
 
             // ============================================
             // AUDITORÍA

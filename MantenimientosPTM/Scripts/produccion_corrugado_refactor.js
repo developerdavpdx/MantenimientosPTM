@@ -44,6 +44,7 @@ $(document).ready(function () {
 // APLICACIÓN PRINCIPAL - GESTIÓN PRODUCCIÓN CORRUGADO
 // ========================================
 class GestionProduccionCorrugado extends GestionProduccionBase {
+
     constructor(datos_usuario, URLBase) {
         super(datos_usuario, URLBase, 110);
         this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos"; // 🔥 NUEVO
@@ -103,7 +104,19 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             TiempoMuertoArrancar: 0,
             TiempoMuertoProceso: 0,
             TiempoDisponible: 0,
-            TiempoProductivo: 0
+            TiempoProductivo: 0,
+            // 🔥 RENDIMIENTO Y OEE
+            DisponibilidadPorcentaje: 0,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,
+            KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: 0,
+            PorcentajeCalidad: 0,
+            PorcentajeOEE: 0,
+            PorcentajeEficienciaProducto: 0,
+            ObjetivoEficiencia: 91,
+            EficienciaOperativa: 0
         };
     }
 
@@ -538,6 +551,23 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                         valueFormatter: params => this.formatearNumero(params.value)
                     }
                 ]
+            },
+            // RENDIMIENTO Y OEE
+            {
+                headerName: 'RENDIMIENTO Y OEE',
+                headerClass: 'header-grupo-verde-fuerte',
+                children: [
+                    { field: 'DisponibilidadPorcentaje', headerName: 'DISPONIBILIDAD %', editable: false, width: 130, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'KgPorTiempoDisponible', headerName: 'KG POR TIEMPO DISPONIBLE', editable: false, width: 150, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'KgHrLinea', headerName: 'KG/HR X LINEA (capacidad instalada)', editable: false, width: 150, cellClass: 'celda-rosa', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'KgHrProducto', headerName: 'KG/HR X PRODUCTO (historial)', editable: false, width: 150, cellClass: 'celda-rosa', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'KgNetosHrReales', headerName: 'KG NETOS/HR REALES (tiempo productivo)', editable: false, width: 150, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'PorcentajeRendimiento', headerName: '% RENDIMIENTO', editable: false, width: 120, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'PorcentajeCalidad', headerName: '% CALIDAD', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'PorcentajeOEE', headerName: '% OEE', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'ObjetivoEficiencia', headerName: 'OBJETIVO DE EFICIENCIA %', width: 140, ...this.getColumnaNumerica('celda-amarilla') },
+                    { field: 'EficienciaOperativa', headerName: 'EFICIENCIA OPERATIVA', editable: false, width: 130, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) }
+                ]
             }
         ];
 
@@ -639,6 +669,75 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         };
 
         new agGrid.Grid(gridDiv, gridOptions);
+    }
+
+    async consultarDatos(fechaInicio, fechaFin, linea, FiltroTurno) {
+
+        try {
+
+            $("#tablaProduccion").addClass("d-none");
+            GlobalUtil.mostrarLoader(true);
+
+            const response = await $.ajax({
+                url: `/${this.URLBase}/GetTiemposMuertosCorrugado`,
+                type: "GET",
+                data: {
+                    FiltroFechaInicio: fechaInicio,
+                    FiltroFechaFin: fechaFin,
+                    FiltroLinea: linea
+                }
+            });
+
+            let hayDatosOriginales = false;
+
+            if (response.Status === "OK") {
+
+                const datos = JSON.parse(response.Data);
+                hayDatosOriginales = this.cargarDatosGrid(datos);
+
+            } else {
+
+                AlertManager.mostrar(response.Message, "info");
+                hayDatosOriginales = this.cargarDatosGrid(null);
+            }
+
+            // 🔥 Correctivos se agregan ANTES de pintar totales
+            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, linea);
+
+            // 🔥 NUEVO: Preventivos se agregan también
+            const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
+
+            // ✅ NUEVO: Productos terminados se agregan también
+            // let PLANTA = this.datos_usuario[0].PLANTA;
+            // const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PCORR');
+            const seAgregaronProductosTerminados = true; //await this.agregarProductosTerminadosAlGrid(productosTerminados);
+
+            // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
+            if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
+                this.gridApi.setRowData(this.datosOriginales);
+            }
+
+            // 🔥 AHORA sí, una sola vez, al final de todo
+            this.agregarFilaTotales();
+
+        } catch (error) {
+
+            console.error(error);
+
+            AlertManager.mostrar(
+                "Error al consultar datos",
+                "danger"
+            );
+
+        } finally {
+
+            setTimeout(() => {
+                GlobalUtil.mostrarLoader(false);
+                $("#tablaProduccion").removeClass("d-none");
+            }, 1000);
+
+        }
+
     }
 
     agregarFilaTotales() {
@@ -959,7 +1058,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 type: "GET",
                 headers: {
                     "Planta": planta || this.datos_usuario[0].PLANTA,
-                    "Turno" : FiltroTurno || null,
+                    "Turno": FiltroTurno || null,
                     "Proceso": proceso || ""
                 },
                 dataType: 'json'
@@ -1160,7 +1259,19 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             TiempoMttoCorrectivosArranque: null,
             TiempoMuertoCorrectivos: null, CambioMoldeSetupExcesos: null,
             TiempoMuertoArrancar: null, TiempoMuertoProceso: null,
-            TiempoDisponible: 0, TiempoProductivo: 0
+            TiempoDisponible: 0, TiempoProductivo: 0,
+            // 🔥 RENDIMIENTO Y OEE
+            DisponibilidadPorcentaje: 0,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,
+            KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: 0,
+            PorcentajeCalidad: 0,
+            PorcentajeOEE: 0,
+            PorcentajeEficienciaProducto: 0,
+            ObjetivoEficiencia: 91,
+            EficienciaOperativa: 0
         };
     }
 
@@ -1282,6 +1393,22 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         row.TiempoProductivo =
             this.calcularTiempoProductivo(row);
 
+        // 🔥 RENDIMIENTO Y OEE
+        row.KgPorTiempoDisponible = this.calcularKgPorTiempoDisponible(row);
+
+        row.KgNetosHrReales = this.calcularKgNetosHrReales(row);
+
+        row.PorcentajeRendimiento = this.calcularPorcentajeRendimiento(row);
+
+        row.PorcentajeEficienciaProducto = row.PorcentajeRendimiento;
+
+        row.PorcentajeCalidad = this.calcularPorcentajeCalidad(row);
+
+        row.DisponibilidadPorcentaje = this.calcularDisponibilidadPorcentaje(row);
+
+        row.PorcentajeOEE = this.calcularPorcentajeOEE(row);
+
+        row.EficienciaOperativa = this.calcularEficienciaOperativa(row);
     }
 
     recalcularTotales() {
@@ -1354,7 +1481,19 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
             // KPIS
             TiempoDisponible: 0,
-            TiempoProductivo: 0
+            TiempoProductivo: 0,
+            // 🔥 RENDIMIENTO Y OEE
+            DisponibilidadPorcentaje: null,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,
+            KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: null,
+            PorcentajeCalidad: null,
+            PorcentajeOEE: null,
+            PorcentajeEficienciaProducto: null,
+            ObjetivoEficiencia: 0,
+            EficienciaOperativa: null
         };
 
         this.gridApi.forEachNode((node) => {
@@ -1400,6 +1539,11 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
             totales.TiempoProductivo += Number(node.data.TiempoProductivo || 0);
 
+            totales.KgPorTiempoDisponible += Number(node.data.KgPorTiempoDisponible || 0);
+
+            totales.KgNetosHrReales += Number(node.data.KgNetosHrReales || 0);
+
+            totales.ObjetivoEficiencia += Number(node.data.ObjetivoEficiencia || 0);
         });
 
         // ========================================
@@ -1419,6 +1563,19 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
             totales.PorcentajeScrapCorte =
                 (totales.ScrapCorteSierra / totales.ProduccionNeta) * 100;
+        }
+
+        // 🔥 Disponibilidad % desde totales
+        if (totales.TiempoDisponible > 0) {
+            totales.DisponibilidadPorcentaje =
+                (totales.TiempoProductivo / totales.TiempoDisponible) * 100;
+        }
+
+        // 🔥 Calidad % desde totales — usa ProduccionNeta y ScrapTotal (Corrugado)
+        const totalProdCalidad = totales.ProduccionNeta + totales.ScrapTotal;
+        if (totalProdCalidad > 0) {
+            totales.PorcentajeCalidad =
+                (totales.ProduccionNeta / totalProdCalidad) * 100;
         }
 
         return totales;
@@ -1628,7 +1785,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         const datos = this.obtenerDatosGrid();
 
         let datosJSON = JSON.stringify(datos);
-        
+
 
         if (datos.length === 0) {
 
@@ -1866,12 +2023,25 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 TiempoMuertoArrancar: null,
                 TiempoMuertoProceso: null,
 
+
                 // ========================================
                 // KPIs
                 // ========================================
 
                 TiempoDisponible: 0,
-                TiempoProductivo: 0
+                TiempoProductivo: 0,
+                // 🔥 RENDIMIENTO Y OEE
+                DisponibilidadPorcentaje: 0,
+                KgPorTiempoDisponible: 0,
+                KgHrLinea: null,
+                KgHrProducto: null,
+                KgNetosHrReales: 0,
+                PorcentajeRendimiento: 0,
+                PorcentajeCalidad: 0,
+                PorcentajeOEE: 0,
+                PorcentajeEficienciaProducto: 0,
+                ObjetivoEficiencia: 91,
+                EficienciaOperativa: 0
             }
         ];
 
@@ -1880,75 +2050,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         setTimeout(() => {
             $("#tablaProduccion").removeClass("d-none");
         }, 1000);
-    }
-
-    async consultarDatos(fechaInicio, fechaFin, linea, FiltroTurno) {
-
-        try {
-
-            $("#tablaProduccion").addClass("d-none");
-            GlobalUtil.mostrarLoader(true);
-
-            const response = await $.ajax({
-                url: `/${this.URLBase}/GetTiemposMuertosCorrugado`,
-                type: "GET",
-                data: {
-                    FiltroFechaInicio: fechaInicio,
-                    FiltroFechaFin: fechaFin,
-                    FiltroLinea: linea
-                }
-            });
-
-            let hayDatosOriginales = false;
-
-            if (response.Status === "OK") {
-
-                const datos = JSON.parse(response.Data);
-                hayDatosOriginales = this.cargarDatosGrid(datos);
-
-            } else {
-
-                AlertManager.mostrar(response.Message, "info");
-                hayDatosOriginales = this.cargarDatosGrid(null);
-            }
-
-            // 🔥 Correctivos se agregan ANTES de pintar totales
-            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, linea);
-
-            // 🔥 NUEVO: Preventivos se agregan también
-            const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
-
-            // ✅ NUEVO: Productos terminados se agregan también
-            let PLANTA = this.datos_usuario[0].PLANTA;
-            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PCORR');
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
-
-            // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
-            if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
-                this.gridApi.setRowData(this.datosOriginales);
-            }
-
-            // 🔥 AHORA sí, una sola vez, al final de todo
-            this.agregarFilaTotales();
-
-        } catch (error) {
-
-            console.error(error);
-
-            AlertManager.mostrar(
-                "Error al consultar datos",
-                "danger"
-            );
-
-        } finally {
-
-            setTimeout(() => {
-                GlobalUtil.mostrarLoader(false);
-                $("#tablaProduccion").removeClass("d-none");
-            }, 1000);
-
-        }
-
     }
 
     cargarDatosGrid(datos) {
@@ -1961,58 +2062,70 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
                 const fila = {
 
-                id: item.ID_REGISTRO || Date.now(),
+                    id: item.ID_REGISTRO || Date.now(),
 
-                ID_REGISTRO: item.ID_REGISTRO,
-                OTMC: item.OTMC,
-                OTMP: item.OTMP,
-                ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
+                    ID_REGISTRO: item.ID_REGISTRO,
+                    OTMC: item.OTMC,
+                    OTMP: item.OTMP,
+                    ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
 
-                Mes: item.MES,
+                    Mes: item.MES,
 
-                Fecha: item.FECHA,
-                Linea: item.LINEA,
-                Corrugador: item.CORRUGADOR,
-                Producto: item.PRODUCTO,
-                Turno: item.TURNO,
-                Grupo: item.GRUPO,
+                    Fecha: item.FECHA,
+                    Linea: item.LINEA,
+                    Corrugador: item.CORRUGADOR,
+                    Producto: item.PRODUCTO,
+                    Turno: item.TURNO,
+                    Grupo: item.GRUPO,
 
-                PesoMinimo: item.PESO_MINIMO ?? 0,
+                    PesoMinimo: item.PESO_MINIMO ?? 0,
 
-                TRLiberados: item.TRLIBERADOS,
-                ProduccionNeta: item.PRODUCCION_NETA,
+                    TRLiberados: item.TRLIBERADOS,
+                    ProduccionNeta: item.PRODUCCION_NETA,
 
-                PesoEstandar: item.PESO_ESTANDAR,
-                PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
+                    PesoEstandar: item.PESO_ESTANDAR,
+                    PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
 
-                ScrapSinCorteSierra: item.SCRAP_SIN_CORTE_SIERRA,
-                ScrapCorteSierra: item.SCRAP_CORTE_SIERRA,
-                ScrapTotal: item.SCRAP_TOTAL,
+                    ScrapSinCorteSierra: item.SCRAP_SIN_CORTE_SIERRA,
+                    ScrapCorteSierra: item.SCRAP_CORTE_SIERRA,
+                    ScrapTotal: item.SCRAP_TOTAL,
 
-                PorcentajeScrapSinCorte: item.PORCENTAJE_SCRAP_SIN_CORTE,
-                PorcentajeScrapCorte: item.PORCENTAJE_SCRAP_CORTE,
+                    PorcentajeScrapSinCorte: item.PORCENTAJE_SCRAP_SIN_CORTE,
+                    PorcentajeScrapCorte: item.PORCENTAJE_SCRAP_CORTE,
 
-                KgReproceso: item.KG_REPROCESO,
-                Carbonato: item.CARBONATO,
+                    KgReproceso: item.KG_REPROCESO,
+                    Carbonato: item.CARBONATO,
 
-                HorasProgramadas: item.HORAS_PROGRAMADAS,
+                    HorasProgramadas: item.HORAS_PROGRAMADAS,
 
-                MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
-                ControlInventarios: item.CONTROL_INVENTARIOS,
-                FaltaEnergia: item.FALTA_ENERGIA,
-                FaltaMateriaPrima: item.FALTA_MATERIA_PRIMA,
-                PreparacionCambio: item.PREPARACION_CAMBIO,
-                ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION,
+                    MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
+                    ControlInventarios: item.CONTROL_INVENTARIOS,
+                    FaltaEnergia: item.FALTA_ENERGIA,
+                    FaltaMateriaPrima: item.FALTA_MATERIA_PRIMA,
+                    PreparacionCambio: item.PREPARACION_CAMBIO,
+                    ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION,
 
-                TiempoMttoCorrectivosArranque: item.TIEMPO_MTTO_CORRECTIVOS_ARRANQUE,
+                    TiempoMttoCorrectivosArranque: item.TIEMPO_MTTO_CORRECTIVOS_ARRANQUE,
 
-                TiempoMuertoCorrectivos: item.TIEMPO_MUERTO_CORRECTIVOS,
-                CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
-                TiempoMuertoArrancar: item.TIEMPO_MUERTO_ARRANCAR,
-                TiempoMuertoProceso: item.TIEMPO_MUERTO_PROCESO,
+                    TiempoMuertoCorrectivos: item.TIEMPO_MUERTO_CORRECTIVOS,
+                    CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
+                    TiempoMuertoArrancar: item.TIEMPO_MUERTO_ARRANCAR,
+                    TiempoMuertoProceso: item.TIEMPO_MUERTO_PROCESO,
 
-                TiempoDisponible: item.TIEMPO_DISPONIBLE,
-                TiempoProductivo: item.TIEMPO_PRODUCTIVO
+                    TiempoDisponible: item.TIEMPO_DISPONIBLE,
+                    TiempoProductivo: item.TIEMPO_PRODUCTIVO,
+                    // 🔥 RENDIMIENTO Y OEE
+                    KgHrLinea: item.KG_HR_LINEA,
+                    KgHrProducto: item.KG_HR_PRODUCTO,
+                    ObjetivoEficiencia: item.OBJETIVO_EFICIENCIA ?? 91,
+                    DisponibilidadPorcentaje: item.DISPONIBILIDAD_PORCENTAJE,
+                    KgPorTiempoDisponible: item.KG_POR_TIEMPO_DISPONIBLE,
+                    KgNetosHrReales: item.KG_NETOS_HR_REALES,
+                    PorcentajeRendimiento: item.PORCENTAJE_RENDIMIENTO,
+                    PorcentajeCalidad: item.PORCENTAJE_CALIDAD,
+                    PorcentajeOEE: item.PORCENTAJE_OEE,
+                    PorcentajeEficienciaProducto: item.PORCENTAJE_EFICIENCIA_PRODUCTO,
+                    EficienciaOperativa: item.EFICIENCIA_OPERATIVA
                 };
 
                 // 🔥 NUEVO: Identificar origen y asignar emoji
@@ -2260,7 +2373,19 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             // ========================================
 
             TiempoDisponible: 0,
-            TiempoProductivo: 0
+            TiempoProductivo: 0,
+            // 🔥 RENDIMIENTO Y OEE
+            DisponibilidadPorcentaje: 0,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,
+            KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: 0,
+            PorcentajeCalidad: 0,
+            PorcentajeOEE: 0,
+            PorcentajeEficienciaProducto: 0,
+            ObjetivoEficiencia: 91,
+            EficienciaOperativa: 0
 
         };
 
@@ -2408,6 +2533,18 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
                     TIEMPO_DISPONIBLE: redondear(node.data.TiempoDisponible, 2),
                     TIEMPO_PRODUCTIVO: redondear(node.data.TiempoProductivo, 2),
+                    // 🔥 RENDIMIENTO Y OEE
+                    KG_HR_LINEA: redondear(node.data.KgHrLinea || 0, 2),
+                    KG_HR_PRODUCTO: redondear(node.data.KgHrProducto || 0, 2),
+                    OBJETIVO_EFICIENCIA: redondear(node.data.ObjetivoEficiencia || 0, 2),
+                    DISPONIBILIDAD_PORCENTAJE: redondear(node.data.DisponibilidadPorcentaje || 0, 2),
+                    KG_POR_TIEMPO_DISPONIBLE: redondear(node.data.KgPorTiempoDisponible || 0, 2),
+                    KG_NETOS_HR_REALES: redondear(node.data.KgNetosHrReales || 0, 2),
+                    PORCENTAJE_RENDIMIENTO: redondear(node.data.PorcentajeRendimiento || 0, 2),
+                    PORCENTAJE_CALIDAD: redondear(node.data.PorcentajeCalidad || 0, 2),
+                    PORCENTAJE_OEE: redondear(node.data.PorcentajeOEE || 0, 2),
+                    PORCENTAJE_EFICIENCIA_PRODUCTO: redondear(node.data.PorcentajeEficienciaProducto || 0, 2),
+                    EFICIENCIA_OPERATIVA: redondear(node.data.EficienciaOperativa || 0, 2),
 
                     USUARIO: this.datos_usuario[0].EMAIL,
                     PLANTA: this.datos_usuario[0].PLANTA
@@ -2454,6 +2591,56 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             },
             valueFormatter: params => this.formatearNumero(params.value)
         };
+    }
+
+    calcularKgPorTiempoDisponible(row) {
+        const tiempoDisponible = parseFloat(row.TiempoDisponible) || 0;
+        const kgHrProducto = parseFloat(row.KgHrProducto) || 0;
+        return tiempoDisponible * kgHrProducto;
+    }
+
+    calcularKgNetosHrReales(row) {
+        const tiempoProductivo = parseFloat(row.TiempoProductivo) || 0;
+        if (tiempoProductivo <= 0) return 0;
+        const produccion = parseFloat(row.ProduccionNeta) || 0;
+        const scrap = parseFloat(row.ScrapTotal) || 0;
+        return (produccion + scrap) / tiempoProductivo;
+    }
+
+    calcularPorcentajeRendimiento(row) {
+        const kgHrProducto = parseFloat(row.KgHrProducto) || 0;
+        if (kgHrProducto <= 0) return 0;
+        const kgNetosHrReales = parseFloat(row.KgNetosHrReales) || 0;
+        return (kgNetosHrReales / kgHrProducto) * 100;
+    }
+
+    calcularPorcentajeCalidad(row) {
+        const produccion = parseFloat(row.ProduccionNeta) || 0;
+        const scrap = parseFloat(row.ScrapTotal) || 0;
+        const total = produccion + scrap;
+        if (total <= 0) return 0;
+        return (produccion / total) * 100;
+    }
+
+    calcularDisponibilidadPorcentaje(row) {
+        const tiempoDisponible = parseFloat(row.TiempoDisponible) || 0;
+        if (tiempoDisponible <= 0) return 0;
+        const tiempoProductivo = parseFloat(row.TiempoProductivo) || 0;
+        return (tiempoProductivo / tiempoDisponible) * 100;
+    }
+
+    calcularPorcentajeOEE(row) {
+        const disponibilidad = (parseFloat(row.DisponibilidadPorcentaje) || 0) / 100;
+        const rendimiento = (parseFloat(row.PorcentajeRendimiento) || 0) / 100;
+        const calidad = (parseFloat(row.PorcentajeCalidad) || 0) / 100;
+        return disponibilidad * rendimiento * calidad * 100;
+    }
+
+    calcularEficienciaOperativa(row) {
+        const kgPorTiempoDisponible = parseFloat(row.KgPorTiempoDisponible) || 0;
+        if (kgPorTiempoDisponible <= 0) return 0;
+        const produccion = parseFloat(row.ProduccionNeta) || 0;
+        return (produccion / kgPorTiempoDisponible) * 100;
     }
 }
 
@@ -2537,6 +2724,10 @@ class ArticuloAutocompleteEditor {
                 row.PesoMinimo = articulo.PesoMinimo || 0;
 
                 row.DescripcionArticulo = articulo.DescripcionArticulo;
+
+                row.KgHrProducto = parseFloat(articulo.KgsDia) / 24 || 0;
+
+                row.KgHrLinea = parseFloat(articulo.KgsDia) / 24 || 0;
 
                 // 🔥 Recalcular KPIs de la fila
                 const app = this.params.context.appProduccion;

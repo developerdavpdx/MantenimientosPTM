@@ -8,11 +8,25 @@ namespace MantenimientosPTM
     public class AccesoDatosMetricas
     {
         #region GeneralCommands(Procedure declaration)
-        public string GCGetMetricasOEE
+        public string GCGetMetricasOEE_PVC
         {
             get
             {
-                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOMetricasOEE\"";
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOMetricasOEE_PVC\"";
+            }
+        }
+        public string GCGetMetricasOEE_PeadLiso
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOMetricasOEE_PeadLiso\"";
+            }
+        }
+        public string GCGetMetricasOEE_Corrugado
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOMetricasOEE_Corrugado\"";
             }
         }
         #endregion

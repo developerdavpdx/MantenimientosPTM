@@ -99,7 +99,19 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             FaltaPersonal: 0,
             TiempoMuertoProceso: 0,
             TiempoDisponible: 0,
-            TiempoProductivo: 0
+            TiempoProductivo: 0,
+            // 🔥 RENDIMIENTO Y OEE
+            DisponibilidadPorcentaje: 0,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,
+            KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: 0,
+            PorcentajeCalidad: 0,
+            PorcentajeOEE: 0,
+            PorcentajeEficienciaProducto: 0,
+            ObjetivoEficiencia: 91,
+            EficienciaOperativa: 0
         };
     }
 
@@ -187,7 +199,19 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
                 TiempoDisponible: null,
 
-                TiempoProductivo: null
+                TiempoProductivo: null,
+                // 🔥 RENDIMIENTO Y OEE
+                DisponibilidadPorcentaje: 0,
+                KgPorTiempoDisponible: 0,
+                KgHrLinea: null,
+                KgHrProducto: null,
+                KgNetosHrReales: 0,
+                PorcentajeRendimiento: 0,
+                PorcentajeCalidad: 0,
+                PorcentajeOEE: 0,
+                PorcentajeEficienciaProducto: 0,
+                ObjetivoEficiencia: 91,
+                EficienciaOperativa: 0
             }
 
         ];
@@ -236,9 +260,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
 
             // ✅ NUEVO: Productos terminados se agregan también
-            let PLANTA = this.datos_usuario[0].PLANTA;
-            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, null, 'PPEADLISO');
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
+            // let PLANTA = this.datos_usuario[0].PLANTA;
+            // const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, null, 'PPEADLISO');
+            const seAgregaronProductosTerminados = true;//await this.agregarProductosTerminadosAlGrid(productosTerminados);
 
             // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
@@ -326,6 +350,18 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 TiempoDisponible: item.TIEMPO_DISPONIBLE,
 
                 TiempoProductivo: item.TIEMPO_PRODUCTIVO,
+                // 🔥 RENDIMIENTO Y OEE
+                KgHrLinea: item.KG_HR_LINEA,
+                KgHrProducto: item.KG_HR_PRODUCTO,
+                ObjetivoEficiencia: item.OBJETIVO_EFICIENCIA ?? 91,
+                DisponibilidadPorcentaje: item.DISPONIBILIDAD_PORCENTAJE,
+                KgPorTiempoDisponible: item.KG_POR_TIEMPO_DISPONIBLE,
+                KgNetosHrReales: item.KG_NETOS_HR_REALES,
+                PorcentajeRendimiento: item.PORCENTAJE_RENDIMIENTO,
+                PorcentajeCalidad: item.PORCENTAJE_CALIDAD,
+                PorcentajeOEE: item.PORCENTAJE_OEE,
+                PorcentajeEficienciaProducto: item.PORCENTAJE_EFICIENCIA_PRODUCTO,
+                EficienciaOperativa: item.EFICIENCIA_OPERATIVA,
 
                 // ✅ NUEVO: Identificar origen de datos de BD
                 ...(item.OTMC && item.OTMC.toString().trim() !== '' ? {
@@ -864,6 +900,22 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     }
 
                 ]
+            },
+            {
+                headerName: 'RENDIMIENTO Y OEE',
+                headerClass: 'header-grupo-verde-fuerte',
+                children: [
+                    { field: 'DisponibilidadPorcentaje', headerName: 'DISPONIBILIDAD %', editable: false, width: 130, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'KgPorTiempoDisponible', headerName: 'KG POR TIEMPO DISPONIBLE', editable: false, width: 150, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'KgHrLinea', headerName: 'KG/HR X LINEA (capacidad instalada)', editable: false, width: 150, cellClass: 'celda-rosa', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'KgHrProducto', headerName: 'KG/HR X PRODUCTO (historial)', editable: false, width: 150, cellClass: 'celda-rosa', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'KgNetosHrReales', headerName: 'KG NETOS/HR REALES (tiempo productivo)', editable: false, width: 150, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'PorcentajeRendimiento', headerName: '% RENDIMIENTO', editable: false, width: 120, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'PorcentajeCalidad', headerName: '% CALIDAD', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'PorcentajeOEE', headerName: '% OEE', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'ObjetivoEficiencia', headerName: 'OBJETIVO DE EFICIENCIA %', width: 140, ...this.getColumnaNumerica('celda-amarilla') },
+                    { field: 'EficienciaOperativa', headerName: 'EFICIENCIA OPERATIVA', editable: false, width: 130, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) }
+                ]
             }
         ];
 
@@ -1278,7 +1330,19 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             TiempoCalentamientoHerramental: null, ArranqueEstabilizacionLinea: null,
             TiempoMuertoCorrectivos: null, TiempoMuertoHerramentales: null,
             CambioMoldeSetupExcesos: null, FaltaPersonal: null, TiempoMuertoProceso: null,
-            TiempoDisponible: 0, TiempoProductivo: 0
+            TiempoDisponible: 0, TiempoProductivo: 0,
+            // 🔥 RENDIMIENTO Y OEE
+            DisponibilidadPorcentaje: 0,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,
+            KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: 0,
+            PorcentajeCalidad: 0,
+            PorcentajeOEE: 0,
+            PorcentajeEficienciaProducto: 0,
+            ObjetivoEficiencia: 91,
+            EficienciaOperativa: 0
         };
     }
 
@@ -1472,6 +1536,16 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         row.TiempoProductivo =
             this.calcularTiempoProductivo(row);
+
+        // 🔥 RENDIMIENTO Y OEE
+        row.KgPorTiempoDisponible = this.calcularKgPorTiempoDisponible(row);
+        row.KgNetosHrReales = this.calcularKgNetosHrReales(row);
+        row.PorcentajeRendimiento = this.calcularPorcentajeRendimiento(row);
+        row.PorcentajeEficienciaProducto = row.PorcentajeRendimiento;
+        row.PorcentajeCalidad = this.calcularPorcentajeCalidad(row);
+        row.DisponibilidadPorcentaje = this.calcularDisponibilidadPorcentaje(row);
+        row.PorcentajeOEE = this.calcularPorcentajeOEE(row);
+        row.EficienciaOperativa = this.calcularEficienciaOperativa(row);
 
     }
 
@@ -1693,7 +1767,19 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             TiempoDisponible: 0,
 
-            TiempoProductivo: 0
+            TiempoProductivo: 0,
+            // 🔥 RENDIMIENTO Y OEE
+            DisponibilidadPorcentaje: null,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,
+            KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: null,
+            PorcentajeCalidad: null,
+            PorcentajeOEE: null,
+            PorcentajeEficienciaProducto: null,
+            ObjetivoEficiencia: 0,
+            EficienciaOperativa: null
 
         };
 
@@ -1764,6 +1850,10 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             totales.TiempoProductivo += Number(node.data.TiempoProductivo || 0);
 
+            totales.KgPorTiempoDisponible += Number(node.data.KgPorTiempoDisponible || 0);
+            totales.KgNetosHrReales += Number(node.data.KgNetosHrReales || 0);
+            totales.ObjetivoEficiencia += Number(node.data.ObjetivoEficiencia || 0);
+
         });
 
         // ========================================
@@ -1783,6 +1873,19 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             totales.PorcentajeTotalScrap =
                 (totales.TotalScrap / totalProduccion) * 100;
+        }
+
+        // 🔥 Disponibilidad % desde totales
+        if (totales.TiempoDisponible > 0) {
+            totales.DisponibilidadPorcentaje =
+                (totales.TiempoProductivo / totales.TiempoDisponible) * 100;
+        }
+
+        // 🔥 Calidad % — usa ProduccionNeta y TotalScrap (PEAD Liso)
+        const totalProdCalidad = totales.ProduccionNeta + totales.TotalScrap;
+        if (totalProdCalidad > 0) {
+            totales.PorcentajeCalidad =
+                (totales.ProduccionNeta / totalProdCalidad) * 100;
         }
 
         return totales;
@@ -1919,6 +2022,19 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
                 TIEMPO_DISPONIBLE: redondear(fila.TiempoDisponible, 2),
                 TIEMPO_PRODUCTIVO: redondear(fila.TiempoProductivo, 2),
+
+                // 🔥 RENDIMIENTO Y OEE
+                KG_HR_LINEA: redondear(fila.KgHrLinea || 0, 2),
+                KG_HR_PRODUCTO: redondear(fila.KgHrProducto || 0, 2),
+                OBJETIVO_EFICIENCIA: redondear(fila.ObjetivoEficiencia || 0, 2),
+                DISPONIBILIDAD_PORCENTAJE: redondear(fila.DisponibilidadPorcentaje || 0, 2),
+                KG_POR_TIEMPO_DISPONIBLE: redondear(fila.KgPorTiempoDisponible || 0, 2),
+                KG_NETOS_HR_REALES: redondear(fila.KgNetosHrReales || 0, 2),
+                PORCENTAJE_RENDIMIENTO: redondear(fila.PorcentajeRendimiento || 0, 2),
+                PORCENTAJE_CALIDAD: redondear(fila.PorcentajeCalidad || 0, 2),
+                PORCENTAJE_OEE: redondear(fila.PorcentajeOEE || 0, 2),
+                PORCENTAJE_EFICIENCIA_PRODUCTO: redondear(fila.PorcentajeEficienciaProducto || 0, 2),
+                EFICIENCIA_OPERATIVA: redondear(fila.EficienciaOperativa || 0, 2),
 
                 USUARIO: this.datos_usuario[0].EMAIL,
                 PLANTA: this.datos_usuario[0].PLANTA
@@ -2241,7 +2357,19 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             TiempoDisponible: 0,
 
-            TiempoProductivo: 0
+            TiempoProductivo: 0,
+            // 🔥 RENDIMIENTO Y OEE
+            DisponibilidadPorcentaje: 0,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,
+            KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: 0,
+            PorcentajeCalidad: 0,
+            PorcentajeOEE: 0,
+            PorcentajeEficienciaProducto: 0,
+            ObjetivoEficiencia: 91,
+            EficienciaOperativa: 0
 
         };
 
@@ -2366,6 +2494,56 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         this.gridApi.redrawRows();
 
     }
+
+    calcularKgPorTiempoDisponible(row) {
+        const tiempoDisponible = parseFloat(row.TiempoDisponible) || 0;
+        const kgHrProducto = parseFloat(row.KgHrProducto) || 0;
+        return tiempoDisponible * kgHrProducto;
+    }
+
+    calcularKgNetosHrReales(row) {
+        const tiempoProductivo = parseFloat(row.TiempoProductivo) || 0;
+        if (tiempoProductivo <= 0) return 0;
+        const produccion = parseFloat(row.ProduccionNeta) || 0;
+        const scrap = parseFloat(row.TotalScrap) || 0;
+        return (produccion + scrap) / tiempoProductivo;
+    }
+
+    calcularPorcentajeRendimiento(row) {
+        const kgHrProducto = parseFloat(row.KgHrProducto) || 0;
+        if (kgHrProducto <= 0) return 0;
+        const kgNetosHrReales = parseFloat(row.KgNetosHrReales) || 0;
+        return (kgNetosHrReales / kgHrProducto) * 100;
+    }
+
+    calcularPorcentajeCalidad(row) {
+        const produccion = parseFloat(row.ProduccionNeta) || 0;
+        const scrap = parseFloat(row.TotalScrap) || 0;
+        const total = produccion + scrap;
+        if (total <= 0) return 0;
+        return (produccion / total) * 100;
+    }
+
+    calcularDisponibilidadPorcentaje(row) {
+        const tiempoDisponible = parseFloat(row.TiempoDisponible) || 0;
+        if (tiempoDisponible <= 0) return 0;
+        const tiempoProductivo = parseFloat(row.TiempoProductivo) || 0;
+        return (tiempoProductivo / tiempoDisponible) * 100;
+    }
+
+    calcularPorcentajeOEE(row) {
+        const disponibilidad = (parseFloat(row.DisponibilidadPorcentaje) || 0) / 100;
+        const rendimiento = (parseFloat(row.PorcentajeRendimiento) || 0) / 100;
+        const calidad = (parseFloat(row.PorcentajeCalidad) || 0) / 100;
+        return disponibilidad * rendimiento * calidad * 100;
+    }
+
+    calcularEficienciaOperativa(row) {
+        const kgPorTiempoDisponible = parseFloat(row.KgPorTiempoDisponible) || 0;
+        if (kgPorTiempoDisponible <= 0) return 0;
+        const produccion = parseFloat(row.ProduccionNeta) || 0;
+        return (produccion / kgPorTiempoDisponible) * 100;
+    }
 }
 
 class ArticuloAutocompleteEditor {
@@ -2442,6 +2620,12 @@ class ArticuloAutocompleteEditor {
                 row.PesoMinimo =
                     parseFloat(articulo.PesoMinimo) || 0;
 
+                row.DescripcionArticulo = articulo.DescripcionArticulo;
+
+                row.KgHrProducto = parseFloat(articulo.KgsDia) / 24 || 0;
+
+                row.KgHrLinea = parseFloat(articulo.KgsDia) / 24 || 0;
+
                 // 🔥 Recalcular KPIs de la fila
                 const app = this.params.context.appProduccion;
 
@@ -2498,7 +2682,7 @@ class ExcelExporterPeadLiso extends ExcelExporterBase {
 
     getSheetName() { return 'Causas Tiempos Muertos Pead Liso'; }
     getFileNamePrefix() { return 'Produccion_PeadLiso'; }
-    getTextFields() { return ['Mes','Fecha','Linea','Producto','Turno','Grupo']; }
+    getTextFields() { return ['Mes', 'Fecha', 'Linea', 'Producto', 'Turno', 'Grupo']; }
 
     getTotalsFontColor() { return 'FF0058A1'; }
     getTotalsBorderColor() { return 'FF0058A1'; }

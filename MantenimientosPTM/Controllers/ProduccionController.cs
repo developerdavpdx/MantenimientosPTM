@@ -429,7 +429,7 @@ namespace MantenimientosPTM.Controllers
                     if (string.IsNullOrEmpty(jsonData))
                         throw new Exception("No se recibió información.");
 
-                    RequestData = JsonConvert.DeserializeObject<List<AccesoDatosProduccion.TiemposMuertosProduccionPVC>>(jsonData);
+                    RequestData = JsonConvert.DeserializeObject<List<TiemposMuertosProduccionPVC>>(jsonData);
                 }
 
                 foreach (var registro in RequestData)
