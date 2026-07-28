@@ -55,6 +55,9 @@ class MantenimientosPreventivoApp {
     }
 
     inicializar() {
+        //Inicializar variables globales
+        let areaTecnica = "";
+
         //Inicializar UI
         UIManager.inicializarUI(this.datos_usuario);
         this.mantenimientoManager.inicializar();
@@ -92,12 +95,10 @@ class MantenimientosPreventivoApp {
 
         // Carátula online
         $(document).on('click', '.btn-caratula-online', (e) => {
-            //Asignamos como data atributos las areas del tecnico     
-            let areaTecnica = $(e.currentTarget).data('areatecnica');
-            let area = $(e.currentTarget).data('area');
-            $('#BuscarTecnico')
-                .attr('data-areatecnica', areaTecnica)
-                .attr('data-area', area);
+            this.areaTecnica = $(e.currentTarget).data('areatecnica');
+
+            // Limpia y escribe el texto dinámico del tipo de solicitud
+            $('#tipoSOM').html(this.areaTecnica);
 
             //Se dispara el evento de abrir modal
             this.mantenimientoManager.abrirModalCaratulaOnline($(e.currentTarget));
@@ -257,49 +258,19 @@ class MantenimientosPreventivoApp {
         $('#BuscarTecnico').on('input', (e) => {  // ⬅️ Agrega parámetro 'e'
             const query = $(e.target).val().trim();  // ⬅️ Usa e.target, no this
             let planta = this.datos_usuario[0].PLANTA;
-            let posicion = "";
+            let usuarioWeb = this.datos_usuario[0].USUARIOWEB;
+            let tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+            let posicionId = null;
 
-            //Manejo de logica para busqueda de posición de tecnicos
-            let areaTecnica = $(e.target).attr('data-areatecnica');
-            let area = $(e.target).attr('data-area');
-
-            if (areaTecnica == "MANTENIMIENTO HERRAMENTALES") {
-                switch (true) {
-                    case area.includes("PVC"):
-                        // Entra al case si es una area de PVC
-                        posicion = 95; //TEC HERR PVC
-                        this.parametersBuscarTecnica(query, planta, posicion)
-                        break;
-
-                    case area.includes("PEAD"):
-                        // Entra al case si es una area de PEAD LISO O CORR
-                        posicion = 101;
-                        this.parametersBuscarTecnica(query, planta, posicion)
-                        break;
-                                            
-                }
+            //Buscar tecnico por tipo de solicitud                       
+            if (this.areaTecnica === "MANTENIMIENTO HERRAMENTALES") {
+                posicionId = "95,101";
+                this.parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario)
+                             
             } else {
-                switch (true) {
-                    case area.includes("PVC"):
-                        // Entra al case si es una area de PVC
-                        posicion = 3;
-                        this.parametersBuscarTecnica(query, planta, posicion)
-                        break;
-
-                    case area.includes("PEAD"):
-                        // Entra al case si es una area de PEAD LISO O CORR
-                        posicion = 100;
-                        this.parametersBuscarTecnica(query, planta, posicion)
-                        break;
-
-                    case area.includes("PE/INY"):
-                        // Entra al case si es una area de PEAD LISO O CORR
-                        posicion = 82;
-                        this.parametersBuscarTecnica(query, planta, posicion)
-                        break;
-                }
+                posicionId = "3,100,82";
+                this.parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario)
             }
-
 
         });
 
@@ -344,10 +315,10 @@ class MantenimientosPreventivoApp {
 
     }
 
-    parametersBuscarTecnica(query, planta, posicion) {
+    parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario) {
 
-        if (query.length >= 2) {
-            this.gestionTecnicos.buscarTecnicos(query, planta, posicion);
+        if (query.length >= 2 && tipoUsuario === "TecnicoMtto") {
+            this.gestionTecnicos.buscarTecnicos(query, planta, posicionId, usuarioWeb, tipoUsuario);
         } else {
             this.gestionTecnicos.ocultarSugerencias();
         }
