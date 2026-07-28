@@ -316,7 +316,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_PLANTA", (Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_LINEA", (Linea, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_GRUPO_ART", (GrupoArticulos == 0 ? (object)null : GrupoArticulos, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_VALIDAR_CAP", (ValidarCap, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_VALIDAR_CAP", (ValidarCap, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_ITEMCODE", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure

@@ -6,8 +6,8 @@
 <link href="~/Content/TiemposMuertos.css" rel="stylesheet" />
 
 <main aria-labelledby="title">
-    <div class="ps-2 pe-2 pt-3 pb-3">
-        <div class="row m-0 pt-3">
+    <div class="ps-2 pe-2 pb-1">
+        <div class="row m-0 pt-1">
             <div class="col-12">
                 <div class="card shadow">
                     <div class="card-header text-dark">
@@ -71,6 +71,16 @@
                                         <option value="2">2</option>
                                     </select>
                                 </div>
+                                <!-- Producto -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroProducto">
+                                        <i class="bi bi-box-seam"></i> Producto
+                                    </label>
+                                    <input type="text" class="filtro-input"
+                                           id="FiltroProducto"
+                                           placeholder="Buscar producto..."
+                                           name="FiltroProducto">
+                                </div>
                                 <!-- Botones -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
                                     <button type="button" class="btn-filtro-aplicar"
@@ -84,7 +94,6 @@
                                         Limpiar
                                     </button>
                                 </div>
-
                             </div>
                         </div>
                         <div id="tablaProduccion" class="ag-theme-alpine d-none"></div>

@@ -21,6 +21,7 @@ namespace MantenimientosPTM.Controllers
     public class ProduccionController : Controller
     {
         readonly LogicaProduccion Logic = new LogicaProduccion();
+        readonly LogicaPlaneacion logicaPlaneacion = new LogicaPlaneacion();
 
         #region Views
         public ActionResult Planeacion()
@@ -471,16 +472,17 @@ namespace MantenimientosPTM.Controllers
 
         [HttpGet]
         public JsonResult GetTiemposMuertosPVC(
-        string FiltroFechaInicio,
-        string FiltroFechaFin,
-        string FiltroLinea, string FiltroPlanta)
+            string FiltroFechaInicio,
+            string FiltroFechaFin,
+            string FiltroLinea,
+            string FiltroPlanta,
+            string FiltroTurno,      // 🔥 NUEVO
+            string FiltroProducto)   // 🔥 NUEVO
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
             try
             {
-
-                // ── Fechas: si no vienen, default al mes actual ───────────────────────
                 DateTime dtFechaInicio;
                 DateTime dtFechaFin;
 
@@ -496,13 +498,14 @@ namespace MantenimientosPTM.Controllers
                     dtFechaFin = DateTime.Parse(FiltroFechaFin);
                 }
 
-                // ✅ Preparar parámetros para el SP
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FECHA_INICIO", (string.IsNullOrEmpty(dtFechaInicio.ToString("yyyy-MM-dd")) ? (object)null : dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_FECHA_FIN", (string.IsNullOrEmpty(dtFechaFin.ToString("yyyy-MM-dd")) ? (object)null : dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FECHA_INICIO", (dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN",    (dtFechaFin.ToString("yyyy-MM-dd"),    ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)    ? (object)null : FiltroLinea,    ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta)   ? (object)null : FiltroPlanta,   ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TURNO",        (string.IsNullOrEmpty(FiltroTurno)    ? (object)null : FiltroTurno,    ParameterDirection.Input, HanaDbType.NVarChar) }, // 🔥 NUEVO
+                    { "P_PRODUCTO",     (string.IsNullOrEmpty(FiltroProducto) ? (object)null : FiltroProducto, ParameterDirection.Input, HanaDbType.NVarChar) }  // 🔥 NUEVO
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -641,81 +644,81 @@ namespace MantenimientosPTM.Controllers
         string FiltroFechaInicio,
         string FiltroFechaFin,
         string FiltroLinea)
+        {
+            GlobalCommands.JsonResponseMtto jsonResponse;
+
+            try
             {
-                GlobalCommands.JsonResponseMtto jsonResponse;
+                // ── Fechas: si no vienen, default al mes actual ───────────────────────
+                DateTime dtFechaInicio;
+                DateTime dtFechaFin;
 
-                try
+                if (string.IsNullOrEmpty(FiltroFechaInicio) || string.IsNullOrEmpty(FiltroFechaFin))
                 {
-                    // ── Fechas: si no vienen, default al mes actual ───────────────────────
-                    DateTime dtFechaInicio;
-                    DateTime dtFechaFin;
+                    DateTime hoy = DateTime.Now;
+                    dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1);
+                    dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1);
+                }
+                else
+                {
+                    dtFechaInicio = DateTime.Parse(FiltroFechaInicio);
+                    dtFechaFin = DateTime.Parse(FiltroFechaFin);
+                }
 
-                    if (string.IsNullOrEmpty(FiltroFechaInicio) || string.IsNullOrEmpty(FiltroFechaFin))
-                    {
-                        DateTime hoy = DateTime.Now;
-                        dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1);
-                        dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1);
-                    }
-                    else
-                    {
-                        dtFechaInicio = DateTime.Parse(FiltroFechaInicio);
-                        dtFechaFin = DateTime.Parse(FiltroFechaFin);
-                    }
-
-                    var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
             {
                 { "P_FECHA_INICIO", (dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
                 { "P_FECHA_FIN", (dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
                 { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) }
             };
 
-                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCConsultarTiemposMuertosINY,
-                        parameters
-                    );
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCConsultarTiemposMuertosINY,
+                    parameters
+                );
 
-                    if (resultHana.JsonResult == "[]")
+                if (resultHana.JsonResult == "[]")
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
-                        jsonResponse = new GlobalCommands.JsonResponseMtto()
-                        {
-                            Status = "NO",
-                            Message = "No se encontraron registros de tiempos muertos INY, se mostrará la plantilla por default.",
-                            Data = string.Empty
-                        };
-                    }
-                    else if (resultHana.JsonResult.Contains("Error"))
-                    {
-                        jsonResponse = new GlobalCommands.JsonResponseMtto()
-                        {
-                            Status = "ERROR",
-                            Message = "Error al consultar tiempos muertos INY: " + resultHana.JsonResult,
-                            Data = string.Empty
-                        };
-                    }
-                    else
-                    {
-                        jsonResponse = new GlobalCommands.JsonResponseMtto()
-                        {
-                            Status = "OK",
-                            Message = "Datos obtenidos correctamente.",
-                            Data = resultHana.JsonResult
-                        };
-                    }
-
-                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                        Status = "NO",
+                        Message = "No se encontraron registros de tiempos muertos INY, se mostrará la plantilla por default.",
+                        Data = string.Empty
+                    };
                 }
-                catch (Exception ex)
+                else if (resultHana.JsonResult.Contains("Error"))
                 {
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
                         Status = "ERROR",
-                        Message = "Error al consultar tiempos muertos INY: " + ex.ToString(),
+                        Message = "Error al consultar tiempos muertos INY: " + resultHana.JsonResult,
                         Data = string.Empty
                     };
-
-                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
                 }
+                else
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "OK",
+                        Message = "Datos obtenidos correctamente.",
+                        Data = resultHana.JsonResult
+                    };
+                }
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
             }
+            catch (Exception ex)
+            {
+                jsonResponse = new GlobalCommands.JsonResponseMtto()
+                {
+                    Status = "ERROR",
+                    Message = "Error al consultar tiempos muertos INY: " + ex.ToString(),
+                    Data = string.Empty
+                };
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+        }
 
         [HttpPost]
         public JsonResult GuardarTiemposMuertosCorrugado()
@@ -1438,7 +1441,8 @@ namespace MantenimientosPTM.Controllers
                         }
                     }
                 }
-                else {
+                else
+                {
                     if (FiltroTurno == "1")
                     {
                         turno = 1;
@@ -1469,7 +1473,7 @@ namespace MantenimientosPTM.Controllers
                     }
                 }
 
-                    double horas = (horaActual - horaInicioTurno).TotalHours;
+                double horas = (horaActual - horaInicioTurno).TotalHours;
                 int horasT = Convert.ToInt32(horas);
                 string ConectionStringSQL = ConfigurationManager.ConnectionStrings["SQLConnection"].ConnectionString;
 
@@ -1503,9 +1507,37 @@ namespace MantenimientosPTM.Controllers
                             {
                                 // Agregar columna Turno con el valor calculado, replicado en todas las filas
                                 tabla1.Columns.Add("Turno", typeof(int));
+                                tabla1.Columns.Add("PesoMinimo", typeof(decimal));
+                                tabla1.Columns.Add("KgsDia", typeof(decimal));
                                 foreach (DataRow row in tabla1.Rows)
                                 {
+                                    // ✅ Preparar parámetros para el SP
+                                    var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                                    {
+                                        { "P_QUERY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                        { "P_USUARIO", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                        { "P_PLANTA", (plantaHeader, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                        { "P_LINEA", (row["Id_Linea"], ParameterDirection.Input, HanaDbType.NVarChar) },
+                                        { "P_GRUPO_ART", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
+                                        { "P_VALIDAR_CAP", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
+                                        { "P_ITEMCODE", (row["Codigo"], ParameterDirection.Input, HanaDbType.NVarChar) }
+                                    };
+
+                                    // ✅ Ejecutar el Stored Procedure
+                                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                                        logicaPlaneacion.AD.GCBuscarArticulos, // ⬅️ Nombre de tu SP
+                                        parameters
+                                    );
+
+                                    JArray Articulo = JArray.Parse(resultHana.JsonResult);
+                                    decimal KgsDia = Convert.ToDecimal(Articulo[0]["KgsDia"] != null ? (decimal.Parse(Articulo[0]["KgsDia"].ToString()) / 24).ToString() : "0");
+                                    decimal PesoMinimo = Convert.ToDecimal(Articulo[0]["PesoMinimo"] != null ? Articulo[0]["PesoMinimo"].ToString() : "0");
+
                                     row["Turno"] = turno;
+
+                                    row["PesoMinimo"] = PesoMinimo;
+
+                                    row["KgsDia"] = KgsDia;
                                 }
 
                                 JSONstringSp = JsonConvert.SerializeObject(tabla1);

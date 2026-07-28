@@ -467,7 +467,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             nuevaFila.id = this.generarIdTemporal();
             nuevaFila.OTMC = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
-            nuevaFila.TiempoMuertoCorrectivos = parseFloat(item.DuracionHrs) || 0;
+            nuevaFila.TiempoMuertoCorrectivos = GlobalUtil.calcularDiferenciaHoras(item.FechaCreacion, item.FechaCierre) || 0;
 
             // ✅ NUEVO: Marcar como correctivo
             nuevaFila._origen = 'CORRECTIVO';
@@ -986,10 +986,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
                 this.agregarFilaTotales();
                 this.inicializarTooltipsGrid(); // 🔥 AGREGAR
-
-                setTimeout(() => {
-                    this.gridApi.sizeColumnsToFit();
-                }, 200);
+                this.gridApi.sizeColumnsToFit();
 
             },
 
@@ -1179,35 +1176,28 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
     // 🔥 NUEVO: Traer productos terminados y agregarlos al grid
     // ========================================
     async agregarProductosTerminadosAlGrid(productosTerminados) {
-
         try {
-
             if (!productosTerminados || productosTerminados.length === 0) {
                 return false;
             }
 
-            const idsYaEnGrid = new Set();
-
+            // 🔥 Mapear nodos existentes por ID_PRODUCTO_TERMINADO
+            const nodosExistentes = new Map();
             this.gridApi.forEachNode(node => {
                 if (node.data?.ID_PRODUCTO_TERMINADO) {
-                    idsYaEnGrid.add(String(node.data.ID_PRODUCTO_TERMINADO));
+                    nodosExistentes.set(String(node.data.ID_PRODUCTO_TERMINADO), node);
                 }
             });
 
-            const productosNuevos = productosTerminados.filter(
-                item => !idsYaEnGrid.has(String(item.Id))
-            );
-
-            if (productosNuevos.length === 0) {
-                return false;
-            }
-
             const filasNuevas = [];
+            const filasActualizadas = [];
             const lineasNoEncontradas = [];
             let filasAgregadas = 0;
 
-            productosNuevos.forEach(item => {
+            const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+                'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
+            productosTerminados.forEach(item => {
                 const fecha = this.parsearFechaProductoTerminado(item.FechaPesaje);
                 if (!fecha) {
                     console.warn(`⚠️ Producto ${item.Codigo} tiene fecha inválida, será omitido`);
@@ -1219,49 +1209,80 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     return;
                 }
 
-                const nuevaFila = this.crearFilaVacia();
-
-                nuevaFila.ID_PRODUCTO_TERMINADO = item.Id;
-                nuevaFila.id = this.generarIdTemporal();
-                nuevaFila.Fecha = fecha;
-                nuevaFila.Producto = item.Codigo || '';
-                nuevaFila.Turno = String(item.Turno || '') || '';
-                nuevaFila.TRLiberados = parseFloat(item.NumTubos) || 0;
-                nuevaFila.ProduccionNeta = parseFloat(item.PesoTotal) || 0;
-                nuevaFila.PorcentajeTotalScrap = parseFloat(item.ScrapPt) || 0;
-                nuevaFila.TotalScrap = parseFloat(item.ScrapTotal) || 0;
-
-                // ✅ NUEVO: Marcar como producto terminado
-                nuevaFila._origen = 'PRODUCTO_TERMINADO';
-                nuevaFila._marcador = '📦';
-                nuevaFila._rowClass = 'row-producto-terminado';
-
                 const lineaEncontrada = this.listaLineas.find(
                     l => String(l.value) === String(item.Id_Linea)
                 );
 
-                if (lineaEncontrada) {
-                    nuevaFila.Linea = lineaEncontrada.label;
-                } else {
-                    nuevaFila.Linea = null;
+                if (!lineaEncontrada) {
                     lineasNoEncontradas.push(`${item.Codigo} (Línea ${item.Id_Linea})`);
                 }
 
-                if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+                const nodoExistente = nodosExistentes.get(String(item.Id));
+
+                if (nodoExistente) {
+                    // 🔥 YA EXISTE: actualizar sin duplicar
+                    const dataActualizada = { ...nodoExistente.data };
+
+                    dataActualizada.Fecha = fecha;
+                    dataActualizada.Producto = item.Codigo || '';
+                    dataActualizada.Turno = String(item.Turno || '');
+                    dataActualizada.TRLiberados = parseFloat(item.NumTubos) || 0;
+                    dataActualizada.ProduccionNeta = parseFloat(item.PesoTotal) || 0;
+                    dataActualizada.PorcentajeTotalScrap = 0;
+                    dataActualizada.TotalScrap = parseFloat(item.ScrapTotal) || 0;
+                    dataActualizada.Linea = lineaEncontrada ? lineaEncontrada.label : null;
+                    dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+
+                    dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
+                    dataActualizada.KgHrLinea = parseFloat(item.KgsDia) || 0;
+                    dataActualizada.KgHrProducto = parseFloat(item.KgsDia) || 0;
+
+                    dataActualizada._origen = 'PRODUCTO_TERMINADO';
+                    dataActualizada._marcador = '📦';
+                    dataActualizada._rowClass = 'row-producto-terminado';
+
+                    this.recalcularFila(dataActualizada);
+                    filasActualizadas.push(dataActualizada);
+
+                } else {
+                    // 🔥 NO EXISTE: crear fila nueva
+                    const nuevaFila = this.crearFilaVacia();
+
+                    nuevaFila.ID_PRODUCTO_TERMINADO = item.Id;
+                    nuevaFila.id = this.generarIdTemporal();
+                    nuevaFila.Fecha = fecha;
+                    nuevaFila.Producto = item.Codigo || '';
+                    nuevaFila.Turno = String(item.Turno || '');
+                    nuevaFila.TRLiberados = parseFloat(item.NumTubos) || 0;
+                    nuevaFila.ProduccionNeta = parseFloat(item.PesoTotal) || 0;
+                    nuevaFila.PorcentajeTotalScrap = 0;
+                    nuevaFila.TotalScrap = parseFloat(item.ScrapTotal) || 0;
+                    nuevaFila.Linea = lineaEncontrada ? lineaEncontrada.label : null;
+                    nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+
+                    nuevaFila.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
+                    nuevaFila.KgHrLinea = parseFloat(item.KgsDia) || 0;
+                    nuevaFila.KgHrProducto = parseFloat(item.KgsDia) || 0;
+
+                    nuevaFila._origen = 'PRODUCTO_TERMINADO';
+                    nuevaFila._marcador = '📦';
+                    nuevaFila._rowClass = 'row-producto-terminado';
+
+                    this.recalcularFila(nuevaFila);
+                    filasNuevas.push(nuevaFila);
+                    filasAgregadas++;
                 }
-
-                this.recalcularFila(nuevaFila);
-
-                filasNuevas.push(nuevaFila);
-                filasAgregadas++;
             });
+
+            if (filasActualizadas.length > 0) {
+                this.gridApi.applyTransaction({ update: filasActualizadas });
+                console.log(`🔄 Se actualizaron ${filasActualizadas.length} productos terminados`);
+            }
 
             if (filasNuevas.length > 0) {
                 this.gridApi.applyTransaction({ add: filasNuevas });
+                console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados`);
                 this.inicializarTooltipsGrid();
-                console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados al grid`);
             }
 
             if (lineasNoEncontradas.length > 0) {
@@ -1271,7 +1292,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 );
             }
 
-            return filasAgregadas > 0;
+            return filasAgregadas > 0 || filasActualizadas.length > 0;
 
         } catch (error) {
             console.error("Error al agregar productos terminados:", error);

@@ -36,6 +36,7 @@ class UIManager {
         $("#ProduccionContainer a").addClass("whiteText");
         $("#produccion-collapse").addClass("show");
         $("#RegistroProduccionPVCURL").addClass("selected-item");
+        $('body').css('overflow', 'hidden');
         console.log('✅ UI PVC inicializada');
     }
 }
@@ -291,7 +292,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
         return false;
     }
 
-    async consultarDatos(fechaInicio, fechaFin, FiltroTurno, linea) {
+    async consultarDatos(fechaInicio, fechaFin, FiltroTurno, linea, filtroProducto) {
 
         try {
 
@@ -304,7 +305,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 data: {
                     FiltroFechaInicio: fechaInicio,
                     FiltroFechaFin: fechaFin,
-                    FiltroLinea: linea
+                    FiltroLinea: linea,
+                    FiltroTurno: FiltroTurno || '',        // 🔥 NUEVO
+                    FiltroProducto: filtroProducto || ''   // 🔥 NUEVO
                 }
             });
 
@@ -432,7 +435,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             nuevaFila.id = this.generarIdTemporal();
             nuevaFila.OTMC = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
-            nuevaFila.MttoCorrectivos = parseFloat(item.DuracionHrs) || 0;
+            nuevaFila.MttoCorrectivos = GlobalUtil.calcularDiferenciaHoras(item.FechaCreacion, item.FechaCierre) || 0;
 
             // ✅ Marcar como correctivo
             nuevaFila._origen = 'CORRECTIVO';
@@ -786,10 +789,16 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     dataActualizada.Turno = String(item.Turno || '');
                     dataActualizada.TRFabricados = parseFloat(item.NumTubos) || 0;
                     dataActualizada.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
-                    dataActualizada.PorcentajeScrap = parseFloat(item.ScrapPt) || 0;
+                    dataActualizada.PorcentajeScrap = 0;
                     dataActualizada.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
                     dataActualizada.Linea = lineaEncontrada ? lineaEncontrada.label : null;
                     dataActualizada.Mes = meses[new Date(fecha).getMonth()];
+
+                    // 🔥 NUEVO
+                    dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
+                    dataActualizada.KgHrLinea = parseFloat(item.KgsDia) || 0;
+                    dataActualizada.KgHrProducto = parseFloat(item.KgsDia) || 0;
+
                     dataActualizada._origen = 'PRODUCTO_TERMINADO';
                     dataActualizada._marcador = '📦';
                     dataActualizada._rowClass = 'row-producto-terminado';
@@ -809,10 +818,16 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     nuevaFila.Turno = String(item.Turno || '');
                     nuevaFila.TRFabricados = parseFloat(item.NumTubos) || 0;
                     nuevaFila.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
-                    nuevaFila.PorcentajeScrap = parseFloat(item.ScrapPt) || 0;
+                    nuevaFila.PorcentajeScrap = 0;
                     nuevaFila.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
                     nuevaFila.Linea = lineaEncontrada ? lineaEncontrada.label : null;
                     nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+
+                    // 🔥 NUEVO
+                    nuevaFila.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
+                    nuevaFila.KgHrLinea = parseFloat(item.KgsDia) || 0;
+                    nuevaFila.KgHrProducto = parseFloat(item.KgsDia) || 0;
+
                     nuevaFila._origen = 'PRODUCTO_TERMINADO';
                     nuevaFila._marcador = '📦';
                     nuevaFila._rowClass = 'row-producto-terminado';
@@ -949,7 +964,10 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         },
                         valueFormatter: params => {
                             if (!params.value) return '';
-                            return new Date(params.value + 'T00:00:00').toLocaleDateString('es-MX');
+
+                            // 🔥 Tomar solo la parte de fecha, sin importar el formato que venga
+                            const soloFecha = params.value.split('T')[0]; // "2026-07-01"
+                            return new Date(soloFecha + 'T00:00:00').toLocaleDateString('es-MX');
                         }
                     },
 
@@ -1343,7 +1361,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         const gridOptions = {
 
-            domLayout: 'autoHeight',
+            domLayout: 'normal',
 
             columnDefs: columnDefs,
 
@@ -1608,22 +1626,20 @@ class GestionProduccionPVC extends GestionProduccionBase {
         });
 
         $('#btnAplicarFiltros').on('click', () => {
-
             const fechaInicio = $('#FiltroFechaInicio').val();
             const fechaFin = $('#FiltroFechaFin').val();
             const filtroTurno = $('#FiltroTurno').val();
+            const filtroProducto = $('#FiltroProducto').val(); // 🔥 NUEVO
 
-            this.consultarDatos(fechaInicio, fechaFin,filtroTurno, null);
-
+            this.consultarDatos(fechaInicio, fechaFin, filtroTurno, null, filtroProducto);
         });
 
         $('#btnLimpiarFiltros').on('click', () => {
-
             $('#FiltroFechaInicio').val('');
             $('#FiltroFechaFin').val('');
+            $('#FiltroProducto').val(''); // 🔥 NUEVO
 
-            this.consultarDatos(null, null, null);
-
+            this.consultarDatos(null, null, null, null, null);
         });
 
         $('#FiltroFechaInicio, #FiltroFechaFin')
