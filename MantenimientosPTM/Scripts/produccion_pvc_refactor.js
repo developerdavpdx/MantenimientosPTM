@@ -105,7 +105,19 @@ class GestionProduccionPVC extends GestionProduccionBase {
             FaltaRefacciones: 0,
             // KPIS
             TiempoDisponible: 0,
-            TiempoProductivo: 0
+            TiempoProductivo: 0,
+            // PRODUCCIÓN (agregar junto a los demás, después de TiempoProductivo)
+            DisponibilidadPorcentaje: 0,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,          // manual, sin fórmula (la que marcaste NO)
+            KgHrProducto: null,       // viene del catálogo al buscar el artículo, como PesoMinimo
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: 0,
+            PorcentajeCalidad: 0,
+            PorcentajeOEE: 0,
+            PorcentajeEficienciaProducto: 0,
+            ObjetivoEficiencia: 91,   // constante, no fórmula
+            EficienciaOperativa: 0
         };
     }
 
@@ -157,7 +169,19 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
                 // KPIS
                 TiempoDisponible: null,
-                TiempoProductivo: null
+                TiempoProductivo: null,
+                // PRODUCCIÓN (agregar junto a los demás, después de TiempoProductivo)
+                DisponibilidadPorcentaje: 0,
+                KgPorTiempoDisponible: 0,
+                KgHrLinea: null,          // manual, sin fórmula (la que marcaste NO)
+                KgHrProducto: null,       // viene del catálogo al buscar el artículo, como PesoMinimo
+                KgNetosHrReales: 0,
+                PorcentajeRendimiento: 0,
+                PorcentajeCalidad: 0,
+                PorcentajeOEE: 0,
+                PorcentajeEficienciaProducto: 0,
+                ObjetivoEficiencia: 91,   // constante, no fórmula
+                EficienciaOperativa: 0
             }
         ];
 
@@ -219,7 +243,19 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     FaltaPersonal: item.FALTA_PERSONAL,
                     FaltaRefacciones: item.FALTA_REFACCIONES,
                     TiempoDisponible: item.TIEMPO_DISPONIBLE,
-                    TiempoProductivo: item.TIEMPO_PRODUCTIVO
+                    TiempoProductivo: item.TIEMPO_PRODUCTIVO,
+                    // 🔥 AGREGAR (si tu SP ya los regresa):
+                    KgHrLinea: item.KG_HR_LINEA,
+                    KgHrProducto: item.KG_HR_PRODUCTO,
+                    ObjetivoEficiencia: item.OBJETIVO_EFICIENCIA ?? 91,
+                    DisponibilidadPorcentaje: item.DISPONIBILIDAD_PORCENTAJE,
+                    KgPorTiempoDisponible: item.KG_POR_TIEMPO_DISPONIBLE,
+                    KgNetosHrReales: item.KG_NETOS_HR_REALES,
+                    PorcentajeRendimiento: item.PORCENTAJE_RENDIMIENTO,
+                    PorcentajeCalidad: item.PORCENTAJE_CALIDAD,
+                    PorcentajeOEE: item.PORCENTAJE_OEE,
+                    PorcentajeEficienciaProducto: item.PORCENTAJE_EFICIENCIA_PRODUCTO,
+                    EficienciaOperativa: item.EFICIENCIA_OPERATIVA,
                 };
 
                 // 🔥 NUEVO: Identificar origen y asignar emoji
@@ -289,9 +325,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
             const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
 
             // ✅ NUEVO: Productos terminados se agregan también
-            let PLANTA = this.datos_usuario[0].PLANTA;
-            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PPVC');
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
+            // let PLANTA = this.datos_usuario[0].PLANTA;
+            // const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PPVC');
+            const seAgregaronProductosTerminados = false; //await this.agregarProductosTerminadosAlGrid(productosTerminados);
 
             // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
@@ -368,17 +404,19 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
 
     agregarCorrectivosAlGrid(correctivos) {
-
         const otmcYaEnGrid = new Set();
+
+        console.log('OTMCs en grid:', [...otmcYaEnGrid]);
+        console.log('NumeroOrden del primer correctivo:', correctivos[0]?.NumeroOrden, typeof correctivos[0]?.NumeroOrden);
 
         this.gridApi.forEachNode(node => {
             if (node.data?.OTMC) {
-                otmcYaEnGrid.add(node.data.OTMC);
+                otmcYaEnGrid.add(String(node.data.OTMC).trim()); // 🔥 normalizar
             }
         });
 
         const correctivosNuevos = correctivos.filter(
-            item => !otmcYaEnGrid.has(item.NumeroOrden)
+            item => !otmcYaEnGrid.has(String(item.NumeroOrden).trim()) // 🔥 normalizar
         );
 
         if (correctivosNuevos.length === 0) {
@@ -389,7 +427,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
         const lineasNoEncontradas = [];
 
         correctivosNuevos.forEach(item => {
-
             const nuevaFila = this.crearFilaVacia();
 
             nuevaFila.id = this.generarIdTemporal();
@@ -397,7 +434,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
             nuevaFila.MttoCorrectivos = parseFloat(item.DuracionHrs) || 0;
 
-            // ✅ NUEVO: Marcar como correctivo
+            // ✅ Marcar como correctivo
             nuevaFila._origen = 'CORRECTIVO';
             nuevaFila._marcador = '🔧';
             nuevaFila._rowClass = 'row-correctivo';
@@ -418,13 +455,16 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
             }
 
+            // ✅ MOVER ESTO ANTES DEL PUSH (igual que en preventivos)
             this.recalcularFila(nuevaFila);
 
             filasNuevas.push(nuevaFila);
         });
 
-        this.gridApi.applyTransaction({ add: filasNuevas });
-        this.inicializarTooltipsGrid(); // 🔥 NUEVO
+        if (filasNuevas.length > 0) {
+            this.gridApi.applyTransaction({ add: filasNuevas });
+            this.inicializarTooltipsGrid();
+        }
 
         if (lineasNoEncontradas.length > 0) {
             AlertManager.mostrar(
@@ -603,21 +643,33 @@ class GestionProduccionPVC extends GestionProduccionBase {
     // 🔥 Helper para no repetir el template de fila vacía
     // (extraje el objeto de agregarFila() para reutilizarlo aquí también)
     crearFilaVacia() {
-        return {
-            id: null,
-            Mes: null, Fecha: null, Linea: null, Producto: null, Turno: null, TRIP: null,
-            PesoMinimo: 0, TRFabricados: null, ProduccionNetaReal: null,
-            PesoEstandar: 0, PorcentajeSobrepeso: 0, TotalScrapKg: null, PorcentajeScrap: 0,
-            HorasProgramadas: null,
-            MantenimientoPreventivo: null, ControlInventarios: null, FaltaMateriaInsumos: null,
-            CambioMolde: null, Calentamiento: null, ParoArranqueNoProgramado: null,
-            ArranqueEstabilizacion: null,
-            MttoCorrectivos: null, FallaElectrica: null, Servicios: null,
-            CambioMoldeSetupExcesos: null, Herramental: null, FallaOperacion: null,
-            LimpiezaTanque: null, FaltaMaterial: null, FaltaPersonal: null, FaltaRefacciones: null,
-            TiempoDisponible: 0, TiempoProductivo: 0
-        };
-    }
+    return {
+        id: null,
+        Mes: null, Fecha: null, Linea: null, Producto: null, Turno: null, TRIP: null,
+        PesoMinimo: 0, TRFabricados: null, ProduccionNetaReal: null,
+        PesoEstandar: 0, PorcentajeSobrepeso: 0, TotalScrapKg: null, PorcentajeScrap: 0,
+        HorasProgramadas: null,
+        MantenimientoPreventivo: null, ControlInventarios: null, FaltaMateriaInsumos: null,
+        CambioMolde: null, Calentamiento: null, ParoArranqueNoProgramado: null,
+        ArranqueEstabilizacion: null,
+        MttoCorrectivos: null, FallaElectrica: null, Servicios: null,
+        CambioMoldeSetupExcesos: null, Herramental: null, FallaOperacion: null,
+        LimpiezaTanque: null, FaltaMaterial: null, FaltaPersonal: null, FaltaRefacciones: null,
+        TiempoDisponible: 0, TiempoProductivo: 0,
+        // 🔥 AGREGAR:
+        DisponibilidadPorcentaje: 0,
+        KgPorTiempoDisponible: 0,
+        KgHrLinea: null,
+        KgHrProducto: null,
+        KgNetosHrReales: 0,
+        PorcentajeRendimiento: 0,
+        PorcentajeCalidad: 0,
+        PorcentajeOEE: 0,
+        PorcentajeEficienciaProducto: 0,
+        ObjetivoEficiencia: 91,
+        EficienciaOperativa: 0
+    };
+}
 
     // ========================================
     // 🔥 NUEVO: Obtener Producto Terminado
@@ -1185,6 +1237,90 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         valueFormatter: params => this.formatearNumero(params.value)
                     }
                 ]
+            },
+            {
+                headerName: 'RENDIMIENTO Y OEE',
+                headerClass: 'header-grupo-verde-fuerte',
+                children: [
+                    {
+                        field: 'DisponibilidadPorcentaje',
+                        headerName: 'DISPONIBILIDAD %',
+                        editable: false,
+                        width: 130,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearPorcentaje(params.value)
+                    },
+                    {
+                        field: 'KgPorTiempoDisponible',
+                        headerName: 'KG POR TIEMPO DISPONIBLE',
+                        editable: false,
+                        width: 150,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearNumero(params.value)
+                    },
+                    {
+                        field: 'KgHrLinea',
+                        headerName: 'KG/HR X LINEA (capacidad Instalada)',
+                        editable: false, // 🔥 se llena al buscar el artículo, igual que PesoMinimo
+                        width: 150,
+                        cellClass: 'celda-rosa',
+                        valueFormatter: params => this.formatearNumero(params.value)
+                    },
+                    {
+                        field: 'KgHrProducto',
+                        headerName: 'KG/HR X PRODUCTO (historial)',
+                        editable: false, // 🔥 se llena al buscar el artículo, igual que PesoMinimo
+                        width: 150,
+                        cellClass: 'celda-rosa',
+                        valueFormatter: params => this.formatearNumero(params.value)
+                    },
+                    {
+                        field: 'KgNetosHrReales',
+                        headerName: 'KG NETOS/HR REALES (tiempo productivo)',
+                        editable: false,
+                        width: 150,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearNumero(params.value)
+                    },
+                    {
+                        field: 'PorcentajeRendimiento',
+                        headerName: '% RENDIMIENTO',
+                        editable: false,
+                        width: 120,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearPorcentaje(params.value)
+                    },
+                    {
+                        field: 'PorcentajeCalidad',
+                        headerName: '% CALIDAD',
+                        editable: false,
+                        width: 110,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearPorcentaje(params.value)
+                    },
+                    {
+                        field: 'PorcentajeOEE',
+                        headerName: '% OEE',
+                        editable: false,
+                        width: 110,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearPorcentaje(params.value)
+                    },
+                    {
+                        field: 'ObjetivoEficiencia',
+                        headerName: 'OBJETIVO DE EFICIENCIA %',
+                        width: 140,
+                        ...this.getColumnaNumerica('celda-amarilla') // editable por si cambia la meta
+                    },
+                    {
+                        field: 'EficienciaOperativa',
+                        headerName: 'EFICIENCIA OPERATIVA',
+                        editable: false,
+                        width: 130,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearPorcentaje(params.value)
+                    }
+                ]
             }
         ];
 
@@ -1409,6 +1545,16 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         row.TiempoProductivo =
             this.calcularTiempoProductivo(row);
+
+        // 🔥 NUEVO: Rendimiento / OEE
+        row.KgPorTiempoDisponible = this.calcularKgPorTiempoDisponible(row);
+        row.KgNetosHrReales = this.calcularKgNetosHrReales(row);
+        row.PorcentajeRendimiento = this.calcularPorcentajeRendimiento(row);
+        row.PorcentajeEficienciaProducto = row.PorcentajeRendimiento; // duplicado igual que en el Excel (DJ = DG)
+        row.PorcentajeCalidad = this.calcularPorcentajeCalidad(row);
+        row.DisponibilidadPorcentaje = this.calcularDisponibilidadPorcentaje(row);
+        row.PorcentajeOEE = this.calcularPorcentajeOEE(row);
+        row.EficienciaOperativa = this.calcularEficienciaOperativa(row);
     }
 
     recalcularTotales() {
@@ -1650,6 +1796,18 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
                     TIEMPO_DISPONIBLE: redondear(node.data.TiempoDisponible || 0, 2),
                     TIEMPO_PRODUCTIVO: redondear(node.data.TiempoProductivo || 0, 2),
+                    // 🔥 FALTABAN:
+                    KG_HR_LINEA: redondear(node.data.KgHrLinea || 0, 2),
+                    KG_HR_PRODUCTO: redondear(node.data.KgHrProducto || 0, 2),
+                    OBJETIVO_EFICIENCIA: redondear(node.data.ObjetivoEficiencia || 0, 2),
+                    DISPONIBILIDAD_PORCENTAJE: redondear(node.data.DisponibilidadPorcentaje || 0, 2),
+                    KG_POR_TIEMPO_DISPONIBLE: redondear(node.data.KgPorTiempoDisponible || 0, 2),
+                    KG_NETOS_HR_REALES: redondear(node.data.KgNetosHrReales || 0, 2),
+                    PORCENTAJE_RENDIMIENTO: redondear(node.data.PorcentajeRendimiento || 0, 2),
+                    PORCENTAJE_CALIDAD: redondear(node.data.PorcentajeCalidad || 0, 2),
+                    PORCENTAJE_OEE: redondear(node.data.PorcentajeOEE || 0, 2),
+                    PORCENTAJE_EFICIENCIA_PRODUCTO: redondear(node.data.PorcentajeEficienciaProducto || 0, 2),
+                    EFICIENCIA_OPERATIVA: redondear(node.data.EficienciaOperativa || 0, 2),
 
                     USUARIO: this.datos_usuario[0].EMAIL,
                     PLANTA: this.datos_usuario[0].PLANTA
@@ -1777,7 +1935,19 @@ class GestionProduccionPVC extends GestionProduccionBase {
             // ========================================
 
             TiempoDisponible: 0,
-            TiempoProductivo: 0
+            TiempoProductivo: 0,
+            // 🔥 AGREGAR:
+            DisponibilidadPorcentaje: 0,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,
+            KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: 0,
+            PorcentajeCalidad: 0,
+            PorcentajeOEE: 0,
+            PorcentajeEficienciaProducto: 0,
+            ObjetivoEficiencia: 91,
+            EficienciaOperativa: 0
         };
 
         this.gridApi.applyTransaction({
@@ -1814,6 +1984,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
             // ========================================
 
             PesoMinimo: filaActual.PesoMinimo || 0,
+            KgHrLinea: filaActual.KgHrLinea || 0, // 🔥 AGREGAR
+            KgHrProducto: filaActual.KgHrProducto || 0, // 🔥 AGREGAR
+            DescripcionArticulo: filaActual.DescripcionArticulo, // opcional, solo para el tooltip
             TRFabricados: filaActual.TRFabricados,
             ProduccionNetaReal: filaActual.ProduccionNetaReal,
             TotalScrapKg: filaActual.TotalScrapKg,
@@ -1835,6 +2008,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
             Calentamiento: filaActual.Calentamiento,
             ParoArranqueNoProgramado: filaActual.ParoArranqueNoProgramado,
             ArranqueEstabilizacion: filaActual.ArranqueEstabilizacion,
+
+
+            // 🔥 AGREGAR (campos manuales que no tienen fórmula):
+            KgHrLinea: filaActual.KgHrLinea,
+            ObjetivoEficiencia: filaActual.ObjetivoEficiencia,
 
             // ========================================
             // TIEMPO NO PRODUCTIVO
@@ -2041,6 +2219,64 @@ class GestionProduccionPVC extends GestionProduccionBase {
         return (scrap / total) * 100;
     }
 
+    calcularKgPorTiempoDisponible(row) {
+        const tiempoDisponible = parseFloat(row.TiempoDisponible) || 0;
+        const kgHrProducto = parseFloat(row.KgHrProducto) || 0;
+        return tiempoDisponible * kgHrProducto;
+    }
+
+    calcularKgNetosHrReales(row) {
+        const tiempoProductivo = parseFloat(row.TiempoProductivo) || 0;
+        if (tiempoProductivo <= 0) return 0;
+
+        const produccion = parseFloat(row.ProduccionNetaReal) || 0;
+        const scrap = parseFloat(row.TotalScrapKg) || 0;
+
+        return (produccion + scrap) / tiempoProductivo;
+    }
+
+    calcularPorcentajeRendimiento(row) {
+        const kgHrProducto = parseFloat(row.KgHrProducto) || 0;
+        if (kgHrProducto <= 0) return 0;
+
+        const kgNetosHrReales = parseFloat(row.KgNetosHrReales) || 0;
+        return (kgNetosHrReales / kgHrProducto) * 100;
+    }
+
+    calcularPorcentajeCalidad(row) {
+        const produccion = parseFloat(row.ProduccionNetaReal) || 0;
+        const scrap = parseFloat(row.TotalScrapKg) || 0;
+        const total = produccion + scrap;
+
+        if (total <= 0) return 0;
+
+        return (produccion / total) * 100;
+    }
+
+    calcularDisponibilidadPorcentaje(row) {
+        const tiempoDisponible = parseFloat(row.TiempoDisponible) || 0;
+        if (tiempoDisponible <= 0) return 0;
+
+        const tiempoProductivo = parseFloat(row.TiempoProductivo) || 0;
+        return (tiempoProductivo / tiempoDisponible) * 100;
+    }
+
+    calcularPorcentajeOEE(row) {
+        const disponibilidad = (parseFloat(row.DisponibilidadPorcentaje) || 0) / 100;
+        const rendimiento = (parseFloat(row.PorcentajeRendimiento) || 0) / 100;
+        const calidad = (parseFloat(row.PorcentajeCalidad) || 0) / 100;
+
+        return disponibilidad * rendimiento * calidad * 100;
+    }
+
+    calcularEficienciaOperativa(row) {
+        const kgPorTiempoDisponible = parseFloat(row.KgPorTiempoDisponible) || 0;
+        if (kgPorTiempoDisponible <= 0) return 0;
+
+        const produccion = parseFloat(row.ProduccionNetaReal) || 0;
+        return (produccion / kgPorTiempoDisponible) * 100;
+    }
+
     obtenerTotalesGrid() {
 
         const totales = {
@@ -2090,7 +2326,20 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             // KPIS
             TiempoDisponible: 0,
-            TiempoProductivo: 0
+            TiempoProductivo: 0,
+
+            // 🔥 NUEVO: RENDIMIENTO Y OEE
+            DisponibilidadPorcentaje: null,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,                     // 🔲 en blanco, mezcla productos/líneas distintas
+            KgHrProducto: null,                  // 🔲 en blanco, mezcla productos/líneas distintas
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: null,         // 🔲 en blanco, depende de KgHrProducto
+            PorcentajeCalidad: null,
+            PorcentajeOEE: null,                 // 🔲 en blanco, depende de %Rendimiento
+            PorcentajeEficienciaProducto: null,  // 🔲 en blanco, igual que %Rendimiento (DJ=DG)
+            ObjetivoEficiencia: 0,
+            EficienciaOperativa: null
         };
 
         this.gridApi.forEachNode((node) => {
@@ -2129,6 +2378,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
             totales.TiempoDisponible += Number(node.data.TiempoDisponible || 0);
             totales.TiempoProductivo += Number(node.data.TiempoProductivo || 0);
 
+            // 🔥 NUEVO: acumulables (sí tienen sentido sumados)
+            totales.KgPorTiempoDisponible += Number(node.data.KgPorTiempoDisponible || 0);
+            totales.KgNetosHrReales += Number(node.data.KgNetosHrReales || 0);
+            totales.ObjetivoEficiencia += Number(node.data.ObjetivoEficiencia || 0);
+
         });
 
         if (totales.PesoEstandar > 0) {
@@ -2145,6 +2399,23 @@ class GestionProduccionPVC extends GestionProduccionBase {
             totales.PorcentajeScrap =
                 (totales.TotalScrapKg / totalProduccion) * 100;
         }
+
+        // 🔥 NUEVO: Disponibilidad % recalculada desde los totales de tiempo
+        if (totales.TiempoDisponible > 0) {
+            totales.DisponibilidadPorcentaje =
+                (totales.TiempoProductivo / totales.TiempoDisponible) * 100;
+        }
+
+        // 🔥 NUEVO: % Calidad recalculado desde los totales de kg
+        const totalProduccionCalidad = totales.ProduccionNetaReal + totales.TotalScrapKg;
+        if (totalProduccionCalidad > 0) {
+            totales.PorcentajeCalidad =
+                (totales.ProduccionNetaReal / totalProduccionCalidad) * 100;
+        }
+
+        // KgHrLinea, KgHrProducto, PorcentajeRendimiento, PorcentajeOEE,
+        // PorcentajeEficienciaProducto y EficienciaOperativa se quedan en null
+        // porque mezclan productos/líneas distintas — igual que en el Excel.
 
         return totales;
     }
@@ -2237,6 +2508,11 @@ class ArticuloAutocompleteEditor {
 
                 row.DescripcionArticulo = articulo.DescripcionArticulo;
 
+                row.KgHrProducto = parseFloat(articulo.KgsDia) / 24 || 0;
+
+                row.KgHrLinea = parseFloat(articulo.KgsDia) / 24 || 0;
+
+
                 // 🔥 Recalcular KPIs de la fila
                 const app = this.params.context.appProduccion;
 
@@ -2294,10 +2570,13 @@ class ExcelExporterPVC extends ExcelExporterBase {
     }
 
     getSheetName() { return 'Causas Tiempos Muertos PVC'; }
+
     getFileNamePrefix() { return 'Produccion_PVC'; }
+
     getTextFields() { return ['Mes','Fecha','Producto','TRIP','Linea','Turno']; }
 
     getTotalsFontColor() { return 'FF0058A1'; }
+
     getTotalsBorderColor() { return 'FF0058A1'; }
 
     analizarEstructuraColumnas() {
@@ -2529,6 +2808,11 @@ class ExcelExporterPVC extends ExcelExporterBase {
                     colorFondo = '6AA84F';
                     colorTexto = 'FFFFFF';
 
+                }
+
+                else if (grupo.nombre === 'RENDIMIENTO Y OEE') {
+                    colorFondo = '38761D'; // verde más oscuro, distinto de KPIS
+                    colorTexto = 'FFFFFF';
                 }
 
                 celda.fill = {

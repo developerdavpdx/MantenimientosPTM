@@ -340,41 +340,41 @@
                             </div>
                         </div>
 
-                        <!-- TIEMPO DE ESPERA / MTTA Card -->
+                        <!-- TIEMPO DE ESPERA Card -->
                         <div class="col-12 col-md-6 col-xl-4">
                             <div class="card shadow-sm border-0 h-100">
                                 <div class="card-header bg-primary text-white">
                                     <h6 class="card-title mb-0">
-                                        <i class="bi bi-hourglass-split me-2"></i>MTTA
+                                        <i class="bi bi-hourglass-split me-2"></i>Tiempo de Espera
                                     </h6>
-                                    <small class="opacity-75">Mean Time To Attend</small>
+                                    <small class="opacity-75">Order generated to repair start</small>
                                 </div>
                                 <div class="card-body d-flex flex-column justify-content-between">
                                     <p class="card-text text-muted small mb-2">
-                                        Tiempo medio entre la generación de la orden y el inicio de reparación del técnico.
+                                        Suma del tiempo entre la generación de la orden y el inicio de reparación del técnico.
                                     </p>
 
                                     <div style="position:relative; height:160px; width:160px; margin:0 auto;">
-                                        <canvas id="tiempoEsperaDonutChart" role="img" aria-label="Gráfica MTTA">MTTA</canvas>
+                                        <canvas id="tiempoEsperaDonutChart" role="img" aria-label="Gráfica Tiempo de Espera">Tiempo de Espera</canvas>
                                         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-                                            <div class="fw-bold text-primary fs-4" id="metric-mtta">--</div>
-                                            <small class="text-muted" style="font-size:10px;">hrs promedio</small>
+                                            <div class="fw-bold text-primary fs-4" id="metric-tiempoespera">--</div>
+                                            <small class="text-muted" style="font-size:10px;">hrs totales</small>
                                         </div>
                                     </div>
 
                                     <div class="mt-2" style="font-size:12px;">
                                         <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#eda100;display:inline-block;border-radius:2px;margin-right:4px;"></span>ΣT.E (total)</span>
-                                            <span id="lbl-tiempo-espera-total">-- hr</span>
+                                            <span><span style="width:8px;height:8px;background:#eda100;display:inline-block;border-radius:2px;margin-right:4px;"></span>OTs con espera</span>
+                                            <span id="lbl-tiempo-espera-total-ots">--</span>
                                         </div>
                                         <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#f5d78c;display:inline-block;border-radius:2px;margin-right:4px;"></span>OTs con espera</span>
-                                            <span id="lbl-tiempo-espera-total-ots">--</span>
+                                            <span><span style="width:8px;height:8px;background:#f5d78c;display:inline-block;border-radius:2px;margin-right:4px;"></span>Promedio por OT</span>
+                                            <span id="lbl-tiempo-espera-promedio">-- hr</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="card-footer bg-light text-muted small">
-                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="mtta-update">--</span>
+                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="tiempoespera-update">--</span>
                                 </div>
                             </div>
                         </div>
