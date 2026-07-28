@@ -168,6 +168,10 @@ class MantenimientosPreventivoApp {
 
         // Carátula online
         $(document).on('click', '.btn-caratula-online', (e) => {
+            //Asignamos como data atributos las areas del tecnico  
+            let area = $(e.currentTarget).data('area');
+            $('#BuscarTecnico').attr('data-area', area);
+
             this.mantenimientoManager.abrirModalCaratulaOnline($(e.currentTarget));
         })
 
@@ -414,15 +418,22 @@ class MantenimientosPreventivoApp {
 
         // ✅ Cambiar TODAS las function() por arrow functions
         $('#BuscarTecnico').on('input', (e) => {  // ⬅️ Agrega parámetro 'e'
-           const query = $(e.target).val().trim();  // ⬅️ Usa e.target, no this
+            const query = $(e.target).val().trim();
             let planta = this.datos_usuario[0].PLANTA;
-            let usuarioWeb = this.datos_usuario[0].USUARIOWEB;
-            let tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
-            if (query.length >= 2) {
-                this.gestionTecnicos.buscarTecnicos(query, planta, usuarioWeb, tipoUsuario);
-            } else {
-                this.gestionTecnicos.ocultarSugerencias();
+            let posicion = null;
+
+            let area = $(e.target).attr('data-area');
+
+            if (area.includes("PVC")) {
+                posicion = "3,95";       // TÉC DE MTO PVC + TEC HERR PVC
+            } else if (area.includes("PEAD")) {
+                posicion = "100,101";    // TÉC DE MTO PEAD + TEC HERR PEAD
+            } else if (area.includes("PE/INY")) {
+                posicion = "82";         // TÉC DE MTO PE/INY
             }
+
+            this.parametersBuscarTecnica(query, planta, posicion);
+
         });
 
         $('#btnAgregarTecnico').on('click', () => {  // ⬅️ Arrow function
@@ -464,6 +475,15 @@ class MantenimientosPreventivoApp {
             $(this).val(valor);
         });
 
+    }
+
+    parametersBuscarTecnica(query, planta, posicion) {
+
+        if (query.length >= 2) {
+            this.gestionTecnicos.buscarTecnicos(query, planta, posicion);
+        } else {
+            this.gestionTecnicos.ocultarSugerencias();
+        }
     }
 
     configurarEventosFirmas() {

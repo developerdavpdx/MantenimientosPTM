@@ -613,7 +613,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarEmpleados(int? planta,string query, string usuarioWeb, string tipoUsuario)
+        public JsonResult BuscarEmpleados(int? planta,string query, string posicion, string usuarioWeb, string tipoUsuario)
         {
             try
             {
@@ -628,6 +628,7 @@ namespace MantenimientosPTM.Controllers
                 {
                     { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_POSICION", (posicion, ParameterDirection.Input, HanaDbType.Integer) },
                     { "P_USUARIOWEB", (usuarioWeb, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_TIPOUSUARIO", (tipoUsuario, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
