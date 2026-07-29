@@ -37,6 +37,7 @@ class UIManager {
         $("#produccion-collapse").addClass("show");
         $("#RegistroProduccionPVCURL").addClass("selected-item");
         $('body').css('overflow', 'hidden');
+        $(".main-container").css('padding-top', '40px');
         console.log('✅ UI PVC inicializada');
     }
 }
@@ -60,9 +61,17 @@ class GestionProduccionPVC extends GestionProduccionBase {
         this.correctosManager = new CorreosManagerPVC();
         this.correctosManager.setAppProduccion(this);
         this.correctosManager.inicializar();
-
+        EquiposUtil.llenarLineas(
+            this.datos_usuario[0].PLANTA,
+            1,
+            null,
+            "FiltroLinea",
+            null,
+            null,
+            false
+        );
         // 📧 CONSULTAR DATOS
-        this.consultarDatos(null, null, null);
+        this.consultarDatos(null, null, null,null,null);
         console.log('✅ Sistema PVC inicializado');
     }
 
@@ -292,7 +301,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
         return false;
     }
 
-    async consultarDatos(fechaInicio, fechaFin, FiltroTurno, linea, filtroProducto) {
+    async consultarDatos(fechaInicio, fechaFin, FiltroTurno, FiltroLinea, filtroProducto) {
 
         try {
 
@@ -305,7 +314,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 data: {
                     FiltroFechaInicio: fechaInicio,
                     FiltroFechaFin: fechaFin,
-                    FiltroLinea: linea,
+                    FiltroLinea: FiltroLinea,
                     FiltroTurno: FiltroTurno || '',        // 🔥 NUEVO
                     FiltroProducto: filtroProducto || ''   // 🔥 NUEVO
                 }
@@ -322,15 +331,14 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }
 
             // 🔥 Correctivos se agregan ANTES de pintar totales
-            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, linea);
+            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, FiltroLinea);
 
             // 🔥 NUEVO: Preventivos se agregan también
-            const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
+            const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, FiltroLinea);
 
             // ✅ NUEVO: Productos terminados se agregan también
-            let PLANTA = this.datos_usuario[0].PLANTA;
-            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PPVC');
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
+            const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
+            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados,false);
 
             // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
@@ -677,7 +685,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
     // ========================================
     // 🔥 NUEVO: Obtener Producto Terminado
     // ========================================
-    async ObtenerProductoTerminado(planta, FiltroTurno, proceso) {
+    async ObtenerProductoTerminado(FechaInicio, FechaFin, FiltroTurno, proceso) {
 
         try {
 
@@ -688,7 +696,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 url: `/${this.URLBase}/GetProductoTerminadoNewScale`,
                 type: "GET",
                 headers: {
-                    "Planta": planta || this.datos_usuario[0].PLANTA,
+                    "FechaInicio": FechaInicio,
+                    "FechaFin": FechaFin,
+                    "Planta": this.datos_usuario[0].PLANTA,
                     "Turno" : FiltroTurno || null,
                     "Proceso": proceso || ""
                 },
@@ -734,15 +744,19 @@ class GestionProduccionPVC extends GestionProduccionBase {
     }
 
     // ========================================
-    // 🔥 NUEVO: Traer productos terminados y agregarlos al grid
+    // 🔥 NUEVO: Agregar Productos Terminados al Grid
     // ========================================
-    async agregarProductosTerminadosAlGrid(productosTerminados) {
+    async agregarProductosTerminadosAlGrid(productosTerminados,filtroTurno,showwarning = false) {
         try {
             if (!productosTerminados || productosTerminados.length === 0) {
+                if (showwarning)
+                AlertManager.mostrar(
+                    `No se encontraron productos terminados para los filtros seleccionados del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
+                    "warning"
+                );
                 return false;
             }
 
-            // 🔥 Mapear nodos existentes por ID_PRODUCTO_TERMINADO
             const nodosExistentes = new Map();
             this.gridApi.forEachNode(node => {
                 if (node.data?.ID_PRODUCTO_TERMINADO) {
@@ -755,8 +769,10 @@ class GestionProduccionPVC extends GestionProduccionBase {
             const lineasNoEncontradas = [];
             let filasAgregadas = 0;
 
-            productosTerminados.forEach(item => {  // 🔥 iterar sobre productosTerminados directamente
-                const fecha = this.parsearFechaProductoTerminado(item.FechaPesaje);
+            productosTerminados.forEach(item => {
+                // 🔥 CAMBIO: usar la fecha operativa del turno, no la fecha "de reloj"
+                const fecha = this.calcularFechaOperativaTurno(item.FechaPesaje, item.Turno);
+
                 if (!fecha) {
                     console.warn(`⚠️ Producto ${item.Codigo} tiene fecha inválida, será omitido`);
                     return;
@@ -781,7 +797,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 const nodoExistente = nodosExistentes.get(String(item.Id));
 
                 if (nodoExistente) {
-                    // 🔥 YA EXISTE: actualizar los datos de la fila sin duplicar
                     const dataActualizada = { ...nodoExistente.data };
 
                     dataActualizada.Fecha = fecha;
@@ -792,9 +807,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     dataActualizada.PorcentajeScrap = 0;
                     dataActualizada.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
                     dataActualizada.Linea = lineaEncontrada ? lineaEncontrada.label : null;
-                    dataActualizada.Mes = meses[new Date(fecha).getMonth()];
+                    dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
 
-                    // 🔥 NUEVO
                     dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     dataActualizada.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     dataActualizada.KgHrProducto = parseFloat(item.KgsDia) || 0;
@@ -808,7 +822,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     filasActualizadas.push({ rowNode: nodoExistente, data: dataActualizada });
 
                 } else {
-                    // 🔥 NO EXISTE: crear fila nueva
                     const nuevaFila = this.crearFilaVacia();
 
                     nuevaFila.ID_PRODUCTO_TERMINADO = item.Id;
@@ -823,7 +836,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     nuevaFila.Linea = lineaEncontrada ? lineaEncontrada.label : null;
                     nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
 
-                    // 🔥 NUEVO
                     nuevaFila.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     nuevaFila.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     nuevaFila.KgHrProducto = parseFloat(item.KgsDia) || 0;
@@ -839,18 +851,27 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 }
             });
 
-            // 🔥 Aplicar actualizaciones usando applyTransaction update
             if (filasActualizadas.length > 0) {
                 this.gridApi.applyTransaction({
                     update: filasActualizadas.map(f => f.data)
                 });
                 console.log(`🔄 Se actualizaron ${filasActualizadas.length} productos terminados en el grid`);
+
+                AlertManager.mostrar(
+                    `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno || 'de acuerdo a la hora actual'} con información reciente`,
+                    "info"
+                );
             }
 
-            // 🔥 Agregar filas nuevas
             if (filasNuevas.length > 0) {
                 this.gridApi.applyTransaction({ add: filasNuevas });
                 console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados al grid`);
+
+                AlertManager.mostrar(
+                    `✅ Se agregaron ${filasNuevas.length} productos terminados al grid del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
+                    "info"
+                );
+
                 this.inicializarTooltipsGrid();
             }
 
@@ -860,6 +881,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     "warning"
                 );
             }
+
+            this.agregarFilaTotales();
 
             return filasAgregadas > 0 || filasActualizadas.length > 0;
 
@@ -873,7 +896,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
         if (!fechaISO) return null;
 
         try {
-            // 🔥 Tomar directo la parte de fecha del string sin pasar por Date()
             const partesFecha = fechaISO.split('T')[0]; // "2026-07-28"
 
             if (!partesFecha) return null;
@@ -881,7 +903,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
             const [ano, mes, dia] = partesFecha.split('-');
             if (!ano || !mes || !dia) return null;
 
-            // Rechazar fechas anteriores al 2000
             if (parseInt(ano) < 2000) {
                 console.warn(`⚠️ Fecha inválida detectada: ${fechaISO}`);
                 return null;
@@ -891,6 +912,71 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         } catch (error) {
             console.error("Error al parsear fecha:", error);
+            return null;
+        }
+    }
+
+    // parsearFechaProductoTerminado(fechaISO) {
+    //     if (!fechaISO) return null;
+
+    //     try {
+    //         // 🔥 Tomar directo la parte de fecha del string sin pasar por Date()
+    //         const partesFecha = fechaISO.split('T')[0]; // "2026-07-28"
+
+    //         if (!partesFecha) return null;
+
+    //         const [ano, mes, dia] = partesFecha.split('-');
+    //         if (!ano || !mes || !dia) return null;
+
+    //         // Rechazar fechas anteriores al 2000
+    //         if (parseInt(ano) < 2000) {
+    //             console.warn(`⚠️ Fecha inválida detectada: ${fechaISO}`);
+    //             return null;
+    //         }
+
+    //         return `${ano}-${mes}-${dia}`; // YYYY-MM-DD directo, sin new Date()
+
+    //     } catch (error) {
+    //         console.error("Error al parsear fecha:", error);
+    //         return null;
+    //     }
+    // }
+
+
+    // 🔥 NUEVO: Ajusta la fecha "de reloj" a la fecha "operativa del turno"
+    // Turno 2 corre de 4:30pm a 4:30am del día siguiente.
+    // Si el registro cae en la madrugada (00:00 - 4:30am) y es turno 2,
+    // operativamente pertenece al día ANTERIOR (el día en que arrancó el turno).
+
+    //IDENTICO NEW SCALE
+
+    calcularFechaOperativaTurno(fechaISOConHora, turno) {
+
+        if (!fechaISOConHora) return null;
+
+        try {
+            const fecha = new Date(fechaISOConHora);
+            if (isNaN(fecha.getTime())) return null;
+
+            const hora = fecha.getHours();
+            const minutos = fecha.getMinutes();
+
+            const esMadrugada =
+                hora < 4 || (hora === 4 && minutos <= 30);
+
+            // Si es turno 2 y cae en la madrugada, retrocedemos un día
+            if (String(turno) === '2' && esMadrugada) {
+                fecha.setDate(fecha.getDate() - 1);
+            }
+
+            const ano = fecha.getFullYear();
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            const dia = String(fecha.getDate()).padStart(2, '0');
+
+            return `${ano}-${mes}-${dia}`; // YYYY-MM-DD
+
+        } catch (error) {
+            console.error("Error al calcular fecha operativa del turno:", error);
             return null;
         }
     }
@@ -1499,6 +1585,20 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
     agregarFilaTotales() {
 
+        // 🔥 Si ya existe una fila de TOTALES, la quitamos primero
+        // para que siempre quede una sola, y al final de todo
+        let filaTotalesVieja = null;
+
+        this.gridApi.forEachNode(node => {
+            if (node.data?.id === 'TOTALES') {
+                filaTotalesVieja = node.data;
+            }
+        });
+
+        if (filaTotalesVieja) {
+            this.gridApi.applyTransaction({ remove: [filaTotalesVieja] });
+        }
+
         const totales = this.obtenerTotalesGrid();
 
         this.gridApi.applyTransaction({
@@ -1625,22 +1725,49 @@ class GestionProduccionPVC extends GestionProduccionBase {
             console.log('Eliminar fila:', fila.data());
         });
 
-        $('#btnAplicarFiltros').on('click', () => {
-            const fechaInicio = $('#FiltroFechaInicio').val();
-            const fechaFin = $('#FiltroFechaFin').val();
-            const filtroTurno = $('#FiltroTurno').val();
-            const filtroProducto = $('#FiltroProducto').val(); // 🔥 NUEVO
+        $('#btnAplicarFiltros').on('click', async () => {
+            const $btn = $('#btnAplicarFiltros');
+            $btn.prop('disabled', true);
 
-            this.consultarDatos(fechaInicio, fechaFin, filtroTurno, null, filtroProducto);
+            try {
+                const fechaInicio = $('#FiltroFechaInicio').val();
+                const fechaFin = $('#FiltroFechaFin').val();
+                const filtroTurno = $('#FiltroTurno').val();
+                const filtroProducto = $('#FiltroProducto').val(); // 🔥 NUEVO
+                const FiltroLinea = $('#FiltroLinea').val(); // 🔥 NUEVO
+
+                await this.consultarDatos(fechaInicio, fechaFin, filtroTurno, FiltroLinea, filtroProducto);
+            } finally {
+                $btn.prop('disabled', false);
+            }
+        });
+
+        $('#btnAplicarFiltrosPT').on('click', async () => {
+            const $btn = $('#btnAplicarFiltrosPT');
+            $btn.prop('disabled', true);
+
+            try {
+                const fechaInicio = $('#FiltroFechaInicioPT').val();
+                const fechaFin = $('#FiltroFechaFinPT').val();
+                const filtroTurno = $('#FiltroTurnoPT').val();
+                const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
+                const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno,true);
+            } finally {
+                $btn.prop('disabled', false);
+            }
         });
 
         $('#btnLimpiarFiltros').on('click', () => {
             $('#FiltroFechaInicio').val('');
             $('#FiltroFechaFin').val('');
-            $('#FiltroProducto').val(''); // 🔥 NUEVO
+            $('#FiltroProducto').val('');
+            $('#FiltroTurno').val('');
+            $('#FiltroProducto').val('');
+            $('#FiltroLinea').val('');
 
             this.consultarDatos(null, null, null, null, null);
         });
+
 
         $('#FiltroFechaInicio, #FiltroFechaFin')
             .off('change')
@@ -1653,7 +1780,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     FechaTexto
                 );
 
-                this.consultarDatos(fechaInicio, fechaFin, null);
+                this.consultarDatos(fechaInicio, fechaFin, null,null,null);
 
             });
     }
@@ -1740,7 +1867,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     this.cambiosPendientes = [];
 
                     // 🔥 REFRESCAR GRID
-                    await this.consultarDatos(null, null, null);
+                    await this.consultarDatos(null, null, null,null,null);
 
                 } else {
 
@@ -2510,10 +2637,29 @@ class ArticuloAutocompleteEditor {
         this.eDropdown.innerHTML = '';
 
         const rect = this.eInput.getBoundingClientRect();
+        const anchoDropdown = Math.max(rect.width, 450);
+        const altoDropdown = 280; // el mismo max-height que tienes en el CSS
 
-        this.eDropdown.style.top = rect.bottom + 'px';
-        this.eDropdown.style.left = rect.left + 'px';
-        this.eDropdown.style.width = Math.max(rect.width, 450) + 'px';
+        // 🔥 Evitar que se salga por la derecha
+        let left = rect.left;
+        if (left + anchoDropdown > window.innerWidth) {
+            left = window.innerWidth - anchoDropdown - 10;
+        }
+
+        // 🔥 Evitar que se salga por abajo: si no cabe, lo mostramos ARRIBA del input
+        const espacioAbajo = window.innerHeight - rect.bottom;
+        const cabeAbajo = espacioAbajo >= altoDropdown;
+
+        if (cabeAbajo) {
+            this.eDropdown.style.top = rect.bottom + 'px';
+        } else {
+            // lo pegamos arriba del input, pegado a su borde superior
+            const topArriba = rect.top - altoDropdown;
+            this.eDropdown.style.top = Math.max(topArriba, 10) + 'px';
+        }
+
+        this.eDropdown.style.left = left + 'px';
+        this.eDropdown.style.width = anchoDropdown + 'px';
 
         articulos.forEach(articulo => {
 
@@ -2521,9 +2667,9 @@ class ArticuloAutocompleteEditor {
             item.className = 'autocomplete-item';
 
             item.innerHTML = `
-            <strong>${articulo.CodigoArticulo}</strong><br>
-            <small>${articulo.DescripcionArticulo}</small>
-        `;
+        <strong>${articulo.CodigoArticulo}</strong><br>
+        <small>${articulo.DescripcionArticulo}</small>
+    `;
 
             item.addEventListener('click', () => {
 

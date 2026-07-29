@@ -1969,7 +1969,7 @@ class ValidationManager {
 // ========================================
 class EquiposUtil {
 
-    static llenarLineas(Planta, Area, Produccion, Fieldoptiongroup, Fieldfilter, callback = null) {
+    static llenarLineas(Planta, Area, Produccion, Fieldoptiongroup, Fieldfilter, callback = null,valueIsID = true) {
 
         const selectElement = $(`#${Fieldoptiongroup}`);
         const FiltroLinea = $(`#${Fieldfilter}`);
@@ -2024,9 +2024,10 @@ class EquiposUtil {
                         const optgroup1 = $(`<optgroup label="Planta ${planta}"></optgroup>`);
                         const optgroup2 = $(`<optgroup label="Planta ${planta}"></optgroup>`);
 
-                        grouped[planta].forEach(linea => {
-                            optgroup1.append(`<option value="${linea.ID_LINEA}">${linea.LINEA}</option>`);
-                            optgroup2.append(`<option value="${linea.ID_LINEA}">${linea.LINEA}</option>`);
+                        grouped[planta].forEach(linea => { 
+                            const whichvalue = valueIsID ? linea.ID_LINEA : linea.LINEA
+                            optgroup1.append(`<option value="${whichvalue}">${linea.LINEA}</option>`);
+                            optgroup2.append(`<option value="${whichvalue}">${linea.LINEA}</option>`);
                         });
 
                         selectElement.append(optgroup1);

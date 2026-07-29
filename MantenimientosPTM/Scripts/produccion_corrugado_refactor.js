@@ -47,25 +47,32 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
     constructor(datos_usuario, URLBase) {
         super(datos_usuario, URLBase, 110);
-        this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos"; // 🔥 NUEVO
-        this.URLBaseMantenimientosPreventivos = "MantenimientosPreventivos"; // 🔥 NUEVO
-        this.ID_AREA_CORRECTIVOS = (datos_usuario[0].PLANTA == "1" ? 7 : 7); // 🔥 PVC REVISAR PARA PLANTA 2
-        this.ID_AREA_PREVENTIVOS = (datos_usuario[0].PLANTA == "1" ? 7 : 7); // 🔥 NUEVO PREVENTIVOS CORRUGADO
+        this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos";
+        this.URLBaseMantenimientosPreventivos = "MantenimientosPreventivos";
+        this.ID_AREA_CORRECTIVOS = (datos_usuario[0].PLANTA == "1" ? 7 : 7); // 🔥 REVISAR PARA PLANTA 2
+        this.ID_AREA_PREVENTIVOS = (datos_usuario[0].PLANTA == "1" ? 7 : 7); // 🔥 REVISAR PARA PLANTA 2
     }
 
     async inicializar() {
         await this.inicializarCommon();
 
-        // 📧 NUEVO: Inicializar gestor de correos
+        // 📧 Inicializar gestor de correos
         this.correosManager = new CorreosManagerCorrugado();
         this.correosManager.setAppProduccion(this);
         this.correosManager.inicializar();
 
-        // 🔥 CONSULTAR DATOS
-        this.consultarDatos(null, null, null);
+        EquiposUtil.llenarLineas(
+            this.datos_usuario[0].PLANTA,
+            (this.datos_usuario[0].PLANTA == "1" ? 7 : 7),
+            null,
+            "FiltroLinea",
+            null,
+            null,
+            false
+        );
 
-        // 🔧 Inicializar tooltips
-        this.inicializarTooltips();
+        // 🔥 CONSULTAR DATOS
+        this.consultarDatos(null, null, null, null);
 
         console.log('✅ Sistema Corrugado inicializado');
     }
@@ -105,7 +112,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             TiempoMuertoProceso: 0,
             TiempoDisponible: 0,
             TiempoProductivo: 0,
-            // 🔥 RENDIMIENTO Y OEE
             DisponibilidadPorcentaje: 0,
             KgPorTiempoDisponible: 0,
             KgHrLinea: null,
@@ -120,555 +126,152 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         };
     }
 
-    inicializarGrid() {
-        const gridDiv = document.querySelector('#tablaProduccion');
-
-        // ========================================
-        // DEFINICIÓN DE COLUMNAS CORRUGADO
-        // ========================================
-        const columnDefs = [
-            // COLUMNAS BÁSICAS (AZUL CLARO)
+    cargarDatosIniciales() {
+        this.datosOriginales = [
             {
-                headerName: 'DATOS GENERALES',
-                headerClass: 'header-grupo-morado',
-                children: [
-
-                    {
-                        field: 'Mes',
-                        headerName: 'Mes',
-                        editable: false,
-                        width: 150,
-                        pinned: 'left',
-                        cellClass: 'celda-gris',
-                        // ✅ NUEVO: Renderer para mostrar emoji + mes + tooltip + punto pulsante
-                        cellRenderer: params => {
-                            if (!params.value || params.data?.id === 'TOTALES') {
-                                return params.value || '';
-                            }
-
-                            const emoji = params.data?._marcador || '';
-                            const origen = params.data?._origen;
-                            const idRegistro = params.data?.ID_REGISTRO;
-
-                            // 🔥 Mapa de tooltips según origen
-                            const tooltipTexts = {
-                                'CORRECTIVO': 'Mantenimiento Correctivo',
-                                'PREVENTIVO': 'Mantenimiento Preventivo',
-                                'PRODUCTO_TERMINADO': 'Producto Terminado'
-                            };
-
-                            const tooltipText = tooltipTexts[origen] || '';
-                            const tooltipAttr = tooltipText
-                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
-                                : '';
-
-                            // 🔥 NUEVO: Mostrar punto pulsante si es un registro nuevo (sin ID_REGISTRO)
-                            const puntoPulsante = !idRegistro && (origen === 'CORRECTIVO' || origen === 'PREVENTIVO' || origen === 'PRODUCTO_TERMINADO')
-                                ? `<span class="punto-pulso punto-pulso-margin-left"></span>`
-                                : '';
-
-                            return emoji
-                                ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px; cursor: help;" ${tooltipAttr}>${emoji}</span><span>${params.value}</span>${puntoPulsante}</div>`
-                                : params.value;
-                        }
-                    },
-
-                    {
-                        field: 'Fecha',
-                        headerName: 'Fecha',
-                        editable: true,
-                        width: 120,
-                        cellClass: 'celda-azul',
-                        pinned: 'left',
-                        cellEditor: 'agDateCellEditor',
-                        cellEditorParams: {
-                            browserDatePicker: true,
-                            min: '2020-01-01',
-                            max: '2035-12-31'
-                        },
-                        valueFormatter: params => {
-
-                            if (!params.value) return '';
-
-                            return new Date(
-                                params.value
-                            ).toLocaleDateString('es-MX');
-                        }
-                    },
-
-                    {
-                        field: 'Linea',
-                        headerName: 'Línea',
-                        editable: true,
-                        width: 130,
-                        cellClass: 'celda-azul',
-                        pinned: 'left',
-                        cellEditor: 'agSelectCellEditor',
-                        cellEditorParams: () => {
-                            return {
-                                values:
-                                    this.listaLineas.map(
-                                        x => x.label
-                                    )
-                            };
-                        },
-                        valueFormatter: params => {
-
-                            if (params.data?.id === 'TOTALES') {
-                                return '';
-                            }
-
-                            return params.value || '';
-                        }
-                    },
-
-                    {
-                        field: 'Corrugador',
-                        headerName: 'Corrugador',
-                        editable: true,
-                        width: 120,
-                        cellClass: 'celda-azul',
-                        pinned: 'left',
-                        cellEditor: 'agSelectCellEditor',
-                        cellEditorParams: {
-                            values: [
-                                '60-30',
-                                '08-30'
-                            ]
-                        },
-                        valueFormatter: params => {
-
-                            if (params.data?.id === 'TOTALES') {
-                                return '';
-                            }
-
-                            return params.value || '';
-                        }
-                    },
-
-                    {
-                        field: 'Producto',
-                        headerName: 'Producto',
-                        editable: true,
-                        width: 160,
-                        cellClass: 'celda-azul',
-                        pinned: 'left',
-                        cellEditor:
-                            'articuloAutocompleteEditor',
-                        valueFormatter: params => {
-
-                            if (params.data?.id === 'TOTALES') {
-                                return '';
-                            }
-
-                            return params.value || '';
-                        }
-                    },
-
-                    {
-                        field: 'Turno',
-                        headerName: 'Turno',
-                        editable: true,
-                        width: 90,
-                        cellClass: 'celda-azul',
-                        pinned: 'left',
-                        valueFormatter: params => {
-
-                            if (params.data?.id === 'TOTALES') {
-                                return '';
-                            }
-
-                            return params.value || '';
-                        }
-                    },
-
-                    {
-                        field: 'Grupo',
-                        headerName: 'Grupo',
-                        editable: true,
-                        width: 90,
-                        cellClass: 'celda-azul',
-                        pinned: 'left',
-                        cellEditor: 'agSelectCellEditor',
-                        cellEditorParams: {
-                            values: [
-                                'A',
-                                'B',
-                                'C',
-                                'D'
-                            ]
-                        },
-                        valueFormatter: params => {
-
-                            if (params.data?.id === 'TOTALES') {
-                                return '';
-                            }
-
-                            return params.value || '';
-                        }
-                    }
-
-                ]
-            },
-
-            // COLUMNAS AZUL CLARO (Producción)
-            {
-                headerName: 'PRODUCCIÓN',
-                headerClass: 'header-grupo-amarillo',
-                children: [
-
-                    {
-                        field: 'PesoMinimo',
-                        headerName: 'PESO MÍNIMO',
-                        editable: false,
-                        width: 120,
-                        cellClass: 'celda-gris',
-                        valueFormatter: params =>
-                            this.formatearNumero(params.value)
-                    },
-
-                    {
-                        field: 'TRLiberados',
-                        headerName: 'TR LIBERADOS',
-                        width: 120,
-                        ...this.getColumnaNumerica('celda-azul')
-                    },
-
-                    {
-                        field: 'ProduccionNeta',
-                        headerName: 'PRODUCCIÓN NETA',
-                        width: 140,
-                        ...this.getColumnaNumerica('celda-azul')
-                    },
-
-                    {
-                        field: 'PesoEstandar',
-                        headerName: 'PESO ESTÁNDAR',
-                        editable: false,
-                        width: 140,
-                        cellClass: 'celda-verde-formula',
-                        valueFormatter: params =>
-                            this.formatearNumero(params.value)
-                    },
-
-                    {
-                        field: 'PorcentajeSobrepeso',
-                        headerName: '% SOBREPESO',
-                        editable: false,
-                        width: 120,
-                        cellClass: 'celda-verde-formula',
-                        valueFormatter: params =>
-                            this.formatearNumero(params.value)
-                    },
-
-                    {
-                        field: 'ScrapSinCorteSierra',
-                        headerName: 'SCRAP S/CORTES SIERRA',
-                        width: 150,
-                        ...this.getColumnaNumerica('celda-azul')
-                    },
-
-                    {
-                        field: 'ScrapCorteSierra',
-                        headerName: 'SCRAP CORTES SIERRA',
-                        width: 150,
-                        ...this.getColumnaNumerica('celda-azul')
-                    },
-
-                    {
-                        field: 'ScrapTotal',
-                        headerName: 'SCRAP TOTAL',
-                        editable: false,
-                        width: 130,
-                        cellClass: 'celda-verde-formula',
-                        valueFormatter: params =>
-                            this.formatearNumero(params.value)
-                    },
-
-                    {
-                        field: 'PorcentajeScrapSinCorte',
-                        headerName: '% SCRAP S/CORTE',
-                        editable: false,
-                        width: 130,
-                        cellClass: 'celda-verde-formula',
-                        valueFormatter: params =>
-                            this.formatearNumero(params.value)
-                    },
-
-                    {
-                        field: 'PorcentajeScrapCorte',
-                        headerName: '% SCRAP CORTE',
-                        editable: false,
-                        width: 130,
-                        cellClass: 'celda-verde-formula',
-                        valueFormatter: params =>
-                            this.formatearNumero(params.value)
-                    },
-
-                    {
-                        field: 'KgReproceso',
-                        headerName: 'KG REPROCESO',
-                        width: 130,
-                        ...this.getColumnaNumerica('celda-azul')
-                    },
-
-                    {
-                        field: 'Carbonato',
-                        headerName: 'CARBONATO',
-                        width: 120,
-                        ...this.getColumnaNumerica('celda-azul')
-                    }
-
-                ]
-            },
-
-            // ========================================
-            // DISPONIBILIDAD
-            // ========================================
-            {
-                headerName: 'DISPONIBILIDAD',
-                headerClass: 'header-grupo-azul',
-                children: [
-                    {
-                        field: 'HorasProgramadas',
-                        headerName: 'HORAS PROGRAMADAS',
-                        width: 140,
-                        ...this.getColumnaNumerica('celda-azul')
-                    }
-                ]
-            },
-            // ========================================
-            // TIEMPO NO DISPONIBLE
-            // ========================================
-            {
-                headerName: 'TIEMPO NO DISPONIBLE',
-                headerClass: 'header-grupo-rosa',
-                children: [
-
-                    {
-                        field: 'MantenimientoPreventivo',
-                        headerName: 'MANTENIMIENTO PREVENTIVO',
-                        width: 140,
-                        ...this.getColumnaNumerica('celda-rosa')
-                    },
-
-                    {
-                        field: 'ControlInventarios',
-                        headerName: 'CONTROL INVENTARIOS',
-                        width: 140,
-                        ...this.getColumnaNumerica('celda-rosa')
-                    },
-
-                    {
-                        field: 'FaltaEnergia',
-                        headerName: 'FALTA ENERGÍA ELÉCTRICA',
-                        width: 140,
-                        ...this.getColumnaNumerica('celda-rosa')
-                    },
-
-                    {
-                        field: 'FaltaMateriaPrima',
-                        headerName: 'FALTA MATERIA PRIMA E INSUMOS',
-                        width: 170,
-                        ...this.getColumnaNumerica('celda-rosa')
-                    },
-
-                    {
-                        field: 'PreparacionCambio',
-                        headerName: 'PREPARACIÓN DE LÍNEA',
-                        width: 150,
-                        ...this.getColumnaNumerica('celda-rosa')
-                    },
-
-                    {
-                        field: 'ArranqueEstabilizacion',
-                        headerName: 'ARRANQUE Y ESTABILIZACIÓN',
-                        width: 150,
-                        ...this.getColumnaNumerica('celda-rosa')
-                    },
-
-                    {
-                        field: 'TiempoMttoCorrectivosArranque',
-                        headerName: 'MTTO CORRECTIVOS ARRANQUE',
-                        width: 170,
-                        ...this.getColumnaNumerica('celda-rosa')
-                    }
-
-                ]
-            },
-
-            // GRUPO: TIEMPO NO PRODUCTIVO (VERDE CLARO)
-            {
-                headerName: 'TIEMPO NO PRODUCTIVO',
-                headerClass: 'header-grupo-verde-claro',
-                children: [
-                    {
-                        field: 'TiempoMuertoCorrectivos',
-                        headerName: 'TIEMPO MUERTO POR CORRECTIVOS',
-                        width: 110,
-                        ...this.getColumnaNumerica('celda-verde-claro')
-                    },
-                    {
-                        field: 'CambioMoldeSetupExcesos',
-                        headerName: 'CAMBIO DE MOLDE (SETUP) EXCESOS',
-                        width: 170,
-                        ...this.getColumnaNumerica('celda-verde-claro')
-                    },
-                    {
-                        field: 'TiempoMuertoArrancar',
-                        headerName: 'TIEMPO MUERTO POR ARRANCAR',
-                        width: 110,
-                        ...this.getColumnaNumerica('celda-verde-claro')
-                    },
-                    {
-                        field: 'TiempoMuertoProceso',
-                        headerName: 'TIEMPO MUERTO PROCESO',
-                        width: 110,
-                        ...this.getColumnaNumerica('celda-verde-claro')
-                    }
-                ]
-            },
-
-            // KPIS
-            {
-                headerName: 'KPIs',
-                headerClass: 'header-grupo-verde',
-                children: [
-                    {
-                        field: 'TiempoDisponible',
-                        headerName: 'TIEMPO DISPONIBLE',
-                        editable: false,
-                        width: 110,
-                        cellClass: 'celda-azul-claro',
-                        valueFormatter: params => this.formatearNumero(params.value)
-                    },
-                    {
-                        field: 'TiempoProductivo',
-                        headerName: 'TIEMPO PRODUCTIVO',
-                        editable: false,
-                        width: 110,
-                        cellClass: 'celda-verde-fuerte',
-                        valueFormatter: params => this.formatearNumero(params.value)
-                    }
-                ]
-            },
-            // RENDIMIENTO Y OEE
-            {
-                headerName: 'RENDIMIENTO Y OEE',
-                headerClass: 'header-grupo-verde-fuerte',
-                children: [
-                    { field: 'DisponibilidadPorcentaje', headerName: 'DISPONIBILIDAD %', editable: false, width: 130, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
-                    { field: 'KgPorTiempoDisponible', headerName: 'KG POR TIEMPO DISPONIBLE', editable: false, width: 150, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearNumero(params.value) },
-                    { field: 'KgHrLinea', headerName: 'KG/HR X LINEA (capacidad instalada)', editable: false, width: 150, cellClass: 'celda-rosa', valueFormatter: params => this.formatearNumero(params.value) },
-                    { field: 'KgHrProducto', headerName: 'KG/HR X PRODUCTO (historial)', editable: false, width: 150, cellClass: 'celda-rosa', valueFormatter: params => this.formatearNumero(params.value) },
-                    { field: 'KgNetosHrReales', headerName: 'KG NETOS/HR REALES (tiempo productivo)', editable: false, width: 150, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearNumero(params.value) },
-                    { field: 'PorcentajeRendimiento', headerName: '% RENDIMIENTO', editable: false, width: 120, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
-                    { field: 'PorcentajeCalidad', headerName: '% CALIDAD', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
-                    { field: 'PorcentajeOEE', headerName: '% OEE', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
-                    { field: 'ObjetivoEficiencia', headerName: 'OBJETIVO DE EFICIENCIA %', width: 140, ...this.getColumnaNumerica('celda-amarilla') },
-                    { field: 'EficienciaOperativa', headerName: 'EFICIENCIA OPERATIVA', editable: false, width: 130, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) }
-                ]
+                id: 1,
+                OTMP: null,
+                OTMC: null,
+                ID_PRODUCTO_TERMINADO: null,
+                Mes: null,
+                Fecha: null,
+                Linea: null,
+                Corrugador: null,
+                Producto: null,
+                Turno: null,
+                Grupo: null,
+                PesoMinimo: 0,
+                TRLiberados: null,
+                ProduccionNeta: null,
+                PesoEstandar: 0,
+                PorcentajeSobrepeso: 0,
+                ScrapSinCorteSierra: null,
+                ScrapCorteSierra: null,
+                ScrapTotal: 0,
+                PorcentajeScrapSinCorte: 0,
+                PorcentajeScrapCorte: 0,
+                KgReproceso: null,
+                Carbonato: null,
+                HorasProgramadas: null,
+                MantenimientoPreventivo: null,
+                ControlInventarios: null,
+                FaltaEnergia: null,
+                FaltaMateriaPrima: null,
+                PreparacionCambio: null,
+                ArranqueEstabilizacion: null,
+                TiempoMttoCorrectivosArranque: null,
+                TiempoMuertoCorrectivos: null,
+                CambioMoldeSetupExcesos: null,
+                TiempoMuertoArrancar: null,
+                TiempoMuertoProceso: null,
+                TiempoDisponible: 0,
+                TiempoProductivo: 0,
+                DisponibilidadPorcentaje: 0,
+                KgPorTiempoDisponible: 0,
+                KgHrLinea: null,
+                KgHrProducto: null,
+                KgNetosHrReales: 0,
+                PorcentajeRendimiento: 0,
+                PorcentajeCalidad: 0,
+                PorcentajeOEE: 0,
+                PorcentajeEficienciaProducto: 0,
+                ObjetivoEficiencia: 91,
+                EficienciaOperativa: 0
             }
         ];
 
-        this.columnDefs = columnDefs;
+        this.inicializarGrid();
 
-        const gridOptions = {
-            domLayout: 'autoHeight',
-            columnDefs: columnDefs,
-            context: {
-                datos_usuario: this.datos_usuario,
-                gestionArticulos: this.gestionArticulos,
-                URLBase: this.URLBase,
-                appProduccion: this
-            },
-            rowData: this.datosOriginales,
-            components: {
-                articuloAutocompleteEditor: ArticuloAutocompleteEditor
-            },
-            defaultColDef: {
-                sortable: true,
-                filter: true,
-                resizable: true,
-                editable: (params) => {
+        setTimeout(() => {
+            $("#tablaProduccion").removeClass("d-none");
+        }, 1000);
+    }
 
-                    if (params.data?.id === 'TOTALES') {
-                        return false;
-                    }
+    cargarDatosGrid(datos) {
 
-                    const readonlyFields = [
+        if (datos != null) {
 
-                        // PRODUCCIÓN
+            const datosFormateados = datos.map(item => {
 
-                        'PesoMinimo',
+                const fila = {
+                    id: item.ID_REGISTRO || Date.now(),
+                    ID_REGISTRO: item.ID_REGISTRO,
+                    OTMC: item.OTMC,
+                    OTMP: item.OTMP,
+                    ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
+                    Mes: item.MES,
+                    Fecha: item.FECHA,
+                    Linea: item.LINEA,
+                    Corrugador: item.CORRUGADOR,
+                    Producto: item.PRODUCTO,
+                    Turno: item.TURNO,
+                    Grupo: item.GRUPO,
+                    PesoMinimo: item.PESO_MINIMO ?? 0,
+                    TRLiberados: item.TRLIBERADOS,
+                    ProduccionNeta: item.PRODUCCION_NETA,
+                    PesoEstandar: item.PESO_ESTANDAR,
+                    PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
+                    ScrapSinCorteSierra: item.SCRAP_SIN_CORTE_SIERRA,
+                    ScrapCorteSierra: item.SCRAP_CORTE_SIERRA,
+                    ScrapTotal: item.SCRAP_TOTAL,
+                    PorcentajeScrapSinCorte: item.PORCENTAJE_SCRAP_SIN_CORTE,
+                    PorcentajeScrapCorte: item.PORCENTAJE_SCRAP_CORTE,
+                    KgReproceso: item.KG_REPROCESO,
+                    Carbonato: item.CARBONATO,
+                    HorasProgramadas: item.HORAS_PROGRAMADAS,
+                    MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
+                    ControlInventarios: item.CONTROL_INVENTARIOS,
+                    FaltaEnergia: item.FALTA_ENERGIA,
+                    FaltaMateriaPrima: item.FALTA_MATERIA_PRIMA,
+                    PreparacionCambio: item.PREPARACION_CAMBIO,
+                    ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION,
+                    TiempoMttoCorrectivosArranque: item.TIEMPO_MTTO_CORRECTIVOS_ARRANQUE,
+                    TiempoMuertoCorrectivos: item.TIEMPO_MUERTO_CORRECTIVOS,
+                    CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
+                    TiempoMuertoArrancar: item.TIEMPO_MUERTO_ARRANCAR,
+                    TiempoMuertoProceso: item.TIEMPO_MUERTO_PROCESO,
+                    TiempoDisponible: item.TIEMPO_DISPONIBLE,
+                    TiempoProductivo: item.TIEMPO_PRODUCTIVO,
+                    KgHrLinea: item.KG_HR_LINEA,
+                    KgHrProducto: item.KG_HR_PRODUCTO,
+                    ObjetivoEficiencia: item.OBJETIVO_EFICIENCIA ?? 91,
+                    DisponibilidadPorcentaje: item.DISPONIBILIDAD_PORCENTAJE,
+                    KgPorTiempoDisponible: item.KG_POR_TIEMPO_DISPONIBLE,
+                    KgNetosHrReales: item.KG_NETOS_HR_REALES,
+                    PorcentajeRendimiento: item.PORCENTAJE_RENDIMIENTO,
+                    PorcentajeCalidad: item.PORCENTAJE_CALIDAD,
+                    PorcentajeOEE: item.PORCENTAJE_OEE,
+                    PorcentajeEficienciaProducto: item.PORCENTAJE_EFICIENCIA_PRODUCTO,
+                    EficienciaOperativa: item.EFICIENCIA_OPERATIVA
+                };
 
-                        'PesoEstandar',
-
-                        'PorcentajeSobrepeso',
-
-                        'ScrapTotal',
-
-                        'PorcentajeScrapSinCorte',
-
-                        'PorcentajeScrapCorte',
-
-                        // KPIS
-
-                        'TiempoDisponible',
-
-                        'TiempoProductivo',
-
-                        'Mes'  // ✅ NUEVO: No editable si queremos que muestre emoji
-
-                    ];
-
-                    return !readonlyFields.includes(
-                        params.colDef.field
-                    );
-
-                },
-                wrapHeaderText: true,
-                autoHeaderHeight: true
-            },
-            undoRedoCellEditing: true,
-            undoRedoCellEditingLimit: 20,
-            rowSelection: 'multiple',
-            animateRows: true,
-            suppressHorizontalScroll: false,
-            groupHeaderHeight: 40,
-            headerHeight: 80,
-            onCellValueChanged: (event) => this.onCellChanged(event),
-            onGridReady: (params) => {
-                this.gridApi = params.api;
-                this.gridColumnApi = params.columnApi;
-                this.inicializarTooltipsGrid(); // 🔥 NUEVO
-            },
-            getRowStyle: params => {
-                if (params.data && params.data.id === 'TOTALES') {
-                    return {
-                        fontWeight: 'bold',
-                        backgroundColor: '#e9ecef',
-                        borderTop: '2px solid #0058a1',
-                        pointerEvents: 'none'
-                    };
-                }
-            },
-
-            getRowClass: params => {
-
-                if (params.data?.id === 'TOTALES') {
-                    return '';
+                // Identificar origen y asignar emoji
+                if (item.OTMC && item.OTMC.toString().trim() !== '') {
+                    fila._origen = 'CORRECTIVO';
+                    fila._marcador = '🔧';
+                    fila._rowClass = 'row-correctivo';
+                } else if (item.OTMP && item.OTMP.toString().trim() !== '') {
+                    fila._origen = 'PREVENTIVO';
+                    fila._marcador = '🛠️';
+                    fila._rowClass = 'row-preventivo';
+                } else if (item.ID_PRODUCTO_TERMINADO && item.ID_PRODUCTO_TERMINADO.toString().trim() !== '') {
+                    fila._origen = 'PRODUCTO_TERMINADO';
+                    fila._marcador = '📦';
+                    fila._rowClass = 'row-producto-terminado';
                 }
 
-                if (params.data?._rowClass) {
-                    return params.data._rowClass;
-                }
+                return fila;
+            });
 
-                return '';
-            },
-        };
+            if (datosFormateados.length > 0) {
+                this.gridApi.setRowData(datosFormateados);
+                this.inicializarTooltipsGrid();
+                return true;
+            }
+        }
 
-        new agGrid.Grid(gridDiv, gridOptions);
+        this.gridApi.setRowData([]);
+        return false;
     }
 
     async consultarDatos(fechaInicio, fechaFin, linea, FiltroTurno) {
@@ -684,50 +287,43 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 data: {
                     FiltroFechaInicio: fechaInicio,
                     FiltroFechaFin: fechaFin,
-                    FiltroLinea: linea
+                    FiltroLinea: linea,
+                    FiltroTurno: FiltroTurno || ''
                 }
             });
 
             let hayDatosOriginales = false;
 
             if (response.Status === "OK") {
-
                 const datos = JSON.parse(response.Data);
                 hayDatosOriginales = this.cargarDatosGrid(datos);
-
             } else {
-
                 AlertManager.mostrar(response.Message, "info");
                 hayDatosOriginales = this.cargarDatosGrid(null);
             }
 
-            // 🔥 Correctivos se agregan ANTES de pintar totales
+            // Correctivos ANTES de totales
             const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, linea);
 
-            // 🔥 NUEVO: Preventivos se agregan también
+            // Preventivos también
             const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
 
-            // ✅ NUEVO: Productos terminados se agregan también
-            let PLANTA = this.datos_usuario[0].PLANTA;
-            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PCORR');
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
+            // ✅ FIX: Pasar fechas a ObtenerProductoTerminado
+            const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, FiltroTurno, 'PCORR');
+            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
 
-            // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
+            // Sin datos: mostrar placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
                 this.gridApi.setRowData(this.datosOriginales);
             }
 
-            // 🔥 AHORA sí, una sola vez, al final de todo
+            // Una sola vez, al final
             this.agregarFilaTotales();
 
         } catch (error) {
 
             console.error(error);
-
-            AlertManager.mostrar(
-                "Error al consultar datos",
-                "danger"
-            );
+            AlertManager.mostrar("Error al consultar datos", "danger");
 
         } finally {
 
@@ -737,37 +333,32 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             }, 1000);
 
         }
-
     }
 
+    // ========================================
+    // ✅ FIX: agregarFilaTotales idempotente — siempre quita la vieja y agrega al final
+    // ========================================
     agregarFilaTotales() {
 
-        // 🔥 NUEVO: evitar agregar TOTALES duplicado
-        let existeTotales = false;
+        let filaTotalesVieja = null;
 
         this.gridApi.forEachNode(node => {
             if (node.data?.id === 'TOTALES') {
-                existeTotales = true;
+                filaTotalesVieja = node.data;
             }
         });
 
-        if (existeTotales) {
-            this.recalcularTotales(); // ya existe, solo recalculamos
-            return;
+        if (filaTotalesVieja) {
+            this.gridApi.applyTransaction({ remove: [filaTotalesVieja] });
         }
 
-        const totales = this.obtenerTotalesGrid(); // 🔥 reutilizamos el método que ya calcula todo
-
-        this.gridApi.applyTransaction({
-            add: [totales]
-        });
-
+        const totales = this.obtenerTotalesGrid();
+        this.gridApi.applyTransaction({ add: [totales] });
     }
 
     // ========================================
-    // 🔥 NUEVO: Traer correctivos cerrados y agregarlos al grid
+    // Traer correctivos cerrados
     // ========================================
-
     async traerCorrectivosCerrados(fechaInicio, fechaFin, linea) {
 
         try {
@@ -785,20 +376,18 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     FiltroSolicitud: "",
                     FiltroFechaInicio: fechaInicio,
                     FiltroFechaFin: fechaFin,
-                    FiltroArea: this.ID_AREA_CORRECTIVOS, // 🔥 7 = Corrugado
+                    FiltroArea: this.ID_AREA_CORRECTIVOS,
                     FiltroLinea: linea || "",
                     FiltroOrdenTrabajo: "",
                     FiltroPlanta: this.datos_usuario[0].PLANTA,
                     FiltroEstatusOT: "4",
-                    FiltroExcluirSincronizadosPEADCORR: "S" // ⚠️ nuevo parámetro, falta agregarlo al SP
+                    FiltroExcluirSincronizadosPEADCORR: "S"
                 }
             });
 
             const correctivos = response.data || [];
 
-            if (correctivos.length === 0) {
-                return false;
-            }
+            if (correctivos.length === 0) return false;
 
             return this.agregarCorrectivosAlGrid(correctivos);
 
@@ -813,23 +402,22 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         }
     }
 
+    // ✅ FIX: normalizar String().trim() en el Set para evitar duplicados falsos
     agregarCorrectivosAlGrid(correctivos) {
 
         const otmcYaEnGrid = new Set();
 
         this.gridApi.forEachNode(node => {
             if (node.data?.OTMC) {
-                otmcYaEnGrid.add(node.data.OTMC);
+                otmcYaEnGrid.add(String(node.data.OTMC).trim());
             }
         });
 
         const correctivosNuevos = correctivos.filter(
-            item => !otmcYaEnGrid.has(item.NumeroOrden)
+            item => !otmcYaEnGrid.has(String(item.NumeroOrden).trim())
         );
 
-        if (correctivosNuevos.length === 0) {
-            return false;
-        }
+        if (correctivosNuevos.length === 0) return false;
 
         const filasNuevas = [];
         const lineasNoEncontradas = [];
@@ -843,7 +431,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
             nuevaFila.TiempoMuertoCorrectivos = GlobalUtil.calcularDiferenciaHoras(item.FechaCreacion, item.FechaCierre) || 0;
 
-            // ✅ NUEVO: Marcar como correctivo
             nuevaFila._origen = 'CORRECTIVO';
             nuevaFila._marcador = '🔧';
             nuevaFila._rowClass = 'row-correctivo';
@@ -865,12 +452,13 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             }
 
             this.recalcularFila(nuevaFila);
-
             filasNuevas.push(nuevaFila);
         });
 
-        this.gridApi.applyTransaction({ add: filasNuevas });
-        this.inicializarTooltipsGrid(); // 🔥 NUEVO
+        if (filasNuevas.length > 0) {
+            this.gridApi.applyTransaction({ add: filasNuevas });
+            this.inicializarTooltipsGrid();
+        }
 
         if (lineasNoEncontradas.length > 0) {
             AlertManager.mostrar(
@@ -883,21 +471,16 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
     }
 
     parsearFechaCorrectivo(fechaTexto) {
-
         if (!fechaTexto) return null;
-
         const [fechaParte] = fechaTexto.split(' ');
         const [dia, mes, anio] = fechaParte.split('/');
-
         if (!dia || !mes || !anio) return null;
-
         return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
     }
 
     // ========================================
-    // 🔥 NUEVO: Traer preventivos cerrados y agregarlos al grid
+    // Traer preventivos cerrados
     // ========================================
-
     async traerPreventivosCerrados(fechaInicio, fechaFin, linea) {
 
         try {
@@ -922,17 +505,15 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     FiltroEstatusOT: "4",
                     FiltroUsuario: "",
                     FiltroTipoUsuario: this.datos_usuario[0].TIPO_USUARIO,
-                    FiltroExcluirSincronizadosPEADCORR: "S"  // 🔥 Excluir Corrugado
+                    FiltroExcluirSincronizadosPEADCORR: "S"
                 }
             });
 
             const preventivos = response.data || [];
 
-            if (preventivos.length === 0) {
-                return false; // 🔥 nada que agregar
-            }
+            if (preventivos.length === 0) return false;
 
-            return this.agregarPreventivoAlGrid(preventivos); // 🔥 ahora retorna bool
+            return this.agregarPreventivoAlGrid(preventivos);
 
         } catch (error) {
 
@@ -951,17 +532,15 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
         this.gridApi.forEachNode(node => {
             if (node.data?.OTMP) {
-                otmpYaEnGrid.add(node.data.OTMP);
+                otmpYaEnGrid.add(String(node.data.OTMP).trim());
             }
         });
 
         const preventivosNuevos = preventivos.filter(
-            item => !otmpYaEnGrid.has(item.NumeroOrden)
+            item => !otmpYaEnGrid.has(String(item.NumeroOrden).trim())
         );
 
-        if (preventivosNuevos.length === 0) {
-            return false;
-        }
+        if (preventivosNuevos.length === 0) return false;
 
         const filasNuevas = [];
         const lineasNoEncontradas = [];
@@ -975,7 +554,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             nuevaFila.Fecha = this.parsearFechaPreventivo(item.FechaInicioMantenimiento);
             nuevaFila.MantenimientoPreventivo = parseFloat(item.DuracionHrs) || 0;
 
-            // ✅ NUEVO: Marcar como preventivo
             nuevaFila._origen = 'PREVENTIVO';
             nuevaFila._marcador = '🛠️';
             nuevaFila._rowClass = 'row-preventivo';
@@ -997,12 +575,13 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             }
 
             this.recalcularFila(nuevaFila);
-
             filasNuevas.push(nuevaFila);
         });
 
-        this.gridApi.applyTransaction({ add: filasNuevas });
-        this.inicializarTooltipsGrid(); // 🔥 NUEVO
+        if (filasNuevas.length > 0) {
+            this.gridApi.applyTransaction({ add: filasNuevas });
+            this.inicializarTooltipsGrid();
+        }
 
         if (lineasNoEncontradas.length > 0) {
             AlertManager.mostrar(
@@ -1014,29 +593,20 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         return true;
     }
 
-    // 🔥 Convierte fecha del preventivo
-    // FechaInicioMantenimiento viene en formato "DD/MM/YYYY" desde el SP
     parsearFechaPreventivo(fechaTexto) {
-
         if (!fechaTexto) return null;
-
         try {
-            // Si es un ISO date (YYYY-MM-DD o con T)
             if (fechaTexto.includes('-')) {
                 const fecha = new Date(fechaTexto);
                 if (isNaN(fecha.getTime())) return null;
-
                 const ano = fecha.getFullYear();
                 const mes = String(fecha.getMonth() + 1).padStart(2, '0');
                 const dia = String(fecha.getDate()).padStart(2, '0');
                 return `${ano}-${mes}-${dia}`;
             }
-
-            // Si es formato DD/MM/YYYY
             const [dia, mes, anio] = fechaTexto.split('/');
             if (!dia || !mes || !anio) return null;
-
-            return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`; // YYYY-MM-DD
+            return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
         } catch (error) {
             console.error("Error al parsear fecha preventivo:", error);
             return null;
@@ -1044,40 +614,68 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
     }
 
     // ========================================
-    // 🔥 NUEVO: Obtener Producto Terminado
+    // ✅ NUEVO: Fecha operativa según turno (idéntico a PVC)
+    // Turno 2 corre 4:30pm → 4:30am del día siguiente.
+    // Si cae en madrugada (00:00-4:30am) y es turno 2, retrocede un día.
     // ========================================
-    async ObtenerProductoTerminado(planta, FiltroTurno, proceso) {
+    calcularFechaOperativaTurno(fechaISOConHora, turno) {
+        if (!fechaISOConHora) return null;
+        try {
+            const fecha = new Date(fechaISOConHora);
+            if (isNaN(fecha.getTime())) return null;
+
+            const hora = fecha.getHours();
+            const minutos = fecha.getMinutes();
+            const esMadrugada = hora < 4 || (hora === 4 && minutos <= 30);
+
+            if (String(turno) === '2' && esMadrugada) {
+                fecha.setDate(fecha.getDate() - 1);
+            }
+
+            const ano = fecha.getFullYear();
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            const dia = String(fecha.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+
+        } catch (error) {
+            console.error("Error al calcular fecha operativa del turno:", error);
+            return null;
+        }
+    }
+
+    // ========================================
+    // ✅ FIX: FechaInicio y FechaFin en firma y headers
+    // ========================================
+    async ObtenerProductoTerminado(FechaInicio, FechaFin, FiltroTurno, proceso) {
 
         try {
 
             GlobalUtil.mostrarLoader(true);
 
-            // ✅ CORRECCIÓN: Usar los parámetros correctos
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetProductoTerminadoNewScale`,
                 type: "GET",
                 headers: {
-                    "Planta": planta || this.datos_usuario[0].PLANTA,
+                    "FechaInicio": FechaInicio,
+                    "FechaFin": FechaFin,
+                    "Planta": this.datos_usuario[0].PLANTA,
                     "Turno": FiltroTurno || null,
                     "Proceso": proceso || ""
                 },
                 dataType: 'json'
             });
 
-            // ✅ AJUSTE: Validar estructura correcta
             let productosTerminados = [];
 
             if (response && response.reportesProdTerm && Array.isArray(response.reportesProdTerm)) {
                 productosTerminados = response.reportesProdTerm;
             } else if (response && response.Data) {
-                // Si viene en response.Data, intentar parsear si es string
                 if (typeof response.Data === 'string') {
                     productosTerminados = JSON.parse(response.Data);
                 } else {
                     productosTerminados = response.Data;
                 }
             } else if (Array.isArray(response)) {
-                // Si la respuesta es directamente un array
                 productosTerminados = response;
             }
 
@@ -1096,22 +694,27 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             return [];
 
         } finally {
-
             GlobalUtil.mostrarLoader(false);
-
         }
     }
 
     // ========================================
-    // 🔥 NUEVO: Traer productos terminados y agregarlos al grid
+    // ✅ FIJOS: bug dataActualizada→nuevaFila, /24 en KgsDia,
+    //           calcularFechaOperativaTurno, firma con filtroTurno+showwarning
     // ========================================
-    async agregarProductosTerminadosAlGrid(productosTerminados) {
+    async agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, showwarning = false) {
+
         try {
+
             if (!productosTerminados || productosTerminados.length === 0) {
+                if (showwarning)
+                    AlertManager.mostrar(
+                        `No se encontraron productos terminados para los filtros del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
+                        "warning"
+                    );
                 return false;
             }
 
-            // 🔥 Mapear nodos existentes por ID_PRODUCTO_TERMINADO
             const nodosExistentes = new Map();
             this.gridApi.forEachNode(node => {
                 if (node.data?.ID_PRODUCTO_TERMINADO) {
@@ -1128,7 +731,10 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
             productosTerminados.forEach(item => {
-                const fecha = this.parsearFechaProductoTerminado(item.FechaPesaje);
+
+                // ✅ FIX: usar calcularFechaOperativaTurno igual que PVC
+                const fecha = this.calcularFechaOperativaTurno(item.FechaPesaje, item.Turno);
+
                 if (!fecha) {
                     console.warn(`⚠️ Producto ${item.Codigo} tiene fecha inválida, será omitido`);
                     return;
@@ -1150,7 +756,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 const nodoExistente = nodosExistentes.get(String(item.Id));
 
                 if (nodoExistente) {
-                    // 🔥 YA EXISTE: actualizar sin duplicar
+
                     const dataActualizada = { ...nodoExistente.data };
 
                     dataActualizada.Fecha = fecha;
@@ -1158,15 +764,13 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     dataActualizada.Turno = String(item.Turno || '');
                     dataActualizada.TRLiberados = parseFloat(item.NumTubos) || 0;
                     dataActualizada.ProduccionNeta = parseFloat(item.PesoTotal) || 0;
-                    dataActualizada.PorcentajeScrapCorte = 0;  // 🔥 Corrugado
-                    dataActualizada.ScrapTotal = parseFloat(item.ScrapTotal) || 0;          // 🔥 Corrugado
+                    dataActualizada.ScrapTotal = parseFloat(item.ScrapTotal) || 0;
                     dataActualizada.Linea = lineaEncontrada ? lineaEncontrada.label : null;
                     dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
-
                     dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
-                    dataActualizada.KgHrLinea = parseFloat(item.KgsDia) || 0;
-                    dataActualizada.KgHrProducto = parseFloat(item.KgsDia) || 0;
-
+                    // ✅ FIX: /24 igual que PVC
+                    dataActualizada.KgHrLinea = parseFloat(item.KgsDia) / 24 || 0;
+                    dataActualizada.KgHrProducto = parseFloat(item.KgsDia) / 24 || 0;
                     dataActualizada._origen = 'PRODUCTO_TERMINADO';
                     dataActualizada._marcador = '📦';
                     dataActualizada._rowClass = 'row-producto-terminado';
@@ -1175,7 +779,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     filasActualizadas.push(dataActualizada);
 
                 } else {
-                    // 🔥 NO EXISTE: crear fila nueva
+
                     const nuevaFila = this.crearFilaVacia();
 
                     nuevaFila.ID_PRODUCTO_TERMINADO = item.Id;
@@ -1185,15 +789,13 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     nuevaFila.Turno = String(item.Turno || '');
                     nuevaFila.TRLiberados = parseFloat(item.NumTubos) || 0;
                     nuevaFila.ProduccionNeta = parseFloat(item.PesoTotal) || 0;
-                    nuevaFila.PorcentajeScrapCorte = 0;  // 🔥 Corrugado
-                    nuevaFila.ScrapTotal = parseFloat(item.ScrapTotal) || 0;          // 🔥 Corrugado
+                    nuevaFila.ScrapTotal = parseFloat(item.ScrapTotal) || 0;
                     nuevaFila.Linea = lineaEncontrada ? lineaEncontrada.label : null;
                     nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
-
-                    dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
-                    dataActualizada.KgHrLinea = parseFloat(item.KgsDia) || 0;
-                    dataActualizada.KgHrProducto = parseFloat(item.KgsDia) || 0;
-
+                    nuevaFila.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
+                    // ✅ FIX: era dataActualizada.xxx → nuevaFila.xxx + /24
+                    nuevaFila.KgHrLinea = parseFloat(item.KgsDia) / 24 || 0;
+                    nuevaFila.KgHrProducto = parseFloat(item.KgsDia) / 24 || 0;
                     nuevaFila._origen = 'PRODUCTO_TERMINADO';
                     nuevaFila._marcador = '📦';
                     nuevaFila._rowClass = 'row-producto-terminado';
@@ -1207,11 +809,19 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             if (filasActualizadas.length > 0) {
                 this.gridApi.applyTransaction({ update: filasActualizadas });
                 console.log(`🔄 Se actualizaron ${filasActualizadas.length} productos terminados`);
+                AlertManager.mostrar(
+                    `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno || 'de acuerdo a la hora actual'} con información reciente`,
+                    "info"
+                );
             }
 
             if (filasNuevas.length > 0) {
                 this.gridApi.applyTransaction({ add: filasNuevas });
                 console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados`);
+                AlertManager.mostrar(
+                    `✅ Se agregaron ${filasNuevas.length} productos terminados al grid del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
+                    "info"
+                );
                 this.inicializarTooltipsGrid();
             }
 
@@ -1222,6 +832,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 );
             }
 
+            this.agregarFilaTotales();
+
             return filasAgregadas > 0 || filasActualizadas.length > 0;
 
         } catch (error) {
@@ -1230,38 +842,9 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         }
     }
 
-    // ✅ Convertir fecha del producto terminado (ISO format)
-    parsearFechaProductoTerminado(fechaISO) {
-
-        if (!fechaISO) return null;
-
-        try {
-            // fechaISO viene como: "2026-07-23T13:53:08.467"
-            const fecha = new Date(fechaISO);
-
-            // ✅ VALIDAR: Rechazar fechas inválidas (1900-01-01)
-            if (isNaN(fecha.getTime())) return null;
-
-            // Rechazar si es fecha default (1900)
-            if (fecha.getFullYear() < 2000) {
-                console.warn(`⚠️ Fecha inválida detectada: ${fechaISO}`);
-                return null;
-            }
-
-            // Retornar en formato YYYY-MM-DD para que el grid lo entienda
-            const ano = fecha.getFullYear();
-            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-            const dia = String(fecha.getDate()).padStart(2, '0');
-
-            return `${ano}-${mes}-${dia}`;
-
-        } catch (error) {
-            console.error("Error al parsear fecha:", error);
-            return null;
-        }
-    }
-
-    // 🔥 Helper para no repetir el template de fila vacía
+    // ========================================
+    // Helper fila vacía
+    // ========================================
     crearFilaVacia() {
         return {
             id: null,
@@ -1269,7 +852,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             OTMC: null,
             OTMP: null,
             ID_PRODUCTO_TERMINADO: null,
-            Mes: null, Fecha: null, Linea: null, Corrugador: null, Producto: null, Turno: null, Grupo: null,
+            Mes: null, Fecha: null, Linea: null, Corrugador: null,
+            Producto: null, Turno: null, Grupo: null,
             PesoMinimo: 0,
             TRLiberados: null, ProduccionNeta: null,
             PesoEstandar: 0, PorcentajeSobrepeso: 0,
@@ -1284,7 +868,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             TiempoMuertoCorrectivos: null, CambioMoldeSetupExcesos: null,
             TiempoMuertoArrancar: null, TiempoMuertoProceso: null,
             TiempoDisponible: 0, TiempoProductivo: 0,
-            // 🔥 RENDIMIENTO Y OEE
             DisponibilidadPorcentaje: 0,
             KgPorTiempoDisponible: 0,
             KgHrLinea: null,
@@ -1299,80 +882,289 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         };
     }
 
-    ajustarAlturaGrid() {
-        requestAnimationFrame(() => {
-            const gridDiv = document.querySelector('#tablaProduccion');
-            if (!gridDiv || !this.gridApi) return;
+    // ========================================
+    // Grid
+    // ========================================
+    inicializarGrid() {
+        const gridDiv = document.querySelector('#tablaProduccion');
 
-            const headerHeight = 120;
-            const rowHeight = 40;
-            const totalRows = this.gridApi.getDisplayedRowCount();
-            const scrollbarHeight = 20;
+        const columnDefs = [
+            {
+                headerName: 'DATOS GENERALES',
+                headerClass: 'header-grupo-morado',
+                children: [
+                    {
+                        field: 'Mes',
+                        headerName: 'Mes',
+                        editable: false,
+                        width: 150,
+                        pinned: 'left',
+                        cellClass: 'celda-gris',
+                        cellRenderer: params => {
+                            if (!params.value || params.data?.id === 'TOTALES') {
+                                return params.value || '';
+                            }
+                            const emoji = params.data?._marcador || '';
+                            const origen = params.data?._origen;
+                            const idRegistro = params.data?.ID_REGISTRO;
+                            const tooltipTexts = {
+                                'CORRECTIVO': 'Mantenimiento Correctivo',
+                                'PREVENTIVO': 'Mantenimiento Preventivo',
+                                'PRODUCTO_TERMINADO': 'Producto Terminado'
+                            };
+                            const tooltipText = tooltipTexts[origen] || '';
+                            const tooltipAttr = tooltipText
+                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
+                                : '';
+                            const puntoPulsante = !idRegistro && (origen === 'CORRECTIVO' || origen === 'PREVENTIVO' || origen === 'PRODUCTO_TERMINADO')
+                                ? `<span class="punto-pulso punto-pulso-margin-left"></span>`
+                                : '';
+                            return emoji
+                                ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px; cursor: help;" ${tooltipAttr}>${emoji}</span><span>${params.value}</span>${puntoPulsante}</div>`
+                                : params.value;
+                        }
+                    },
+                    {
+                        field: 'Fecha',
+                        headerName: 'Fecha',
+                        editable: true,
+                        width: 120,
+                        cellClass: 'celda-azul',
+                        pinned: 'left',
+                        cellEditor: 'agDateCellEditor',
+                        cellEditorParams: { browserDatePicker: true, min: '2020-01-01', max: '2035-12-31' },
+                        valueFormatter: params => {
+                            if (!params.value) return '';
+                            const soloFecha = params.value.split('T')[0];
+                            return new Date(soloFecha + 'T00:00:00').toLocaleDateString('es-MX');
+                        }
+                    },
+                    {
+                        field: 'Linea',
+                        headerName: 'Línea',
+                        editable: true,
+                        width: 130,
+                        cellClass: 'celda-azul',
+                        pinned: 'left',
+                        cellEditor: 'agSelectCellEditor',
+                        cellEditorParams: () => ({ values: this.listaLineas.map(x => x.label) }),
+                        valueFormatter: params => params.data?.id === 'TOTALES' ? '' : params.value || ''
+                    },
+                    {
+                        field: 'Corrugador',
+                        headerName: 'Corrugador',
+                        editable: true,
+                        width: 120,
+                        cellClass: 'celda-azul',
+                        pinned: 'left',
+                        cellEditor: 'agSelectCellEditor',
+                        cellEditorParams: { values: ['60-30', '08-30'] },
+                        valueFormatter: params => params.data?.id === 'TOTALES' ? '' : params.value || ''
+                    },
+                    {
+                        field: 'Producto',
+                        headerName: 'Producto',
+                        editable: true,
+                        width: 160,
+                        cellClass: 'celda-azul',
+                        pinned: 'left',
+                        cellEditor: 'articuloAutocompleteEditor',
+                        valueFormatter: params => params.data?.id === 'TOTALES' ? '' : params.value || ''
+                    },
+                    {
+                        field: 'Turno',
+                        headerName: 'Turno',
+                        editable: true,
+                        width: 90,
+                        cellClass: 'celda-azul',
+                        pinned: 'left',
+                        valueFormatter: params => params.data?.id === 'TOTALES' ? '' : params.value || ''
+                    },
+                    {
+                        field: 'Grupo',
+                        headerName: 'Grupo',
+                        editable: true,
+                        width: 90,
+                        cellClass: 'celda-azul',
+                        pinned: 'left',
+                        cellEditor: 'agSelectCellEditor',
+                        cellEditorParams: { values: ['A', 'B', 'C', 'D'] },
+                        valueFormatter: params => params.data?.id === 'TOTALES' ? '' : params.value || ''
+                    }
+                ]
+            },
+            {
+                headerName: 'PRODUCCIÓN',
+                headerClass: 'header-grupo-amarillo',
+                children: [
+                    { field: 'PesoMinimo', headerName: 'PESO MÍNIMO', editable: false, width: 120, cellClass: 'celda-gris', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'TRLiberados', headerName: 'TR LIBERADOS', width: 120, ...this.getColumnaNumerica('celda-azul') },
+                    { field: 'ProduccionNeta', headerName: 'PRODUCCIÓN NETA', width: 140, ...this.getColumnaNumerica('celda-azul') },
+                    { field: 'PesoEstandar', headerName: 'PESO ESTÁNDAR', editable: false, width: 140, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'PorcentajeSobrepeso', headerName: '% SOBREPESO', editable: false, width: 120, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'ScrapSinCorteSierra', headerName: 'SCRAP S/CORTES SIERRA', width: 150, ...this.getColumnaNumerica('celda-azul') },
+                    { field: 'ScrapCorteSierra', headerName: 'SCRAP CORTES SIERRA', width: 150, ...this.getColumnaNumerica('celda-azul') },
+                    { field: 'ScrapTotal', headerName: 'SCRAP TOTAL', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'PorcentajeScrapSinCorte', headerName: '% SCRAP S/CORTE', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'PorcentajeScrapCorte', headerName: '% SCRAP CORTE', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'KgReproceso', headerName: 'KG REPROCESO', width: 130, ...this.getColumnaNumerica('celda-azul') },
+                    { field: 'Carbonato', headerName: 'CARBONATO', width: 120, ...this.getColumnaNumerica('celda-azul') }
+                ]
+            },
+            {
+                headerName: 'DISPONIBILIDAD',
+                headerClass: 'header-grupo-azul',
+                children: [
+                    { field: 'HorasProgramadas', headerName: 'HORAS PROGRAMADAS', width: 140, ...this.getColumnaNumerica('celda-azul') }
+                ]
+            },
+            {
+                headerName: 'TIEMPO NO DISPONIBLE',
+                headerClass: 'header-grupo-rosa',
+                children: [
+                    { field: 'MantenimientoPreventivo', headerName: 'MANTENIMIENTO PREVENTIVO', width: 140, ...this.getColumnaNumerica('celda-rosa') },
+                    { field: 'ControlInventarios', headerName: 'CONTROL INVENTARIOS', width: 140, ...this.getColumnaNumerica('celda-rosa') },
+                    { field: 'FaltaEnergia', headerName: 'FALTA ENERGÍA ELÉCTRICA', width: 140, ...this.getColumnaNumerica('celda-rosa') },
+                    { field: 'FaltaMateriaPrima', headerName: 'FALTA MATERIA PRIMA E INSUMOS', width: 170, ...this.getColumnaNumerica('celda-rosa') },
+                    { field: 'PreparacionCambio', headerName: 'PREPARACIÓN DE LÍNEA', width: 150, ...this.getColumnaNumerica('celda-rosa') },
+                    { field: 'ArranqueEstabilizacion', headerName: 'ARRANQUE Y ESTABILIZACIÓN', width: 150, ...this.getColumnaNumerica('celda-rosa') },
+                    { field: 'TiempoMttoCorrectivosArranque', headerName: 'MTTO CORRECTIVOS ARRANQUE', width: 170, ...this.getColumnaNumerica('celda-rosa') }
+                ]
+            },
+            {
+                headerName: 'TIEMPO NO PRODUCTIVO',
+                headerClass: 'header-grupo-verde-claro',
+                children: [
+                    { field: 'TiempoMuertoCorrectivos', headerName: 'TIEMPO MUERTO POR CORRECTIVOS', width: 110, ...this.getColumnaNumerica('celda-verde-claro') },
+                    { field: 'CambioMoldeSetupExcesos', headerName: 'CAMBIO DE MOLDE (SETUP) EXCESOS', width: 170, ...this.getColumnaNumerica('celda-verde-claro') },
+                    { field: 'TiempoMuertoArrancar', headerName: 'TIEMPO MUERTO POR ARRANCAR', width: 110, ...this.getColumnaNumerica('celda-verde-claro') },
+                    { field: 'TiempoMuertoProceso', headerName: 'TIEMPO MUERTO PROCESO', width: 110, ...this.getColumnaNumerica('celda-verde-claro') }
+                ]
+            },
+            {
+                headerName: 'KPIs',
+                headerClass: 'header-grupo-verde',
+                children: [
+                    { field: 'TiempoDisponible', headerName: 'TIEMPO DISPONIBLE', editable: false, width: 110, cellClass: 'celda-azul-claro', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'TiempoProductivo', headerName: 'TIEMPO PRODUCTIVO', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearNumero(params.value) }
+                ]
+            },
+            {
+                headerName: 'RENDIMIENTO Y OEE',
+                headerClass: 'header-grupo-verde-fuerte',
+                children: [
+                    { field: 'DisponibilidadPorcentaje', headerName: 'DISPONIBILIDAD %', editable: false, width: 130, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'KgPorTiempoDisponible', headerName: 'KG POR TIEMPO DISPONIBLE', editable: false, width: 150, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'KgHrLinea', headerName: 'KG/HR X LINEA (capacidad instalada)', editable: false, width: 150, cellClass: 'celda-rosa', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'KgHrProducto', headerName: 'KG/HR X PRODUCTO (historial)', editable: false, width: 150, cellClass: 'celda-rosa', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'KgNetosHrReales', headerName: 'KG NETOS/HR REALES (tiempo productivo)', editable: false, width: 150, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'PorcentajeRendimiento', headerName: '% RENDIMIENTO', editable: false, width: 120, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'PorcentajeCalidad', headerName: '% CALIDAD', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'PorcentajeOEE', headerName: '% OEE', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'ObjetivoEficiencia', headerName: 'OBJETIVO DE EFICIENCIA %', width: 140, ...this.getColumnaNumerica('celda-amarilla') },
+                    { field: 'EficienciaOperativa', headerName: 'EFICIENCIA OPERATIVA', editable: false, width: 130, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) }
+                ]
+            }
+        ];
 
-            const alturaCalculada = headerHeight + (totalRows * rowHeight) + scrollbarHeight;
-            const alturaFinal = Math.min(alturaCalculada, 600) + 40;
+        this.columnDefs = columnDefs;
 
-            gridDiv.style.height = alturaFinal + 'px';
-        });
+        const gridOptions = {
+            domLayout: 'normal',
+            columnDefs: columnDefs,
+            context: {
+                datos_usuario: this.datos_usuario,
+                gestionArticulos: this.gestionArticulos,
+                URLBase: this.URLBase,
+                appProduccion: this
+            },
+            rowData: this.datosOriginales,
+            components: {
+                articuloAutocompleteEditor: ArticuloAutocompleteEditor
+            },
+            defaultColDef: {
+                sortable: true,
+                filter: true,
+                resizable: true,
+                editable: (params) => {
+                    if (params.data?.id === 'TOTALES') return false;
+                    const readonlyFields = [
+                        'PesoMinimo', 'PesoEstandar', 'PorcentajeSobrepeso',
+                        'ScrapTotal', 'PorcentajeScrapSinCorte', 'PorcentajeScrapCorte',
+                        'TiempoDisponible', 'TiempoProductivo', 'Mes'
+                    ];
+                    return !readonlyFields.includes(params.colDef.field);
+                },
+                wrapHeaderText: true,
+                autoHeaderHeight: true
+            },
+            undoRedoCellEditing: true,
+            undoRedoCellEditingLimit: 20,
+            rowSelection: 'multiple',
+            animateRows: true,
+            suppressHorizontalScroll: false,
+            groupHeaderHeight: 40,
+            headerHeight: 80,
+            onCellValueChanged: (event) => this.onCellChanged(event),
+            onGridReady: (params) => {
+                this.gridApi = params.api;
+                this.gridColumnApi = params.columnApi;
+                this.inicializarTooltipsGrid();
+            },
+            getRowStyle: params => {
+                if (params.data && params.data.id === 'TOTALES') {
+                    return {
+                        fontWeight: 'bold',
+                        backgroundColor: '#e9ecef',
+                        borderTop: '2px solid #0058a1',
+                        pointerEvents: 'none'
+                    };
+                }
+                return null;
+            },
+            getRowClass: params => {
+                if (params.data?.id === 'TOTALES') return '';
+                if (params.data?._rowClass) return params.data._rowClass;
+                return '';
+            }
+        };
+
+        new agGrid.Grid(gridDiv, gridOptions);
     }
 
-    formatearNumero(valor) {
-        if (valor === null || valor === undefined || valor === '') return '';
-
-        // Asegurar que es un número
-        const numValue = typeof valor === 'number' ? valor : parseFloat(valor);
-
-        if (isNaN(numValue)) return '';
-
-        // Formato con 2 decimales y punto como separador decimal
-        return numValue.toFixed(2);
+    inicializarTooltips() {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
     }
 
-    formatearPorcentaje(valor) {
-
-        if (valor === null || valor === undefined || valor === '') {
-            return '';
-        }
-
-        return `${parseFloat(valor).toFixed(2)}%`;
+    inicializarTooltipsGrid() {
+        setTimeout(() => {
+            const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltipElements.forEach(el => {
+                const existingTooltip = bootstrap.Tooltip.getInstance(el);
+                if (existingTooltip) existingTooltip.dispose();
+                new bootstrap.Tooltip(el);
+            });
+        }, 100);
     }
 
     onCellChanged(event) {
 
         if (event.data.id === 'TOTALES') {
-
             event.api.undoCellEditing();
-
             return;
         }
 
         const row = event.data;
 
         if (row.Fecha) {
-
             const fecha = new Date(row.Fecha);
-
-            const meses = [
-                'ENERO',
-                'FEBRERO',
-                'MARZO',
-                'ABRIL',
-                'MAYO',
-                'JUNIO',
-                'JULIO',
-                'AGOSTO',
-                'SEPTIEMBRE',
-                'OCTUBRE',
-                'NOVIEMBRE',
-                'DICIEMBRE'
-            ];
-
+            const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+                'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
             row.Mes = meses[fecha.getMonth()];
         }
 
-        // 🔥 UNA SOLA LLAMADA
         this.recalcularFila(row);
-
         event.node.setData(row);
 
         this.cambiosPendientes.push({
@@ -1382,1239 +1174,90 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             valorNuevo: event.newValue
         });
 
-        this.gridApi.refreshCells({
-            rowNodes: [event.node],
-            force: true
-        });
-
+        this.gridApi.refreshCells({ rowNodes: [event.node], force: true });
         this.recalcularTotales();
     }
 
     recalcularFila(row) {
-
-        row.PesoEstandar =
-            this.calcularPesoEstandar(row);
-
-        row.PorcentajeSobrepeso =
-            this.calcularSobrepeso(row);
-
-        row.ScrapTotal =
-            this.calcularScrapTotal(row);
-
-        // 🔥 NO recalcular ScrapSinCorteSierra ni ScrapCorteSierra
-        // porque son editables por el usuario
-        // Solo recalcular los porcentajes derivados
-
-        row.PorcentajeScrapSinCorte =
-            this.calcularScrapSinCorte(row);
-
-        row.PorcentajeScrapCorte =
-            this.calcularScrapCorte(row);
-
-        row.TiempoDisponible =
-            this.calcularTiempoDisponible(row);
-
-        row.TiempoProductivo =
-            this.calcularTiempoProductivo(row);
-
-        // 🔥 RENDIMIENTO Y OEE
+        row.PesoEstandar = this.calcularPesoEstandar(row);
+        row.PorcentajeSobrepeso = this.calcularSobrepeso(row);
+        row.ScrapTotal = this.calcularScrapTotal(row);
+        row.PorcentajeScrapSinCorte = this.calcularScrapSinCorte(row);
+        row.PorcentajeScrapCorte = this.calcularScrapCorte(row);
+        row.TiempoDisponible = this.calcularTiempoDisponible(row);
+        row.TiempoProductivo = this.calcularTiempoProductivo(row);
         row.KgPorTiempoDisponible = this.calcularKgPorTiempoDisponible(row);
-
         row.KgNetosHrReales = this.calcularKgNetosHrReales(row);
-
         row.PorcentajeRendimiento = this.calcularPorcentajeRendimiento(row);
-
         row.PorcentajeEficienciaProducto = row.PorcentajeRendimiento;
-
         row.PorcentajeCalidad = this.calcularPorcentajeCalidad(row);
-
         row.DisponibilidadPorcentaje = this.calcularDisponibilidadPorcentaje(row);
-
         row.PorcentajeOEE = this.calcularPorcentajeOEE(row);
-
         row.EficienciaOperativa = this.calcularEficienciaOperativa(row);
     }
 
     recalcularTotales() {
-
         const filaTotales = this.obtenerTotalesGrid();
-
-        this.gridApi.forEachNode((node) => {
-
-            if (node.data.id === 'TOTALES') {
-
+        this.gridApi.forEachNode(node => {
+            if (node.data?.id === 'TOTALES') {
                 node.setData(filaTotales);
             }
-
         });
     }
 
-    obtenerTotalesGrid() {
-
-        const totales = {
-
-            id: 'TOTALES',
-
-            // GENERALES
-            Mes: null,
-            Fecha: null,
-            Linea: null,
-            Corrugador: null,
-            Producto: null,
-            Turno: null,
-            Grupo: null,
-
-            // PRODUCCIÓN
-            PesoMinimo: 0,
-
-            TRLiberados: 0,
-            ProduccionNeta: 0,
-
-            PesoEstandar: 0,
-            PorcentajeSobrepeso: null,
-
-            ScrapSinCorteSierra: 0,
-            ScrapCorteSierra: 0,
-
-            ScrapTotal: 0,
-
-            PorcentajeScrapSinCorte: null,
-            PorcentajeScrapCorte: null,
-
-            KgReproceso: 0,
-            Carbonato: 0,
-
-            // DISPONIBILIDAD
-            HorasProgramadas: 0,
-
-            // TIEMPO NO DISPONIBLE
-            MantenimientoPreventivo: 0,
-            ControlInventarios: 0,
-            FaltaEnergia: 0,
-            FaltaMateriaPrima: 0,
-            PreparacionCambio: 0,
-            ArranqueEstabilizacion: 0,
-
-            TiempoMttoCorrectivosArranque: 0,
-
-            // TIEMPO NO PRODUCTIVO
-            TiempoMuertoCorrectivos: 0,
-            CambioMoldeSetupExcesos: 0,
-            TiempoMuertoArrancar: 0,
-            TiempoMuertoProceso: 0,
-
-            // KPIS
-            TiempoDisponible: 0,
-            TiempoProductivo: 0,
-            // 🔥 RENDIMIENTO Y OEE
-            DisponibilidadPorcentaje: null,
-            KgPorTiempoDisponible: 0,
-            KgHrLinea: null,
-            KgHrProducto: null,
-            KgNetosHrReales: 0,
-            PorcentajeRendimiento: null,
-            PorcentajeCalidad: null,
-            PorcentajeOEE: null,
-            PorcentajeEficienciaProducto: null,
-            ObjetivoEficiencia: 0,
-            EficienciaOperativa: null
-        };
-
-        this.gridApi.forEachNode((node) => {
-
-            if (!node.data || node.data.id === 'TOTALES') {
-                return;
-            }
-
-            totales.PesoMinimo += Number(node.data.PesoMinimo || 0);
-            totales.TRLiberados += Number(node.data.TRLiberados || 0);
-            totales.ProduccionNeta += Number(node.data.ProduccionNeta || 0);
-
-            totales.PesoEstandar += Number(node.data.PesoEstandar || 0);
-
-            totales.ScrapSinCorteSierra += Number(node.data.ScrapSinCorteSierra || 0);
-            totales.ScrapCorteSierra += Number(node.data.ScrapCorteSierra || 0);
-
-            totales.ScrapTotal += Number(node.data.ScrapTotal || 0);
-
-            totales.KgReproceso += Number(node.data.KgReproceso || 0);
-            totales.Carbonato += Number(node.data.Carbonato || 0);
-
-            totales.HorasProgramadas += Number(node.data.HorasProgramadas || 0);
-
-            totales.MantenimientoPreventivo += Number(node.data.MantenimientoPreventivo || 0);
-            totales.ControlInventarios += Number(node.data.ControlInventarios || 0);
-            totales.FaltaEnergia += Number(node.data.FaltaEnergia || 0);
-            totales.FaltaMateriaPrima += Number(node.data.FaltaMateriaPrima || 0);
-            totales.PreparacionCambio += Number(node.data.PreparacionCambio || 0);
-            totales.ArranqueEstabilizacion += Number(node.data.ArranqueEstabilizacion || 0);
-
-            totales.TiempoMttoCorrectivosArranque += Number(node.data.TiempoMttoCorrectivosArranque || 0);
-
-            totales.TiempoMuertoCorrectivos += Number(node.data.TiempoMuertoCorrectivos || 0);
-
-            totales.CambioMoldeSetupExcesos += Number(node.data.CambioMoldeSetupExcesos || 0);
-
-            totales.TiempoMuertoArrancar += Number(node.data.TiempoMuertoArrancar || 0);
-
-            totales.TiempoMuertoProceso += Number(node.data.TiempoMuertoProceso || 0);
-
-            totales.TiempoDisponible += Number(node.data.TiempoDisponible || 0);
-
-            totales.TiempoProductivo += Number(node.data.TiempoProductivo || 0);
-
-            totales.KgPorTiempoDisponible += Number(node.data.KgPorTiempoDisponible || 0);
-
-            totales.KgNetosHrReales += Number(node.data.KgNetosHrReales || 0);
-
-            totales.ObjetivoEficiencia += Number(node.data.ObjetivoEficiencia || 0);
-        });
-
-        // ========================================
-        // PORCENTAJES TOTALES
-        // ========================================
-
-        if (totales.PesoEstandar > 0) {
-
-            totales.PorcentajeSobrepeso =
-                ((totales.ProduccionNeta / totales.PesoEstandar) - 1) * 100;
-        }
-
-        if (totales.ProduccionNeta > 0) {
-
-            totales.PorcentajeScrapSinCorte =
-                (totales.ScrapSinCorteSierra / totales.ProduccionNeta) * 100;
-
-            totales.PorcentajeScrapCorte =
-                (totales.ScrapCorteSierra / totales.ProduccionNeta) * 100;
-        }
-
-        // 🔥 Disponibilidad % desde totales
-        if (totales.TiempoDisponible > 0) {
-            totales.DisponibilidadPorcentaje =
-                (totales.TiempoProductivo / totales.TiempoDisponible) * 100;
-        }
-
-        // 🔥 Calidad % desde totales — usa ProduccionNeta y ScrapTotal (Corrugado)
-        const totalProdCalidad = totales.ProduccionNeta + totales.ScrapTotal;
-        if (totalProdCalidad > 0) {
-            totales.PorcentajeCalidad =
-                (totales.ProduccionNeta / totalProdCalidad) * 100;
-        }
-
-        return totales;
-    }
-
+    // ========================================
+    // Cálculos
+    // ========================================
     calcularPesoEstandar(row) {
-
-        const pesoMinimo =
-            parseFloat(row.PesoMinimo) || 0;
-
-        const trLiberados =
-            parseFloat(row.TRLiberados) || 0;
-
-        return pesoMinimo * trLiberados;
+        return (parseFloat(row.PesoMinimo) || 0) * (parseFloat(row.TRLiberados) || 0);
     }
 
     calcularSobrepeso(row) {
-
-        const produccion =
-            parseFloat(row.ProduccionNeta) || 0;
-
-        const pesoEstandar =
-            parseFloat(row.PesoEstandar) || 0;
-
-        if (pesoEstandar <= 0) {
-            return 0;
-        }
-
-        return (
-            ((produccion / pesoEstandar) - 1)
-            * 100
-        );
+        const produccion = parseFloat(row.ProduccionNeta) || 0;
+        const pesoEstandar = parseFloat(row.PesoEstandar) || 0;
+        if (pesoEstandar <= 0) return 0;
+        return ((produccion / pesoEstandar) - 1) * 100;
     }
 
     calcularScrapTotal(row) {
-
-        return (
-
-            (parseFloat(row.ScrapSinCorteSierra) || 0)
-
-            +
-
-            (parseFloat(row.ScrapCorteSierra) || 0)
-
-        );
-
+        return (parseFloat(row.ScrapSinCorteSierra) || 0) + (parseFloat(row.ScrapCorteSierra) || 0);
     }
 
-    // Retorna el PORCENTAJE de scrap sin corte de sierra
     calcularScrapSinCorte(row) {
-
-        const scrap =
-            parseFloat(row.ScrapSinCorteSierra) || 0;
-
-        const produccion =
-            parseFloat(row.ProduccionNeta) || 0;
-
-        if (produccion <= 0) {
-            return 0;
-        }
-
+        const scrap = parseFloat(row.ScrapSinCorteSierra) || 0;
+        const produccion = parseFloat(row.ProduccionNeta) || 0;
+        if (produccion <= 0) return 0;
         return (scrap / produccion) * 100;
     }
 
-    // Retorna el PORCENTAJE de scrap con cortes de sierra
     calcularScrapCorte(row) {
-
-        const scrap =
-            parseFloat(row.ScrapCorteSierra) || 0;
-
-        const produccion =
-            parseFloat(row.ProduccionNeta) || 0;
-
-        if (produccion <= 0) {
-            return 0;
-        }
-
+        const scrap = parseFloat(row.ScrapCorteSierra) || 0;
+        const produccion = parseFloat(row.ProduccionNeta) || 0;
+        if (produccion <= 0) return 0;
         return (scrap / produccion) * 100;
-    }
-
-    calcularTiempoProductivo(row) {
-
-        const disponible =
-            parseFloat(row.TiempoDisponible) || 0;
-
-        const tiempoNoProductivo =
-
-            (parseFloat(row.TiempoMuertoCorrectivos) || 0)
-
-            +
-
-            (parseFloat(row.CambioMoldeSetupExcesos) || 0)
-
-            +
-
-            (parseFloat(row.TiempoMuertoArrancar) || 0)
-
-            +
-
-            (parseFloat(row.TiempoMuertoProceso) || 0);
-
-        return Math.max(
-            disponible - tiempoNoProductivo,
-            0
-        );
-
     }
 
     calcularTiempoDisponible(row) {
-
-        const horas =
-            parseFloat(row.HorasProgramadas) || 0;
-
+        const horas = parseFloat(row.HorasProgramadas) || 0;
         const tiempoNoDisponible =
-
-            (parseFloat(row.MantenimientoPreventivo) || 0)
-
-            +
-
-            (parseFloat(row.ControlInventarios) || 0)
-
-            +
-
-            (parseFloat(row.FaltaEnergia) || 0)
-
-            +
-
-            (parseFloat(row.FaltaMateriaPrima) || 0)
-
-            +
-
-            (parseFloat(row.PreparacionCambio) || 0)
-
-            +
-
-            (parseFloat(row.ArranqueEstabilizacion) || 0)
-
-            +
-
+            (parseFloat(row.MantenimientoPreventivo) || 0) +
+            (parseFloat(row.ControlInventarios) || 0) +
+            (parseFloat(row.FaltaEnergia) || 0) +
+            (parseFloat(row.FaltaMateriaPrima) || 0) +
+            (parseFloat(row.PreparacionCambio) || 0) +
+            (parseFloat(row.ArranqueEstabilizacion) || 0) +
             (parseFloat(row.TiempoMttoCorrectivosArranque) || 0);
-
-        return Math.max(
-            horas - tiempoNoDisponible,
-            0
-        );
-
+        return Math.max(horas - tiempoNoDisponible, 0);
     }
 
-    configurarEventos() {
-        $('#btnExportarExcel').on('click', () => this.exportarExcel());
-        $('#btnGuardarCambios').on('click', () => this.guardarCambios());
-
-        // ========================================
-        // 📧 NUEVO: Abrir modal para enviar por correo
-        // ========================================
-        $('#btnEnviarCorreo').on('click', () => {
-            const modal = new bootstrap.Modal(document.getElementById('modalEnviarExcelCorreo'));
-            modal.show();
-        });
-
-        $('#btnAplicarFiltros').on('click', () => {
-
-            const fechaInicio = $('#FiltroFechaInicio').val();
-            const fechaFin = $('#FiltroFechaFin').val();
-            const filtroTurno = $('#FiltroTurno').val();
-
-            this.consultarDatos(fechaInicio, fechaFin, null, filtroTurno);
-
-        });
-
-        $('#btnLimpiarFiltros').on('click', () => {
-
-            $('#FiltroFechaInicio').val('');
-            $('#FiltroFechaFin').val('');
-
-            this.consultarDatos(null, null, null, null);
-
-        });
-
-        $('#FiltroFechaInicio, #FiltroFechaFin')
-            .off('change')
-            .on('change', () => {
-
-                const fechaInicio = $('#FiltroFechaInicio').val();
-                const fechaFin = $('#FiltroFechaFin').val();
-
-                const FechaTexto =
-                    this.formatearRangoFechas(
-                        fechaInicio,
-                        fechaFin
-                    );
-
-                $("#mesActual").text(FechaTexto);
-
-                this.consultarDatos(
-                    fechaInicio,
-                    fechaFin,
-                    null,
-                    null
-                );
-
-            });
-    }
-
-    async guardarCambios() {
-
-        const datos = this.obtenerDatosGrid();
-
-        let datosJSON = JSON.stringify(datos);
-
-
-        if (datos.length === 0) {
-
-            AlertManager.mostrar(
-                "No hay datos para guardar",
-                "warning"
-            );
-
-            return;
-        }
-
-        // ========================================
-        // VALIDACIONES CAMPOS OBLIGATORIOS
-        // ========================================
-        const camposObligatorios = [
-            { campo: "FECHA", nombre: "Fecha" },
-            { campo: "LINEA", nombre: "Línea" },
-            { campo: "CORRUGADOR", nombre: "Corrugador" },
-            { campo: "PRODUCTO", nombre: "Producto" },
-            { campo: "TURNO", nombre: "Turno" },
-            { campo: "GRUPO", nombre: "Grupo" },
-            { campo: "HORAS_PROGRAMADAS", nombre: "Horas Programadas" }
-        ];
-
-        for (let i = 0; i < datos.length; i++) {
-
-            const fila = datos[i];
-
-            for (const campo of camposObligatorios) {
-
-                if (!fila[campo.campo] && fila[campo.campo] !== 0) {
-
-                    AlertManager.mostrar(
-                        `Falta el campo "${campo.nombre}" en la fila ${i + 1}`,
-                        "warning"
-                    );
-
-                    return;
-                }
-
-            }
-
-        }
-
-        // ========================================
-        // VALIDAR TIEMPO NO DISPONIBLE
-        // ========================================
-        const camposTiempo = [
-            "MANTENIMIENTO_PREVENTIVO",
-            "CONTROL_INVENTARIOS",
-            "FALTA_ENERGIA",
-            "FALTA_MATERIA_PRIMA",
-            "PREPARACION_CAMBIO",
-            "ARRANQUE_ESTABILIZACION",
-            "TIEMPO_MTTO_CORRECTIVOS_ARRANQUE"
-        ];
-
-        const existeTiempo = datos.some(fila =>
-            camposTiempo.some(campo => Number(fila[campo]) > 0)
-        );
-
-        // if (!existeTiempo) {
-
-        //     AlertManager.mostrar(
-        //         "Debe capturar al menos un TIEMPO NO DISPONIBLE",
-        //         "warning"
-        //     );
-
-        //     return;
-        // }
-
-        // ========================================
-        // BOTÓN LOADING
-        // ======================================m==
-        $("#btnGuardarCambios")
-            .prop("disabled", true)
-            .html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
-
-        try {
-
-            const response = await $.ajax({
-
-                url: `/${this.URLBase}/GuardarTiemposMuertosCorrugado`,
-
-                type: "POST",
-
-                data: JSON.stringify(datos),
-
-                contentType: "application/json",
-
-                beforeSend: () => {
-                    GlobalUtil.mostrarLoader(true);
-                }
-
-            });
-
-            if (response.Status === "SI") {
-
-                AlertManager.mostrar(
-                    "Datos guardados correctamente",
-                    "success"
-                );
-
-                this.cambiosPendientes = [];
-
-                // 🔥 refrescar grid
-                await this.consultarDatos(null, null, null);
-
-            } else {
-
-                AlertManager.mostrar(
-                    response.Message,
-                    "warning"
-                );
-
-            }
-
-        } catch (error) {
-
-            console.error(error);
-
-            AlertManager.mostrar(
-                "Error al guardar",
-                "danger"
-            );
-
-        } finally {
-
-            $("#btnGuardarCambios")
-                .prop("disabled", false)
-                .html('<i class="bi bi-save-fill me-1"></i>Guardar');
-
-            GlobalUtil.mostrarLoader(false);
-
-        }
-
-    }
-
-    exportarExcel() {
-        const exporter = new ExcelExporterCorrugado(this.gridApi, this.columnDefs);
-        exporter.exportarConFormato();
-    }
-
-    inicializarTooltips() {
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
-    }
-
-    inicializarTooltipsGrid() {
-        // 🔥 Esperar a que el DOM se renderice antes de inicializar tooltips
-        setTimeout(() => {
-            const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-            tooltipElements.forEach(el => {
-                // Destruir tooltip anterior si existe
-                const existingTooltip = bootstrap.Tooltip.getInstance(el);
-                if (existingTooltip) existingTooltip.dispose();
-
-                // Crear nuevo tooltip
-                new bootstrap.Tooltip(el);
-            });
-        }, 100);
-    }
-
-    cargarDatosIniciales() {
-
-        this.datosOriginales = [
-            {
-                id: 1,
-
-                // ========================================
-                // DATOS GENERALES
-                // ========================================
-
-                OTMP: null, // 🔥 NUEVO PREVENTIVOS
-                OTMC: null, // 🔥 NUEVO CORRECTIVOS
-                ID_PRODUCTO_TERMINADO: null, // 🔥 NUEVO PRODUCTO TERMINADO
-                Mes: null,
-                Fecha: null,
-                Linea: null,
-                Corrugador: null,
-                Producto: null,
-                Turno: null,
-                Grupo: null,
-
-                // ========================================
-                // PRODUCCIÓN
-                // ========================================
-
-                PesoMinimo: 0,
-
-                TRLiberados: null,
-                ProduccionNeta: null,
-
-                PesoEstandar: 0,
-                PorcentajeSobrepeso: 0,
-
-                ScrapSinCorteSierra: null,
-                ScrapCorteSierra: null,
-
-                ScrapTotal: 0,
-
-                PorcentajeScrapSinCorte: 0,
-                PorcentajeScrapCorte: 0,
-
-                KgReproceso: null,
-                Carbonato: null,
-
-                // ========================================
-                // DISPONIBILIDAD
-                // ========================================
-
-                HorasProgramadas: null,
-
-                // ========================================
-                // TIEMPO NO DISPONIBLE
-                // ========================================
-
-                MantenimientoPreventivo: null,
-                ControlInventarios: null,
-                FaltaEnergia: null,
-                FaltaMateriaPrima: null,
-                PreparacionCambio: null,
-                ArranqueEstabilizacion: null,
-
-                TiempoMttoCorrectivosArranque: null,
-
-                // ========================================
-                // TIEMPO NO PRODUCTIVO
-                // ========================================
-
-                TiempoMuertoCorrectivos: null,
-
-                CambioMoldeSetupExcesos: null,
-
-                TiempoMuertoArrancar: null,
-                TiempoMuertoProceso: null,
-
-
-                // ========================================
-                // KPIs
-                // ========================================
-
-                TiempoDisponible: 0,
-                TiempoProductivo: 0,
-                // 🔥 RENDIMIENTO Y OEE
-                DisponibilidadPorcentaje: 0,
-                KgPorTiempoDisponible: 0,
-                KgHrLinea: null,
-                KgHrProducto: null,
-                KgNetosHrReales: 0,
-                PorcentajeRendimiento: 0,
-                PorcentajeCalidad: 0,
-                PorcentajeOEE: 0,
-                PorcentajeEficienciaProducto: 0,
-                ObjetivoEficiencia: 91,
-                EficienciaOperativa: 0
-            }
-        ];
-
-        this.inicializarGrid();
-
-        setTimeout(() => {
-            $("#tablaProduccion").removeClass("d-none");
-        }, 1000);
-    }
-
-    cargarDatosGrid(datos) {
-
-        // 🔥 Ya NO agrega la fila de totales aquí — eso se decide al final en consultarDatos
-
-        if (datos != null) {
-
-            const datosFormateados = datos.map(item => {
-
-                const fila = {
-
-                    id: item.ID_REGISTRO || Date.now(),
-
-                    ID_REGISTRO: item.ID_REGISTRO,
-                    OTMC: item.OTMC,
-                    OTMP: item.OTMP,
-                    ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
-
-                    Mes: item.MES,
-
-                    Fecha: item.FECHA,
-                    Linea: item.LINEA,
-                    Corrugador: item.CORRUGADOR,
-                    Producto: item.PRODUCTO,
-                    Turno: item.TURNO,
-                    Grupo: item.GRUPO,
-
-                    PesoMinimo: item.PESO_MINIMO ?? 0,
-
-                    TRLiberados: item.TRLIBERADOS,
-                    ProduccionNeta: item.PRODUCCION_NETA,
-
-                    PesoEstandar: item.PESO_ESTANDAR,
-                    PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
-
-                    ScrapSinCorteSierra: item.SCRAP_SIN_CORTE_SIERRA,
-                    ScrapCorteSierra: item.SCRAP_CORTE_SIERRA,
-                    ScrapTotal: item.SCRAP_TOTAL,
-
-                    PorcentajeScrapSinCorte: item.PORCENTAJE_SCRAP_SIN_CORTE,
-                    PorcentajeScrapCorte: item.PORCENTAJE_SCRAP_CORTE,
-
-                    KgReproceso: item.KG_REPROCESO,
-                    Carbonato: item.CARBONATO,
-
-                    HorasProgramadas: item.HORAS_PROGRAMADAS,
-
-                    MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
-                    ControlInventarios: item.CONTROL_INVENTARIOS,
-                    FaltaEnergia: item.FALTA_ENERGIA,
-                    FaltaMateriaPrima: item.FALTA_MATERIA_PRIMA,
-                    PreparacionCambio: item.PREPARACION_CAMBIO,
-                    ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION,
-
-                    TiempoMttoCorrectivosArranque: item.TIEMPO_MTTO_CORRECTIVOS_ARRANQUE,
-
-                    TiempoMuertoCorrectivos: item.TIEMPO_MUERTO_CORRECTIVOS,
-                    CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
-                    TiempoMuertoArrancar: item.TIEMPO_MUERTO_ARRANCAR,
-                    TiempoMuertoProceso: item.TIEMPO_MUERTO_PROCESO,
-
-                    TiempoDisponible: item.TIEMPO_DISPONIBLE,
-                    TiempoProductivo: item.TIEMPO_PRODUCTIVO,
-                    // 🔥 RENDIMIENTO Y OEE
-                    KgHrLinea: item.KG_HR_LINEA,
-                    KgHrProducto: item.KG_HR_PRODUCTO,
-                    ObjetivoEficiencia: item.OBJETIVO_EFICIENCIA ?? 91,
-                    DisponibilidadPorcentaje: item.DISPONIBILIDAD_PORCENTAJE,
-                    KgPorTiempoDisponible: item.KG_POR_TIEMPO_DISPONIBLE,
-                    KgNetosHrReales: item.KG_NETOS_HR_REALES,
-                    PorcentajeRendimiento: item.PORCENTAJE_RENDIMIENTO,
-                    PorcentajeCalidad: item.PORCENTAJE_CALIDAD,
-                    PorcentajeOEE: item.PORCENTAJE_OEE,
-                    PorcentajeEficienciaProducto: item.PORCENTAJE_EFICIENCIA_PRODUCTO,
-                    EficienciaOperativa: item.EFICIENCIA_OPERATIVA
-                };
-
-                // 🔥 NUEVO: Identificar origen y asignar emoji
-                if (item.OTMC && item.OTMC.toString().trim() !== '') {
-                    // Es un correctivo guardado en DB
-                    fila._origen = 'CORRECTIVO';
-                    fila._marcador = '🔧';
-                    fila._rowClass = 'row-correctivo';
-                } else if (item.OTMP && item.OTMP.toString().trim() !== '') {
-                    // Es un preventivo guardado en DB
-                    fila._origen = 'PREVENTIVO';
-                    fila._marcador = '🛠️';
-                    fila._rowClass = 'row-preventivo';
-                } else if (item.ID_PRODUCTO_TERMINADO && item.ID_PRODUCTO_TERMINADO.toString().trim() !== '') {
-                    // Es un producto terminado guardado en DB
-                    fila._origen = 'PRODUCTO_TERMINADO';
-                    fila._marcador = '📦';
-                    fila._rowClass = 'row-producto-terminado';
-                }
-
-                return fila;
-            });
-
-            if (datosFormateados.length > 0) {
-                this.gridApi.setRowData(datosFormateados);
-                this.inicializarTooltipsGrid(); // 🔥
-                return true; // 🔥 sí había datos
-            }
-        }
-
-        // 🔥 Sin datos: limpiamos el grid, SIN placeholder todavía
-        this.gridApi.setRowData([]);
-        return false;
-    }
-
-    formatearRangoFechas(fechaInicio, fechaFin) {
-
-        const inicio = DateUtils.formatearFechaTexto(fechaInicio, false);
-        const fin = DateUtils.formatearFechaTexto(fechaFin, true);
-
-        return `Del ${inicio} al ${fin}`;
-    }
-
-    async cargarLineas() {
-
-        try {
-            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, (this.datos_usuario[0].PLANTA == "1" ? 7 : 7), 1); // 🔥 REVISAR PLANTA 2
-            this.listaLineas = lineas;
-
-        } catch (error) {
-
-            console.error(error);
-
-        }
-
-    }
-
-    configurarMenuContextual() {
-
-        const menu = document.getElementById("menuContextual");
-
-        document.querySelector('#tablaProduccion')
-            .addEventListener("contextmenu", (e) => {
-
-                e.preventDefault();
-
-                const rowIndex =
-                    this.gridApi.getFocusedCell()?.rowIndex;
-
-                this.filaSeleccionada =
-                    this.gridApi.getDisplayedRowAtIndex(
-                        rowIndex
-                    );
-
-                if (this.filaSeleccionada?.data?.id === 'TOTALES') {
-                    menu.style.display = "none";
-                    return;
-                }
-
-                const eliminar =
-                    menu.querySelector(
-                        '[data-action="eliminar"]'
-                    );
-
-                if (this.filaSeleccionada?.data?.ID_REGISTRO) {
-
-                    eliminar.style.display = "none";
-
-                } else {
-
-                    eliminar.style.display = "block";
-
-                }
-
-                // ========================================
-                // MOSTRAR MENÚ CON POSICIÓN CORRECTA
-                // ========================================
-                menu.style.display = "block";
-
-                // Obtener dimensiones del menú y viewport
-                const menuRect = menu.getBoundingClientRect();
-                const menuWidth = menuRect.width || 180;
-                const menuHeight = menuRect.height || 150;
-
-                const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
-
-                let posX = e.pageX;
-                let posY = e.pageY;
-
-                // Ajustar posición X si se sale por la derecha
-                if (posX + menuWidth > viewportWidth) {
-                    posX = viewportWidth - menuWidth - 10;
-                }
-
-                // Ajustar posición Y si se sale por abajo
-                if (posY + menuHeight > viewportHeight) {
-                    posY = viewportHeight - menuHeight - 10;
-                }
-
-                // Asegurar que no se salga por la izquierda o arriba
-                posX = Math.max(10, posX);
-                posY = Math.max(10, posY);
-
-                menu.style.left = posX + "px";
-                menu.style.top = posY + "px";
-
-            });
-
-        document.addEventListener("click", () => {
-
-            menu.style.display = "none";
-
-        });
-
-        menu.addEventListener("click", (e) => {
-
-            const accion = e.target.dataset.action;
-
-            if (!this.filaSeleccionada) return;
-
-            const params = {
-                node: this.filaSeleccionada
-            };
-
-            if (accion === "agregar") {
-
-                this.agregarFila(params);
-
-            }
-
-            if (accion === "copiar") {
-
-                this.copiarFilaAnterior(params);
-
-            }
-
-            if (accion === "eliminar") {
-
-                this.eliminarFila(params);
-
-            }
-
-            menu.style.display = "none";
-
-        });
-
-    }
-
-    generarIdTemporal() {
-        return `TMP_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-    }
-
-    agregarFila(params) {
-
-        const nuevaFila = {
-
-            id: this.generarIdTemporal(),
-
-            // ========================================
-            // DATOS GENERALES
-            // ========================================
-
-            Mes: null,
-            Fecha: null,
-            Linea: null,
-            Corrugador: null,
-            Producto: null,
-            Turno: null,
-            Grupo: null,
-
-            // ========================================
-            // PRODUCCIÓN
-            // ========================================
-
-            PesoMinimo: 0,
-
-            TRLiberados: null,
-            ProduccionNeta: null,
-
-            PesoEstandar: 0,
-            PorcentajeSobrepeso: 0,
-
-            ScrapSinCorteSierra: null,
-            ScrapCorteSierra: null,
-
-            ScrapTotal: 0,
-
-            PorcentajeScrapSinCorte: 0,
-            PorcentajeScrapCorte: 0,
-
-            KgReproceso: null,
-            Carbonato: null,
-
-            // ========================================
-            // DISPONIBILIDAD
-            // ========================================
-
-            HorasProgramadas: null,
-
-            // ========================================
-            // TIEMPO NO DISPONIBLE
-            // ========================================
-
-            MantenimientoPreventivo: null,
-            ControlInventarios: null,
-            FaltaEnergia: null,
-            FaltaMateriaPrima: null,
-            PreparacionCambio: null,
-            ArranqueEstabilizacion: null,
-
-            TiempoMttoCorrectivosArranque: null,
-
-            // ========================================
-            // TIEMPO NO PRODUCTIVO
-            // ========================================
-
-            TiempoMuertoCorrectivos: null,
-            CambioMoldeSetupExcesos: null,
-            TiempoMuertoArrancar: null,
-            TiempoMuertoProceso: null,
-
-            // ========================================
-            // KPIs
-            // ========================================
-
-            TiempoDisponible: 0,
-            TiempoProductivo: 0,
-            // 🔥 RENDIMIENTO Y OEE
-            DisponibilidadPorcentaje: 0,
-            KgPorTiempoDisponible: 0,
-            KgHrLinea: null,
-            KgHrProducto: null,
-            KgNetosHrReales: 0,
-            PorcentajeRendimiento: 0,
-            PorcentajeCalidad: 0,
-            PorcentajeOEE: 0,
-            PorcentajeEficienciaProducto: 0,
-            ObjetivoEficiencia: 91,
-            EficienciaOperativa: 0
-
-        };
-
-        this.gridApi.applyTransaction({
-            add: [nuevaFila],
-            addIndex: params.node.rowIndex + 1
-        });
-
-        this.recalcularTotales();
-
-        this.gridApi.refreshCells({
-            force: true
-        });
-
-        this.gridApi.redrawRows();
-
-    }
-
-    copiarFilaAnterior(params) {
-
-        const filaActual = params.node.data;
-
-        if (!filaActual || filaActual.id === 'TOTALES') {
-            return;
-        }
-
-        const nuevaFila =
-            JSON.parse(JSON.stringify(filaActual));
-
-        // ========================================
-        // NUEVO REGISTRO
-        // ========================================
-
-        nuevaFila.id = this.generarIdTemporal();
-
-        nuevaFila.ID_REGISTRO = null;
-
-        // ========================================
-        // RECALCULAR KPIs
-        // ========================================
-
-        this.recalcularFila(nuevaFila);
-
-        this.gridApi.applyTransaction({
-
-            add: [nuevaFila],
-
-            addIndex:
-                params.node.rowIndex + 1
-
-        });
-
-        this.recalcularTotales();
-
-    }
-
-    eliminarFila(params) {
-
-        if (params.node.data.id === 'TOTALES') return;
-
-        if (params.node.data.ID_REGISTRO) {
-
-            AlertManager.mostrar(
-                "No se puede eliminar un registro guardado",
-                "warning"
-            );
-
-            return;
-        }
-
-        this.gridApi.applyTransaction({
-
-            remove: [params.node.data]
-
-        });
-
-        this.recalcularTotales();
-
-        this.gridApi.refreshCells({
-            force: true
-        });
-
-        this.gridApi.redrawRows();
-
-    }
-
-    obtenerDatosGrid() {
-
-        const datos = [];
-
-        // 🔥 NUEVO — mismo helper que PVC
-        const redondear = (valor, decimales = 2) => {
-            if (valor === null || valor === undefined || isNaN(valor)) return 0;
-            return Math.round(valor * Math.pow(10, decimales)) / Math.pow(10, decimales);
-        };
-
-        this.gridApi.forEachNode((node) => {
-
-            if (node.data.id !== 'TOTALES') {
-
-                datos.push({
-
-                    ID_REGISTRO: node.data.ID_REGISTRO || null,
-                    OTMC: node.data.OTMC || null, // 🔥 NUEVO
-                    OTMP: node.data.OTMP || null,                          // 🔥 AGREGAR
-                    ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null, // 🔥 AGREGAR
-                    MES: node.data.Mes,
-                    FECHA: node.data.Fecha,
-                    LINEA: node.data.Linea,
-                    CORRUGADOR: node.data.Corrugador,
-                    PRODUCTO: node.data.Producto,
-                    TURNO: node.data.Turno,
-                    GRUPO: node.data.Grupo,
-
-                    PESO_MINIMO: redondear(node.data.PesoMinimo, 2),
-                    TRLIBERADOS: redondear(node.data.TRLiberados, 2),
-                    PRODUCCION_NETA: redondear(node.data.ProduccionNeta, 2),
-                    PESO_ESTANDAR: redondear(node.data.PesoEstandar, 2),
-                    PORCENTAJE_SOBREPESO: redondear(node.data.PorcentajeSobrepeso, 2),
-
-                    SCRAP_SIN_CORTE_SIERRA: redondear(node.data.ScrapSinCorteSierra, 2),
-                    SCRAP_CORTE_SIERRA: redondear(node.data.ScrapCorteSierra, 2),
-                    SCRAP_TOTAL: redondear(node.data.ScrapTotal, 2),
-                    PORCENTAJE_SCRAP_SIN_CORTE: redondear(node.data.PorcentajeScrapSinCorte, 2),
-                    PORCENTAJE_SCRAP_CORTE: redondear(node.data.PorcentajeScrapCorte, 2),
-
-                    KG_REPROCESO: redondear(node.data.KgReproceso, 2),
-                    CARBONATO: redondear(node.data.Carbonato, 2),
-
-                    HORAS_PROGRAMADAS: redondear(node.data.HorasProgramadas, 2),
-
-                    MANTENIMIENTO_PREVENTIVO: redondear(node.data.MantenimientoPreventivo, 2),
-                    CONTROL_INVENTARIOS: redondear(node.data.ControlInventarios, 2),
-                    FALTA_ENERGIA: redondear(node.data.FaltaEnergia, 2),
-                    FALTA_MATERIA_PRIMA: redondear(node.data.FaltaMateriaPrima, 2),
-                    PREPARACION_CAMBIO: redondear(node.data.PreparacionCambio, 2),
-                    ARRANQUE_ESTABILIZACION: redondear(node.data.ArranqueEstabilizacion, 2),
-
-                    TIEMPO_MTTO_CORRECTIVOS_ARRANQUE: redondear(node.data.TiempoMttoCorrectivosArranque, 2),
-
-                    TIEMPO_MUERTO_CORRECTIVOS: redondear(node.data.TiempoMuertoCorrectivos, 2),
-                    CAMBIO_MOLDE_SETUP_EXCESOS: redondear(node.data.CambioMoldeSetupExcesos, 2),
-                    TIEMPO_MUERTO_ARRANCAR: redondear(node.data.TiempoMuertoArrancar, 2),
-                    TIEMPO_MUERTO_PROCESO: redondear(node.data.TiempoMuertoProceso, 2),
-
-                    TIEMPO_DISPONIBLE: redondear(node.data.TiempoDisponible, 2),
-                    TIEMPO_PRODUCTIVO: redondear(node.data.TiempoProductivo, 2),
-                    // 🔥 RENDIMIENTO Y OEE
-                    KG_HR_LINEA: redondear(node.data.KgHrLinea || 0, 2),
-                    KG_HR_PRODUCTO: redondear(node.data.KgHrProducto || 0, 2),
-                    OBJETIVO_EFICIENCIA: redondear(node.data.ObjetivoEficiencia || 0, 2),
-                    DISPONIBILIDAD_PORCENTAJE: redondear(node.data.DisponibilidadPorcentaje || 0, 2),
-                    KG_POR_TIEMPO_DISPONIBLE: redondear(node.data.KgPorTiempoDisponible || 0, 2),
-                    KG_NETOS_HR_REALES: redondear(node.data.KgNetosHrReales || 0, 2),
-                    PORCENTAJE_RENDIMIENTO: redondear(node.data.PorcentajeRendimiento || 0, 2),
-                    PORCENTAJE_CALIDAD: redondear(node.data.PorcentajeCalidad || 0, 2),
-                    PORCENTAJE_OEE: redondear(node.data.PorcentajeOEE || 0, 2),
-                    PORCENTAJE_EFICIENCIA_PRODUCTO: redondear(node.data.PorcentajeEficienciaProducto || 0, 2),
-                    EFICIENCIA_OPERATIVA: redondear(node.data.EficienciaOperativa || 0, 2),
-
-                    USUARIO: this.datos_usuario[0].EMAIL,
-                    PLANTA: this.datos_usuario[0].PLANTA
-
-                });
-            }
-
-        });
-
-        return datos;
-    }
-
-    getColumnaNumerica(cellClass = '') {
-        return {
-            editable: true,
-            cellEditor: 'agNumberCellEditor',
-            cellClass: cellClass,
-            valueParser: params => {
-                if (params.newValue === null || params.newValue === undefined || params.newValue === '')
-                    return null;
-
-                // Convierte string a número, maneja tanto comas como puntos como separador decimal
-                let valor = params.newValue.toString().trim();
-
-                // Si contiene coma y punto, asumir que la coma es separador decimal (formato latino)
-                if (valor.includes(',') && valor.includes('.')) {
-                    const lastComma = valor.lastIndexOf(',');
-                    const lastDot = valor.lastIndexOf('.');
-
-                    if (lastComma > lastDot) {
-                        // Formato latino: 1.000,50 => remover puntos y usar coma como decimal
-                        valor = valor.replace(/\./g, '').replace(',', '.');
-                    } else {
-                        // Formato inglés: 1,000.50 => remover comas
-                        valor = valor.replace(/,/g, '');
-                    }
-                } else if (valor.includes(',')) {
-                    // Solo coma: asumir separador decimal
-                    valor = valor.replace(/,/g, '.');
-                }
-
-                const numValue = parseFloat(valor);
-                return isNaN(numValue) ? null : numValue;
-            },
-            valueFormatter: params => this.formatearNumero(params.value)
-        };
+    calcularTiempoProductivo(row) {
+        const disponible = parseFloat(row.TiempoDisponible) || 0;
+        const tiempoNoProductivo =
+            (parseFloat(row.TiempoMuertoCorrectivos) || 0) +
+            (parseFloat(row.CambioMoldeSetupExcesos) || 0) +
+            (parseFloat(row.TiempoMuertoArrancar) || 0) +
+            (parseFloat(row.TiempoMuertoProceso) || 0);
+        return Math.max(disponible - tiempoNoProductivo, 0);
     }
 
     calcularKgPorTiempoDisponible(row) {
@@ -2634,8 +1277,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
     calcularPorcentajeRendimiento(row) {
         const kgHrProducto = parseFloat(row.KgHrProducto) || 0;
         if (kgHrProducto <= 0) return 0;
-        const kgNetosHrReales = parseFloat(row.KgNetosHrReales) || 0;
-        return (kgNetosHrReales / kgHrProducto) * 100;
+        return (parseFloat(row.KgNetosHrReales) || 0) / kgHrProducto * 100;
     }
 
     calcularPorcentajeCalidad(row) {
@@ -2649,8 +1291,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
     calcularDisponibilidadPorcentaje(row) {
         const tiempoDisponible = parseFloat(row.TiempoDisponible) || 0;
         if (tiempoDisponible <= 0) return 0;
-        const tiempoProductivo = parseFloat(row.TiempoProductivo) || 0;
-        return (tiempoProductivo / tiempoDisponible) * 100;
+        return (parseFloat(row.TiempoProductivo) || 0) / tiempoDisponible * 100;
     }
 
     calcularPorcentajeOEE(row) {
@@ -2663,15 +1304,461 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
     calcularEficienciaOperativa(row) {
         const kgPorTiempoDisponible = parseFloat(row.KgPorTiempoDisponible) || 0;
         if (kgPorTiempoDisponible <= 0) return 0;
-        const produccion = parseFloat(row.ProduccionNeta) || 0;
-        return (produccion / kgPorTiempoDisponible) * 100;
+        return (parseFloat(row.ProduccionNeta) || 0) / kgPorTiempoDisponible * 100;
+    }
+
+    // ========================================
+    // Totales
+    // ========================================
+    obtenerTotalesGrid() {
+
+        const totales = {
+            id: 'TOTALES',
+            Mes: null, Fecha: null, Linea: null, Corrugador: null,
+            Producto: null, Turno: null, Grupo: null,
+            PesoMinimo: 0, TRLiberados: 0, ProduccionNeta: 0,
+            PesoEstandar: 0, PorcentajeSobrepeso: null,
+            ScrapSinCorteSierra: 0, ScrapCorteSierra: 0, ScrapTotal: 0,
+            PorcentajeScrapSinCorte: null, PorcentajeScrapCorte: null,
+            KgReproceso: 0, Carbonato: 0,
+            HorasProgramadas: 0,
+            MantenimientoPreventivo: 0, ControlInventarios: 0,
+            FaltaEnergia: 0, FaltaMateriaPrima: 0,
+            PreparacionCambio: 0, ArranqueEstabilizacion: 0,
+            TiempoMttoCorrectivosArranque: 0,
+            TiempoMuertoCorrectivos: 0, CambioMoldeSetupExcesos: 0,
+            TiempoMuertoArrancar: 0, TiempoMuertoProceso: 0,
+            TiempoDisponible: 0, TiempoProductivo: 0,
+            DisponibilidadPorcentaje: null,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null, KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: null, PorcentajeCalidad: null,
+            PorcentajeOEE: null, PorcentajeEficienciaProducto: null,
+            ObjetivoEficiencia: 0, EficienciaOperativa: null
+        };
+
+        this.gridApi.forEachNode(node => {
+            if (!node.data || node.data.id === 'TOTALES') return;
+
+            totales.PesoMinimo += Number(node.data.PesoMinimo || 0);
+            totales.TRLiberados += Number(node.data.TRLiberados || 0);
+            totales.ProduccionNeta += Number(node.data.ProduccionNeta || 0);
+            totales.PesoEstandar += Number(node.data.PesoEstandar || 0);
+            totales.ScrapSinCorteSierra += Number(node.data.ScrapSinCorteSierra || 0);
+            totales.ScrapCorteSierra += Number(node.data.ScrapCorteSierra || 0);
+            totales.ScrapTotal += Number(node.data.ScrapTotal || 0);
+            totales.KgReproceso += Number(node.data.KgReproceso || 0);
+            totales.Carbonato += Number(node.data.Carbonato || 0);
+            totales.HorasProgramadas += Number(node.data.HorasProgramadas || 0);
+            totales.MantenimientoPreventivo += Number(node.data.MantenimientoPreventivo || 0);
+            totales.ControlInventarios += Number(node.data.ControlInventarios || 0);
+            totales.FaltaEnergia += Number(node.data.FaltaEnergia || 0);
+            totales.FaltaMateriaPrima += Number(node.data.FaltaMateriaPrima || 0);
+            totales.PreparacionCambio += Number(node.data.PreparacionCambio || 0);
+            totales.ArranqueEstabilizacion += Number(node.data.ArranqueEstabilizacion || 0);
+            totales.TiempoMttoCorrectivosArranque += Number(node.data.TiempoMttoCorrectivosArranque || 0);
+            totales.TiempoMuertoCorrectivos += Number(node.data.TiempoMuertoCorrectivos || 0);
+            totales.CambioMoldeSetupExcesos += Number(node.data.CambioMoldeSetupExcesos || 0);
+            totales.TiempoMuertoArrancar += Number(node.data.TiempoMuertoArrancar || 0);
+            totales.TiempoMuertoProceso += Number(node.data.TiempoMuertoProceso || 0);
+            totales.TiempoDisponible += Number(node.data.TiempoDisponible || 0);
+            totales.TiempoProductivo += Number(node.data.TiempoProductivo || 0);
+            totales.KgPorTiempoDisponible += Number(node.data.KgPorTiempoDisponible || 0);
+            totales.KgNetosHrReales += Number(node.data.KgNetosHrReales || 0);
+            totales.ObjetivoEficiencia += Number(node.data.ObjetivoEficiencia || 0);
+        });
+
+        if (totales.PesoEstandar > 0) {
+            totales.PorcentajeSobrepeso = ((totales.ProduccionNeta / totales.PesoEstandar) - 1) * 100;
+        }
+
+        if (totales.ProduccionNeta > 0) {
+            totales.PorcentajeScrapSinCorte = (totales.ScrapSinCorteSierra / totales.ProduccionNeta) * 100;
+            totales.PorcentajeScrapCorte = (totales.ScrapCorteSierra / totales.ProduccionNeta) * 100;
+        }
+
+        if (totales.TiempoDisponible > 0) {
+            totales.DisponibilidadPorcentaje = (totales.TiempoProductivo / totales.TiempoDisponible) * 100;
+        }
+
+        const totalProdCalidad = totales.ProduccionNeta + totales.ScrapTotal;
+        if (totalProdCalidad > 0) {
+            totales.PorcentajeCalidad = (totales.ProduccionNeta / totalProdCalidad) * 100;
+        }
+
+        return totales;
+    }
+
+    // ========================================
+    // Guardar
+    // ========================================
+    async guardarCambios() {
+
+        const datos = this.obtenerDatosGrid();
+
+        if (datos.length === 0) {
+            AlertManager.mostrar("No hay datos para guardar", "warning");
+            return;
+        }
+
+        const camposObligatorios = [
+            { campo: "FECHA", nombre: "Fecha" },
+            { campo: "LINEA", nombre: "Línea" },
+            { campo: "CORRUGADOR", nombre: "Corrugador" },
+            { campo: "PRODUCTO", nombre: "Producto" },
+            { campo: "TURNO", nombre: "Turno" },
+            { campo: "GRUPO", nombre: "Grupo" },
+            { campo: "HORAS_PROGRAMADAS", nombre: "Horas Programadas" }
+        ];
+
+        for (let i = 0; i < datos.length; i++) {
+            const fila = datos[i];
+            for (const campo of camposObligatorios) {
+                if (!fila[campo.campo] && fila[campo.campo] !== 0) {
+                    AlertManager.mostrar(`Falta el campo "${campo.nombre}" en la fila ${i + 1}`, "warning");
+                    return;
+                }
+            }
+        }
+
+        $("#btnGuardarCambios")
+            .prop("disabled", true)
+            .html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
+
+        try {
+
+            const response = await $.ajax({
+                url: `/${this.URLBase}/GuardarTiemposMuertosCorrugado`,
+                type: "POST",
+                data: JSON.stringify(datos),
+                contentType: "application/json",
+                beforeSend: () => { GlobalUtil.mostrarLoader(true); }
+            });
+
+            if (response.Status === "SI") {
+                AlertManager.mostrar("Datos guardados correctamente", "success");
+                this.cambiosPendientes = [];
+                await this.consultarDatos(null, null, null, null);
+            } else {
+                AlertManager.mostrar(response.Message, "warning");
+            }
+
+        } catch (error) {
+            console.error(error);
+            AlertManager.mostrar("Error al guardar", "danger");
+        } finally {
+            $("#btnGuardarCambios")
+                .prop("disabled", false)
+                .html('<i class="bi bi-save-fill me-1"></i>Guardar');
+            GlobalUtil.mostrarLoader(false);
+        }
+    }
+
+    obtenerDatosGrid() {
+
+        const datos = [];
+
+        const redondear = (valor, decimales = 2) => {
+            if (valor === null || valor === undefined || isNaN(valor)) return 0;
+            return Math.round(valor * Math.pow(10, decimales)) / Math.pow(10, decimales);
+        };
+
+        this.gridApi.forEachNode(node => {
+            if (node.data.id !== 'TOTALES') {
+                datos.push({
+                    ID_REGISTRO: node.data.ID_REGISTRO || null,
+                    OTMC: node.data.OTMC || null,
+                    OTMP: node.data.OTMP || null,
+                    ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null,
+                    MES: node.data.Mes,
+                    FECHA: node.data.Fecha,
+                    LINEA: node.data.Linea,
+                    CORRUGADOR: node.data.Corrugador,
+                    PRODUCTO: node.data.Producto,
+                    TURNO: node.data.Turno,
+                    GRUPO: node.data.Grupo,
+                    PESO_MINIMO: redondear(node.data.PesoMinimo, 2),
+                    TRLIBERADOS: redondear(node.data.TRLiberados, 2),
+                    PRODUCCION_NETA: redondear(node.data.ProduccionNeta, 2),
+                    PESO_ESTANDAR: redondear(node.data.PesoEstandar, 2),
+                    PORCENTAJE_SOBREPESO: redondear(node.data.PorcentajeSobrepeso, 2),
+                    SCRAP_SIN_CORTE_SIERRA: redondear(node.data.ScrapSinCorteSierra, 2),
+                    SCRAP_CORTE_SIERRA: redondear(node.data.ScrapCorteSierra, 2),
+                    SCRAP_TOTAL: redondear(node.data.ScrapTotal, 2),
+                    PORCENTAJE_SCRAP_SIN_CORTE: redondear(node.data.PorcentajeScrapSinCorte, 2),
+                    PORCENTAJE_SCRAP_CORTE: redondear(node.data.PorcentajeScrapCorte, 2),
+                    KG_REPROCESO: redondear(node.data.KgReproceso, 2),
+                    CARBONATO: redondear(node.data.Carbonato, 2),
+                    HORAS_PROGRAMADAS: redondear(node.data.HorasProgramadas, 2),
+                    MANTENIMIENTO_PREVENTIVO: redondear(node.data.MantenimientoPreventivo, 2),
+                    CONTROL_INVENTARIOS: redondear(node.data.ControlInventarios, 2),
+                    FALTA_ENERGIA: redondear(node.data.FaltaEnergia, 2),
+                    FALTA_MATERIA_PRIMA: redondear(node.data.FaltaMateriaPrima, 2),
+                    PREPARACION_CAMBIO: redondear(node.data.PreparacionCambio, 2),
+                    ARRANQUE_ESTABILIZACION: redondear(node.data.ArranqueEstabilizacion, 2),
+                    TIEMPO_MTTO_CORRECTIVOS_ARRANQUE: redondear(node.data.TiempoMttoCorrectivosArranque, 2),
+                    TIEMPO_MUERTO_CORRECTIVOS: redondear(node.data.TiempoMuertoCorrectivos, 2),
+                    CAMBIO_MOLDE_SETUP_EXCESOS: redondear(node.data.CambioMoldeSetupExcesos, 2),
+                    TIEMPO_MUERTO_ARRANCAR: redondear(node.data.TiempoMuertoArrancar, 2),
+                    TIEMPO_MUERTO_PROCESO: redondear(node.data.TiempoMuertoProceso, 2),
+                    TIEMPO_DISPONIBLE: redondear(node.data.TiempoDisponible, 2),
+                    TIEMPO_PRODUCTIVO: redondear(node.data.TiempoProductivo, 2),
+                    KG_HR_LINEA: redondear(node.data.KgHrLinea || 0, 2),
+                    KG_HR_PRODUCTO: redondear(node.data.KgHrProducto || 0, 2),
+                    OBJETIVO_EFICIENCIA: redondear(node.data.ObjetivoEficiencia || 0, 2),
+                    DISPONIBILIDAD_PORCENTAJE: redondear(node.data.DisponibilidadPorcentaje || 0, 2),
+                    KG_POR_TIEMPO_DISPONIBLE: redondear(node.data.KgPorTiempoDisponible || 0, 2),
+                    KG_NETOS_HR_REALES: redondear(node.data.KgNetosHrReales || 0, 2),
+                    PORCENTAJE_RENDIMIENTO: redondear(node.data.PorcentajeRendimiento || 0, 2),
+                    PORCENTAJE_CALIDAD: redondear(node.data.PorcentajeCalidad || 0, 2),
+                    PORCENTAJE_OEE: redondear(node.data.PorcentajeOEE || 0, 2),
+                    PORCENTAJE_EFICIENCIA_PRODUCTO: redondear(node.data.PorcentajeEficienciaProducto || 0, 2),
+                    EFICIENCIA_OPERATIVA: redondear(node.data.EficienciaOperativa || 0, 2),
+                    USUARIO: this.datos_usuario[0].EMAIL,
+                    PLANTA: this.datos_usuario[0].PLANTA
+                });
+            }
+        });
+
+        return datos;
+    }
+
+    exportarExcel() {
+        const exporter = new ExcelExporterCorrugado(this.gridApi, this.columnDefs);
+        exporter.exportarConFormato();
+    }
+
+    // ========================================
+    // ✅ FIX: configurarEventos con async + disabled en botones
+    // ========================================
+    configurarEventos() {
+        $('#btnExportarExcel').on('click', () => this.exportarExcel());
+        $('#btnGuardarCambios').on('click', () => this.guardarCambios());
+
+        $('#btnEnviarCorreo').on('click', () => {
+            const modal = new bootstrap.Modal(document.getElementById('modalEnviarExcelCorreo'));
+            modal.show();
+        });
+
+        // Botón principal de filtros — async + protección doble click
+        $('#btnAplicarFiltros').on('click', async () => {
+            const $btn = $('#btnAplicarFiltros');
+            $btn.prop('disabled', true);
+            try {
+                const fechaInicio = $('#FiltroFechaInicio').val();
+                const fechaFin = $('#FiltroFechaFin').val();
+                const filtroTurno = $('#FiltroTurno').val();
+                const filtroLinea = $('#FiltroLinea').val();
+                await this.consultarDatos(fechaInicio, fechaFin, filtroLinea, filtroTurno);
+            } finally {
+                $btn.prop('disabled', false);
+            }
+        });
+
+        // Botón filtros Producto Terminado — async + protección doble click
+        $('#btnAplicarFiltrosPT').on('click', async () => {
+            const $btn = $('#btnAplicarFiltrosPT');
+            $btn.prop('disabled', true);
+            try {
+                const fechaInicio = $('#FiltroFechaInicioPT').val();
+                const fechaFin = $('#FiltroFechaFinPT').val();
+                const filtroTurno = $('#FiltroTurnoPT').val();
+                const productosTerminados = await this.ObtenerProductoTerminado(
+                    fechaInicio, fechaFin, filtroTurno, 'PCORR'
+                );
+                await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
+            } finally {
+                $btn.prop('disabled', false);
+            }
+        });
+
+        $('#btnLimpiarFiltros').on('click', () => {
+            $('#FiltroFechaInicio').val('');
+            $('#FiltroFechaFin').val('');
+            $('#FiltroTurno').val('');
+            $('#FiltroLinea').val('');
+            this.consultarDatos(null, null, null, null);
+        });
+
+        $('#FiltroFechaInicio, #FiltroFechaFin')
+            .off('change')
+            .on('change', () => {
+                const fechaInicio = $('#FiltroFechaInicio').val();
+                const fechaFin = $('#FiltroFechaFin').val();
+                $("#mesActual").text(this.formatearRangoFechas(fechaInicio, fechaFin));
+                this.consultarDatos(fechaInicio, fechaFin, null, null);
+            });
+    }
+
+    formatearNumero(valor) {
+        if (valor === null || valor === undefined || valor === '') return '';
+        const numValue = typeof valor === 'number' ? valor : parseFloat(valor);
+        if (isNaN(numValue)) return '';
+        return numValue.toFixed(2);
+    }
+
+    formatearPorcentaje(valor) {
+        if (valor === null || valor === undefined || valor === '') return '';
+        return `${parseFloat(valor).toFixed(2)}%`;
+    }
+
+    formatearRangoFechas(fechaInicio, fechaFin) {
+        const inicio = DateUtils.formatearFechaTexto(fechaInicio, false);
+        const fin = DateUtils.formatearFechaTexto(fechaFin, true);
+        return `Del ${inicio} al ${fin}`;
+    }
+
+    generarIdTemporal() {
+        return `TMP_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    }
+
+    async cargarLineas() {
+        try {
+            const lineas = await EquiposUtil.obtenerLineas(
+                this.datos_usuario[0].PLANTA,
+                (this.datos_usuario[0].PLANTA == "1" ? 7 : 7),
+                null
+            );
+            this.listaLineas = lineas;
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    // ========================================
+    // CRUD filas
+    // ========================================
+    agregarFila(params) {
+        const nuevaFila = this.crearFilaVacia();
+        nuevaFila.id = this.generarIdTemporal();
+
+        this.gridApi.applyTransaction({
+            add: [nuevaFila],
+            addIndex: params.node.rowIndex + 1
+        });
+
+        this.recalcularTotales();
+        this.gridApi.refreshCells({ force: true });
+        this.gridApi.redrawRows();
+    }
+
+    copiarFilaAnterior(params) {
+        const filaActual = params.node.data;
+        if (!filaActual || filaActual.id === 'TOTALES') return;
+
+        const nuevaFila = JSON.parse(JSON.stringify(filaActual));
+        nuevaFila.id = this.generarIdTemporal();
+        nuevaFila.ID_REGISTRO = null;
+
+        this.recalcularFila(nuevaFila);
+
+        this.gridApi.applyTransaction({
+            add: [nuevaFila],
+            addIndex: params.node.rowIndex + 1
+        });
+
+        this.recalcularTotales();
+    }
+
+    eliminarFila(params) {
+        if (params.node.data.id === 'TOTALES') return;
+
+        if (params.node.data.ID_REGISTRO) {
+            AlertManager.mostrar("No se puede eliminar un registro guardado", "warning");
+            return;
+        }
+
+        this.gridApi.applyTransaction({ remove: [params.node.data] });
+        this.recalcularTotales();
+        this.gridApi.refreshCells({ force: true });
+        this.gridApi.redrawRows();
+    }
+
+    configurarMenuContextual() {
+        const menu = document.getElementById("menuContextual");
+
+        document.querySelector('#tablaProduccion').addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+
+            const rowIndex = this.gridApi.getFocusedCell()?.rowIndex;
+            this.filaSeleccionada = this.gridApi.getDisplayedRowAtIndex(rowIndex);
+
+            if (this.filaSeleccionada?.data?.id === 'TOTALES') {
+                menu.style.display = "none";
+                return;
+            }
+
+            const eliminar = menu.querySelector('[data-action="eliminar"]');
+            eliminar.style.display = this.filaSeleccionada?.data?.ID_REGISTRO ? "none" : "block";
+
+            menu.style.display = "block";
+
+            const menuWidth = 180;
+            const menuHeight = 150;
+            let posX = Math.min(e.pageX, window.innerWidth - menuWidth - 10);
+            let posY = Math.min(e.pageY, window.innerHeight - menuHeight - 10);
+            posX = Math.max(10, posX);
+            posY = Math.max(10, posY);
+
+            menu.style.left = posX + "px";
+            menu.style.top = posY + "px";
+        });
+
+        document.addEventListener("click", () => { menu.style.display = "none"; });
+
+        menu.addEventListener("click", (e) => {
+            const accion = e.target.dataset.action;
+            if (!this.filaSeleccionada) return;
+            const params = { node: this.filaSeleccionada };
+            if (accion === "agregar") this.agregarFila(params);
+            if (accion === "copiar") this.copiarFilaAnterior(params);
+            if (accion === "eliminar") this.eliminarFila(params);
+            menu.style.display = "none";
+        });
+    }
+
+    getColumnaNumerica(cellClass = '') {
+        return {
+            editable: true,
+            cellEditor: 'agNumberCellEditor',
+            cellClass: cellClass,
+            valueParser: params => {
+                if (params.newValue === null || params.newValue === undefined || params.newValue === '')
+                    return null;
+
+                let valor = params.newValue.toString().trim();
+
+                if (valor.includes(',') && valor.includes('.')) {
+                    const lastComma = valor.lastIndexOf(',');
+                    const lastDot = valor.lastIndexOf('.');
+                    if (lastComma > lastDot) {
+                        valor = valor.replace(/\./g, '').replace(',', '.');
+                    } else {
+                        valor = valor.replace(/,/g, '');
+                    }
+                } else if (valor.includes(',')) {
+                    valor = valor.replace(/,/g, '.');
+                }
+
+                const numValue = parseFloat(valor);
+                return isNaN(numValue) ? null : numValue;
+            },
+            valueFormatter: params => this.formatearNumero(params.value)
+        };
     }
 }
 
+// ========================================
+// AUTOCOMPLETE EDITOR — igual que PVC (con fix de posicionamiento dinámico)
+// ========================================
 class ArticuloAutocompleteEditor {
 
-    init(params) {
+    constructor() {
+        this.articuloSeleccionado = null;
+    }
 
+    init(params) {
         this.params = params;
 
         this.eContainer = document.createElement('div');
@@ -2690,75 +1777,68 @@ class ArticuloAutocompleteEditor {
         this.gestionArticulos = params.context.gestionArticulos;
         this.datos_usuario = params.context.datos_usuario;
         this.URLBase = params.context.URLBase;
+        this.appProduccion = params.context.appProduccion;
 
         $(this.eInput).on('input', async (e) => {
-
             const query = e.target.value;
-
             if (query.length >= 2) {
-
                 const articulos = await this.gestionArticulos.obtenerArticulos(
                     query,
                     this.datos_usuario[0].EMAIL,
                     0
                 );
-
                 this.mostrarSugerencias(articulos);
-
             } else {
-
                 this.eDropdown.innerHTML = '';
-
             }
-
         });
-
     }
 
     mostrarSugerencias(articulos) {
-
         this.eDropdown.innerHTML = '';
 
         const rect = this.eInput.getBoundingClientRect();
+        const anchoDropdown = Math.max(rect.width, 450);
+        const altoDropdown = 280;
 
-        this.eDropdown.style.top = rect.bottom + 'px';
-        this.eDropdown.style.left = rect.left + 'px';
-        this.eDropdown.style.width = Math.max(rect.width, 450) + 'px';
+        // Evitar que se salga por la derecha
+        let left = rect.left;
+        if (left + anchoDropdown > window.innerWidth) {
+            left = window.innerWidth - anchoDropdown - 10;
+        }
+
+        // Voltear hacia arriba si no cabe abajo
+        const espacioAbajo = window.innerHeight - rect.bottom;
+        const cabeAbajo = espacioAbajo >= altoDropdown;
+
+        if (cabeAbajo) {
+            this.eDropdown.style.top = rect.bottom + 'px';
+        } else {
+            const topArriba = rect.top - altoDropdown;
+            this.eDropdown.style.top = Math.max(topArriba, 10) + 'px';
+        }
+
+        this.eDropdown.style.left = left + 'px';
+        this.eDropdown.style.width = anchoDropdown + 'px';
 
         articulos.forEach(articulo => {
-
             const item = document.createElement('div');
             item.className = 'autocomplete-item';
-
-            item.innerHTML = `
-            <strong>${articulo.CodigoArticulo}</strong><br>
-            <small>${articulo.DescripcionArticulo}</small>
-        `;
+            item.innerHTML = `<strong>${articulo.CodigoArticulo}</strong><br><small>${articulo.DescripcionArticulo}</small>`;
 
             item.addEventListener('click', () => {
-
                 this.eInput.value = articulo.CodigoArticulo;
-
                 this.articuloSeleccionado = articulo;
 
                 const row = this.params.node.data;
-
                 row.Producto = articulo.CodigoArticulo;
-
                 row.PesoMinimo = articulo.PesoMinimo || 0;
-
                 row.DescripcionArticulo = articulo.DescripcionArticulo;
-
                 row.KgHrProducto = parseFloat(articulo.KgsDia) / 24 || 0;
-
                 row.KgHrLinea = parseFloat(articulo.KgsDia) / 24 || 0;
 
-                // 🔥 Recalcular KPIs de la fila
                 const app = this.params.context.appProduccion;
-
                 app.recalcularFila(row);
-
-                // 🔥 Actualizar totales
                 app.recalcularTotales();
 
                 this.eDropdown.innerHTML = '';
@@ -2769,34 +1849,25 @@ class ArticuloAutocompleteEditor {
                 });
 
                 this.params.stopEditing();
-
             });
 
             this.eDropdown.appendChild(item);
-
         });
-
     }
 
-    getGui() {
-        return this.eContainer;
-    }
+    getGui() { return this.eContainer; }
 
     afterGuiAttached() {
         this.eInput.focus();
         this.eInput.select();
-        this.eInput.value = ''; // 🔥 limpiar input
+        this.eInput.value = '';
     }
 
-    getValue() {
-        return this.eInput.value;
-    }
+    getValue() { return this.eInput.value; }
 
     destroy() { }
 
-    isPopup() {
-        return true;
-    }
+    isPopup() { return true; }
 }
 
 

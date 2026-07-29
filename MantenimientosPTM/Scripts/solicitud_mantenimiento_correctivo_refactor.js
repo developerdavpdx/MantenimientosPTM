@@ -249,7 +249,7 @@ class MantenimientoManager {
         });
     }
 
-    abrirModalCaratulaOnline(btn,) {
+    abrirModalCaratulaOnline(btn) {
         // ===== OBTENER TODOS LOS DATA ATTRIBUTES DEL CORRECTIVO =====
         const idSolicitud = btn.IdSolicitud;
         const idEquipo = btn.IdEquipo;

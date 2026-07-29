@@ -59,13 +59,20 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
     async inicializar() {
         await this.inicializarCommon();
 
-        // 📧 NUEVO: Inicializar gestor de correos
         this.correosManager = new CorreosManagerPeadLiso();
         this.correosManager.setAppProduccion(this);
         this.correosManager.inicializar();
-
-        // 🔥 CONSULTAR DATOS
-        this.consultarDatos(null, null, null);
+        EquiposUtil.llenarLineas(
+            this.datos_usuario[0].PLANTA,
+            9,
+            null,
+            "FiltroLinea",
+            null,
+            null,
+            false
+        );
+        // 🔥 CONSULTAR DATOS (firma actualizada con 5 params, igual que PVC)
+        this.consultarDatos(null, null, null, null, null);
         console.log('✅ Sistema PEAD LISO inicializado');
     }
 
@@ -227,7 +234,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
     }
 
-    async consultarDatos(fechaInicio, fechaFin, linea) {
+    async consultarDatos(fechaInicio, fechaFin, FiltroTurno, FiltroLinea, filtroProducto) {
 
         try {
             GlobalUtil.mostrarLoader(true);
@@ -239,7 +246,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 data: {
                     FiltroFechaInicio: fechaInicio,
                     FiltroFechaFin: fechaFin,
-                    FiltroLinea: linea
+                    FiltroLinea: FiltroLinea,
+                    FiltroTurno: FiltroTurno || '',        // 🔥 NUEVO
+                    FiltroProducto: filtroProducto || ''   // 🔥 NUEVO
                 }
             });
 
@@ -254,15 +263,14 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             }
 
             // 🔥 Correctivos se agregan ANTES de pintar totales
-            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, linea);
+            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, FiltroLinea);
 
-            // 🔥 NUEVO: Preventivos se agregan también
-            const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
+            // 🔥 Preventivos se agregan también
+            const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, FiltroLinea);
 
-            // ✅ NUEVO: Productos terminados se agregan también
-            let PLANTA = this.datos_usuario[0].PLANTA;
-            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, null, 'PPEADLISO');
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
+            // ✅ Productos terminados se agregan también (turno actual si no hay fecha, mismo patrón que PVC)
+            const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, 'PPEADLISO');
+            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
 
             // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
@@ -1116,38 +1124,39 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
     // ========================================
     // 🔥 NUEVO: Obtener Producto Terminado
     // ========================================
-    async ObtenerProductoTerminado(planta, filtroTurno, proceso) {
+    // ========================================
+    // 🔥 NUEVO: Obtener Producto Terminado
+    // ========================================
+    async ObtenerProductoTerminado(FechaInicio, FechaFin, FiltroTurno, proceso) {
 
         try {
 
             GlobalUtil.mostrarLoader(true);
 
-            // ✅ CORRECIÓN: Usar los parámetros correctos
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetProductoTerminadoNewScale`,
                 type: "GET",
                 headers: {
-                    "Planta": planta || this.datos_usuario[0].PLANTA,
-                    "Turno": filtroTurno || null,
+                    "FechaInicio": FechaInicio,
+                    "FechaFin": FechaFin,
+                    "Planta": this.datos_usuario[0].PLANTA,
+                    "Turno": FiltroTurno || null,
                     "Proceso": proceso || ""
                 },
                 dataType: 'json'
             });
 
-            // ✅ AJUSTE: Validar estructura correcta
             let productosTerminados = [];
 
             if (response && response.reportesProdTerm && Array.isArray(response.reportesProdTerm)) {
                 productosTerminados = response.reportesProdTerm;
             } else if (response && response.Data) {
-                // Si viene en response.Data, intentar parsear si es string
                 if (typeof response.Data === 'string') {
                     productosTerminados = JSON.parse(response.Data);
                 } else {
                     productosTerminados = response.Data;
                 }
             } else if (Array.isArray(response)) {
-                // Si la respuesta es directamente un array
                 productosTerminados = response;
             }
 
@@ -1175,13 +1184,18 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
     // ========================================
     // 🔥 NUEVO: Traer productos terminados y agregarlos al grid
     // ========================================
-    async agregarProductosTerminadosAlGrid(productosTerminados) {
+    async agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, showwarning = false) {
         try {
             if (!productosTerminados || productosTerminados.length === 0) {
+                if (showwarning) {
+                    AlertManager.mostrar(
+                        `No se encontraron productos terminados para los filtros seleccionados del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
+                        "warning"
+                    );
+                }
                 return false;
             }
 
-            // 🔥 Mapear nodos existentes por ID_PRODUCTO_TERMINADO
             const nodosExistentes = new Map();
             this.gridApi.forEachNode(node => {
                 if (node.data?.ID_PRODUCTO_TERMINADO) {
@@ -1198,7 +1212,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
             productosTerminados.forEach(item => {
-                const fecha = this.parsearFechaProductoTerminado(item.FechaPesaje);
+                // 🔥 CAMBIO: usar la fecha operativa del turno, no la fecha "de reloj"
+                const fecha = this.calcularFechaOperativaTurno(item.FechaPesaje, item.Turno);
+
                 if (!fecha) {
                     console.warn(`⚠️ Producto ${item.Codigo} tiene fecha inválida, será omitido`);
                     return;
@@ -1277,11 +1293,22 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             if (filasActualizadas.length > 0) {
                 this.gridApi.applyTransaction({ update: filasActualizadas });
                 console.log(`🔄 Se actualizaron ${filasActualizadas.length} productos terminados`);
+
+                AlertManager.mostrar(
+                    `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno || 'de acuerdo a la hora actual'} con información reciente`,
+                    "info"
+                );
             }
 
             if (filasNuevas.length > 0) {
                 this.gridApi.applyTransaction({ add: filasNuevas });
                 console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados`);
+
+                AlertManager.mostrar(
+                    `✅ Se agregaron ${filasNuevas.length} productos terminados al grid del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
+                    "info"
+                );
+
                 this.inicializarTooltipsGrid();
             }
 
@@ -1291,6 +1318,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     "warning"
                 );
             }
+
+            // 🔥 Reponer la fila de totales al final, recalculada
+            this.agregarFilaTotales();
 
             return filasAgregadas > 0 || filasActualizadas.length > 0;
 
@@ -1327,6 +1357,40 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         } catch (error) {
             console.error("Error al parsear fecha:", error);
+            return null;
+        }
+    }
+
+    // 🔥 NUEVO: Ajusta la fecha "de reloj" a la fecha "operativa del turno"
+    // Turno 2 corre de 4:30pm a 4:30am del día siguiente.
+    // Si el registro cae en la madrugada (00:00 - 4:30am) y es turno 2,
+    // operativamente pertenece al día ANTERIOR (el día en que arrancó el turno).
+    calcularFechaOperativaTurno(fechaISOConHora, turno) {
+
+        if (!fechaISOConHora) return null;
+
+        try {
+            const fecha = new Date(fechaISOConHora);
+            if (isNaN(fecha.getTime())) return null;
+
+            const hora = fecha.getHours();
+            const minutos = fecha.getMinutes();
+
+            const esMadrugada =
+                hora < 4 || (hora === 4 && minutos <= 30);
+
+            if (String(turno) === '2' && esMadrugada) {
+                fecha.setDate(fecha.getDate() - 1);
+            }
+
+            const ano = fecha.getFullYear();
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            const dia = String(fecha.getDate()).padStart(2, '0');
+
+            return `${ano}-${mes}-${dia}`; // YYYY-MM-DD
+
+        } catch (error) {
+            console.error("Error al calcular fecha operativa del turno:", error);
             return null;
         }
     }
@@ -1661,30 +1725,30 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         if (!this.gridApi) return;
 
-        let existeTotales = false;
+        // 🔥 Si ya existe una fila de TOTALES, la quitamos primero
+        // para que siempre quede una sola, y al final de todo
+        let filaTotalesVieja = null;
 
         this.gridApi.forEachNode(node => {
             if (node.data?.id === 'TOTALES') {
-                existeTotales = true;
+                filaTotalesVieja = node.data;
             }
         });
 
-        if (!existeTotales) {
-
-            const filaTotales = {
-                id: 'TOTALES',
-                Linea: 'TOTALES'
-            };
-
-            this.gridApi.applyTransaction({
-                add: [filaTotales],
-                addIndex: this.gridApi.getDisplayedRowCount()
-            });
-
+        if (filaTotalesVieja) {
+            this.gridApi.applyTransaction({ remove: [filaTotalesVieja] });
         }
 
-        this.recalcularTotales();
+        const filaTotales = {
+            id: 'TOTALES',
+            Linea: 'TOTALES'
+        };
 
+        this.gridApi.applyTransaction({
+            add: [filaTotales]
+        });
+
+        this.recalcularTotales();
     }
 
     recalcularTotales() {
@@ -1915,58 +1979,58 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
     configurarEventos() {
 
-        // ========================================
-        // GUARDAR
-        // ========================================
         $("#btnGuardarCambios").on("click", () => {
             this.guardarCambios();
         });
 
-        // ========================================
-        // EXPORTAR
-        // ========================================
         $('#btnExportarExcel').on('click', () => this.exportarExcel());
 
-        // ========================================
-        // 📧 NUEVO: Abrir modal para enviar por correo
-        // ========================================
         $('#btnEnviarCorreo').on('click', () => {
             const modal = new bootstrap.Modal(document.getElementById('modalEnviarExcelCorreo'));
             modal.show();
         });
 
-        // ========================================
-        // FILTROS
-        // ========================================
-        $("#btnAplicarFiltros").on("click", () => {
+        $('#btnAplicarFiltros').on('click', async () => {
+            const $btn = $('#btnAplicarFiltros');
+            $btn.prop('disabled', true);
 
-            const fechaInicio =
-                $("#FiltroFechaInicio").val();
+            try {
+                const fechaInicio = $('#FiltroFechaInicio').val();
+                const fechaFin = $('#FiltroFechaFin').val();
+                const filtroTurno = $('#FiltroTurno').val();
+                const filtroProducto = $('#FiltroProducto').val();
+                const FiltroLinea = $('#FiltroLinea').val();
 
-            const fechaFin =
-                $("#FiltroFechaFin").val();
-
-            this.consultarDatos(
-                fechaInicio,
-                fechaFin,
-                null
-            );
-
+                await this.consultarDatos(fechaInicio, fechaFin, filtroTurno, FiltroLinea, filtroProducto);
+            } finally {
+                $btn.prop('disabled', false);
+            }
         });
 
-        // ========================================
-        // LIMPIAR
-        // ========================================
+        $('#btnAplicarFiltrosPT').on('click', async () => {
+            const $btn = $('#btnAplicarFiltrosPT');
+            $btn.prop('disabled', true);
+
+            try {
+                const fechaInicio = $('#FiltroFechaInicioPT').val();
+                const fechaFin = $('#FiltroFechaFinPT').val();
+                const filtroTurno = $('#FiltroTurnoPT').val();
+                const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, 'PPEADLISO');
+                await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
+            } finally {
+                $btn.prop('disabled', false);
+            }
+        });
+
         $("#btnLimpiarFiltros").on("click", () => {
 
             $("#FiltroFechaInicio").val("");
             $("#FiltroFechaFin").val("");
+            $("#FiltroTurno").val("");
+            $("#FiltroProducto").val("");
+            $("#FiltroLinea").val("");
 
-            this.consultarDatos(
-                null,
-                null,
-                null
-            );
+            this.consultarDatos(null, null, null, null, null);
 
         });
 
@@ -1977,11 +2041,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 const fechaInicio = $('#FiltroFechaInicio').val();
                 const fechaFin = $('#FiltroFechaFin').val();
                 const FechaTexto = this.formatearRangoFechas(fechaInicio, fechaFin);
-                $("#mesActual").text(
-                    FechaTexto
-                );
+                $("#mesActual").text(FechaTexto);
 
-                this.consultarDatos(fechaInicio, fechaFin, null);
+                this.consultarDatos(fechaInicio, fechaFin, null, null, null);
 
             });
 
@@ -2146,7 +2208,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 this.cambiosPendientes = [];
 
                 // 🔥 refrescar grid
-                this.consultarDatos(null, null, null);
+                this.consultarDatos(null, null, null, null, null);
 
             } else {
 
@@ -2569,6 +2631,10 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
 class ArticuloAutocompleteEditor {
 
+    constructor() {
+        this.articuloSeleccionado = null;
+    }
+
     init(params) {
 
         this.params = params;
@@ -2589,6 +2655,8 @@ class ArticuloAutocompleteEditor {
         this.gestionArticulos = params.context.gestionArticulos;
         this.datos_usuario = params.context.datos_usuario;
         this.URLBase = params.context.URLBase;
+
+        this.appProduccion = params.context.appProduccion;
 
         $(this.eInput).on('input', async (e) => {
 
@@ -2618,6 +2686,28 @@ class ArticuloAutocompleteEditor {
 
         this.eDropdown.innerHTML = '';
 
+        const rect = this.eInput.getBoundingClientRect();
+        const anchoDropdown = Math.max(rect.width, 450);
+        const altoDropdown = 280;
+
+        let left = rect.left;
+        if (left + anchoDropdown > window.innerWidth) {
+            left = window.innerWidth - anchoDropdown - 10;
+        }
+
+        const espacioAbajo = window.innerHeight - rect.bottom;
+        const cabeAbajo = espacioAbajo >= altoDropdown;
+
+        if (cabeAbajo) {
+            this.eDropdown.style.top = rect.bottom + 'px';
+        } else {
+            const topArriba = rect.top - altoDropdown;
+            this.eDropdown.style.top = Math.max(topArriba, 10) + 'px';
+        }
+
+        this.eDropdown.style.left = left + 'px';
+        this.eDropdown.style.width = anchoDropdown + 'px';
+
         articulos.forEach(articulo => {
 
             const item = document.createElement('div');
@@ -2638,8 +2728,7 @@ class ArticuloAutocompleteEditor {
 
                 row.Producto = articulo.CodigoArticulo;
 
-                row.PesoMinimo =
-                    parseFloat(articulo.PesoMinimo) || 0;
+                row.PesoMinimo = parseFloat(articulo.PesoMinimo) || 0;
 
                 row.DescripcionArticulo = articulo.DescripcionArticulo;
 
@@ -2647,12 +2736,10 @@ class ArticuloAutocompleteEditor {
 
                 row.KgHrLinea = parseFloat(articulo.KgsDia) / 24 || 0;
 
-                // 🔥 Recalcular KPIs de la fila
                 const app = this.params.context.appProduccion;
 
                 app.recalcularFila(row);
 
-                // 🔥 Actualizar totales
                 app.recalcularTotales();
 
                 this.eDropdown.innerHTML = '';

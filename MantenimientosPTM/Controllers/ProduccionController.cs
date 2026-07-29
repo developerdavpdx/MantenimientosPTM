@@ -561,7 +561,9 @@ namespace MantenimientosPTM.Controllers
         string FiltroFechaInicio,
         string FiltroFechaFin,
         string FiltroLinea,
-        string FiltroPlanta)
+        string FiltroPlanta,
+        string FiltroTurno,      // 🔥 NUEVO
+        string FiltroProducto)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -585,10 +587,12 @@ namespace MantenimientosPTM.Controllers
 
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FECHA_INICIO", (string.IsNullOrEmpty(dtFechaInicio.ToString("yyyy-MM-dd")) ? (object)null : dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_FECHA_FIN", (string.IsNullOrEmpty(dtFechaFin.ToString("yyyy-MM-dd")) ? (object)null : dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FECHA_INICIO", (dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN",    (dtFechaFin.ToString("yyyy-MM-dd"),    ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)    ? (object)null : FiltroLinea,    ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta)   ? (object)null : FiltroPlanta,   ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TURNO",        (string.IsNullOrEmpty(FiltroTurno)    ? (object)null : FiltroTurno,    ParameterDirection.Input, HanaDbType.NVarChar) }, // 🔥 NUEVO
+                    { "P_PRODUCTO",     (string.IsNullOrEmpty(FiltroProducto) ? (object)null : FiltroProducto, ParameterDirection.Input, HanaDbType.NVarChar) }  // 🔥 NUEVO
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -643,7 +647,9 @@ namespace MantenimientosPTM.Controllers
         public JsonResult GetTiemposMuertosINY(
         string FiltroFechaInicio,
         string FiltroFechaFin,
-        string FiltroLinea)
+        string FiltroLinea,
+        string FiltroTurno,      // 🔥 NUEVO
+        string FiltroProducto)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -782,7 +788,9 @@ namespace MantenimientosPTM.Controllers
         string FiltroFechaInicio,
         string FiltroFechaFin,
         string FiltroLinea,
-        string FiltroPlanta)
+        string FiltroPlanta,
+        string FiltroTurno,      // 🔥 NUEVO
+        string FiltroProducto)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -806,13 +814,12 @@ namespace MantenimientosPTM.Controllers
 
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FECHA_INICIO", (string.IsNullOrEmpty(dtFechaInicio.ToString("yyyy-MM-dd")) ? (object)null : dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-
-                    { "P_FECHA_FIN", (string.IsNullOrEmpty(dtFechaFin.ToString("yyyy-MM-dd")) ? (object)null : dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-
-                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
-
-                    { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FECHA_INICIO", (dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN",    (dtFechaFin.ToString("yyyy-MM-dd"),    ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)    ? (object)null : FiltroLinea,    ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta)   ? (object)null : FiltroPlanta,   ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TURNO",        (string.IsNullOrEmpty(FiltroTurno)    ? (object)null : FiltroTurno,    ParameterDirection.Input, HanaDbType.NVarChar) }, // 🔥 NUEVO
+                    { "P_PRODUCTO",     (string.IsNullOrEmpty(FiltroProducto) ? (object)null : FiltroProducto, ParameterDirection.Input, HanaDbType.NVarChar) }  // 🔥 NUEVO
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -1383,6 +1390,10 @@ namespace MantenimientosPTM.Controllers
                 string proceso = Request.Headers["Proceso"];
                 string FiltroTurno = Request.Headers["Turno"];
 
+                // 🔥 NUEVO: leer fechas del filtro
+                string filtroFechaInicio = Request.Headers["FechaInicio"];
+                string filtroFechaFin = Request.Headers["FechaFin"];
+
                 if (string.IsNullOrEmpty(plantaHeader) || string.IsNullOrEmpty(proceso))
                 {
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
@@ -1408,10 +1419,54 @@ namespace MantenimientosPTM.Controllers
                 string JSONstringSp = string.Empty;
                 List<ReportesProdTerm> reportesProdTerm = new List<ReportesProdTerm>();
 
-                if (FiltroTurno == null || FiltroTurno == "null")
-                {
+                // 🔥 NUEVO: ¿el usuario mandó un rango de fechas explícito desde el filtro?
+                DateTime fechaInicioParsed = DateTime.MinValue;
+                DateTime fechaFinParsed = DateTime.MinValue;
 
-                    // Asignar turno y rangos de fechas
+                bool hayFiltroFechas =
+                    DateTime.TryParse(filtroFechaInicio, out fechaInicioParsed) &&
+                    DateTime.TryParse(filtroFechaFin, out fechaFinParsed);
+
+                if (hayFiltroFechas)
+                {
+                    DateTime fechaIni = fechaInicioParsed.Date;
+                    DateTime fechaFinDia = fechaFinParsed.Date;
+
+                    // 🔥 Si no viene turno explícito, lo deducimos igual que la lógica original (por hora actual)
+                    string turnoEfectivo = FiltroTurno;
+
+                    if (string.IsNullOrEmpty(turnoEfectivo) || turnoEfectivo == "null")
+                    {
+                        bool esTurno1PorHora = horaActual >= horaInicioTurno && horaActual <= horaFinTurno;
+                        turnoEfectivo = esTurno1PorHora ? "1" : "2";
+                    }
+
+                    if (turnoEfectivo == "1")
+                    {
+                        turno = 1;
+
+                        // Turno 1: 4:30:01am a 4:30pm del mismo día
+                        TurnoStar = fechaIni.AddHours(4.5).AddSeconds(1);
+                        TurnoEnd = fechaFinDia.AddHours(16.5);
+
+                        TurnoScrapStar = fechaIni.AddHours(5).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = fechaFinDia.AddHours(17).AddMinutes(45);
+                    }
+                    else // turnoEfectivo == "2"
+                    {
+                        turno = 2;
+
+                        // Turno 2: 4:30:01pm del día a 4:30am del día siguiente
+                        TurnoStar = fechaIni.AddHours(16.5).AddSeconds(1);
+                        TurnoEnd = fechaFinDia.AddDays(1).AddHours(4.5);
+
+                        TurnoScrapStar = fechaIni.AddHours(17).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = fechaFinDia.AddDays(1).AddHours(5).AddMinutes(45);
+                    }
+                }
+                else if (FiltroTurno == null || FiltroTurno == "null")
+                {
+                    // Asignar turno y rangos de fechas (lógica original: turno actual por hora del sistema)
                     if (horaActual >= horaInicioTurno && horaActual <= horaFinTurno)
                     {
                         turno = 1;
@@ -1430,7 +1485,6 @@ namespace MantenimientosPTM.Controllers
                         TurnoScrapStar = DateTime.Today.AddHours(17).AddMinutes(45).AddSeconds(1);
                         TurnoScrapEnd = DateTime.Today.AddDays(1).AddHours(5).AddMinutes(45);
 
-                        // Madrugada: ajustar al día anterior
                         if (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
                            (horaActual.Hour == 4 && horaActual.Minute <= 30))
                         {
@@ -1461,7 +1515,6 @@ namespace MantenimientosPTM.Controllers
                         TurnoScrapStar = DateTime.Today.AddHours(17).AddMinutes(45).AddSeconds(1);
                         TurnoScrapEnd = DateTime.Today.AddDays(1).AddHours(5).AddMinutes(45);
 
-                        // Madrugada: ajustar al día anterior
                         if (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
                            (horaActual.Hour == 4 && horaActual.Minute <= 30))
                         {
