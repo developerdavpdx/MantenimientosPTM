@@ -481,7 +481,7 @@ class GestionTecnicos {
         console.log('✅ GestionTecnicos inicializado correctamente');
     }
 
-    async buscarTecnicos(query, planta, posicion, usuarioWeb, tipoUsuario) {
+    async buscarTecnicos(query, planta, posicionId, usuarioWeb, tipoUsuario) {
         try {
             const response = await $.ajax({
                 url: `/${this.URLBase}/BuscarEmpleados`,
@@ -489,7 +489,7 @@ class GestionTecnicos {
                 data: {
                     planta: planta,
                     query: query,
-                    posicion: posicion,
+                    posicionId: posicionId,
                     usuarioWeb: usuarioWeb,
                     tipoUsuario: tipoUsuario
                 },
@@ -2911,6 +2911,7 @@ class SessionManager {
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
             $("#MetricasURL").addClass("d-none"); //METRICAS
+            $("#MCProgramarURL").addClass("d-none");
         }
         //SUPERVISOR MANTENIMIENTO
         if (tipoUsuario === "SupervisorMantenimiento") {

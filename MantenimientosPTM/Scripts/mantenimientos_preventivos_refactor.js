@@ -420,19 +420,11 @@ class MantenimientosPreventivoApp {
         $('#BuscarTecnico').on('input', (e) => {  // ⬅️ Agrega parámetro 'e'
             const query = $(e.target).val().trim();
             let planta = this.datos_usuario[0].PLANTA;
-            let posicion = null;
-
-            let area = $(e.target).attr('data-area');
-
-            if (area.includes("PVC")) {
-                posicion = "3,95";       // TÉC DE MTO PVC + TEC HERR PVC
-            } else if (area.includes("PEAD")) {
-                posicion = "100,101";    // TÉC DE MTO PEAD + TEC HERR PEAD
-            } else if (area.includes("PE/INY")) {
-                posicion = "82";         // TÉC DE MTO PE/INY
-            }
-
-            this.parametersBuscarTecnica(query, planta, posicion);
+            let usuarioWeb = this.datos_usuario[0].USUARIOWEB;
+            let tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+            let posicionId = null;
+                        
+            this.parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario);
 
         });
 
@@ -477,10 +469,10 @@ class MantenimientosPreventivoApp {
 
     }
 
-    parametersBuscarTecnica(query, planta, posicion) {
+    parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario) {
 
-        if (query.length >= 2) {
-            this.gestionTecnicos.buscarTecnicos(query, planta, posicion);
+        if (query.length >= 2 && tipoUsuario === "TecnicoMtto") {
+            this.gestionTecnicos.buscarTecnicos(query, planta, posicionId, usuarioWeb, tipoUsuario);
         } else {
             this.gestionTecnicos.ocultarSugerencias();
         }

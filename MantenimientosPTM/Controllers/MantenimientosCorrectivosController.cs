@@ -781,7 +781,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarEmpleados(int? planta, string query, int posicion, string usuarioWeb, string tipoUsuario)
+        public JsonResult BuscarEmpleados(int? planta, string query, string posicionId, string usuarioWeb, string tipoUsuario)
         {
             try
             {
@@ -791,14 +791,18 @@ namespace MantenimientosPTM.Controllers
                     return Json(new List<object>(), JsonRequestBehavior.AllowGet);
                 }
 
+                string posicionIdFinal = string.IsNullOrEmpty(posicionId) ? null : posicionId;
+                string usuarioWebFinal = string.IsNullOrEmpty(usuarioWeb) ? null : usuarioWeb;
+                string tipoUsuarioFinal = string.IsNullOrEmpty(tipoUsuario) ? null : tipoUsuario;
+
                 // ✅ Preparar parámetros para el SP
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
                     { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_POSICION", (posicion, ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_USUARIOWEB", (usuarioWeb, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_TIPOUSUARIO", (tipoUsuario, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_POSICION",(posicionIdFinal,  ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_USUARIOWEB",(usuarioWebFinal,  ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TIPOUSUARIO",(tipoUsuarioFinal, ParameterDirection.Input, HanaDbType.NVarChar) },
                 };
 
                 // ✅ Ejecutar el Stored Procedure
