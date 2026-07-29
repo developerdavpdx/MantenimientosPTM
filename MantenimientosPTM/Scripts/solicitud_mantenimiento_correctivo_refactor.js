@@ -196,6 +196,7 @@ class MantenimientoManager {
                                     $("#btnGuardarCorrectivo").html('<i class="bi bi-save-fill me-1"></i>Guardar');
                                     $("#btnGuardarCorrectivo").prop("disabled", false);
                                 }, 3000);
+                               
                                 //OBTENER MC
                                 $.ajax({
                                     url: `/${this.URLBase}/GetMantenimientoCorrectivo`,
@@ -210,6 +211,9 @@ class MantenimientoManager {
                                         //RESET FORM
                                         $("#formSolicitudCorrectivo")[0].reset();
                                         $("#formSolicitudCorrectivo").removeClass("was-validated");
+                                        // 👇 Quitar is-valid e is-invalid de todos los inputs
+                                        $("#formSolicitudCorrectivo .is-valid").removeClass("is-valid");
+                                        $("#formSolicitudCorrectivo .is-invalid").removeClass("is-invalid");
                                     },
                                     error: (xhr, status, error) => {
                                         $("#btnGuardarCorrectivo").html('<i class="bi bi-save me-1"></i>Guardar');

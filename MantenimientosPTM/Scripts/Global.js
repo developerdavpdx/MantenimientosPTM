@@ -2899,9 +2899,10 @@ class SessionManager {
         const planta = datos_usuario[0].PLANTA;
         const perfilLegible = mapeoPerfiles[tipoUsuario] || tipoUsuario;
         const plantaLegible = mapeoPlantas[planta] || planta;
+        const posicion = datos_usuario[0].POSICION;
 
         // Establecer el nombre de usuario con perfil
-        $("#UserName").text(`${datos_usuario[0].NOMBRECOMPLETO} (${perfilLegible} ${plantaLegible})`);
+        $("#UserName").text(`${datos_usuario[0].NOMBRECOMPLETO} (${posicion} ${plantaLegible})`);
 
         //TECNICO MTTO
         if (tipoUsuario === "TecnicoMtto") {

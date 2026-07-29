@@ -537,6 +537,8 @@ class MantenimientoManager {
             }
 
             let FiltroEstatusOT = (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto" ? "2,3,4" : null);
+            //Obtencion de la posicion del empleado
+            let posicionId = this.datos_usuario[0].POSICIONID || null;
 
             function calcularHeaderOffset() {
                 if (window.innerWidth < 625) {
@@ -663,7 +665,8 @@ class MantenimientoManager {
                             "FiltroLinea": $("#FiltroLinea").val() || null,
                             "FiltroOrdenTrabajo": $("#FiltroOrdenTrabajo").val() || null,
                             "FiltroPlanta": this.datos_usuario[0].PLANTA || null,
-                            "FiltroEstatusOT": FiltroEstatusOT
+                            "FiltroEstatusOT": FiltroEstatusOT,
+                            "FiltroPosicionId": posicionId
                         });
                     },
                     dataSrc: function (json) {
@@ -2460,14 +2463,14 @@ class MantenimientoManager {
 
         //CALCULO DE TIEMPO DE ESPERA VA AQUI
         // Tiempo de espera
-        let TE = this.calcularDiferenciaHoras(HoraAperturaOT, HoraInicioTrabajo);
+        let TE = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraInicioTrabajo);
         $('#TiempoEspera').val(TE + ' HRS');
         // Tiempo reparación
-        let TR = this.calcularDiferenciaHoras(HoraAperturaOT, HoraFinTrabajo);
+        let TR = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraFinTrabajo);
         $('#TiempoReparacion').val(TR + ' HRS');
         // Tiempo muerto
         if (MaquinaDetenida) {
-            let TM = this.calcularDiferenciaHoras(HoraAperturaOT, HoraCierreOT);
+            let TM = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraCierreOT);
             $('#TiempoMuerto').val(TM + ' HRS');
         }
         else {

@@ -926,6 +926,8 @@ class MantenimientoManager {
             }
 
             let FiltroEstatusOT = (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto" ? "2,3,4" : null);
+            //Obtencion de la posicion del empleado
+            let posicionId = this.datos_usuario[0].POSICIONID || null;
 
             // Función para calcular el offset correcto según el tamaño de pantalla
             function calcularHeaderOffset() {
@@ -1058,7 +1060,8 @@ class MantenimientoManager {
                             "FiltroPlanta": this.datos_usuario[0].PLANTA || null,
                             "FiltroEstatusOT": FiltroEstatusOT,
                             "FiltroUsuario": this.datos_usuario[0].EMAIL || null,
-                            "FiltroTipoUsuario": this.datos_usuario[0].TIPOUSUARIO
+                            "FiltroTipoUsuario": this.datos_usuario[0].TIPOUSUARIO,
+                            "FiltroPosicionId": posicionId
                         });
                     },
                     dataSrc: function (json) {
