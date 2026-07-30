@@ -7,7 +7,61 @@ class UIManager {
         $("#ProduccionContainer a").addClass("whiteText");
         $("#produccion-collapse").addClass("show");
         $("#RegistroProduccionPLURL").addClass("selected-item");
-        console.log('✅ UI Pead Liso inicializada');
+        $('body').css('overflow', 'hidden');
+        $(".main-container").css('padding-top', '10px');
+        $(".filtros-panel").css('padding-top', '0px');
+        $(".filtros-panel").css('padding-bottom', '0px');
+        // ========================================
+        // COLAPSO PANEL FILTROS
+        // ========================================
+        const elColapso = document.getElementById('colapseFiltros');
+        const btnColapso = document.getElementById('btnColapsoFiltros');
+
+        elColapso.addEventListener('hide.bs.collapse', () => {
+            btnColapso.classList.add('colapsado');
+            document.getElementById('iconoColapsoFiltros')
+                .classList.replace('bi-dash-square-fill', 'bi-plus-square-fill');
+            $(".filtros-panel").css('padding-top', '0px');
+            $(".filtros-panel").css('padding-bottom', '0px');
+            $("#colapse-title").css("visibility", "visible");
+        });
+
+        elColapso.addEventListener('show.bs.collapse', () => {
+            btnColapso.classList.remove('colapsado');
+            document.getElementById('iconoColapsoFiltros')
+                .classList.replace('bi-plus-square-fill', 'bi-dash-square-fill');
+            $(".filtros-panel").css('padding', '0.1rem 1.4rem');
+            $(".filtros-panel").css('padding-bottom', '8px');
+            $("#colapse-title").css("visibility", "hidden");
+        });
+
+        UIManager.ajustarAlturaCard();
+
+        console.log('✅ UI PVC inicializada');
+    }
+
+    static ajustarAlturaCard() {
+        const $card = $(".card").first();
+        const $footer = $("footer");
+
+        if ($card.length === 0) return;
+
+        const calcularAltura = () => {
+            const offsetCard = $card.offset().top;
+            const alturaVentana = $(window).height();
+
+            // Si hay footer visible, restamos su altura + margen
+            const alturaFooter = $footer.length > 0 ? $footer.outerHeight(true) : 0;
+
+            const nuevaAltura = alturaVentana - offsetCard - alturaFooter - 8; // 12px de margen
+            $card.css("height", nuevaAltura + "px");
+        };
+
+        // Calcular al cargar
+        calcularAltura();
+
+        // Recalcular al cambiar tamaño de ventana
+        $(window).off("resize.card").on("resize.card", calcularAltura);
     }
 }
 
@@ -931,7 +985,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         const gridOptions = {
 
-            domLayout: 'autoHeight',
+            domLayout: 'normal',
 
             columnDefs: columnDefs,
 

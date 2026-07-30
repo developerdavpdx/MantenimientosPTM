@@ -37,8 +37,60 @@ class UIManager {
         $("#produccion-collapse").addClass("show");
         $("#RegistroProduccionPVCURL").addClass("selected-item");
         $('body').css('overflow', 'hidden');
-        $(".main-container").css('padding-top', '40px');
+        $(".main-container").css('padding-top', '10px');
+        $(".filtros-panel").css('padding-top', '0px');
+        $(".filtros-panel").css('padding-bottom', '0px');
+        // ========================================
+        // COLAPSO PANEL FILTROS
+        // ========================================
+        const elColapso = document.getElementById('colapseFiltros');
+        const btnColapso = document.getElementById('btnColapsoFiltros');
+
+        elColapso.addEventListener('hide.bs.collapse', () => {
+            btnColapso.classList.add('colapsado');
+            document.getElementById('iconoColapsoFiltros')
+                .classList.replace('bi-dash-square-fill', 'bi-plus-square-fill');
+            $(".filtros-panel").css('padding-top', '0px');
+            $(".filtros-panel").css('padding-bottom', '0px');
+            $("#colapse-title").css("visibility", "visible");
+        });
+
+        elColapso.addEventListener('show.bs.collapse', () => {
+            btnColapso.classList.remove('colapsado');
+            document.getElementById('iconoColapsoFiltros')
+                .classList.replace('bi-plus-square-fill', 'bi-dash-square-fill');
+            $(".filtros-panel").css('padding', '0.1rem 1.4rem');
+            $(".filtros-panel").css('padding-bottom', '8px');
+            $("#colapse-title").css("visibility", "hidden");
+        });
+
+        UIManager.ajustarAlturaCard();
+
         console.log('✅ UI PVC inicializada');
+    }
+
+    static ajustarAlturaCard() {
+        const $card = $(".card").first();
+        const $footer = $("footer");
+
+        if ($card.length === 0) return;
+
+        const calcularAltura = () => {
+            const offsetCard = $card.offset().top;
+            const alturaVentana = $(window).height();
+
+            // Si hay footer visible, restamos su altura + margen
+            const alturaFooter = $footer.length > 0 ? $footer.outerHeight(true) : 0;
+
+            const nuevaAltura = alturaVentana - offsetCard - alturaFooter - 8; // 12px de margen
+            $card.css("height", nuevaAltura + "px");
+        };
+
+        // Calcular al cargar
+        calcularAltura();
+
+        // Recalcular al cambiar tamaño de ventana
+        $(window).off("resize.card").on("resize.card", calcularAltura);
     }
 }
 
@@ -71,7 +123,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             false
         );
         // 📧 CONSULTAR DATOS
-        this.consultarDatos(null, null, null,null,null);
+        this.consultarDatos(null, null, null, null, null);
         console.log('✅ Sistema PVC inicializado');
     }
 
@@ -338,7 +390,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             // ✅ NUEVO: Productos terminados se agregan también
             const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados,false);
+            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, false);
 
             // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
@@ -654,33 +706,33 @@ class GestionProduccionPVC extends GestionProduccionBase {
     // 🔥 Helper para no repetir el template de fila vacía
     // (extraje el objeto de agregarFila() para reutilizarlo aquí también)
     crearFilaVacia() {
-    return {
-        id: null,
-        Mes: null, Fecha: null, Linea: null, Producto: null, Turno: null, TRIP: null,
-        PesoMinimo: 0, TRFabricados: null, ProduccionNetaReal: null,
-        PesoEstandar: 0, PorcentajeSobrepeso: 0, TotalScrapKg: null, PorcentajeScrap: 0,
-        HorasProgramadas: null,
-        MantenimientoPreventivo: null, ControlInventarios: null, FaltaMateriaInsumos: null,
-        CambioMolde: null, Calentamiento: null, ParoArranqueNoProgramado: null,
-        ArranqueEstabilizacion: null,
-        MttoCorrectivos: null, FallaElectrica: null, Servicios: null,
-        CambioMoldeSetupExcesos: null, Herramental: null, FallaOperacion: null,
-        LimpiezaTanque: null, FaltaMaterial: null, FaltaPersonal: null, FaltaRefacciones: null,
-        TiempoDisponible: 0, TiempoProductivo: 0,
-        // 🔥 AGREGAR:
-        DisponibilidadPorcentaje: 0,
-        KgPorTiempoDisponible: 0,
-        KgHrLinea: null,
-        KgHrProducto: null,
-        KgNetosHrReales: 0,
-        PorcentajeRendimiento: 0,
-        PorcentajeCalidad: 0,
-        PorcentajeOEE: 0,
-        PorcentajeEficienciaProducto: 0,
-        ObjetivoEficiencia: 91,
-        EficienciaOperativa: 0
-    };
-}
+        return {
+            id: null,
+            Mes: null, Fecha: null, Linea: null, Producto: null, Turno: null, TRIP: null,
+            PesoMinimo: 0, TRFabricados: null, ProduccionNetaReal: null,
+            PesoEstandar: 0, PorcentajeSobrepeso: 0, TotalScrapKg: null, PorcentajeScrap: 0,
+            HorasProgramadas: null,
+            MantenimientoPreventivo: null, ControlInventarios: null, FaltaMateriaInsumos: null,
+            CambioMolde: null, Calentamiento: null, ParoArranqueNoProgramado: null,
+            ArranqueEstabilizacion: null,
+            MttoCorrectivos: null, FallaElectrica: null, Servicios: null,
+            CambioMoldeSetupExcesos: null, Herramental: null, FallaOperacion: null,
+            LimpiezaTanque: null, FaltaMaterial: null, FaltaPersonal: null, FaltaRefacciones: null,
+            TiempoDisponible: 0, TiempoProductivo: 0,
+            // 🔥 AGREGAR:
+            DisponibilidadPorcentaje: 0,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,
+            KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: 0,
+            PorcentajeCalidad: 0,
+            PorcentajeOEE: 0,
+            PorcentajeEficienciaProducto: 0,
+            ObjetivoEficiencia: 91,
+            EficienciaOperativa: 0
+        };
+    }
 
     // ========================================
     // 🔥 NUEVO: Obtener Producto Terminado
@@ -699,7 +751,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     "FechaInicio": FechaInicio,
                     "FechaFin": FechaFin,
                     "Planta": this.datos_usuario[0].PLANTA,
-                    "Turno" : FiltroTurno || null,
+                    "Turno": FiltroTurno || null,
                     "Proceso": proceso || ""
                 },
                 dataType: 'json'
@@ -746,14 +798,14 @@ class GestionProduccionPVC extends GestionProduccionBase {
     // ========================================
     // 🔥 NUEVO: Agregar Productos Terminados al Grid
     // ========================================
-    async agregarProductosTerminadosAlGrid(productosTerminados,filtroTurno,showwarning = false) {
+    async agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, showwarning = false) {
         try {
             if (!productosTerminados || productosTerminados.length === 0) {
                 if (showwarning)
-                AlertManager.mostrar(
-                    `No se encontraron productos terminados para los filtros seleccionados del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
-                    "warning"
-                );
+                    AlertManager.mostrar(
+                        `No se encontraron productos terminados para los filtros seleccionados del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
+                        "warning"
+                    );
                 return false;
             }
 
@@ -1751,7 +1803,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 const fechaFin = $('#FiltroFechaFinPT').val();
                 const filtroTurno = $('#FiltroTurnoPT').val();
                 const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
-                const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno,true);
+                const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
             } finally {
                 $btn.prop('disabled', false);
             }
@@ -1780,7 +1832,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     FechaTexto
                 );
 
-                this.consultarDatos(fechaInicio, fechaFin, null,null,null);
+                this.consultarDatos(fechaInicio, fechaFin, null, null, null);
 
             });
     }
@@ -1867,7 +1919,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     this.cambiosPendientes = [];
 
                     // 🔥 REFRESCAR GRID
-                    await this.consultarDatos(null, null, null,null,null);
+                    await this.consultarDatos(null, null, null, null, null);
 
                 } else {
 
@@ -2750,7 +2802,7 @@ class ExcelExporterPVC extends ExcelExporterBase {
 
     getFileNamePrefix() { return 'Produccion_PVC'; }
 
-    getTextFields() { return ['Mes','Fecha','Producto','TRIP','Linea','Turno']; }
+    getTextFields() { return ['Mes', 'Fecha', 'Producto', 'TRIP', 'Linea', 'Turno']; }
 
     getTotalsFontColor() { return 'FF0058A1'; }
 

@@ -83,12 +83,12 @@
     gap: 6px;
 }
 
-    .filtros-titulo::after {
+    /*.filtros-titulo::after {
         content: '';
         flex: 1;
         height: 1px;
         background: #e2e8f0;
-    }
+    }*/
 
 /* Labels */
 .filtro-label {

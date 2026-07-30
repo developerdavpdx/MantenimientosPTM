@@ -267,7 +267,7 @@
 
 /* Card ocupa toda la pantalla disponible */
 .card {
-    height: calc(100vh - 140px); /* ajusta según tu navbar */
+    /*height: calc(100vh - 115px);*/ /* ajusta según tu navbar */
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -298,3 +298,51 @@
     width: 100%;
     height: 100% !important;
 }
+
+/* Ícono rota al colapsar */
+#colapseFiltros.collapsing ~ .filtros-titulo #iconoColapso,
+#colapseFiltros:not(.show) ~ * #iconoColapso {
+    transform: rotate(180deg);
+}
+
+/* Transición suave del ícono */
+#iconoColapso {
+    transition: transform 0.3s ease;
+}
+
+/* ========================================
+   BOTÓN COLAPSO FILTROS
+   ======================================== */
+.btn-colapso-filtros {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    color: #0ea5d8;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+.btn-colapso-filtrosv2 {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    color: #0ea5d8;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+
+    .btn-colapso-filtros:hover {
+        background: rgba(14, 165, 216, 0.1);
+    }
+
+    .btn-colapso-filtros i {
+        font-size: 1rem;
+        display: block;
+        transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* Cuando está colapsado, el chevron rota 180° */
+    .btn-colapso-filtros.colapsado i {
+        transform: rotate(180deg);
+    }
