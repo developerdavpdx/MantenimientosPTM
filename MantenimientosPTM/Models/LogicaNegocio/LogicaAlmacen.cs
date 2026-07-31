@@ -365,7 +365,7 @@ namespace MantenimientosPTM
                         newLine["CostingCode4"] = articulo.Cedis;
                         newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe; //AUTORIZA (RECIBE)
                         newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega; //ALMACENISTA (ENTREGA)
-
+                      
 
                         // ✅ Cuenta contable si aplica
                         if (!string.IsNullOrWhiteSpace(linea["CuentaContable"]?.ToString()))
@@ -405,6 +405,7 @@ namespace MantenimientosPTM
                 dictGI["Comments"] = $"Salida de mercancía generada por interfaz PTM Mantenimientos — {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Para solicitud: {payload.Referencia} Orden Trabajo: {payload.OrdenTrabajo}";
                 dictGI["JournalMemo"] = $"Salida de mercancía para solicitud: {payload.Referencia} Orden Trabajo: {payload.OrdenTrabajo}";
                 dictGI["Reference2"] = payload.DataMovimiento.Recibe; //AUTORIZA (RECIBE)
+                dictGI["U_U_PDX_SOLICITANTE"] = payload.DataMovimiento.NumEmpleado;
 
                 var serie = GetSerieByName(payload.Contabilizacion[0].Cedis);
 

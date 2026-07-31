@@ -896,7 +896,6 @@ namespace MantenimientosPTM
             public int IdMantenimiento { get; set; }
             public string NombreEmpleado { get; set; }
             public string AlmacenistaEntrega { get; set; }
-
             public List<Contabilizacion> Contabilizacion { get; set; } = new List<Contabilizacion>();
             public DataMovimiento DataMovimiento { get; set; } = new DataMovimiento();
         }
