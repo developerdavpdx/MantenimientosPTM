@@ -96,6 +96,7 @@ class ValidationManagerLogin {
                                 const userWeb = datos_usuario[0].USUARIOWEB;
                                 const posicionId = datos_usuario[0].POSICIONID;
                                 const posicion = datos_usuario[0].POSICION;
+                                const codigoEmpleado = datos_usuario[0].CODIGOEMPLEADO;
 
 
                                 // Mapeo de perfiles a rutas

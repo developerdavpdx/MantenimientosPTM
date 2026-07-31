@@ -126,6 +126,7 @@ namespace MantenimientosPTM
                         string errorCode = errorResponse.error.code?.ToString() ?? "?";
                         string errorValue = errorResponse.error.message.value?.ToString() ?? result;
                         responseAbx.Message = $"Error SAP: {errorCode} / {errorValue}";
+                        responseAbx.IsError = true;
                     }
                     catch
                     {

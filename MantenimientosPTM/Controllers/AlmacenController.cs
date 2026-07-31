@@ -702,6 +702,7 @@ namespace MantenimientosPTM.Controllers
                 }
                 JArray CabeceraCompra = JArray.Parse(resultEstatus.JsonResult);
                 string FolioCompra = CabeceraCompra[0]["FOLIO_COMPRA"].ToString();
+                int codigoEmpleado = RequestData.CodigoEmpleado;
                 // ───────────────────────────────────────────
                 // 2️⃣ Actualizar DETALLE — recorrer artículos y sus IdsDetalle
                 // ───────────────────────────────────────────
@@ -732,7 +733,7 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 //Enviar notificacion de autorizacion
-                var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString());
+                var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString(), codigoEmpleado);
                 if (notificacionEmail == null || notificacionEmail.Status != "OK")
                 {
                     log.Warn($"Notificación de autorización no enviada o con error: {notificacionEmail?.Message ?? "Sin respuesta"}");
@@ -775,7 +776,7 @@ namespace MantenimientosPTM.Controllers
                     { "P_COMENTARIOS",     (RequestData.Comentarios,     ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_USUARIOSOLICITA", (RequestData.UsuarioSolicita, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA",          (RequestData.Planta,          ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_ESTATUS",         ("Espera Autorizacion",       ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_ESTATUS",         ("Espera Autorizacion",       ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_1",  (RequestData.Requisicion.Contabilizacion.Departamento,ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_2",  (RequestData.Requisicion.Contabilizacion.Proceso,ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_3",  (RequestData.Requisicion.Contabilizacion.Gastos,ParameterDirection.Input, HanaDbType.NVarChar) },
@@ -796,6 +797,7 @@ namespace MantenimientosPTM.Controllers
                 JArray EncabezadoSolicitud = JArray.Parse(resultEncabezado.JsonResult);
                 var idSolicitudCompra = int.Parse(EncabezadoSolicitud[0]["ID_SOLICITUD_COMPRA"].ToString());
                 var Planta = RequestData.Planta;
+                var codigoEmpleado = RequestData.CodigoEmpleado;
                 var contabilizacion = RequestData.Requisicion.Contabilizacion;
                 var articulos = RequestData.Requisicion.Articulos ?? new List<ArticuloRequisicionModel>();
                 string FolioCompra = EncabezadoSolicitud[0]["FOLIO_COMPRA"].ToString();
@@ -812,8 +814,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_ID_SOLICITUD_COMPRA",    (idSolicitudCompra,        ParameterDirection.Input, HanaDbType.Integer) },
                     { "P_ID_SOLICITUD_REFACCION", ((object)null,ParameterDirection.Input, HanaDbType.Integer) }, //no aplica la solicitud de refaccion
                     { "P_CANTIDAD_ENCARGAR",      (linea.CantidadTotal,   ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_CARD_CODE",      (linea.CodigoProveedor,   ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_CODIGO_ARTICULO",      (linea.CodigoArticulo,   ParameterDirection.Input, HanaDbType.Integer) }
+                    { "P_CARD_CODE",      (linea.CodigoProveedor,   ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CODIGO_ARTICULO",      (linea.CodigoArticulo,   ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                     var resultDetalle = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -834,7 +836,7 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 //Enviar notificacion de autorizacion
-                var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString());
+                var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString(), codigoEmpleado);
                 if (notificacionEmail == null || notificacionEmail.Status != "OK")
                 {
                     log.Warn($"Notificación de autorización no enviada o con error: {notificacionEmail?.Message ?? "Sin respuesta"}");
@@ -955,7 +957,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpPost]
-        public async Task<GlobalCommands.JsonResponseMtto> EnviarSolicitudCompraAutorizacion(int idSolicitudCompra, string folio, List<ArticuloRequisicionModel> articulos, string Planta)
+        public async Task<GlobalCommands.JsonResponseMtto> EnviarSolicitudCompraAutorizacion(int idSolicitudCompra, string folio, List<ArticuloRequisicionModel> articulos, string Planta, int codigoEmpleado)
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
             try
@@ -966,7 +968,8 @@ namespace MantenimientosPTM.Controllers
                 var parametersEmail = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
             {
                 { "P_PLANTA", (Planta, ParameterDirection.Input, HanaDbType.Integer) },
-                { "P_TIPO", (ConfigurationManager.AppSettings["Email.ReqCom"], ParameterDirection.Input, HanaDbType.NVarChar) }
+                { "P_TIPO", (ConfigurationManager.AppSettings["Email.ReqCom"], ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_CODE", (codigoEmpleado, ParameterDirection.Input, HanaDbType.Integer) }
             };
 
                 // Ejecutar stored procedure de actualización
@@ -983,7 +986,6 @@ namespace MantenimientosPTM.Controllers
                     var emailsData = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultEmails.JsonResult.ToString());
                     emails = emailsData.Select(e => e["Email"].ToString()).ToList();
                 }
-                emails.Add("mafiantv2@gmail.com");
 
                 //Si no hay emails retornar respuesta OK (sin destinatarios)
                 if (emails.Count == 0)
@@ -1193,17 +1195,23 @@ namespace MantenimientosPTM.Controllers
 
                         if (resultUpdate.JsonResult.Contains("ERROR"))
                             throw new Exception("Error al actualizar el estatus de la solicitud.");
+
+                        // ✅ 5. Mostrar vista con resultado
+                        ViewBag.Estado = "Aprobado";
+                        ViewBag.Folio = folio;
+                        ViewBag.Mensaje = "La solicitud de compra ha sido autorizada correctamente," + Environment.NewLine + " Folio de solicitud de compra generado en SAP: " + sapResp.DocNum;
+
+                        // ✅ NOTIFICAR A TODOS LOS CLIENTES
+                        var contextSC = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                        contextSC.Clients.All.actualizarTablaSolicitudCompra(planta);
+
                     }
-
-                    // ✅ NOTIFICAR A TODOS LOS CLIENTES
-                    var contextSC = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
-                    contextSC.Clients.All.actualizarTablaSolicitudCompra(planta);
-
-
-                    // ✅ 5. Mostrar vista con resultado
-                    ViewBag.Estado = "Aprobado";
-                    ViewBag.Folio = folio;
-                    ViewBag.Mensaje = "La solicitud de compra ha sido autorizada correctamente," + Environment.NewLine + " Folio de solicitud de compra generado en SAP: " + sapResp.DocNum;
+                    else {
+                        ViewBag.Estado = "Error";
+                        ViewBag.Folio = folio;
+                        ViewBag.Mensaje = "No fue posible actualizar solicitud de compra: " + Environment.NewLine + sapResp.Message;
+                    }
+                   
                     return View("AprobacionSolicitud");
 
                 }
@@ -1435,7 +1443,7 @@ namespace MantenimientosPTM.Controllers
                     { "P_FILTRO_FOLIO",       (Folio, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_FECHA_INICIO", ((object)null,ParameterDirection.Input, HanaDbType.Date)},
                     { "P_FILTRO_FECHA_FIN",    ((object)null,ParameterDirection.Input, HanaDbType.Date)},
-                    { "P_PLANTA",    ((object)null,ParameterDirection.Input, HanaDbType.NVarChar)}
+                    { "P_PLANTA",    ((object)null,ParameterDirection.Input, HanaDbType.Integer)}
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
