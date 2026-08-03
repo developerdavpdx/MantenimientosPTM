@@ -55,7 +55,7 @@ class GestionEventosApp {
                 this.gestionArticulos.buscarArticulos(
                     query,
                     this.datos_usuario[0].EMAIL,
-                    lineaParaEnviar,
+                    null, //La linea la mandamos en null
                     1
                 );
             } else {
