@@ -304,9 +304,15 @@ namespace MantenimientosPTM.Controllers
             {
                 // ✅ Validar que venga el parámetro
                if (string.IsNullOrEmpty(query))
-                {
+               {
                     return Json(new List<object>(), JsonRequestBehavior.AllowGet);
-                }
+               }
+
+                // ✅ Leer fabricantes desde WebConfig
+                string fabricantes = System.Configuration.ConfigurationManager.AppSettings["FabricantesPermitidos"];
+                // Si no está configurado, se manda null (sin filtro)
+                if (string.IsNullOrWhiteSpace(fabricantes))
+                    fabricantes = null;
 
                 // ✅ Preparar parámetros para el SP
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
@@ -317,7 +323,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_LINEA", (Linea, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_GRUPO_ART", (GrupoArticulos == 0 ? (object)null : GrupoArticulos, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_VALIDAR_CAP", (ValidarCap, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_ITEMCODE", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_ITEMCODE", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_FABRICANTES", ((object)fabricantes ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure
