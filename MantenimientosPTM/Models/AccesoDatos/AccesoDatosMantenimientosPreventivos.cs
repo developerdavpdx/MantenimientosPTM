@@ -458,6 +458,15 @@ namespace MantenimientosPTM
             [JsonProperty("FechaActualFin")]
             public string FechaActualFin { get; set; }
 
+            [JsonProperty("FechaRepInicio")]
+            public string FechaRepInicio { get; set; }
+
+            [JsonProperty("FechaRepFin")]
+            public string FechaRepFin { get; set; }
+
+            [JsonProperty("EnviarSiguienteMes")]
+            public bool EnviarSiguienteMes { get; set; }
+
             [JsonProperty("Motivo")]
             public string Motivo { get; set; }
 

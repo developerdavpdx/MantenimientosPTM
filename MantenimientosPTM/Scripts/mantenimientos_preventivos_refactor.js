@@ -184,6 +184,26 @@ class MantenimientosPreventivoApp {
         // 🔥 Reprogramación - enviar solicitud
         $('#formReprogramacion').on('submit', (e) => this.mantenimientoManager.enviarSolicitudReprogramacion(e));
 
+        // Check deshabilitar fechas reales de ejecución
+        $('#chkSiguienteMes').on('change', function () {
+            const checked = $(this).is(':checked');
+            const $inputs = $('#RepFechaActualInicio, #RepFechaActualFin');
+
+            if (checked) {
+                $inputs
+                    .prop('disabled', true)
+                    .removeAttr('required')
+                    .val('')
+                    .removeClass('is-invalid');
+                $('.spanReq').addClass('d-none');
+            } else {
+                $inputs
+                    .prop('disabled', false)
+                    .attr('required', 'required');
+                $('.spanReq').removeClass('d-none');
+            }
+        });
+
         // ✅ CORRECTO - Debes pasar "e" como parámetro
         $('#formOrdenMantenimiento').on('submit', (e) => this.mantenimientoManager.guardarOT(e));
 
@@ -388,6 +408,8 @@ class MantenimientosPreventivoApp {
                 }
             });
         });
+
+
     }
 
     configurarEventosPDF() {
@@ -665,6 +687,16 @@ class MantenimientoManager {
     // ============================
     abrirModalReprogramacion(btn) {
 
+        // ✅ RESET COMPLETO DEL CHECKBOX Y LOS INPUTS
+        $('#chkSiguienteMes').prop('checked', false);
+
+        $('#RepFechaActualInicio, #RepFechaActualFin')
+            .prop('disabled', false)
+            .attr('required', 'required')
+            .removeClass('is-invalid');
+
+        $('.spanReq').removeClass('d-none');
+
         // Limpiar validación
         ValidationManager.limpiarValidacion('#formReprogramacion');
 
@@ -702,8 +734,33 @@ class MantenimientoManager {
 
     enviarSolicitudReprogramacion(e) {
         e.preventDefault();
+        const siguienteMes = $('#chkSiguienteMes').is(':checked');       
 
-        // Validar formulario
+        // ========================
+        // VALIDACIÓN DE FORMULARIO
+        // ========================
+        // Validar fecha
+        const fechaRepInicio = $('#RepFechaActualInicio').val();
+        const fechaRepFin = $('#RepFechaActualFin').val();
+
+        // Validación de fechas solo si NO es siguiente mes
+        if (!siguienteMes) {
+            const fechaRepInicio = $('#RepFechaActualInicio').val();
+            const fechaRepFin = $('#RepFechaActualFin').val();
+
+            if (fechaRepInicio && fechaRepFin) {
+                if (new Date(fechaRepFin) < new Date(fechaRepInicio)) {
+                    AlertManager.mostrar(
+                        'La fecha fin real de ejecución no puede ser anterior a la fecha inicio.',
+                        'warning',
+                        'alertReprogramacionContainer'
+                    );
+                    $('#RepFechaActualFin').focus();
+                    return false;
+                }
+            }
+        }
+
         if (!ValidationManager.validarFormulario('#formReprogramacion')) {
             AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', 'alertReprogramacionContainer');
             return false;
@@ -715,6 +772,9 @@ class MantenimientoManager {
             NumeroOrden: this.datosBotón.numeroOrden,
             FechaActualInicio: $('#ReprogramacionFechaActualInicio').val(),
             FechaActualFin: $('#ReprogramacionFechaActualFin').val(),
+            FechaRepInicio: siguienteMes ? null : $('#RepFechaActualInicio').val(),
+            FechaRepFin: siguienteMes ? null : $('#RepFechaActualFin').val(),
+            EnviarSiguienteMes: siguienteMes,
             Motivo: $('#ReprogramacionMotivo').val(),
             UsuarioSolicita: this.datos_usuario[0].EMAIL,
             IdPeriodicidad: this.datosBotón.idPeriodicidad,
@@ -749,11 +809,12 @@ class MantenimientoManager {
 
                     setTimeout(() => {
                         $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
+                        $('#btnEnviarReprogramacion').prop('disabled', false);
                         $('#modalSolicitarReprogramacion').modal('hide');
                     }, 2000);
                 } else if (response.Status === 'ERROR') {
                     $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
-                    $('#btnEnviarReprogramacion').prop('disabled', false);
+                    
                     AlertManager.mostrar(response.Message || 'Error técnico al procesar la solicitud', 'danger', 'alertReprogramacionContainer');
                 } else {
                     $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
