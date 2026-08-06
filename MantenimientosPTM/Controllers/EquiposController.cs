@@ -1487,6 +1487,7 @@ namespace MantenimientosPTM.Controllers
                 string FiltroArea = Request.Form["FiltroArea"];
                 string FiltroLinea = Request.Form["FiltroLinea"];
                 string FiltroOrdenTrabajo = Request.Form["FiltroOrdenTrabajo"];
+                string FiltroNombreEquipo = Request.Form["FiltroNombreEquipo"];
                 string FiltroFechaInicioMantenimiento = Request.Form["FiltroFechaInicioMantenimiento"];
                 string FiltroEstatus = Request.Form["FiltroEstatus"];
 
@@ -1507,7 +1508,7 @@ namespace MantenimientosPTM.Controllers
                 var parameters = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
                 {
                     { "P_ID_EQUIPO", (null, ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_NOMBRE", (string.IsNullOrEmpty(FiltroBusqueda) ? (object)null : FiltroBusqueda, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_NOMBRE", (string.IsNullOrEmpty(FiltroNombreEquipo) ? (object)null : FiltroNombreEquipo, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_USUARIO", (string.IsNullOrEmpty(FiltroUsuario) ? (object)null : FiltroUsuario, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_AREA", (string.IsNullOrEmpty(FiltroArea) ? (object)null : FiltroArea, ParameterDirection.Input, HanaDbType.NVarChar) },

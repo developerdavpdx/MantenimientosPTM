@@ -298,7 +298,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarArticulo(string query, string Usuario,string Planta,int? Linea, int? GrupoArticulos,int? ValidarCap)
+        public JsonResult BuscarArticulo(string query, string Usuario,string Planta,int? Linea, int? GrupoArticulos,int? ValidarCap,bool RestringirFabricante = false)
         {
             try
             {
@@ -324,7 +324,7 @@ namespace MantenimientosPTM.Controllers
                     { "P_GRUPO_ART", (GrupoArticulos == 0 ? (object)null : GrupoArticulos, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_VALIDAR_CAP", (ValidarCap, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_ITEMCODE", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_FABRICANTES", ((object)fabricantes ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FABRICANTES", ((RestringirFabricante ? fabricantes : null), ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure

@@ -115,7 +115,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
         this.correctosManager.inicializar();
         EquiposUtil.llenarLineas(
             this.datos_usuario[0].PLANTA,
-            1,
+            (this.datos_usuario[0].PLANTA == "1" ? 1 : 14),
             null,
             "FiltroLinea",
             null,
@@ -967,40 +967,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
             return null;
         }
     }
-
-    // parsearFechaProductoTerminado(fechaISO) {
-    //     if (!fechaISO) return null;
-
-    //     try {
-    //         // 🔥 Tomar directo la parte de fecha del string sin pasar por Date()
-    //         const partesFecha = fechaISO.split('T')[0]; // "2026-07-28"
-
-    //         if (!partesFecha) return null;
-
-    //         const [ano, mes, dia] = partesFecha.split('-');
-    //         if (!ano || !mes || !dia) return null;
-
-    //         // Rechazar fechas anteriores al 2000
-    //         if (parseInt(ano) < 2000) {
-    //             console.warn(`⚠️ Fecha inválida detectada: ${fechaISO}`);
-    //             return null;
-    //         }
-
-    //         return `${ano}-${mes}-${dia}`; // YYYY-MM-DD directo, sin new Date()
-
-    //     } catch (error) {
-    //         console.error("Error al parsear fecha:", error);
-    //         return null;
-    //     }
-    // }
-
-
-    // 🔥 NUEVO: Ajusta la fecha "de reloj" a la fecha "operativa del turno"
-    // Turno 2 corre de 4:30pm a 4:30am del día siguiente.
-    // Si el registro cae en la madrugada (00:00 - 4:30am) y es turno 2,
-    // operativamente pertenece al día ANTERIOR (el día en que arrancó el turno).
-
-    //IDENTICO NEW SCALE
 
     calcularFechaOperativaTurno(fechaISOConHora, turno) {
 
@@ -2669,7 +2635,7 @@ class ArticuloAutocompleteEditor {
                 const articulos = await this.gestionArticulos.obtenerArticulos(
                     query,
                     this.datos_usuario[0].EMAIL,
-                    0
+                    1
                 );
 
                 this.mostrarSugerencias(articulos);

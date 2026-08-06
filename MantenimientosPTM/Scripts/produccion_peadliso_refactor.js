@@ -118,7 +118,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         this.correosManager.inicializar();
         EquiposUtil.llenarLineas(
             this.datos_usuario[0].PLANTA,
-            9,
+            (this.datos_usuario[0].PLANTA == "1" ? 9 : 9), // 🔥 PEAD LISO REVISAR PLANTA 2
             null,
             "FiltroLinea",
             null,
