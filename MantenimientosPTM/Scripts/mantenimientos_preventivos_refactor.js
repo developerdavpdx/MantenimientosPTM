@@ -652,6 +652,9 @@ class MantenimientoManager {
             periodicidadMantenimiento: "",
             fechaRealInicio: "",
             fechaRealFin: "",
+            idSolicitud: "",
+            fechaInicioPeriodo: "",
+            fechaFinPeriodo: "",
             enviarSiguienteMes:""
         };
 
@@ -684,6 +687,8 @@ class MantenimientoManager {
             idSolicitud: btn.data('idsolicitudpendiente'),
             fechaRealInicio: btn.data('fecharealinicio'),
             fechaRealFin: btn.data('fecharealfin'),
+            fechaInicioPeriodo: btn.data('fechainicioperiodo'),
+            fechaFinPeriodo: btn.data('fechafinperiodo'),
             enviarSiguienteMes: btn.data('enviarsiguientemes'),
             motivo: btn.data('motivo'),
         };
@@ -693,16 +698,7 @@ class MantenimientoManager {
     // REPROGRAMACIÓN DE MANTENIMIENTO
     // ============================
     abrirModalReprogramacion(btn) {
-
-        // ✅ RESET COMPLETO DEL CHECKBOX Y LOS INPUTS
-        $('#chkSiguienteMes').prop('checked', false);
-
-        $('#RepFechaActualInicio, #RepFechaActualFin')
-            .prop('disabled', false)
-            .attr('required', 'required')
-            .removeClass('is-invalid');
-
-        $('.spanReq').removeClass('d-none');
+               
 
         // Limpiar validación
         ValidationManager.limpiarValidacion('#formReprogramacion');
@@ -724,18 +720,98 @@ class MantenimientoManager {
             return fecha.split(' ')[0]; // Toma solo "2026-08-06"
         };
 
-        //Limitar las fechas reales inicio y fin 
-        $('#RepFechaActualInicio, #RepFechaActualFin').on('change', function () {
+        // Obtener si la solicitud ya fue reprogramada
+        let fueReprogramda = this.datosBotón.fueReprogramado; 
+        if (fueReprogramda === 'SI') { // Si ya fue reprogramada no puede volver a reprogramarse, solo asignar nuevas fechas
+            $('#enviarSigMes').addClass('d-none');
+            $('#chkSiguienteMes').prop('disabled', true);
+
+            $('#RepFechaActualInicio, #RepFechaActualFin')
+                .prop('disabled', false)
+                .attr('required', 'required')
+                .removeClass('is-invalid');
+
+            $('.spanReq').removeClass('d-none');
+
+            // Limitar SOLO al siguiente mes
             const hoy = new Date();
+
+            const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
+            const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 2, 0);
+
+            const formatDate = (fecha) => {
+                const year = fecha.getFullYear();
+                const month = String(fecha.getMonth() + 1).padStart(2, '0');
+                const day = String(fecha.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            $('#RepFechaActualInicio, #RepFechaActualFin')
+                .attr('min', formatDate(primerDiaMes))
+                .attr('max', formatDate(ultimoDiaMes))
+                .off('change.reprogramacion')
+                .on('change.reprogramacion', function () {
+
+                    const fecha = new Date($(this).val());
+
+                    if (fecha < primerDiaMes || fecha > ultimoDiaMes) {
+                        AlertManager.mostrar(
+                            'Solo puedes seleccionar fechas en base a la reprogramación conforme al mes en el que se solicito.',
+                            'warning',
+                            'alertReprogramacionContainer'
+                        );
+
+                        $(this).val('');
+                    }
+                });
+
+        } else {
+            // Si la solicitud no a sido reprogramada
+
+            $('#enviarSigMes').removeClass('d-none');
+
+            // ✅ RESET COMPLETO DEL CHECKBOX Y LOS INPUTS
+            $('#chkSiguienteMes').prop('checked', false);
+            $('#chkSiguienteMes').prop('disabled', false);
+
+            $('#RepFechaActualInicio, #RepFechaActualFin')
+                .prop('disabled', false)
+                .attr('required', 'required')
+                .removeClass('is-invalid');
+
+            $('.spanReq').removeClass('d-none');
+
+            const hoy = new Date();
+
             const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
             const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-            const fecha = new Date($(this).val());
 
-            if (fecha < primerDiaMes || fecha > ultimoDiaMes) {
-                AlertManager.mostrar('Solo puedes seleccionar fechas dentro del mes actual.', 'warning', 'alertReprogramacionContainer');
-                $(this).val('');
-            }
-        });
+            const formatDate = (fecha) => {
+                const year = fecha.getFullYear();
+                const month = String(fecha.getMonth() + 1).padStart(2, '0');
+                const day = String(fecha.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            $('#RepFechaActualInicio, #RepFechaActualFin')
+                .attr('min', formatDate(primerDiaMes))
+                .attr('max', formatDate(ultimoDiaMes));
+
+                       
+            //Limitar las fechas reales inicio y fin (Solo mes actual)
+            $('#RepFechaActualInicio, #RepFechaActualFin').off('change.reprogramacion').on('change.reprogramacion', function () {
+                const hoy = new Date();
+                const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+                const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+                const fecha = new Date($(this).val());
+
+                if (fecha < primerDiaMes || fecha > ultimoDiaMes) {
+                    AlertManager.mostrar('Solo puedes seleccionar fechas dentro del mes actual.', 'warning', 'alertReprogramacionContainer');
+                    $(this).val('');
+                }
+            });
+        }
+
 
         // Llenar datos en el modal
         let Equipo = `${this.datosBotón.nombreEquipo} ${this.datosBotón.numeroDocPmCalidad}`;
@@ -745,8 +821,8 @@ class MantenimientoManager {
         $('#ReprogramacionArea').val(this.datosBotón.area);
         $('#ReprogramacionLinea').val(this.datosBotón.lineaProduccion);
         $('#ReprogramacionPeriodicidad').val(this.datosBotón.periodicidadMantenimiento);
-        $('#ReprogramacionFechaActualInicio').val(convertirFecha(this.datosBotón.fechaInicioMantenimiento));
-        $('#ReprogramacionFechaActualFin').val(convertirFecha(this.datosBotón.fechaFinMantenimiento));
+        $('#ReprogramacionFechaActualInicio').val(convertirFechaReal(this.datosBotón.fechaInicioPeriodo));
+        $('#ReprogramacionFechaActualFin').val(convertirFechaReal(this.datosBotón.fechaFinPeriodo));
 
         $('#RepFechaActualInicio').val(convertirFechaReal(this.datosBotón.fechaRealInicio));
         $('#RepFechaActualFin').val(convertirFechaReal(this.datosBotón.fechaRealFin));
@@ -913,7 +989,7 @@ class MantenimientoManager {
             // ✅ v4: para el flujo de reprogramación
             FueReprogramado: this.datosBotón.fueReprogramado,
             TieneSolicitudPendiente: this.datosBotón.tieneSolicitudPendiente,
-            IdSolicitudPendiente: this.datosBotón.idSolicitudPendiente
+            IdSolicitudPendiente: this.datosBotón.idSolicitud
         };
 
         $.ajax({
@@ -960,7 +1036,7 @@ class MantenimientoManager {
             // ✅ v4: para el flujo de reprogramación
             FueReprogramado: this.datosBotón.fueReprogramado,
             TieneSolicitudPendiente: this.datosBotón.tieneSolicitudPendiente,
-            IdSolicitudPendiente: this.datosBotón.idSolicitudPendiente
+            IdSolicitudPendiente: this.datosBotón.idSolicitud
         };
 
         $.ajax({
@@ -1238,13 +1314,23 @@ class MantenimientoManager {
                                         dataAttrs
                                     );
                                     return reprogramBtn;
+                                } else if (fueReprogramado === 'SI') { //Se agrega si ya fue aceptada la reprogramacion, da oportunidad de ingresar las nuevas fechas en las que se atendera apartir de la aprobación
+                                    let razonDeshabilitado = 'Ya fue reprogramado';
+
+                                    const reprogramBtn = btn(
+                                        'btn-warning',
+                                        'btn-solicitar-reprogramacion',
+                                        'calendar2-check',
+                                        'Reprogramar fechas',
+                                        dataAttrs
+                                    );
+                                    return reprogramBtn;
+
                                 } else {
                                     // Mostrar botón deshabilitado con razón
                                     let razonDeshabilitado = 'No disponible';
                                     if (numeroOrden === '') {
                                         razonDeshabilitado = 'Orden de trabajo sin número';
-                                    } else if (fueReprogramado === 'SI') {
-                                        razonDeshabilitado = 'Ya fue reprogramado';
                                     } else if (tieneSolicitudPendiente === 'SI') {
                                         razonDeshabilitado = 'Solicitud pendiente';
                                     }
@@ -1762,6 +1848,8 @@ class MantenimientoManager {
             fechaRealInicio: row.FechaRealInicio,
             fechaRealFin: row.FechaRealFin,
             motivo: row.Motivo,
+            fechaInicioPeriodo: row.FechaInicioPeriodo,
+            fechaFinPeriodo: row.FechaFinPeriodo,
 
             // ✅ v4: para el flujo de reprogramación
             fuereprogramado: row.FueReprogramado,

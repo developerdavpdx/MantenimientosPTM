@@ -1048,7 +1048,7 @@ namespace MantenimientosPTM.Controllers
                         p_USUARIO_SOLICITA = datos.UsuarioSolicita,
                         p_ID_PERIODICIDAD = datos.IdPeriodicidad,
                         p_PLANTA = datos.Planta.Value,
-                        p_ESTATUS = "Creada"
+                        p_ESTATUS = datos.FueReprogramado == "SI" ? null : "Creada"
                     };
 
                     // Convertir a parámetros HANA
@@ -1074,7 +1074,7 @@ namespace MantenimientosPTM.Controllers
                                 string estatus = firstItem["ESTATUS_ACTUAL"]?.ToString();
                                 int idSolicitud = Convert.ToInt32(firstItem["ID_SOLICITUD"]?.ToString() ?? "0");
 
-                                if (estatus == "SI" || estatus == "Pendiente" || estatus == "NA")
+                                if (estatus == "Aceptada" || estatus == "SI" || estatus == "Pendiente" || estatus == "NA")
                                 {
                                     jsonResponse.Status = "SI";
                                     jsonResponse.Message = $"Solicitud de reprogramación registrada correctamente. ID: {idSolicitud}";
@@ -1162,6 +1162,9 @@ namespace MantenimientosPTM.Controllers
                         p_ID_SOLICITUD = datos.IdSolicitudPendiente,
                         p_ID_EQUIPO = (int?)null,
                         p_NUMERO_ORDEN = (string)null,
+                        p_FECHA_REP_INICIO = (DateTime?)null,
+                        p_FECHA_REP_FIN = (DateTime?)null,
+                        p_ENVIAR_SIGUIENTE_MES = true, 
                         p_MOTIVO = (string)null,
                         p_USUARIO_SOLICITA = (string)null,
                         p_ID_PERIODICIDAD = (int?)null,
