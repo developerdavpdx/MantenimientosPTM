@@ -90,7 +90,8 @@ namespace MantenimientosPTM.Controllers
             DateTime? FiltroFechaInicio,
             DateTime? FiltroFechaFin,
             string FiltroLinea,
-            string FiltroPlanta)
+            string FiltroPlanta,
+            string FiltroProceso)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -111,12 +112,13 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 var parameters = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
-                {
-                    { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_FECHA_FIN",    (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)  ? (object)null : FiltroLinea,  ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
-                };
+        {
+            { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
+            { "P_FECHA_FIN",    (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date) },
+            { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)  ? (object)null : FiltroLinea,  ParameterDirection.Input, HanaDbType.NVarChar) },
+            { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
+            { "P_AREA",         (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
+        };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                     Logic.AD.GCGetMetricasOEE_PeadLiso,
@@ -140,7 +142,8 @@ namespace MantenimientosPTM.Controllers
             DateTime? FiltroFechaInicio,
             DateTime? FiltroFechaFin,
             string FiltroLinea,
-            int? FiltroPlanta)  // 🔥 INT porque PLANTA en Corrugado es INT
+            int? FiltroPlanta,   // 🔥 INT porque PLANTA en Corrugado es INT
+            string FiltroProceso)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -165,7 +168,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_FECHA_INICIO", (dtFechaInicio,                ParameterDirection.Input, HanaDbType.Date) },
                     { "P_FECHA_FIN",    (dtFechaFin,                   ParameterDirection.Input, HanaDbType.Date) },
                     { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA",       (FiltroPlanta ?? (object)null,  ParameterDirection.Input, HanaDbType.Integer) }
+                    { "P_PLANTA",       (FiltroPlanta ?? (object)null,  ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_AREA",         (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(

@@ -217,47 +217,6 @@
                             </div>
                         </div>
 
-
-                        <!-- FPY Card -->
-                        <div class="col-12 col-md-6 col-xl-4">
-                            <div class="card shadow-sm border-0 h-100">
-                                <div class="card-header MetricHeader MetricHeader--calidad text-white">
-                                    <h6 class="card-title mb-0">
-                                        <i class="bi bi-check-circle-fill me-2"></i>FPY
-                                    </h6>
-                                </div>
-                                <div class="card-body d-flex flex-column justify-content-between">
-                                    <p class="card-text text-muted small mb-2">
-                                        Porcentaje de producción que pasa inspección sin retrabajo.
-                                    </p>
-
-                                    <!-- Valor central -->
-                                    <div style="position:relative; height:160px; width:160px; margin:0 auto;">
-                                        <canvas id="fpyDonutChart" role="img" aria-label="Gráfica FPY: producción neta vs scrap">FPY</canvas>
-                                        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-                                            <div class="fw-bold text-success fs-4" id="metric-fpy">--</div>
-                                            <small class="text-muted" style="font-size:10px;">FPY</small>
-                                        </div>
-                                    </div>
-
-                                    <!-- Desglose -->
-                                    <div class="mt-2" style="font-size:12px;">
-                                        <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#1baf7a;display:inline-block;border-radius:2px;margin-right:4px;"></span>Producción Neta</span>
-                                            <span id="lbl-fpy-neta">-- kg</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#f28b82;display:inline-block;border-radius:2px;margin-right:4px;"></span>Total Scrap</span>
-                                            <span id="lbl-fpy-scrap">-- kg</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card-footer bg-light text-muted small">
-                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="fpy-update">--</span>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- OEE Card -->
                         <div class="col-12 col-md-6 col-xl-4">
                             <div class="card shadow-sm border-0 h-100">
@@ -329,9 +288,46 @@
                             </div>
                         </div>
 
+                        <!-- DISPONIBILIDAD TÉCNICA (DT) Card -->
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header MetricHeader MetricHeader--dt text-white">
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-shield-check me-2"></i>Disponibilidad Técnica
+                                    </h6>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-between">
+                                    <p class="card-text text-muted small mb-2">
+                                        Porcentaje de tiempo que la máquina está disponible para operar, en relación al tiempo entre fallas y el tiempo de reparación.
+                                    </p>
+
+                                    <div style="position:relative; height:160px; width:160px; margin:0 auto;">
+                                        <canvas id="dtDonutChart" role="img" aria-label="Gráfica Disponibilidad Técnica">DT</canvas>
+                                        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+                                            <div class="fw-bold text-primary fs-4" id="metric-dt">--</div>
+                                            <small class="text-muted" style="font-size:10px;">disponibilidad</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-2" style="font-size:12px;">
+                                        <div class="d-flex justify-content-between">
+                                            <span><span style="width:8px;height:8px;background:#1baf7a;display:inline-block;border-radius:2px;margin-right:4px;"></span>MTBF</span>
+                                            <span id="lbl-dt-mtbf">-- hr</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span><span style="width:8px;height:8px;background:#eda100;display:inline-block;border-radius:2px;margin-right:4px;"></span>MTTR</span>
+                                            <span id="lbl-dt-mttr">-- hr</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="dt-update">--</span>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- TIEMPO DE ESPERA / MTTA Card -->
-                        <div class="col-12 col-md-6 col-xl-4">
+                        @*<div class="col-12 col-md-6 col-xl-4">
                             <div class="card shadow-sm border-0 h-100">
                                 <div class="card-header MetricHeader MetricHeader--tiempo-respuesta text-white">
                                     <h6 class="card-title mb-0">
@@ -366,7 +362,7 @@
                                     <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="mtta-update">--</span>
                                 </div>
                             </div>
-                        </div>
+                        </div>*@
                     </div>
 
                     <!-- Alerta Container -->

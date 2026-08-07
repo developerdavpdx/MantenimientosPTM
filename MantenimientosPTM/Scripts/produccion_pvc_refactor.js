@@ -495,7 +495,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             nuevaFila.id = this.generarIdTemporal();
             nuevaFila.OTMC = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
-            nuevaFila.MttoCorrectivos = GlobalUtil.calcularDiferenciaHoras(item.FechaCreacion, item.FechaCierre) || 0;
+            nuevaFila.MttoCorrectivos = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
 
             // ✅ Marcar como correctivo
             nuevaFila._origen = 'CORRECTIVO';
@@ -1017,7 +1017,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         field: 'Mes',
                         headerName: 'Mes',
                         editable: false,
-                        width: 120,
+                        width: 180,
                         cellClass: 'celda-gris',
                         pinned: 'left',
                         // ✅ NUEVO: Renderer para mostrar emoji + mes + tooltip + punto pulsante

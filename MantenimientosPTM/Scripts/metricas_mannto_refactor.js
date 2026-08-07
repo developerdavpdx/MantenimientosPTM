@@ -45,7 +45,7 @@ class MetricasApp {
         setInterval(() => {
             this.metricasManager.cargarMetricasPorProceso();
             console.log('🔄 Métricas actualizadas automáticamente');
-        }, 300000);
+        }, 60000);
     }
 }
 
@@ -102,20 +102,18 @@ class UIManager {
 
     static mostrarSkeletons() {
         const skeleton = '<div class="skeleton-card"></div>';
-        $("#metric-disponibilidad, #metric-rendimiento, #metric-calidad, #metric-oee, #metric-tiempomuerto, #metric-mtta, #metric-cumplimientopm, #metric-mttr")
+        $("#metric-disponibilidad, #metric-rendimiento, #metric-calidad, #metric-oee, #metric-tiempomuerto, #metric-mtta, #metric-cumplimientopm, #metric-mttr, #metric-mtbf, #metric-dt")
             .empty()
             .append(skeleton);
     }
 
-    // 🔥 Muestra mensaje cuando no hay proceso seleccionado
     static mostrarSinProceso() {
-        $("#metric-disponibilidad, #metric-rendimiento, #metric-calidad, #metric-oee, #metric-tiempomuerto, #metric-mtta, #metric-cumplimientopm, #metric-mttr")
+        $("#metric-disponibilidad, #metric-rendimiento, #metric-calidad, #metric-oee, #metric-tiempomuerto, #metric-mtta, #metric-cumplimientopm, #metric-mttr, #metric-mtbf, #metric-dt")
             .html('<span class="text-muted small">Selecciona un proceso</span>');
     }
 
-    // 🔥 Muestra mensaje cuando no hay datos
     static mostrarSinDatos() {
-        $("#metric-disponibilidad, #metric-rendimiento, #metric-calidad, #metric-oee, #metric-tiempomuerto, #metric-mtta, #metric-cumplimientopm, #metric-mttr")
+        $("#metric-disponibilidad, #metric-rendimiento, #metric-calidad, #metric-oee, #metric-tiempomuerto, #metric-mtta, #metric-cumplimientopm, #metric-mttr, #metric-mtbf, #metric-dt")
             .html('<span class="text-muted small">Sin datos</span>');
     }
 }
@@ -161,6 +159,8 @@ class MetricasManager {
         this.cumplimientoPMDonutChart = null; // 🔥 nuevo
         this.cumplimientoPMDonutChart = null; // 🔥 nuevo
         this.mttrDonutChart = null; // 🔥 nuevo
+        this.mtbfDonutChart = null; // 🔥 nuevo
+        this.dtDonutChart = null; // 🔥 nuevo
 
 
         // 🔥 Mapa ID → clave de proceso
@@ -185,6 +185,8 @@ class MetricasManager {
         this.inicializarGraficaTiempoEspera();
         this.inicializarGraficaCumplimientoPM(); // 🔥 nuevo
         this.inicializarGraficaMTTR(); // 🔥 nuevo
+        this.inicializarGraficaMTBF(); // 🔥 nuevo
+        this.inicializarGraficaDT(); // 🔥 nuevo
         // 🔥 Carga inicial — si no hay proceso seleccionado muestra aviso
         this.cargarMetricasPorProceso();
         $("#FiltroPlanta").val(this.datos_usuario[0].PLANTA);
@@ -362,6 +364,82 @@ class MetricasManager {
         });
     }
 
+    // ========================================
+    // 🔥 NUEVO: GRÁFICA MTBF
+    // ========================================
+    inicializarGraficaMTBF() {
+        const ctx = document.getElementById('mtbfDonutChart');
+        if (!ctx) return;
+
+        this.mtbfDonutChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['T. Disponible', 'T. Correctivos'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: ['#0dcaf0', '#a8eaf7'],
+                    borderWidth: 3,
+                    borderColor: 'transparent'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: { legend: { display: false } },
+                animation: { duration: 600 }
+            }
+        });
+    }
+
+    // ========================================
+    // 🔥 NUEVO: GRÁFICA DT (Disponibilidad Técnica)
+    // ========================================
+    inicializarGraficaDT() {
+        const ctx = document.getElementById('dtDonutChart');
+        if (!ctx) return;
+
+        this.dtDonutChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['MTBF', 'MTTR'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: ['#1baf7a', '#eda100'],
+                    borderWidth: 3,
+                    borderColor: 'transparent'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: { legend: { display: false } },
+                animation: { duration: 600 }
+            }
+        });
+    }
+
+    actualizarGraficaDT(mtbfVal, mttrVal) {
+        if (!this.dtDonutChart) return;
+
+        this.dtDonutChart.data.datasets[0].data = [mtbfVal, mttrVal];
+        this.dtDonutChart.update();
+
+        $('#lbl-dt-mtbf').text(mtbfVal.toFixed(1) + ' hr');
+        $('#lbl-dt-mttr').text(mttrVal.toFixed(1) + ' hr');
+    }
+
+    actualizarGraficaMTBF(tiempoDisponibleVal, tiempoCorrectivosVal) {
+        if (!this.mtbfDonutChart) return;
+
+        this.mtbfDonutChart.data.datasets[0].data = [tiempoDisponibleVal, tiempoCorrectivosVal];
+        this.mtbfDonutChart.update();
+
+        $('#lbl-mtbf-disponible').text(tiempoDisponibleVal.toFixed(1) + ' hr');
+        $('#lbl-mtbf-correctivos').text(tiempoCorrectivosVal.toFixed(1) + ' hr');
+    }
+
     actualizarGraficaMTTR(tiempoReparacionVal, totalReparacionesVal) {
         if (!this.mttrDonutChart) return;
 
@@ -409,7 +487,6 @@ class MetricasManager {
     // 🔥 LLAMADA AL ENDPOINT SEGÚN PROCESO
     // ========================================
     cargarMetricasOEE(endpoint, filtros) {
-
         $.ajax({
             url: `/${this.URLBase}/${endpoint}`,
             type: 'GET',
@@ -418,7 +495,7 @@ class MetricasManager {
                 FiltroFechaFin: filtros.fechaFin,
                 FiltroLinea: filtros.linea,
                 FiltroPlanta: filtros.planta,
-                FiltroProceso: this.datos_usuario[0].PLANTA == "1" ? "1" : "14"
+                FiltroProceso: filtros.proceso
             },
             dataType: 'json',
 
@@ -469,13 +546,26 @@ class MetricasManager {
                 const totalReparacionesVal = parseInt(m.TOTAL_REPARACIONES) || 0;
                 const mttrVal = parseFloat(m.MTTR_HRS) || 0;
 
+                // 🔥 Valores de MTBF
+                const mtbfVal = parseFloat(m.MTBF_HRS) || 0;
+                const totalParadasVal = parseInt(m.TOTAL_PARADAS) || 0;
+                const tiempoCorrectivosBitacoraVal = parseFloat(m.TIEMPO_CORRECTIVOS_BITACORA_HRS) || 0; // 🔥 NUEVO
+
+                // 🔥 Valores de DT (Disponibilidad Técnica)
+                const dtVal = parseFloat(m.DT_PORCENTAJE) || 0;
+
                 // 🔥 KPI central de OEE
                 UIManager.actualizarMetrica('rendimiento', rendVal.toFixed(1), '%');
                 UIManager.actualizarMetrica('calidad', calVal.toFixed(1), '%');
                 UIManager.actualizarMetrica('oee', oeeVal.toFixed(1), '%');
+                // 🔥 KPI central de MTBF
+                UIManager.actualizarMetrica('mtbf', mtbfVal.toFixed(1), 'hrs');
 
                 // 🔥 KPI central de cumplimiento PM
                 UIManager.actualizarMetrica('cumplimientopm', pmPorcentajeVal.toFixed(1), '%');
+
+                // 🔥 KPI central de DT
+                UIManager.actualizarMetrica('dt', dtVal.toFixed(1), '%');
                 $('#lbl-pm-cerrados').text(pmCerradosVal);
                 $('#lbl-pm-programados').text(pmProgramadosVal);
 
@@ -489,6 +579,7 @@ class MetricasManager {
                     ? (tiempoMuertoVal / horasProgramadas) * 100
                     : 0;
                 UIManager.actualizarMetrica('tiempomuerto', tiempoMuertoPct.toFixed(1), '%');
+
 
                 // 🔥 Valores de Tiempo de Espera / MTTA
                 const tiempoEsperaTotalVal = parseFloat(m.TIEMPO_ESPERA_TOTAL_HRS) || 0;
@@ -507,6 +598,8 @@ class MetricasManager {
                 this.actualizarGraficaTiempoEspera(tiempoEsperaTotalVal, mttaVal);
                 this.actualizarGraficaCumplimientoPM(pmProgramadosVal, pmCerradosVal);
                 this.actualizarGraficaMTTR(tiempoReparacionTotalVal, totalReparacionesVal);
+                this.actualizarGraficaMTBF(tiempoNoDisponibleVal, tiempoCorrectivosBitacoraVal); // 🔥 corregido
+                this.actualizarGraficaDT(mtbfVal, mttrVal);
 
 
                 $('#labelProcesoActivo').text(filtros.proceso);
