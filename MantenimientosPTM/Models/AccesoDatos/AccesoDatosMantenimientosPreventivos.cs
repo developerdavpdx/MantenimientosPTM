@@ -136,6 +136,22 @@ namespace MantenimientosPTM
             [JsonProperty("PERIODICIDAD_MANTENIMIENTO")]
             public string PeriodicidadMantenimiento { get; set; }
 
+            // Fecha Real Inicio
+            [JsonProperty("FECHA_REAL_INICIO")]
+            public string FechaRealInicio { get; set; }
+
+            // Fecha Real Fin
+            [JsonProperty("FECHA_REAL_FIN")]
+            public string FechaRealFin { get; set; }
+
+            // Enviar Siguiente Mes
+            [JsonProperty("ENVIAR_SIGUIENTE_MES")]
+            public int? EnviarSiguienteMes { get; set; }
+
+            // Enviar Siguiente Mes
+            [JsonProperty("MOTIVO")]
+            public string Motivo { get; set; }
+
             // Periodicidad de mantenimiento
             [JsonProperty("ID_PERIODICIDAD")]
             public string IdPeriodicidad { get; set; }
@@ -457,6 +473,15 @@ namespace MantenimientosPTM
 
             [JsonProperty("FechaActualFin")]
             public string FechaActualFin { get; set; }
+
+            [JsonProperty("FechaRepInicio")]
+            public string FechaRepInicio { get; set; }
+
+            [JsonProperty("FechaRepFin")]
+            public string FechaRepFin { get; set; }
+
+            [JsonProperty("EnviarSiguienteMes")]
+            public bool EnviarSiguienteMes { get; set; }
 
             [JsonProperty("Motivo")]
             public string Motivo { get; set; }

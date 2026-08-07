@@ -184,6 +184,26 @@ class MantenimientosPreventivoApp {
         // 🔥 Reprogramación - enviar solicitud
         $('#formReprogramacion').on('submit', (e) => this.mantenimientoManager.enviarSolicitudReprogramacion(e));
 
+        // Check deshabilitar fechas reales de ejecución
+        $('#chkSiguienteMes').on('change', function () {
+            const checked = $(this).is(':checked');
+            const $inputs = $('#RepFechaActualInicio, #RepFechaActualFin');
+
+            if (checked) {
+                $inputs
+                    .prop('disabled', true)
+                    .removeAttr('required')
+                    .val('')
+                    .removeClass('is-invalid');
+                $('.spanReq').addClass('d-none');
+            } else {
+                $inputs
+                    .prop('disabled', false)
+                    .attr('required', 'required');
+                $('.spanReq').removeClass('d-none');
+            }
+        });
+
         // ✅ CORRECTO - Debes pasar "e" como parámetro
         $('#formOrdenMantenimiento').on('submit', (e) => this.mantenimientoManager.guardarOT(e));
 
@@ -388,6 +408,8 @@ class MantenimientosPreventivoApp {
                 }
             });
         });
+
+
     }
 
     configurarEventosPDF() {
@@ -627,7 +649,10 @@ class MantenimientoManager {
             fechaInicioMantenimiento: "",
             fechaFinMantenimiento: "",
             idPeriodicidad: "",
-            periodicidadMantenimiento: ""
+            periodicidadMantenimiento: "",
+            fechaRealInicio: "",
+            fechaRealFin: "",
+            enviarSiguienteMes:""
         };
 
         // ✅ IDs y referencias globales
@@ -656,7 +681,11 @@ class MantenimientoManager {
             // ✅ v4: para el flujo de reprogramación
             fueReprogramado: btn.data('fuereprogramado'),
             tieneSolicitudPendiente: btn.data('tienesolicitudpendiente'),
-            idSolicitudPendiente: btn.data('idsolicitudpendiente')
+            idSolicitud: btn.data('idsolicitudpendiente'),
+            fechaRealInicio: btn.data('fecharealinicio'),
+            fechaRealFin: btn.data('fecharealfin'),
+            enviarSiguienteMes: btn.data('enviarsiguientemes'),
+            motivo: btn.data('motivo'),
         };
     }
 
@@ -664,6 +693,16 @@ class MantenimientoManager {
     // REPROGRAMACIÓN DE MANTENIMIENTO
     // ============================
     abrirModalReprogramacion(btn) {
+
+        // ✅ RESET COMPLETO DEL CHECKBOX Y LOS INPUTS
+        $('#chkSiguienteMes').prop('checked', false);
+
+        $('#RepFechaActualInicio, #RepFechaActualFin')
+            .prop('disabled', false)
+            .attr('required', 'required')
+            .removeClass('is-invalid');
+
+        $('.spanReq').removeClass('d-none');
 
         // Limpiar validación
         ValidationManager.limpiarValidacion('#formReprogramacion');
@@ -680,6 +719,24 @@ class MantenimientoManager {
             return `${anio}-${mes}-${dia}`;
         };
 
+        const convertirFechaReal = (fecha) => {
+            if (!fecha || fecha === 'null' || fecha.trim() === '') return '';
+            return fecha.split(' ')[0]; // Toma solo "2026-08-06"
+        };
+
+        //Limitar las fechas reales inicio y fin 
+        $('#RepFechaActualInicio, #RepFechaActualFin').on('change', function () {
+            const hoy = new Date();
+            const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            const fecha = new Date($(this).val());
+
+            if (fecha < primerDiaMes || fecha > ultimoDiaMes) {
+                AlertManager.mostrar('Solo puedes seleccionar fechas dentro del mes actual.', 'warning', 'alertReprogramacionContainer');
+                $(this).val('');
+            }
+        });
+
         // Llenar datos en el modal
         let Equipo = `${this.datosBotón.nombreEquipo} ${this.datosBotón.numeroDocPmCalidad}`;
         $('#ReprogramacionIdEquipo').val(this.datosBotón.idEquipo);
@@ -691,10 +748,15 @@ class MantenimientoManager {
         $('#ReprogramacionFechaActualInicio').val(convertirFecha(this.datosBotón.fechaInicioMantenimiento));
         $('#ReprogramacionFechaActualFin').val(convertirFecha(this.datosBotón.fechaFinMantenimiento));
 
+        $('#RepFechaActualInicio').val(convertirFechaReal(this.datosBotón.fechaRealInicio));
+        $('#RepFechaActualFin').val(convertirFechaReal(this.datosBotón.fechaRealFin));
+        $('#ReprogramacionMotivo').val(this.datosBotón.motivo);
+
         // Limpiar campos de reprogramación
         $('#ReprogramacionFechaNovaInicio').val('');
         $('#ReprogramacionFechaNovaFin').val('');
-        $('#ReprogramacionMotivo').val('');
+       
+
 
         // Mostrar modal
         $('#modalSolicitarReprogramacion').modal('show');
@@ -702,8 +764,33 @@ class MantenimientoManager {
 
     enviarSolicitudReprogramacion(e) {
         e.preventDefault();
+        const siguienteMes = $('#chkSiguienteMes').is(':checked');       
 
-        // Validar formulario
+        // ========================
+        // VALIDACIÓN DE FORMULARIO
+        // ========================
+        // Validar fecha
+        const fechaRepInicio = $('#RepFechaActualInicio').val();
+        const fechaRepFin = $('#RepFechaActualFin').val();
+
+        // Validación de fechas solo si NO es siguiente mes
+        if (!siguienteMes) {
+            const fechaRepInicio = $('#RepFechaActualInicio').val();
+            const fechaRepFin = $('#RepFechaActualFin').val();
+
+            if (fechaRepInicio && fechaRepFin) {
+                if (new Date(fechaRepFin) < new Date(fechaRepInicio)) {
+                    AlertManager.mostrar(
+                        'La fecha fin real de ejecución no puede ser anterior a la fecha inicio.',
+                        'warning',
+                        'alertReprogramacionContainer'
+                    );
+                    $('#RepFechaActualFin').focus();
+                    return false;
+                }
+            }
+        }
+
         if (!ValidationManager.validarFormulario('#formReprogramacion')) {
             AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', 'alertReprogramacionContainer');
             return false;
@@ -715,6 +802,9 @@ class MantenimientoManager {
             NumeroOrden: this.datosBotón.numeroOrden,
             FechaActualInicio: $('#ReprogramacionFechaActualInicio').val(),
             FechaActualFin: $('#ReprogramacionFechaActualFin').val(),
+            FechaRepInicio: siguienteMes ? null : $('#RepFechaActualInicio').val(),
+            FechaRepFin: siguienteMes ? null : $('#RepFechaActualFin').val(),
+            EnviarSiguienteMes: siguienteMes,
             Motivo: $('#ReprogramacionMotivo').val(),
             UsuarioSolicita: this.datos_usuario[0].EMAIL,
             IdPeriodicidad: this.datosBotón.idPeriodicidad,
@@ -722,7 +812,7 @@ class MantenimientoManager {
             // ✅ v4: para el flujo de reprogramación
             FueReprogramado: this.datosBotón.fueReprogramado,
             TieneSolicitudPendiente: this.datosBotón.tieneSolicitudPendiente,
-            IdSolicitudPendiente: this.datosBotón.idSolicitudPendiente
+            IdSolicitud: this.datosBotón.idSolicitud
         };
 
         $('#btnEnviarReprogramacion').html('<span class="spinner-border spinner-border-sm me-2"></span>Enviando...').prop('disabled', true);
@@ -749,11 +839,12 @@ class MantenimientoManager {
 
                     setTimeout(() => {
                         $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
+                        $('#btnEnviarReprogramacion').prop('disabled', false);
                         $('#modalSolicitarReprogramacion').modal('hide');
                     }, 2000);
                 } else if (response.Status === 'ERROR') {
                     $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
-                    $('#btnEnviarReprogramacion').prop('disabled', false);
+                    
                     AlertManager.mostrar(response.Message || 'Error técnico al procesar la solicitud', 'danger', 'alertReprogramacionContainer');
                 } else {
                     $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
@@ -1133,9 +1224,9 @@ class MantenimientoManager {
                                 const tieneSolicitudPendiente = row.TieneSolicitudPendiente || 'SI';
 
                                 // Validar todas las condiciones
-                                const puedeReprogramar = 
-                                    numeroOrden !== '' && 
-                                    fueReprogramado === 'NO' && 
+                                const puedeReprogramar =
+                                    numeroOrden !== '' &&
+                                    fueReprogramado === 'NO' &&
                                     tieneSolicitudPendiente === 'NO';
 
                                 if (puedeReprogramar && estatusOrden == 2) {
@@ -1165,7 +1256,6 @@ class MantenimientoManager {
                                     );
                                 }
                             }
-
                             let refaccionBtn = '';
                             let caratulaBtn = '';
                             let impresionBtn = '';
@@ -1331,10 +1421,32 @@ class MantenimientoManager {
                         data: "MesMantenimiento",
                         className: "text-center",
                         render: (data, type, row) => {
+                            // if (!data) {
+                            //     return `<span class="badge btn-ptm-light badge-custom">
+                            //     <i class="bi bi-calendar-x me-1"></i>N/A
+                            // </span>`;
+                            // }
+
+                            // return data.replace(
+                            //     /(\d{2}\/\d{2}\/\d{4})/g,
+                            //     '<span class="badge btn-ptm-light badge-custom"><i class="bi bi-calendar3 me-1"></i>$1</span>'
+                            // );
+
+                            // ✅ Si tiene fechas reales, mostrarlas en lugar de las programadas
+                            const tieneFechaRealInicio = row.FechaRealInicio !== null && row.FechaRealInicio !== undefined && row.FechaRealInicio !== '';
+                            const tieneFechaRealFin = row.FechaRealFin !== null && row.FechaRealFin !== undefined && row.FechaRealFin !== '';
+
+                            if (tieneFechaRealInicio && tieneFechaRealFin) {
+                                const inicio = row.FechaRealInicio.substring(0, 10);
+                                const fin = row.FechaRealFin.substring(0, 10);
+                                return `Del <span class="badge btn-ptm-light badge-custom"><i class="bi bi-calendar3 me-1"></i>${inicio} </span> Al
+                                        <span class="badge btn-ptm-light badge-custom"><i class="bi bi-calendar3 me-1"></i>${fin}</span>`;
+                            }
+
                             if (!data) {
                                 return `<span class="badge btn-ptm-light badge-custom">
-                                <i class="bi bi-calendar-x me-1"></i>N/A
-                            </span>`;
+                                            <i class="bi bi-calendar-x me-1"></i>N/A
+                                        </span>`;
                             }
 
                             return data.replace(
@@ -1470,12 +1582,17 @@ class MantenimientoManager {
                     emptyTable: "No hay datos disponibles en la tabla"
                 },
                 createdRow: function (row, data, dataIndex) {
+
+
                     $(row).attr('data-id-equipo', data.IdEquipo);
                     $(row).attr('data-numero-ocurrencia', data.NumeroOcurrencia);
                     $(row).attr('data-area', data.Area);
                     $(row).attr('data-linea', data.LineaProduccion);
                     $(row).attr('data-periodicidad', data.PeriodicidadMantenimiento);
                     $(row).attr('data-id-periodicidad', data.IdPeriodicidad);
+                    $(row).attr('data-fecharealinicio', data.FechaRealInicio);
+                    $(row).attr('data-fecharealfin', data.FechaRealFin);
+                    $(row).attr('data-enviarsiguientemes', data.EnviarSiguienteMes);
 
                     $(row).data('mantenimiento-completo', {
                         idEquipo: data.IdEquipo,
@@ -1495,7 +1612,16 @@ class MantenimientoManager {
                     });
 
                     // 🔴 PINTAR FILA SI HAY SOLICITUD PENDIENTE DE REPROGRAMACIÓN
-                    if (data.TieneSolicitudPendiente === 'SI') {
+                    // if (data.TieneSolicitudPendiente === 'SI') {
+                    //     $(row).addClass('reprogramacion-pendiente');
+                    // }
+
+                    // 🔴 PINTAR FILA - lógica nueva con EnviarSiguienteMes y fechas reales
+                    const enviarSiguiente = data.EnviarSiguienteMes === 1;
+                    const tieneFechaRealInicio = data.FechaRealInicio !== null && data.FechaRealInicio !== undefined && data.FechaRealInicio !== '';
+                    const tieneFechaRealFin = data.FechaRealFin !== null && data.FechaRealFin !== undefined && data.FechaRealFin !== '';
+
+                    if (enviarSiguiente && !tieneFechaRealInicio && !tieneFechaRealFin) {
                         $(row).addClass('reprogramacion-pendiente');
                     }
 
@@ -1631,6 +1757,11 @@ class MantenimientoManager {
             firmamantenimiento: row.FirmaMantenimiento,
             tieneRefacciones: row.TieneRefacciones,
             nombremantenimiento: row.NombreMantenimiento,
+
+            enviarSiguienteMes: row.EnviarSiguienteMes,
+            fechaRealInicio: row.FechaRealInicio,
+            fechaRealFin: row.FechaRealFin,
+            motivo: row.Motivo,
 
             // ✅ v4: para el flujo de reprogramación
             fuereprogramado: row.FueReprogramado,
