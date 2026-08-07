@@ -146,7 +146,13 @@ namespace MantenimientosPTM
 
             // Enviar Siguiente Mes
             [JsonProperty("ENVIAR_SIGUIENTE_MES")]
-            public int? EnviarSiguienteMes { get; set; }
+            public bool? EnviarSiguienteMes { get; set; }
+
+            [JsonProperty("FECHA_INICIO_PERIODO")]
+            public string FechaInicioPeriodo { get; set; }
+
+            [JsonProperty("FECHA_FIN_PERIODO")]
+            public string FechaFinPeriodo { get; set; }
 
             // Enviar Siguiente Mes
             [JsonProperty("MOTIVO")]
@@ -494,6 +500,9 @@ namespace MantenimientosPTM
 
             [JsonProperty("Planta")]
             public int? Planta { get; set; }
+
+            [JsonProperty("FueReprogramado")]
+            public string FueReprogramado { get; set; }
         }
 
         public class SolicitarReprogramacionResponseDTO
