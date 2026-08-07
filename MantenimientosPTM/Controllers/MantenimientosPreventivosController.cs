@@ -1074,7 +1074,7 @@ namespace MantenimientosPTM.Controllers
                                 string estatus = firstItem["ESTATUS_ACTUAL"]?.ToString();
                                 int idSolicitud = Convert.ToInt32(firstItem["ID_SOLICITUD"]?.ToString() ?? "0");
 
-                                if (estatus == "SI" || estatus == "Pendiente")
+                                if (estatus == "SI" || estatus == "Pendiente" || estatus == "NA")
                                 {
                                     jsonResponse.Status = "SI";
                                     jsonResponse.Message = $"Solicitud de reprogramación registrada correctamente. ID: {idSolicitud}";
