@@ -355,6 +355,7 @@ class SolicitudCompraApp {
             else if (window.CURRENT_VIEW === 'ReporteStock') {
                 urlfinal = "InsertarSolicitudOrdenCompraMPUndependent";
             }
+           
 
             // ✅ Paso 1: Actualizar solicitud de compra con estatus "Espera Autorizacion"
             const responseInsert = await $.ajax({
@@ -365,7 +366,8 @@ class SolicitudCompraApp {
                     Requisicion: payload,
                     Comentarios: "Solicitud enviada para autorización",
                     UsuarioSolicita: this.datos_usuario[0].EMAIL,
-                    Planta: this.datos_usuario[0].PLANTA
+                    Planta: this.datos_usuario[0].PLANTA,
+                    CodigoEmpleado: this.datos_usuario[0].CODIGOEMPLEADO
                 }),
                 dataType: 'json'
             });

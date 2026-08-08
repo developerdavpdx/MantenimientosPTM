@@ -1,0 +1,204 @@
+﻿@{
+    ViewBag.Title = "Producción INY";
+}
+
+<link href="~/Content/Produccion.css" rel="stylesheet" />
+<link href="~/Content/TiemposMuertos.css" rel="stylesheet" />
+
+<main aria-labelledby="title">
+    <div class="ps-2 pe-2 pt-3 pb-3">
+        <div class="row m-0 pt-3">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header text-dark">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-12 col-md-8">
+                                <h4 class="mb-0 text-color-logo d-flex">
+                                    <i class="bi bi-table me-2"></i>Causas Tiempos Muertos
+                                    <span id="fechaActual" class="text-primary ms-2">INY</span>
+                                    <span id="mesActual" class="text-primary ms-2"></span>
+                                </h4>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="d-flex justify-content-md-end gap-2">
+                                    <button id="btnGuardarCambios" class="btn-filtro-aplicar">
+                                        <i class="bi bi-save-fill me-1"></i>Guardar
+                                    </button>
+                                    <button id="btnExportarExcel" class="btn-filtro-limpiar" title="Descargar Excel">
+                                        <i class="bi bi-file-excel-fill me-1"></i>Descargar
+                                    </button>
+                                    <button id="btnEnviarCorreo" class="btn-filtro-aplicar" title="Enviar por Correo">
+                                        <i class="bi bi-send-fill me-1"></i>Enviar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="filtros-panel">
+
+                            <div class="filtros-titulo">
+                                <i class="bi bi-sliders" style="color:#0ea5d8"></i>
+                                Filtros de búsqueda
+                            </div>
+
+                            <div class="row g-2 align-items-end">
+
+                                <!-- Fecha Inicio -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroFechaInicio">
+                                        <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
+                                    </label>
+                                    <input type="date" class="filtro-input"
+                                           id="FiltroFechaInicio" name="FiltroFechaInicio">
+                                </div>
+
+                                <!-- Fecha Fin -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroFechaFin">
+                                        <i class="bi bi-calendar-x-fill"></i> Fecha Fin
+                                    </label>
+                                    <input type="date" class="filtro-input"
+                                           id="FiltroFechaFin" name="FiltroFechaFin">
+                                </div>
+
+                                <!-- Turno -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroTurno">
+                                        <i class="bi bi-clock-fill"></i> Turno
+                                    </label>
+                                    <select class="filtro-input" id="FiltroTurno" name="FiltroTurno">
+                                        <option value="">Selecciona un turno...</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                    </select>
+                                </div>
+
+                                <!-- Botones -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                                    <button type="button" class="btn-filtro-aplicar"
+                                            id="btnAplicarFiltros" title="Aplicar filtros">
+                                        <i class="bi bi-search"></i>
+                                        Buscar
+                                    </button>
+                                    <button type="button" class="btn-filtro-limpiar"
+                                            id="btnLimpiarFiltros" title="Limpiar filtros">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                        Limpiar
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div id="tablaProduccion" class="ag-theme-alpine d-none"></div>
+
+                    </div>
+                </div>
+
+                <!-- Menú contextual -->
+                <div id="menuContextual" class="menu-contextual">
+                    <div data-action="agregar">➕ Agregar fila</div>
+                    <div data-action="copiar">📋 Copiar fila</div>
+                    <div data-action="eliminar">🗑️ Eliminar fila</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Loader fullscreen -->
+<div id="calendarLoader" style="display: none;">
+    <div class="calendar-loader-overlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-3 text-white fw-semibold">Cargando datos por favor espere...</p>
+    </div>
+</div>
+
+<!-- MODAL: Enviar Excel por Correo -->
+<div class="modal fade" id="modalEnviarExcelCorreo" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:500px">
+        <div class="modal-content">
+
+            <!-- Header -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-envelope-paper"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Enviar Reporte por Correo</div>
+                        <div class="modal-subtitle-custom">Selecciona los destinatarios para enviar el Excel</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body-custom">
+
+                <!-- Agregar Correos -->
+                <div class="mb-4">
+                    <h6 class="mb-3 pb-2 border-bottom" style="color:var(--modal-primary);font-weight:700;">
+                        <i class="bi bi-envelope-fill me-2"></i>Correos de Destino
+                    </h6>
+                    <div class="p-3 rounded border" style="background:#fff;">
+
+                        <div class="d-flex gap-2 mb-3">
+                            <div class="flex-grow-1">
+                                <input type="email" class="form-control-custom" id="inputCorreoINY"
+                                       placeholder="ejemplo@empresa.com" autocomplete="off">
+                                <div id="errorCorreoINY" class="modal-error-msg invalid-feedback" style="display:none;">
+                                    <img src="~/Content/Images/alerta.gif" width="24" class="me-3"> Ingrese un correo válido.
+                                </div>
+                            </div>
+                            <button type="button" class="btn-modal-guardar" id="btnAgregarCorreoINY" style="white-space:nowrap;">
+                                <i class="bi bi-plus-circle-fill me-1"></i> Agregar
+                            </button>
+                        </div>
+
+                        <div id="listaCorreosINY" class="d-flex flex-wrap gap-2">
+                            <span class="text-muted" style="font-size:0.82rem;">
+                                <i class="bi bi-info-circle me-1"></i> No hay correos agregados aún.
+                            </span>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Info del envío -->
+                <div class="p-3 rounded border" style="background:#f8f9fa;">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="bi bi-info-circle text-info"></i>
+                        <strong style="font-size:0.95rem;">Información del Reporte:</strong>
+                    </div>
+                    <div style="font-size:0.85rem;color:#666;">
+                        <p class="mb-1"><i class="bi bi-check-circle-fill me-2" style="color:var(--modal-primary)"></i> Se adjuntará el Excel con todos los datos</p>
+                        <p class="mb-1"><i class="bi bi-check-circle-fill me-2" style="color:var(--modal-primary)"></i> Formato profesional con estilos</p>
+                        <p class="mb-0"><i class="bi bi-check-circle-fill me-2" style="color:var(--modal-primary)"></i> Se enviará un correo a cada destinatario</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer-custom justify-content-between">
+                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal" id="btnCancelarEnvio">
+                    <i class="bi bi-x-circle me-1"></i> Cancelar
+                </button>
+                <button type="button" class="btn-modal-guardar" id="btnEnviarExcelCorreo" style="gap:0.5rem;">
+                    <i class="bi bi-send-fill me-1"></i> Enviar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="~/Scripts/produccion_iny_refactor.js"></script>

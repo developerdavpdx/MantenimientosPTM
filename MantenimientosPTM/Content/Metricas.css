@@ -1,0 +1,16 @@
+﻿.MetricHeader {
+    background: linear-gradient(135deg, #1569ad 0%, #0d4a7a 100%);
+    border-left: 4px solid transparent;
+}
+
+.MetricHeader--tiempo-respuesta {
+    border-left-color: #eda100; /* MTTR, MTTA */
+}
+
+.MetricHeader--cumplimiento {
+    border-left-color: #9b59b6; /* Cumplimiento PM */
+}
+
+.MetricHeader--calidad {
+    border-left-color: #1baf7a; /* FPY */
+}

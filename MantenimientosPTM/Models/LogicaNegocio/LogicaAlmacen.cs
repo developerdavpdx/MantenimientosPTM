@@ -126,6 +126,7 @@ namespace MantenimientosPTM
                         string errorCode = errorResponse.error.code?.ToString() ?? "?";
                         string errorValue = errorResponse.error.message.value?.ToString() ?? result;
                         responseAbx.Message = $"Error SAP: {errorCode} / {errorValue}";
+                        responseAbx.IsError = true;
                     }
                     catch
                     {
@@ -364,7 +365,7 @@ namespace MantenimientosPTM
                         newLine["CostingCode4"] = articulo.Cedis;
                         newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe; //AUTORIZA (RECIBE)
                         newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega; //ALMACENISTA (ENTREGA)
-
+                      
 
                         // ✅ Cuenta contable si aplica
                         if (!string.IsNullOrWhiteSpace(linea["CuentaContable"]?.ToString()))
@@ -404,11 +405,12 @@ namespace MantenimientosPTM
                 dictGI["Comments"] = $"Salida de mercancía generada por interfaz PTM Mantenimientos — {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Para solicitud: {payload.Referencia} Orden Trabajo: {payload.OrdenTrabajo}";
                 dictGI["JournalMemo"] = $"Salida de mercancía para solicitud: {payload.Referencia} Orden Trabajo: {payload.OrdenTrabajo}";
                 dictGI["Reference2"] = payload.DataMovimiento.Recibe; //AUTORIZA (RECIBE)
+                dictGI["U_U_PDX_SOLICITANTE"] = payload.DataMovimiento.NumEmpleado;
 
                 var serie = GetSerieByName(payload.Contabilizacion[0].Cedis);
 
                 //La serie debe ser igual al CEDIS
-                dictGI["Series"] = serie;
+                dictGI["Series"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["SeriesP1"] : ConfigurationManager.AppSettings["SeriesP2"]);
 
 
 
@@ -654,7 +656,7 @@ namespace MantenimientosPTM
                 //FALTA SERIE = CEDIS
 
                 var serie = GetSerieByName(payload.Contabilizacion[0].Cedis);
-                dictGR["Serie"] = serie;
+                dictGR["Series"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["SeriesP1"] : ConfigurationManager.AppSettings["SeriesP2"]);
 
 
                 foreach (var linea in articulosData)

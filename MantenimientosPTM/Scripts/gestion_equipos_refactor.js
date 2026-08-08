@@ -138,6 +138,7 @@ class GestionEquiposApp {
             $('#FiltroLinea').val('');
             $('#FiltroProceso').val('');
             $('#FiltroOrdenTrabajo').val('');
+            $('#FiltroNombreEquipo').val('');
             $('#FiltroFechaInicioMantenimiento').val('');
             $('#tablaEquipos').DataTable().ajax.reload();
         });
@@ -647,6 +648,7 @@ class EquipoManager {
                             "FiltroLinea": $("#FiltroLinea").val() || null,
                             "FiltroArea": $("#FiltroProceso").val() || null,
                             "FiltroOrdenTrabajo": $("#FiltroOrdenTrabajo").val() || null,
+                            "FiltroNombreEquipo": $("#FiltroNombreEquipo").val() || null,
                             "FiltroFechaInicioMantenimiento": $("#FiltroFechaInicioMantenimiento").val() || null,
                             "FiltroEstatus": $("#FiltroEstatus").val()
                         });

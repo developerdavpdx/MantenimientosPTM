@@ -29,11 +29,11 @@ class GestionEventosApp {
             const lineaText = $("#PlanLinea option:selected").text() || lineaVal || '';
 
             // Normalizar línea: si el valor no existe, extraer el primer número del texto (ej. "LINEA 1 PVC" -> 1)
-            let normalizedLinea = lineaVal;
-            if (!normalizedLinea) {
+            let normalizedLinea = "";
+            // if (!normalizedLinea) {
                 const m = lineaText.match(/\b(\d+)\b/);
                 if (m && m[1]) normalizedLinea = m[1];
-            }
+            // }
 
             const lineaParaEnviar = normalizedLinea ? parseInt(normalizedLinea, 10) : null;
 
@@ -56,7 +56,8 @@ class GestionEventosApp {
                     query,
                     this.datos_usuario[0].EMAIL,
                     lineaParaEnviar,
-                    1
+                    1,
+                    true
                 );
             } else {
                 this.gestionArticulos.ocultarSugerencias();

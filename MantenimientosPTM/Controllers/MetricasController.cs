@@ -28,31 +28,30 @@ namespace MantenimientosPTM.Controllers
         }
         #endregion
 
-        #region Endpoints
+        #region Métricas OEE
+
+        // ========================================
+        // PVC
+        // ========================================
         [HttpGet]
-        public JsonResult GetMetricasOEE(
-        DateTime? FiltroFechaInicio,
-        DateTime? FiltroFechaFin,
-        string FiltroLinea,
-        string FiltroProceso,
-        int? FiltroEquipo,
-        int? FiltroPlanta
-        )
+        public JsonResult GetMetricasOEE_PVC(
+            DateTime? FiltroFechaInicio,
+            DateTime? FiltroFechaFin,
+            string FiltroLinea,
+            string FiltroPlanta,
+            string FiltroProceso)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
             try
             {
-
-                // ✅ Si no vienen fechas, usar el año 2026
-                DateTime dtFechaInicio;
-                DateTime dtFechaFin;
+                DateTime dtFechaInicio, dtFechaFin;
 
                 if (FiltroFechaInicio == null || FiltroFechaFin == null)
                 {
                     DateTime hoy = DateTime.Now;
-                    dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1); // ✅ Primer día del mes actual
-                    dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1); // ✅ Último día del mes actual
+                    dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1);
+                    dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1);
                 }
                 else
                 {
@@ -61,63 +60,161 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 var parameters = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
-            {
-                { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
-                { "P_FECHA_FIN", (dtFechaFin, ParameterDirection.Input, HanaDbType.Date) },
-                { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
-                { "P_PROCESO", (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) },
-                { "P_EQUIPO", (FiltroEquipo ?? (object)null, ParameterDirection.Input, HanaDbType.Integer) },
-                { "P_PLANTA", (FiltroPlanta ?? (object)null, ParameterDirection.Input, HanaDbType.Integer) }
-            };
+                {
+                    { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN",    (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)  ? (object)null : FiltroLinea,  ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_AREA",       (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCGetMetricasOEE,
+                    Logic.AD.GCGetMetricasOEE_PVC,
                     parameters
                 );
 
-                if (resultHana.JsonResult == "[]")
-                {
-                    jsonResponse = new GlobalCommands.JsonResponseMtto()
-                    {
-                        Status = "NO",
-                        Message = "No se encontraron métricas.",
-                        Data = string.Empty
-                    };
-                }
-                else if (resultHana.JsonResult.Contains("Error"))
-                {
-                    jsonResponse = new GlobalCommands.JsonResponseMtto()
-                    {
-                        Status = "ERROR",
-                        Message = resultHana.JsonResult,
-                        Data = string.Empty
-                    };
-                }
-                else
-                {
-                   
-                    jsonResponse = new GlobalCommands.JsonResponseMtto()
-                    {
-                        Status = "OK",
-                        Message = "Métricas obtenidas correctamente.",
-                        Data = resultHana.JsonResult
-                    };
-                }
-
+                jsonResponse = BuildResponse(resultHana.JsonResult);
                 return Json(jsonResponse, JsonRequestBehavior.AllowGet);
             }
             catch (Exception ex)
             {
-                jsonResponse = new GlobalCommands.JsonResponseMtto()
+                return Json(new GlobalCommands.JsonResponseMtto { Status = "ERROR", Message = ex.ToString() });
+            }
+        }
+
+        // ========================================
+        // PEAD LISO
+        // ========================================
+        [HttpGet]
+        public JsonResult GetMetricasOEE_PeadLiso(
+            DateTime? FiltroFechaInicio,
+            DateTime? FiltroFechaFin,
+            string FiltroLinea,
+            string FiltroPlanta,
+            string FiltroProceso)
+        {
+            GlobalCommands.JsonResponseMtto jsonResponse;
+
+            try
+            {
+                DateTime dtFechaInicio, dtFechaFin;
+
+                if (FiltroFechaInicio == null || FiltroFechaFin == null)
                 {
-                    Status = "ERROR",
-                    Message = ex.ToString(),
+                    DateTime hoy = DateTime.Now;
+                    dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1);
+                    dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1);
+                }
+                else
+                {
+                    dtFechaInicio = (DateTime)FiltroFechaInicio;
+                    dtFechaFin = (DateTime)FiltroFechaFin;
+                }
+
+                var parameters = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
+        {
+            { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
+            { "P_FECHA_FIN",    (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date) },
+            { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)  ? (object)null : FiltroLinea,  ParameterDirection.Input, HanaDbType.NVarChar) },
+            { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
+            { "P_AREA",         (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
+        };
+
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetMetricasOEE_PeadLiso,
+                    parameters
+                );
+
+                jsonResponse = BuildResponse(resultHana.JsonResult);
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new GlobalCommands.JsonResponseMtto { Status = "ERROR", Message = ex.ToString() });
+            }
+        }
+
+        // ========================================
+        // CORRUGADO
+        // ========================================
+        [HttpGet]
+        public JsonResult GetMetricasOEE_Corrugado(
+            DateTime? FiltroFechaInicio,
+            DateTime? FiltroFechaFin,
+            string FiltroLinea,
+            int? FiltroPlanta,   // 🔥 INT porque PLANTA en Corrugado es INT
+            string FiltroProceso)
+        {
+            GlobalCommands.JsonResponseMtto jsonResponse;
+
+            try
+            {
+                DateTime dtFechaInicio, dtFechaFin;
+
+                if (FiltroFechaInicio == null || FiltroFechaFin == null)
+                {
+                    DateTime hoy = DateTime.Now;
+                    dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1);
+                    dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1);
+                }
+                else
+                {
+                    dtFechaInicio = (DateTime)FiltroFechaInicio;
+                    dtFechaFin = (DateTime)FiltroFechaFin;
+                }
+
+                var parameters = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
+                {
+                    { "P_FECHA_INICIO", (dtFechaInicio,                ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN",    (dtFechaFin,                   ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",       (FiltroPlanta ?? (object)null,  ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_AREA",         (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetMetricasOEE_Corrugado,
+                    parameters
+                );
+
+                jsonResponse = BuildResponse(resultHana.JsonResult);
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new GlobalCommands.JsonResponseMtto { Status = "ERROR", Message = ex.ToString() });
+            }
+        }
+
+        // ========================================
+        // 🔥 HELPER — evita repetir el if/else en los 3
+        // ========================================
+        private GlobalCommands.JsonResponseMtto BuildResponse(string jsonResult)
+        {
+            if (jsonResult == "[]")
+                return new GlobalCommands.JsonResponseMtto
+                {
+                    Status = "NO",
+                    Message = "No se encontraron métricas.",
                     Data = string.Empty
                 };
 
-                return Json(jsonResponse);
-            }
+            if (jsonResult.Contains("Error"))
+                return new GlobalCommands.JsonResponseMtto
+                {
+                    Status = "ERROR",
+                    Message = jsonResult,
+                    Data = string.Empty
+                };
+
+            return new GlobalCommands.JsonResponseMtto
+            {
+                Status = "OK",
+                Message = "Métricas obtenidas correctamente.",
+                Data = jsonResult
+            };
         }
+
         #endregion
     }
 }

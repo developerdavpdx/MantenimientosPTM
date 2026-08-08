@@ -313,7 +313,7 @@ class ProduccionManager {
                 $('#HistorialParos').DataTable().destroy();
             }
 
-            const Planta = $("#FiltroPlanta").val();
+            const Planta = this.PLANTA;
 
             // Función para calcular el offset según tamaño de pantalla
             function calcularHeaderOffset() {
@@ -988,10 +988,11 @@ class ProduccionManager {
 
     abrirModalRegistrarParo(e) {
         e.preventDefault();
+        $("#formRegistrarParo")[0].reset();
         $("#LineasProduccionContainer").addClass("d-none");
         $("#contenedorLineasParo").empty();
+        $("#FiltroPlantaParo").val(this.PLANTA).prop("disabled", true).trigger("change");
         $("#tablaParos tbody").empty();
-        $("#formRegistrarParo")[0].reset();
         $('#FiltroPlantaParo option[value=""]').show();
         $('#modalRegistrarParo').modal('show');
     }

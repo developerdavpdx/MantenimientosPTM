@@ -91,10 +91,12 @@ class ValidationManagerLogin {
                                 sessionStorage.setItem('userData', JSON.stringify(UserData));
 
                                 //Validar permisos y modulos
-                                //Validar permisos y modulos
                                 let datos_usuario = GlobalUtil.getDatosUsuario();
                                 const tipoUsuario = datos_usuario[0].TIPOUSUARIO;
                                 const userWeb = datos_usuario[0].USUARIOWEB;
+                                const posicionId = datos_usuario[0].POSICIONID;
+                                const posicion = datos_usuario[0].POSICION;
+                                const codigoEmpleado = datos_usuario[0].CODIGOEMPLEADO;
 
 
                                 // Mapeo de perfiles a rutas

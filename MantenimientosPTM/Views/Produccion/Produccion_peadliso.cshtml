@@ -6,8 +6,8 @@
 <link href="~/Content/TiemposMuertos.css" rel="stylesheet" />
 
 <main aria-labelledby="title">
-    <div class="ps-2 pe-2 pt-3 pb-3">
-        <div class="row m-0 pt-3">
+    <div class="ps-2 pe-2">
+        <div class="row m-0">
             <div class="col-12">
                 <div class="card shadow">
                     <div class="card-header text-dark">
@@ -36,57 +36,134 @@
                     </div>
 
                     <div class="card-body">
-
-                        <!-- FILTROS -->
                         <div class="filtros-panel">
-
-                            <div class="filtros-titulo">
-                                <i class="bi bi-sliders" style="color:#0ea5d8"></i>
-                                Filtros de búsqueda
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span id="colapse-title">
+                                    <i class="bi bi-sliders" style="color:#0ea5d8;"></i>
+                                    Panel de filtros
+                                </span>
+                                <button class="btn-colapso-filtrosv2 p-0" id="btnColapsoFiltros"
+                                        data-bs-toggle="collapse" data-bs-target="#colapseFiltros"
+                                        title="Mostrar / Ocultar filtros">
+                                    <i class="bi fs-4 bi-plus-square-fill" id="iconoColapsoFiltros"></i>
+                                </button>
                             </div>
 
-                            <div class="row g-2 align-items-end">
-
-                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-                                    <label class="filtro-label">
-                                        <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
-                                    </label>
-                                    <input type="date" class="filtro-input"
-                                           id="FiltroFechaInicio">
+                            <div class="collapse" id="colapseFiltros">
+                                <div class="filtros-titulo">
+                                    <i class="bi bi-sliders" style="color:#0ea5d8"></i>
+                                    Filtros de búsqueda(datos salvados)
                                 </div>
 
-                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-                                    <label class="filtro-label">
-                                        <i class="bi bi-calendar-x-fill"></i> Fecha Fin
-                                    </label>
-                                    <input type="date" class="filtro-input"
-                                           id="FiltroFechaFin">
+                                <div class="row g-2 align-items-end">
+                                    <!-- Fecha Inicio -->
+                                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                        <label class="filtro-label" for="FiltroFechaInicio">
+                                            <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
+                                        </label>
+                                        <input type="date" class="filtro-input"
+                                               id="FiltroFechaInicio" name="FiltroFechaInicio">
+                                    </div>
+
+                                    <!-- Fecha Fin -->
+                                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                        <label class="filtro-label" for="FiltroFechaFin">
+                                            <i class="bi bi-calendar-x-fill"></i> Fecha Fin
+                                        </label>
+                                        <input type="date" class="filtro-input"
+                                               id="FiltroFechaFin" name="FiltroFechaFin">
+                                    </div>
+                                    <!-- Turno -->
+                                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                        <label class="filtro-label" for="Turno">
+                                            <i class="bi bi-calendar-x-fill"></i> Turno
+                                        </label>
+                                        <select class="filtro-input" id="FiltroTurno" name="FiltroTurno">
+                                            <option value="">Todos los turnos...</option>
+                                            <option value="1">1</option>
+                                            <option value="2">2</option>
+                                        </select>
+                                    </div>
+                                    <!-- Linea -->
+                                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                        <label class="filtro-label" for="Turno">
+                                            <i class="bi bi-calendar-x-fill"></i> Linea
+                                        </label>
+                                        <select class="filtro-input" id="FiltroLinea" name="FiltroLinea">
+                                            <option value="">Selecciona una línea...</option>
+                                        </select>
+                                    </div>
+                                    <!-- Producto -->
+                                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                        <label class="filtro-label" for="FiltroProducto">
+                                            <i class="bi bi-box-seam"></i> Producto
+                                        </label>
+                                        <input type="text" class="filtro-input"
+                                               id="FiltroProducto"
+                                               placeholder="Buscar producto..."
+                                               name="FiltroProducto">
+                                    </div>
+                                    <!-- Botones -->
+                                    <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                                        <button type="button" class="btn-filtro-aplicar"
+                                                id="btnAplicarFiltros" title="Aplicar filtros">
+                                            <i class="bi bi-search"></i>
+                                            Buscar
+                                        </button>
+                                        <button type="button" class="btn-filtro-limpiar"
+                                                id="btnLimpiarFiltros" title="Limpiar filtros">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                            Limpiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="filtros-titulo pt-2">
+                                    <i class="bi bi-sliders" style="color:#0ea5d8"></i>
+                                    Filtros de búsqueda (Producto terminado Pendiente)
                                 </div>
 
-                                <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                                <div class="row g-2 align-items-end">
+                                    <!-- Fecha Inicio -->
+                                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                        <label class="filtro-label" for="FiltroFechaInicioPT">
+                                            <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
+                                        </label>
+                                        <input type="date" class="filtro-input"
+                                               id="FiltroFechaInicioPT" name="FiltroFechaInicioPT">
+                                    </div>
 
-                                    <button class="btn-filtro-aplicar"
-                                            id="btnAplicarFiltros">
-                                        <i class="bi bi-search"></i>
-                                        Buscar
-                                    </button>
-
-                                    <button class="btn-filtro-limpiar"
-                                            id="btnLimpiarFiltros">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                        Limpiar
-                                    </button>
-
+                                    <!-- Fecha Fin -->
+                                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                        <label class="filtro-label" for="FiltroFechaFinPT">
+                                            <i class="bi bi-calendar-x-fill"></i> Fecha Fin
+                                        </label>
+                                        <input type="date" class="filtro-input"
+                                               id="FiltroFechaFinPT" name="FiltroFechaFinPT">
+                                    </div>
+                                    <!-- Turno -->
+                                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                        <label class="filtro-label" for="Turno">
+                                            <i class="bi bi-calendar-x-fill"></i> Turno
+                                        </label>
+                                        <select class="filtro-input" id="FiltroTurnoPT" name="FiltroTurnoPT">
+                                            <option value="">Selecciona un turno...</option>
+                                            <option value="1">1</option>
+                                            <option value="2">2</option>
+                                        </select>
+                                    </div>
+                                    <!-- Botones -->
+                                    <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
+                                        <button type="button" class="btn-filtro-aplicar"
+                                                id="btnAplicarFiltrosPT" title="Aplicar filtros">
+                                            <i class="bi bi-search"></i>
+                                            Buscar
+                                        </button>
+                                    </div>
                                 </div>
-
                             </div>
                         </div>
-
-                        <!-- GRID -->
                         <div id="tablaProduccion" class="ag-theme-alpine d-none"></div>
-
                     </div>
-
                 </div>
 
                 <!-- MENU CONTEXTUAL -->

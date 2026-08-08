@@ -33,7 +33,6 @@
     z-index: 999999;
     font-size: 13px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    top: 202.188px !important;
 }
 /* ============================================================
    AUTOCOMPLETE GRID
@@ -236,3 +235,114 @@
     gap: 4px;
     padding: 2px 4px;
 }
+
+/* ========================================
+   GRID ALTURA FIJA - HEADERS FIJOS
+   ======================================== */
+#tablaProduccion {
+    height: calc(100vh - 210px);
+    width: 100%;
+}
+
+.ag-theme-alpine .ag-root-wrapper {
+    height: 100%;
+}
+
+.ag-theme-alpine .ag-body-viewport {
+    overflow-y: auto !important;
+}
+
+ Filas de PREVENTIVOS 
+.ag-theme-alpine .ag-row.row-preventivo {
+    background-color: #e8f4fd !important;
+}
+
+    .ag-theme-alpine .ag-row.row-preventivo:hover {
+        background-color: #c5e3f7 !important;
+    }
+
+/* ========================================
+   CARD FULLSCREEN Y GRID CONTENIDO
+   ======================================== */
+
+/* Card ocupa toda la pantalla disponible */
+.card {
+    /*height: calc(100vh - 115px);*/ /* ajusta según tu navbar */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.card-header {
+    flex-shrink: 0; /* el header no se encoge */
+}
+
+.card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 8px !important;
+    min-height: 0;
+}
+
+.filtros-panel {
+    flex-shrink: 0; /* los filtros no se encogen */
+    margin-bottom: 8px;
+}
+
+/* Grid ocupa TODO el espacio restante */
+#tablaProduccion {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100% !important;
+}
+
+/* Ícono rota al colapsar */
+#colapseFiltros.collapsing ~ .filtros-titulo #iconoColapso,
+#colapseFiltros:not(.show) ~ * #iconoColapso {
+    transform: rotate(180deg);
+}
+
+/* Transición suave del ícono */
+#iconoColapso {
+    transition: transform 0.3s ease;
+}
+
+/* ========================================
+   BOTÓN COLAPSO FILTROS
+   ======================================== */
+.btn-colapso-filtros {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    color: #0ea5d8;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+.btn-colapso-filtrosv2 {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    color: #0ea5d8;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+
+    .btn-colapso-filtros:hover {
+        background: rgba(14, 165, 216, 0.1);
+    }
+
+    .btn-colapso-filtros i {
+        font-size: 1rem;
+        display: block;
+        transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* Cuando está colapsado, el chevron rota 180° */
+    .btn-colapso-filtros.colapsado i {
+        transform: rotate(180deg);
+    }

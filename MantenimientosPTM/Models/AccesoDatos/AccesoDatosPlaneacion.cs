@@ -115,6 +115,12 @@ namespace MantenimientosPTM
             [JsonProperty("CodigoArticulo")]
             public string CodigoArticulo { get; set; }
 
+            [JsonProperty("Estatus")]
+            public string Estatus { get; set; }
+
+            [JsonProperty("Fabricante")]
+            public int Fabricante { get; set; }
+
             [JsonProperty("DescripcionArticulo")]
             public string DescripcionArticulo { get; set; }
 

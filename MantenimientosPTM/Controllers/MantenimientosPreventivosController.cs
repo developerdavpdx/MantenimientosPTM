@@ -80,6 +80,12 @@ namespace MantenimientosPTM.Controllers
                 string FiltroExcluirSincronizadosPVC = Request.Form["FiltroExcluirSincronizadosPVC"];
                 string FiltroExcluirSincronizadosPEADLISO = Request.Form["FiltroExcluirSincronizadosPEADLISO"];
                 string FiltroExcluirSincronizadosPEADCORR = Request.Form["FiltroExcluirSincronizadosPEADCORR"];
+                string FiltroPosicionId = Request.Form["FiltroPosicionId"];
+
+                // Leer desde config las restricciones a las posiciones que se le aplicara
+                string IdsHerr = System.Configuration.ConfigurationManager.AppSettings["PosicionesHerr"];
+                string IdsMtto = System.Configuration.ConfigurationManager.AppSettings["PosicionesMtto"];
+
 
                 //Limpiar para tecnico
                 if (FiltroTipoUsuario == "TecnicoMtto")
@@ -128,7 +134,10 @@ namespace MantenimientosPTM.Controllers
                     { "P_USUARIO", (string.IsNullOrEmpty(FiltroUsuario) ? (object)null : FiltroUsuario, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_EXCLUIR_SINCRONIZADOS_PVC", (string.IsNullOrEmpty(FiltroExcluirSincronizadosPVC) ? (object)null : FiltroExcluirSincronizadosPVC, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_EXCLUIR_SINCRONIZADOS_PEADLISO", (string.IsNullOrEmpty(FiltroExcluirSincronizadosPEADLISO) ? (object)null : FiltroExcluirSincronizadosPEADLISO, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_EXCLUIR_SINCRONIZADOS_CORRUGADO ", (string.IsNullOrEmpty(FiltroExcluirSincronizadosPEADCORR) ? (object)null : FiltroExcluirSincronizadosPEADCORR, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_EXCLUIR_SINCRONIZADOS_CORRUGADO ", (string.IsNullOrEmpty(FiltroExcluirSincronizadosPEADCORR) ? (object)null : FiltroExcluirSincronizadosPEADCORR, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_FILTRO_POSICION_ID", (string.IsNullOrEmpty(FiltroPosicionId) ? (object)null : FiltroPosicionId, ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_IDS_HERR", (string.IsNullOrEmpty(IdsHerr) ? (object)null : IdsHerr, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_IDS_MTTO", (string.IsNullOrEmpty(IdsMtto) ? (object)null : IdsMtto, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -613,7 +622,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarEmpleados(int? planta,string query, string usuarioWeb, string tipoUsuario)
+        public JsonResult BuscarEmpleados(int? planta, string query, string posicionId, string usuarioWeb, string tipoUsuario)
         {
             try
             {
@@ -623,13 +632,18 @@ namespace MantenimientosPTM.Controllers
                     return Json(new List<object>(), JsonRequestBehavior.AllowGet);
                 }
 
+                string posicionIdFinal = string.IsNullOrEmpty(posicionId) ? null : posicionId;
+                string usuarioWebFinal = string.IsNullOrEmpty(usuarioWeb) ? null : usuarioWeb;
+                string tipoUsuarioFinal = string.IsNullOrEmpty(tipoUsuario) ? null : tipoUsuario;
+
                 // ✅ Preparar parámetros para el SP
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
                     { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_USUARIOWEB", (usuarioWeb, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_TIPOUSUARIO", (tipoUsuario, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_POSICION",(posicionIdFinal,  ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_USUARIOWEB",(usuarioWebFinal,  ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TIPOUSUARIO",(tipoUsuarioFinal, ParameterDirection.Input, HanaDbType.NVarChar) },
                 };
 
                 // ✅ Ejecutar el Stored Procedure
@@ -976,7 +990,7 @@ namespace MantenimientosPTM.Controllers
                     var datos = JsonConvert.DeserializeObject<AccesoDatosMantenimientosPreventivos.SolicitarReprogramacionDTO>(jsonData);
 
                     // Validar campos requeridos
-                    if (datos == null || 
+                    if (datos == null ||
                         datos.IdEquipo <= 0 ||
                         string.IsNullOrEmpty(datos.FechaActualInicio) ||
                         string.IsNullOrEmpty(datos.FechaActualFin) ||
@@ -1001,17 +1015,40 @@ namespace MantenimientosPTM.Controllers
                     if (fechaInicio >= fechaFin)
                         throw new Exception("La fecha de inicio no puede ser mayor o igual a la fecha de fin.");
 
+                    // ── Fechas de reprogramación (solo si NO es siguiente mes) ───────
+                    DateTime fechaRepInicio = DateTime.MinValue;
+                    DateTime fechaRepFin = DateTime.MinValue;
+
+                    if (!datos.EnviarSiguienteMes)
+                    {
+                        if (string.IsNullOrEmpty(datos.FechaRepInicio) || string.IsNullOrEmpty(datos.FechaRepFin))
+                            throw new Exception("Ingrese las fechas de reprogramación.");
+
+                        if (!DateTime.TryParse(datos.FechaRepInicio, out fechaRepInicio))
+                            throw new Exception("Formato de fecha de reprogramación inicio inválido.");
+
+                        if (!DateTime.TryParse(datos.FechaRepFin, out fechaRepFin))
+                            throw new Exception("Formato de fecha de reprogramación fin inválido.");
+
+                        if (fechaRepFin < fechaRepInicio)
+                            throw new Exception("La fecha fin de reprogramación no puede ser anterior a la fecha inicio.");
+                    }
+                    // ─────────────────────────────────────────────────────────────
+
                     // Construir parámetros para el stored procedure
                     var parametros = new
                     {
                         p_ID_SOLIICTUD = datos.IdSolicitud,
                         p_ID_EQUIPO = datos.IdEquipo,
                         p_NUMERO_ORDEN = string.IsNullOrEmpty(datos.NumeroOrden) ? (object)DBNull.Value : datos.NumeroOrden,
+                        p_FECHA_REP_INICIO = datos.EnviarSiguienteMes ? (object)DBNull.Value : fechaRepInicio,
+                        p_FECHA_REP_FIN = datos.EnviarSiguienteMes ? (object)DBNull.Value : fechaRepFin,                        
+                        P_ENVIAR_SIGUIENTE_MES = datos.EnviarSiguienteMes,
                         p_MOTIVO = datos.Motivo,
                         p_USUARIO_SOLICITA = datos.UsuarioSolicita,
                         p_ID_PERIODICIDAD = datos.IdPeriodicidad,
                         p_PLANTA = datos.Planta.Value,
-                        p_ESTATUS = "Creada"
+                        p_ESTATUS = datos.FueReprogramado == "SI" ? null : "Creada"
                     };
 
                     // Convertir a parámetros HANA
@@ -1037,7 +1074,7 @@ namespace MantenimientosPTM.Controllers
                                 string estatus = firstItem["ESTATUS_ACTUAL"]?.ToString();
                                 int idSolicitud = Convert.ToInt32(firstItem["ID_SOLICITUD"]?.ToString() ?? "0");
 
-                                if (estatus == "SI")
+                                if (estatus == "Aceptada" || estatus == "SI" || estatus == "Pendiente" || estatus == "NA")
                                 {
                                     jsonResponse.Status = "SI";
                                     jsonResponse.Message = $"Solicitud de reprogramación registrada correctamente. ID: {idSolicitud}";
@@ -1125,6 +1162,9 @@ namespace MantenimientosPTM.Controllers
                         p_ID_SOLICITUD = datos.IdSolicitudPendiente,
                         p_ID_EQUIPO = (int?)null,
                         p_NUMERO_ORDEN = (string)null,
+                        p_FECHA_REP_INICIO = (DateTime?)null,
+                        p_FECHA_REP_FIN = (DateTime?)null,
+                        p_ENVIAR_SIGUIENTE_MES = true, 
                         p_MOTIVO = (string)null,
                         p_USUARIO_SOLICITA = (string)null,
                         p_ID_PERIODICIDAD = (int?)null,

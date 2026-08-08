@@ -481,12 +481,18 @@ class GestionTecnicos {
         console.log('✅ GestionTecnicos inicializado correctamente');
     }
 
-    async buscarTecnicos(query, planta, usuarioWeb, tipoUsuario) {
+    async buscarTecnicos(query, planta, posicionId, usuarioWeb, tipoUsuario) {
         try {
             const response = await $.ajax({
                 url: `/${this.URLBase}/BuscarEmpleados`,
                 method: 'GET',
-                data: { planta: planta, query: query, usuarioWeb: usuarioWeb, tipoUsuario: tipoUsuario },
+                data: {
+                    planta: planta,
+                    query: query,
+                    posicionId: posicionId,
+                    usuarioWeb: usuarioWeb,
+                    tipoUsuario: tipoUsuario
+                },
                 dataType: 'json'
             });
 
@@ -1872,6 +1878,51 @@ class GlobalUtil {
         return true;
     }
 
+    static calcularDiferenciaHoras(horaInicio, horaFin) {
+        // const parseFecha = (fechaStr) => {
+        //     const [fecha, hora] = fechaStr.split(' ');
+        //     const [dia, mes, anio] = fecha.split('/');
+        //     return new Date(`${anio}-${mes}-${dia}T${hora}`);
+        // };
+
+        // const inicio = parseFecha(horaInicio);
+        // const fin = parseFecha(horaFin);
+
+        // if (isNaN(inicio) || isNaN(fin)) return null;
+
+        // const diffMs = fin - inicio;
+
+        // const horas = diffMs / (1000 * 60 * 60);
+
+        // return horas.toFixed(2);
+
+        if (!horaInicio || !horaFin)
+            return null;
+
+        // Si viene fecha y hora, nos quedamos solo con la hora
+        horaInicio = horaInicio.includes(' ') ? horaInicio.split(' ')[1] : horaInicio;
+        horaFin = horaFin.includes(' ') ? horaFin.split(' ')[1] : horaFin;
+
+        const [h1, m1] = horaInicio.split(':').map(Number);
+        const [h2, m2] = horaFin.split(':').map(Number);
+
+        let inicioMin = h1 * 60 + m1;
+        let finMin = h2 * 60 + m2;
+
+        // Si cruza medianoche
+        if (finMin < inicioMin) {
+            finMin += 24 * 60;
+        }
+
+        const diferencia = finMin - inicioMin;
+
+        const horas = Math.floor(diferencia / 60);
+        const minutos = diferencia % 60;
+
+        return `${horas}.${String(minutos).padStart(2, '0')}`;
+
+    }
+
 }
 
 // ========================================
@@ -1918,7 +1969,7 @@ class ValidationManager {
 // ========================================
 class EquiposUtil {
 
-    static llenarLineas(Planta, Area, Produccion, Fieldoptiongroup, Fieldfilter, callback = null) {
+    static llenarLineas(Planta, Area, Produccion, Fieldoptiongroup, Fieldfilter, callback = null,valueIsID = true) {
 
         const selectElement = $(`#${Fieldoptiongroup}`);
         const FiltroLinea = $(`#${Fieldfilter}`);
@@ -1973,9 +2024,10 @@ class EquiposUtil {
                         const optgroup1 = $(`<optgroup label="Planta ${planta}"></optgroup>`);
                         const optgroup2 = $(`<optgroup label="Planta ${planta}"></optgroup>`);
 
-                        grouped[planta].forEach(linea => {
-                            optgroup1.append(`<option value="${linea.ID_LINEA}">${linea.LINEA}</option>`);
-                            optgroup2.append(`<option value="${linea.ID_LINEA}">${linea.LINEA}</option>`);
+                        grouped[planta].forEach(linea => { 
+                            const whichvalue = valueIsID ? linea.ID_LINEA : linea.LINEA
+                            optgroup1.append(`<option value="${whichvalue}">${linea.LINEA}</option>`);
+                            optgroup2.append(`<option value="${whichvalue}">${linea.LINEA}</option>`);
                         });
 
                         selectElement.append(optgroup1);
@@ -2837,13 +2889,21 @@ class SessionManager {
             'SupervisorProduccion': 'Supervisor Producción',
             'Produccion': 'Producción'
         };
+        // Mapeo de plantas
+        const mapeoPlantas = {
+            '1': 'P1',
+            '2': 'P2'
+        };
 
         // Obtener el perfil legible
         const tipoUsuario = datos_usuario[0].TIPOUSUARIO;
+        const planta = datos_usuario[0].PLANTA;
         const perfilLegible = mapeoPerfiles[tipoUsuario] || tipoUsuario;
+        const plantaLegible = mapeoPlantas[planta] || planta;
+        const posicion = datos_usuario[0].POSICION;
 
         // Establecer el nombre de usuario con perfil
-        $("#UserName").text(`${datos_usuario[0].NOMBRECOMPLETO} (${perfilLegible})`);
+        $("#UserName").text(`${datos_usuario[0].NOMBRECOMPLETO} (${posicion} ${plantaLegible})`);
 
         //TECNICO MTTO
         if (tipoUsuario === "TecnicoMtto") {
@@ -2853,6 +2913,7 @@ class SessionManager {
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
             $("#MetricasURL").addClass("d-none"); //METRICAS
+            $("#MCProgramarURL").addClass("d-none");
         }
         //SUPERVISOR MANTENIMIENTO
         if (tipoUsuario === "SupervisorMantenimiento") {
@@ -3467,7 +3528,7 @@ class GestionArticulos {
     }
 
     // ─── Búsqueda con debounce integrado ──────────────────────────────────────
-    buscarArticulos(query, Usuario, Linea, ValidarCap) {
+    buscarArticulos(query, Usuario, Linea, ValidarCap, RestringirFabricante = false) {
         let Planta = this.datos_usuario[0].PLANTA;
         let GrupoArticulos = this.grupo_articulos;
         clearTimeout(this._debounceTimer);
@@ -3476,7 +3537,7 @@ class GestionArticulos {
                 const response = await $.ajax({
                     url: `/${this.URLBase}/BuscarArticulo`,
                     method: 'GET',
-                    data: { query, Usuario, Planta, Linea, GrupoArticulos, ValidarCap },
+                    data: { query, Usuario, Planta, Linea, GrupoArticulos, ValidarCap, RestringirFabricante },
                     dataType: 'json'
                 });
                 this._mostrarSugerencias(response);

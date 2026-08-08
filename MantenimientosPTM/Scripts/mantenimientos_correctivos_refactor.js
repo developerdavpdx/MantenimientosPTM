@@ -55,6 +55,9 @@ class MantenimientosPreventivoApp {
     }
 
     inicializar() {
+        //Inicializar variables globales
+        let areaTecnica = "";
+
         //Inicializar UI
         UIManager.inicializarUI(this.datos_usuario);
         this.mantenimientoManager.inicializar();
@@ -92,6 +95,12 @@ class MantenimientosPreventivoApp {
 
         // Carátula online
         $(document).on('click', '.btn-caratula-online', (e) => {
+            this.areaTecnica = $(e.currentTarget).data('areatecnica');
+
+            // Limpia y escribe el texto dinámico del tipo de solicitud
+            $('#tipoSOM').html(this.areaTecnica);
+
+            //Se dispara el evento de abrir modal
             this.mantenimientoManager.abrirModalCaratulaOnline($(e.currentTarget));
         });
 
@@ -249,11 +258,20 @@ class MantenimientosPreventivoApp {
         $('#BuscarTecnico').on('input', (e) => {  // ⬅️ Agrega parámetro 'e'
             const query = $(e.target).val().trim();  // ⬅️ Usa e.target, no this
             let planta = this.datos_usuario[0].PLANTA;
-            if (query.length >= 2) {
-                this.gestionTecnicos.buscarTecnicos(query, planta);
+            let usuarioWeb = this.datos_usuario[0].USUARIOWEB;
+            let tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+            let posicionId = null;
+
+            //Buscar tecnico por tipo de solicitud                       
+            if (this.areaTecnica === "MANTENIMIENTO HERRAMENTALES") {
+                posicionId = "95,101";
+                this.parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario)
+                             
             } else {
-                this.gestionTecnicos.ocultarSugerencias();
+                posicionId = "3,100,82";
+                this.parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario)
             }
+
         });
 
         $('#btnAgregarTecnico').on('click', () => {  // ⬅️ Arrow function
@@ -295,6 +313,15 @@ class MantenimientosPreventivoApp {
             $(this).val(valor);
         });
 
+    }
+
+    parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario) {
+
+        if (query.length >= 2 && tipoUsuario === "TecnicoMtto") {
+            this.gestionTecnicos.buscarTecnicos(query, planta, posicionId, usuarioWeb, tipoUsuario);
+        } else {
+            this.gestionTecnicos.ocultarSugerencias();
+        }
     }
 
     configurarEventosImpresion() {
@@ -510,6 +537,8 @@ class MantenimientoManager {
             }
 
             let FiltroEstatusOT = (this.datos_usuario[0].TIPOUSUARIO == "TecnicoMtto" ? "2,3,4" : null);
+            //Obtencion de la posicion del empleado
+            let posicionId = this.datos_usuario[0].POSICIONID || null;
 
             function calcularHeaderOffset() {
                 if (window.innerWidth < 625) {
@@ -636,7 +665,8 @@ class MantenimientoManager {
                             "FiltroLinea": $("#FiltroLinea").val() || null,
                             "FiltroOrdenTrabajo": $("#FiltroOrdenTrabajo").val() || null,
                             "FiltroPlanta": this.datos_usuario[0].PLANTA || null,
-                            "FiltroEstatusOT": FiltroEstatusOT
+                            "FiltroEstatusOT": FiltroEstatusOT,
+                            "FiltroPosicionId": posicionId
                         });
                     },
                     dataSrc: function (json) {
@@ -1031,6 +1061,7 @@ class MantenimientoManager {
             descripcionequipo: row.DescripcionEquipo,
             idarea: row.Idarea,
             area: row.Area,
+            areaTecnica: row.AreaTecnica,
             idlineaproduccion: row.IdLineaProduccion,
             lineaproduccion: row.LineaProduccion,
             centrocostos: row.CentroCostos,
@@ -1386,7 +1417,7 @@ class MantenimientoManager {
             $("#TextoSecuencia").val(data.textoSecuencia || '').attr("readonly", false);
             //$("#DuracionHrs").val(data.duracionHrs || '');
             $("#DuracionHrs").val(
-                this.calcularDiferenciaHoras(data.horaInicioTime, data.horaFinTime)
+                GlobalUtil.calcularDiferenciaHoras(data.horaInicioTime, data.horaFinTime)
             );
 
             // ========================================
@@ -2432,14 +2463,14 @@ class MantenimientoManager {
 
         //CALCULO DE TIEMPO DE ESPERA VA AQUI
         // Tiempo de espera
-        let TE = this.calcularDiferenciaHoras(HoraAperturaOT, HoraInicioTrabajo);
+        let TE = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraInicioTrabajo);
         $('#TiempoEspera').val(TE + ' HRS');
         // Tiempo reparación
-        let TR = this.calcularDiferenciaHoras(HoraAperturaOT, HoraFinTrabajo);
+        let TR = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraFinTrabajo);
         $('#TiempoReparacion').val(TR + ' HRS');
         // Tiempo muerto
         if (MaquinaDetenida) {
-            let TM = this.calcularDiferenciaHoras(HoraAperturaOT, HoraCierreOT);
+            let TM = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraCierreOT);
             $('#TiempoMuerto').val(TM + ' HRS');
         }
         else {
@@ -2451,50 +2482,7 @@ class MantenimientoManager {
         $("#TiempoMuertoContainer").removeClass("d-none");
     }
 
-    calcularDiferenciaHoras(horaInicio, horaFin) {
-        // const parseFecha = (fechaStr) => {
-        //     const [fecha, hora] = fechaStr.split(' ');
-        //     const [dia, mes, anio] = fecha.split('/');
-        //     return new Date(`${anio}-${mes}-${dia}T${hora}`);
-        // };
-
-        // const inicio = parseFecha(horaInicio);
-        // const fin = parseFecha(horaFin);
-
-        // if (isNaN(inicio) || isNaN(fin)) return null;
-
-        // const diffMs = fin - inicio;
-
-        // const horas = diffMs / (1000 * 60 * 60);
-
-        // return horas.toFixed(2);
-
-        if (!horaInicio || !horaFin)
-            return null;
-
-        // Si viene fecha y hora, nos quedamos solo con la hora
-        horaInicio = horaInicio.includes(' ') ? horaInicio.split(' ')[1] : horaInicio;
-        horaFin = horaFin.includes(' ') ? horaFin.split(' ')[1] : horaFin;
-
-        const [h1, m1] = horaInicio.split(':').map(Number);
-        const [h2, m2] = horaFin.split(':').map(Number);
-
-        let inicioMin = h1 * 60 + m1;
-        let finMin = h2 * 60 + m2;
-
-        // Si cruza medianoche
-        if (finMin < inicioMin) {
-            finMin += 24 * 60;
-        }
-
-        const diferencia = finMin - inicioMin;
-
-        const horas = Math.floor(diferencia / 60);
-        const minutos = diferencia % 60;
-
-        return `${horas}.${String(minutos).padStart(2, '0')}`;
-
-    }
+    
 
    
 }

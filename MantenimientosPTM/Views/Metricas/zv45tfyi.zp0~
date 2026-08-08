@@ -2,8 +2,7 @@
     ViewBag.Title = "Métricas de Mantenimiento";
 }
 
-@*<link href="~/Content/MantenimientosPreventivos.css" rel="stylesheet" />*@
-<link href="~/Content/Metricas.css" rel="stylesheet" />
+<link href="~/Content/MantenimientosPreventivos.css" rel="stylesheet" />
 
 <div class="row m-0 pt-3">
     <div class="col-12 col-xl-12 mb-4 mb-lg-0">
@@ -11,13 +10,10 @@
             <!-- Header Responsive -->
             <div class="card-header text-dark">
                 <div class="row g-3 align-items-center">
-                    <div class="col-6">
+                    <div class="col-12">
                         <h5 class="mb-0 text-color-logo">
                             <i class="bi bi-graph-up-arrow me-2"></i>Métricas de Mantenimiento
                         </h5>
-                    </div>
-                    <div class="col-6 d-flex justify-content-end">
-                        <h6 id="fechaActual" class="text-primary"></h6><h6 class="ps-1 text-primary" id="horaActual"></h6>
                     </div>
                 </div>
             </div>
@@ -102,19 +98,19 @@
 
                             <!-- Equipo -->
                             @*<div class="col-12 col-sm-6 col-md-4 col-xl-2">
-                                    <label class="filtro-label" for="FiltroEquipo">
-                                        <i class="bi bi-cpu-fill"></i> Equipo
-                                    </label>
-                                    <div class="select-wrapper">
-                                        <select class="filtro-input"
-                                                id="FiltroEquipo" name="FiltroEquipo">
-                                            <option value="">Todos los equipos...</option>
-                                        </select>
-                                        <div class="select-loader d-none" id="loader_FiltroEquipo">
-                                            <span class="spinner-border spinner-border-sm"></span>
-                                        </div>
+                                <label class="filtro-label" for="FiltroEquipo">
+                                    <i class="bi bi-cpu-fill"></i> Equipo
+                                </label>
+                                <div class="select-wrapper">
+                                    <select class="filtro-input"
+                                            id="FiltroEquipo" name="FiltroEquipo">
+                                        <option value="">Todos los equipos...</option>
+                                    </select>
+                                    <div class="select-loader d-none" id="loader_FiltroEquipo">
+                                        <span class="spinner-border spinner-border-sm"></span>
                                     </div>
-                                </div>*@
+                                </div>
+                            </div>*@
 
                             <!-- Botones -->
                             <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
@@ -124,7 +120,15 @@
                                     <i class="bi bi-search"></i>
                                     Buscar
                                 </button>
+
+                                <button type="button"
+                                        class="btn-filtro-limpiar"
+                                        id="btnLimpiarFiltros">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                    Limpiar
+                                </button>
                             </div>
+
                         </div>
                     </div>
                 </form>
@@ -139,10 +143,11 @@
                         <!-- MTBF Card -->
                         <div class="col-12 col-md-6 col-xl-4">
                             <div class="card shadow-sm border-0 h-100">
-                                <div class="card-header MetricHeader text-white">
+                                <div class="card-header bg-info text-white">
                                     <h6 class="card-title mb-0">
                                         <i class="bi bi-gear-wide-connected me-2"></i>MTBF
                                     </h6>
+                                    <small class="opacity-75">Mean Time Between Failures</small>
                                 </div>
                                 <div class="card-body d-flex flex-column justify-content-between">
                                     <p class="card-text text-muted small mb-2">
@@ -180,10 +185,11 @@
                         <!-- MTTR Card -->
                         <div class="col-12 col-md-6 col-xl-4">
                             <div class="card shadow-sm border-0 h-100">
-                                <div class="card-header MetricHeader MetricHeader--tiempo-respuesta text-white">
+                                <div class="card-header bg-warning text-white">
                                     <h6 class="card-title mb-0">
                                         <i class="bi bi-stopwatch-fill me-2"></i>MTTR
                                     </h6>
+                                    <small class="opacity-75">Mean Time To Repair</small>
                                 </div>
                                 <div class="card-body d-flex flex-column justify-content-between">
                                     <p class="card-text text-muted small mb-2">
@@ -217,13 +223,99 @@
                             </div>
                         </div>
 
+
+                        <!-- FPY Card -->
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-check-circle-fill me-2"></i>FPY
+                                    </h6>
+                                    <small class="opacity-75">First Pass Yield</small>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-between">
+                                    <p class="card-text text-muted small mb-2">
+                                        Porcentaje de producción que pasa inspección sin retrabajo.
+                                    </p>
+
+                                    <!-- Valor central -->
+                                    <div style="position:relative; height:160px; width:160px; margin:0 auto;">
+                                        <canvas id="fpyDonutChart" role="img" aria-label="Gráfica FPY: producción neta vs scrap">FPY</canvas>
+                                        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+                                            <div class="fw-bold text-success fs-4" id="metric-fpy">--</div>
+                                            <small class="text-muted" style="font-size:10px;">FPY</small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Desglose -->
+                                    <div class="mt-2" style="font-size:12px;">
+                                        <div class="d-flex justify-content-between">
+                                            <span><span style="width:8px;height:8px;background:#1baf7a;display:inline-block;border-radius:2px;margin-right:4px;"></span>Producción Neta</span>
+                                            <span id="lbl-fpy-neta">-- kg</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span><span style="width:8px;height:8px;background:#f28b82;display:inline-block;border-radius:2px;margin-right:4px;"></span>Total Scrap</span>
+                                            <span id="lbl-fpy-scrap">-- kg</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="fpy-update">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- TIEMPO MUERTO Card -->
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-clock-history me-2"></i>Tiempo Muerto
+                                    </h6>
+                                    <small class="opacity-75">Equipment inoperative</small>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-between">
+                                    <p class="card-text text-muted small mb-2">
+                                        Porcentaje del tiempo en que el equipo está inoperativo.
+                                    </p>
+
+                                    <!-- Valor central -->
+                                    <div style="position:relative; height:160px; width:160px; margin:0 auto;">
+                                        <canvas id="tiempoMuertoDonutChart" role="img" aria-label="Gráfica Tiempo Muerto">Tiempo Muerto</canvas>
+                                        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+                                            <div class="fw-bold text-primary fs-4" id="metric-tiempomuerto">--</div>
+                                            <small class="text-muted" style="font-size:10px;">Tiempo Muerto</small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Desglose -->
+                                    <div class="mt-2" style="font-size:12px;">
+                                        <div class="d-flex justify-content-between">
+                                            <span><span style="width:8px;height:8px;background:#2a78d6;display:inline-block;border-radius:2px;margin-right:4px;"></span>Tiempo No Disponible</span>
+                                            <span id="lbl-tiempo-no-disponible">-- hr</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span><span style="width:8px;height:8px;background:#c0d8f5;display:inline-block;border-radius:2px;margin-right:4px;"></span>Tiempo No Productivo</span>
+                                            <span id="lbl-tiempo-no-productivo">-- hr</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="tiempo-muerto-update">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+
                         <!-- OEE Card -->
                         <div class="col-12 col-md-6 col-xl-4">
                             <div class="card shadow-sm border-0 h-100">
-                                <div class="card-header MetricHeader text-white">
+                                <div class="card-header bg-danger text-white">
                                     <h6 class="card-title mb-0">
                                         <i class="bi bi-speedometer2 me-2"></i>OEE
                                     </h6>
+                                    <small class="opacity-75">Overall Equipment Effectiveness</small>
                                 </div>
                                 <div class="card-body d-flex flex-column justify-content-between">
                                     <p class="card-text text-muted small mb-2">
@@ -248,121 +340,44 @@
                             </div>
                         </div>
 
-                        <!-- CUMPLIMIENTO MANTENIMIENTO PREVENTIVO Card -->
+                        <!-- TIEMPO DE ESPERA Card -->
                         <div class="col-12 col-md-6 col-xl-4">
                             <div class="card shadow-sm border-0 h-100">
-                                <div class="card-header MetricHeader MetricHeader--cumplimiento text-white">
+                                <div class="card-header bg-primary text-white">
                                     <h6 class="card-title mb-0">
-                                        <i class="bi bi-clock-history me-2"></i>Cumplimiento Mantenimiento Preventivo
+                                        <i class="bi bi-hourglass-split me-2"></i>Tiempo de Espera
                                     </h6>
+                                    <small class="opacity-75">Order generated to repair start</small>
                                 </div>
                                 <div class="card-body d-flex flex-column justify-content-between">
                                     <p class="card-text text-muted small mb-2">
-                                        Porcentaje de órdenes de mantenimiento preventivo cerradas contra las programadas.
-                                    </p>
-
-                                    <!-- Valor central -->
-                                    <div style="position:relative; height:160px; width:160px; margin:0 auto;">
-                                        <canvas id="cumplimientoPMDonutChart" role="img" aria-label="Gráfica Cumplimiento PM">Cumplimiento PM</canvas>
-                                        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-                                            <div class="fw-bold text-primary fs-4" id="metric-cumplimientopm">--</div>
-                                            <small class="text-muted" style="font-size:10px;">Cumplimiento PM</small>
-                                        </div>
-                                    </div>
-
-                                    <!-- Desglose -->
-                                    <div class="mt-2" style="font-size:12px;">
-                                        <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#1baf7a;display:inline-block;border-radius:2px;margin-right:4px;"></span>PM Cerrados</span>
-                                            <span id="lbl-pm-cerrados">--</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#e0e0e0;display:inline-block;border-radius:2px;margin-right:4px;"></span>PM Programados</span>
-                                            <span id="lbl-pm-programados">--</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card-footer bg-light text-muted small">
-                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="cumplimientopm-update">--</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- DISPONIBILIDAD TÉCNICA (DT) Card -->
-                        <div class="col-12 col-md-6 col-xl-4">
-                            <div class="card shadow-sm border-0 h-100">
-                                <div class="card-header MetricHeader MetricHeader--dt text-white">
-                                    <h6 class="card-title mb-0">
-                                        <i class="bi bi-shield-check me-2"></i>Disponibilidad Técnica
-                                    </h6>
-                                </div>
-                                <div class="card-body d-flex flex-column justify-content-between">
-                                    <p class="card-text text-muted small mb-2">
-                                        Porcentaje de tiempo que la máquina está disponible para operar, en relación al tiempo entre fallas y el tiempo de reparación.
+                                        Suma del tiempo entre la generación de la orden y el inicio de reparación del técnico.
                                     </p>
 
                                     <div style="position:relative; height:160px; width:160px; margin:0 auto;">
-                                        <canvas id="dtDonutChart" role="img" aria-label="Gráfica Disponibilidad Técnica">DT</canvas>
+                                        <canvas id="tiempoEsperaDonutChart" role="img" aria-label="Gráfica Tiempo de Espera">Tiempo de Espera</canvas>
                                         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-                                            <div class="fw-bold text-primary fs-4" id="metric-dt">--</div>
-                                            <small class="text-muted" style="font-size:10px;">disponibilidad</small>
+                                            <div class="fw-bold text-primary fs-4" id="metric-tiempoespera">--</div>
+                                            <small class="text-muted" style="font-size:10px;">hrs totales</small>
                                         </div>
                                     </div>
 
                                     <div class="mt-2" style="font-size:12px;">
                                         <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#1baf7a;display:inline-block;border-radius:2px;margin-right:4px;"></span>MTBF</span>
-                                            <span id="lbl-dt-mtbf">-- hr</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#eda100;display:inline-block;border-radius:2px;margin-right:4px;"></span>MTTR</span>
-                                            <span id="lbl-dt-mttr">-- hr</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card-footer bg-light text-muted small">
-                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="dt-update">--</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- TIEMPO DE ESPERA / MTTA Card -->
-                        @*<div class="col-12 col-md-6 col-xl-4">
-                            <div class="card shadow-sm border-0 h-100">
-                                <div class="card-header MetricHeader MetricHeader--tiempo-respuesta text-white">
-                                    <h6 class="card-title mb-0">
-                                        <i class="bi bi-hourglass-split me-2"></i>MTTA
-                                    </h6>
-                                </div>
-                                <div class="card-body d-flex flex-column justify-content-between">
-                                    <p class="card-text text-muted small mb-2">
-                                        Tiempo medio entre la generación de la orden y el inicio de reparación del técnico.
-                                    </p>
-
-                                    <div style="position:relative; height:160px; width:160px; margin:0 auto;">
-                                        <canvas id="tiempoEsperaDonutChart" role="img" aria-label="Gráfica MTTA">MTTA</canvas>
-                                        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-                                            <div class="fw-bold text-primary fs-4" id="metric-mtta">--</div>
-                                            <small class="text-muted" style="font-size:10px;">hrs promedio</small>
-                                        </div>
-                                    </div>
-
-                                    <div class="mt-2" style="font-size:12px;">
-                                        <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#eda100;display:inline-block;border-radius:2px;margin-right:4px;"></span>ΣT.E (total)</span>
-                                            <span id="lbl-tiempo-espera-total">-- hr</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#f5d78c;display:inline-block;border-radius:2px;margin-right:4px;"></span>OTs con espera</span>
+                                            <span><span style="width:8px;height:8px;background:#eda100;display:inline-block;border-radius:2px;margin-right:4px;"></span>OTs con espera</span>
                                             <span id="lbl-tiempo-espera-total-ots">--</span>
                                         </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span><span style="width:8px;height:8px;background:#f5d78c;display:inline-block;border-radius:2px;margin-right:4px;"></span>Promedio por OT</span>
+                                            <span id="lbl-tiempo-espera-promedio">-- hr</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="card-footer bg-light text-muted small">
-                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="mtta-update">--</span>
+                                    <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="tiempoespera-update">--</span>
                                 </div>
                             </div>
-                        </div>*@
+                        </div>
                     </div>
 
                     <!-- Alerta Container -->
@@ -389,11 +404,6 @@
             </div>
         </div>
     </div>
-</div>
-
-<!-- Container para alerts de Bootstrap -->
-<div id="alertMainContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;">
-    <!-- Los alerts se insertarán aquí dinámicamente -->
 </div>
 
 <!-- Scripts -->

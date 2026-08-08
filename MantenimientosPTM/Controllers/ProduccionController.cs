@@ -21,6 +21,7 @@ namespace MantenimientosPTM.Controllers
     public class ProduccionController : Controller
     {
         readonly LogicaProduccion Logic = new LogicaProduccion();
+        readonly LogicaPlaneacion logicaPlaneacion = new LogicaPlaneacion();
 
         #region Views
         public ActionResult Planeacion()
@@ -48,6 +49,10 @@ namespace MantenimientosPTM.Controllers
             return View();
         }
         public ActionResult CalendarioPlaneacion()
+        {
+            return View();
+        }
+        public ActionResult Produccion_iny()
         {
             return View();
         }
@@ -425,7 +430,7 @@ namespace MantenimientosPTM.Controllers
                     if (string.IsNullOrEmpty(jsonData))
                         throw new Exception("No se recibió información.");
 
-                    RequestData = JsonConvert.DeserializeObject<List<AccesoDatosProduccion.TiemposMuertosProduccionPVC>>(jsonData);
+                    RequestData = JsonConvert.DeserializeObject<List<TiemposMuertosProduccionPVC>>(jsonData);
                 }
 
                 foreach (var registro in RequestData)
@@ -467,16 +472,17 @@ namespace MantenimientosPTM.Controllers
 
         [HttpGet]
         public JsonResult GetTiemposMuertosPVC(
-        string FiltroFechaInicio,
-        string FiltroFechaFin,
-        string FiltroLinea, string FiltroPlanta)
+            string FiltroFechaInicio,
+            string FiltroFechaFin,
+            string FiltroLinea,
+            string FiltroPlanta,
+            string FiltroTurno,      // 🔥 NUEVO
+            string FiltroProducto)   // 🔥 NUEVO
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
             try
             {
-
-                // ── Fechas: si no vienen, default al mes actual ───────────────────────
                 DateTime dtFechaInicio;
                 DateTime dtFechaFin;
 
@@ -492,13 +498,14 @@ namespace MantenimientosPTM.Controllers
                     dtFechaFin = DateTime.Parse(FiltroFechaFin);
                 }
 
-                // ✅ Preparar parámetros para el SP
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FECHA_INICIO", (string.IsNullOrEmpty(dtFechaInicio.ToString("yyyy-MM-dd")) ? (object)null : dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_FECHA_FIN", (string.IsNullOrEmpty(dtFechaFin.ToString("yyyy-MM-dd")) ? (object)null : dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FECHA_INICIO", (dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN",    (dtFechaFin.ToString("yyyy-MM-dd"),    ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)    ? (object)null : FiltroLinea,    ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta)   ? (object)null : FiltroPlanta,   ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TURNO",        (string.IsNullOrEmpty(FiltroTurno)    ? (object)null : FiltroTurno,    ParameterDirection.Input, HanaDbType.NVarChar) }, // 🔥 NUEVO
+                    { "P_PRODUCTO",     (string.IsNullOrEmpty(FiltroProducto) ? (object)null : FiltroProducto, ParameterDirection.Input, HanaDbType.NVarChar) }  // 🔥 NUEVO
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -554,7 +561,9 @@ namespace MantenimientosPTM.Controllers
         string FiltroFechaInicio,
         string FiltroFechaFin,
         string FiltroLinea,
-        string FiltroPlanta)
+        string FiltroPlanta,
+        string FiltroTurno,      // 🔥 NUEVO
+        string FiltroProducto)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -578,10 +587,12 @@ namespace MantenimientosPTM.Controllers
 
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FECHA_INICIO", (string.IsNullOrEmpty(dtFechaInicio.ToString("yyyy-MM-dd")) ? (object)null : dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_FECHA_FIN", (string.IsNullOrEmpty(dtFechaFin.ToString("yyyy-MM-dd")) ? (object)null : dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FECHA_INICIO", (dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN",    (dtFechaFin.ToString("yyyy-MM-dd"),    ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)    ? (object)null : FiltroLinea,    ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta)   ? (object)null : FiltroPlanta,   ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TURNO",        (string.IsNullOrEmpty(FiltroTurno)    ? (object)null : FiltroTurno,    ParameterDirection.Input, HanaDbType.NVarChar) }, // 🔥 NUEVO
+                    { "P_PRODUCTO",     (string.IsNullOrEmpty(FiltroProducto) ? (object)null : FiltroProducto, ParameterDirection.Input, HanaDbType.NVarChar) }  // 🔥 NUEVO
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -625,6 +636,89 @@ namespace MantenimientosPTM.Controllers
                 {
                     Status = "ERROR",
                     Message = "Error al consultar: " + ex.ToString(),
+                    Data = string.Empty
+                };
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        [HttpGet]
+        public JsonResult GetTiemposMuertosINY(
+        string FiltroFechaInicio,
+        string FiltroFechaFin,
+        string FiltroLinea,
+        string FiltroTurno,      // 🔥 NUEVO
+        string FiltroProducto)
+        {
+            GlobalCommands.JsonResponseMtto jsonResponse;
+
+            try
+            {
+                // ── Fechas: si no vienen, default al mes actual ───────────────────────
+                DateTime dtFechaInicio;
+                DateTime dtFechaFin;
+
+                if (string.IsNullOrEmpty(FiltroFechaInicio) || string.IsNullOrEmpty(FiltroFechaFin))
+                {
+                    DateTime hoy = DateTime.Now;
+                    dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1);
+                    dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1);
+                }
+                else
+                {
+                    dtFechaInicio = DateTime.Parse(FiltroFechaInicio);
+                    dtFechaFin = DateTime.Parse(FiltroFechaFin);
+                }
+
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+            {
+                { "P_FECHA_INICIO", (dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                { "P_FECHA_FIN", (dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) }
+            };
+
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCConsultarTiemposMuertosINY,
+                    parameters
+                );
+
+                if (resultHana.JsonResult == "[]")
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "NO",
+                        Message = "No se encontraron registros de tiempos muertos INY, se mostrará la plantilla por default.",
+                        Data = string.Empty
+                    };
+                }
+                else if (resultHana.JsonResult.Contains("Error"))
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "ERROR",
+                        Message = "Error al consultar tiempos muertos INY: " + resultHana.JsonResult,
+                        Data = string.Empty
+                    };
+                }
+                else
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "OK",
+                        Message = "Datos obtenidos correctamente.",
+                        Data = resultHana.JsonResult
+                    };
+                }
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse = new GlobalCommands.JsonResponseMtto()
+                {
+                    Status = "ERROR",
+                    Message = "Error al consultar tiempos muertos INY: " + ex.ToString(),
                     Data = string.Empty
                 };
 
@@ -694,7 +788,9 @@ namespace MantenimientosPTM.Controllers
         string FiltroFechaInicio,
         string FiltroFechaFin,
         string FiltroLinea,
-        string FiltroPlanta)
+        string FiltroPlanta,
+        string FiltroTurno,      // 🔥 NUEVO
+        string FiltroProducto)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -718,13 +814,12 @@ namespace MantenimientosPTM.Controllers
 
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FECHA_INICIO", (string.IsNullOrEmpty(dtFechaInicio.ToString("yyyy-MM-dd")) ? (object)null : dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-
-                    { "P_FECHA_FIN", (string.IsNullOrEmpty(dtFechaFin.ToString("yyyy-MM-dd")) ? (object)null : dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-
-                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
-
-                    { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FECHA_INICIO", (dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN",    (dtFechaFin.ToString("yyyy-MM-dd"),    ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)    ? (object)null : FiltroLinea,    ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta)   ? (object)null : FiltroPlanta,   ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TURNO",        (string.IsNullOrEmpty(FiltroTurno)    ? (object)null : FiltroTurno,    ParameterDirection.Input, HanaDbType.NVarChar) }, // 🔥 NUEVO
+                    { "P_PRODUCTO",     (string.IsNullOrEmpty(FiltroProducto) ? (object)null : FiltroProducto, ParameterDirection.Input, HanaDbType.NVarChar) }  // 🔥 NUEVO
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -818,6 +913,63 @@ namespace MantenimientosPTM.Controllers
 
                 jsonResponse.Status = "SI";
                 jsonResponse.Message = "Registros guardados correctamente.";
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al guardar: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult GuardarTiemposMuertosINY()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            List<AccesoDatosProduccion.TiemposMuertosProduccionINY> RequestData;
+
+            try
+            {
+                Request.InputStream.Position = 0;
+
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    RequestData = JsonConvert.DeserializeObject<List<AccesoDatosProduccion.TiemposMuertosProduccionINY>>(jsonData);
+                }
+
+                foreach (var registro in RequestData)
+                {
+                    var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(registro, true, null);
+
+                    var parameters = allparameters.ToDictionary(p => p.Key, p => p.Value);
+
+                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCGuardarTiemposMuertosINY,
+                        parameters
+                    );
+
+                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                    {
+                        jsonResponse.Status = "NO";
+                        jsonResponse.Message = $"Error al guardar registros INY: {resultHana.JsonResult}";
+                        jsonResponse.Data = string.Empty;
+
+                        return Json(jsonResponse);
+                    }
+                }
+
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = "Registros INY guardados correctamente.";
                 jsonResponse.Data = string.Empty;
 
                 return Json(jsonResponse);
@@ -1238,6 +1390,10 @@ namespace MantenimientosPTM.Controllers
                 string proceso = Request.Headers["Proceso"];
                 string FiltroTurno = Request.Headers["Turno"];
 
+                // 🔥 NUEVO: leer fechas del filtro
+                string filtroFechaInicio = Request.Headers["FechaInicio"];
+                string filtroFechaFin = Request.Headers["FechaFin"];
+
                 if (string.IsNullOrEmpty(plantaHeader) || string.IsNullOrEmpty(proceso))
                 {
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
@@ -1263,33 +1419,110 @@ namespace MantenimientosPTM.Controllers
                 string JSONstringSp = string.Empty;
                 List<ReportesProdTerm> reportesProdTerm = new List<ReportesProdTerm>();
 
-                // Asignar turno y rangos de fechas
-                if ((horaActual >= horaInicioTurno && horaActual <= horaFinTurno) || (FiltroTurno == "1"))
+                // 🔥 NUEVO: ¿el usuario mandó un rango de fechas explícito desde el filtro?
+                DateTime fechaInicioParsed = DateTime.MinValue;
+                DateTime fechaFinParsed = DateTime.MinValue;
+
+                bool hayFiltroFechas =
+                    DateTime.TryParse(filtroFechaInicio, out fechaInicioParsed) &&
+                    DateTime.TryParse(filtroFechaFin, out fechaFinParsed);
+
+                if (hayFiltroFechas)
                 {
-                    turno = 1;
+                    DateTime fechaIni = fechaInicioParsed.Date;
+                    DateTime fechaFinDia = fechaFinParsed.Date;
 
-                    TurnoStar = DateTime.Today.AddHours(4.5).AddSeconds(1);
-                    TurnoEnd = DateTime.Today.AddHours(16.5);
-                    TurnoScrapStar = DateTime.Today.AddHours(5).AddMinutes(45).AddSeconds(1);
-                    TurnoScrapEnd = DateTime.Today.AddHours(17).AddMinutes(45);
-                }
-                else if (FiltroTurno == "2" || FiltroTurno == "null")
-                {
-                    turno = 2;
+                    // 🔥 Si no viene turno explícito, lo deducimos igual que la lógica original (por hora actual)
+                    string turnoEfectivo = FiltroTurno;
 
-                    TurnoStar = DateTime.Today.AddHours(16.5).AddSeconds(1);
-                    TurnoEnd = DateTime.Today.AddDays(1).AddHours(4.5);
-                    TurnoScrapStar = DateTime.Today.AddHours(17).AddMinutes(45).AddSeconds(1);
-                    TurnoScrapEnd = DateTime.Today.AddDays(1).AddHours(5).AddMinutes(45);
-
-                    // Madrugada: ajustar al día anterior
-                    if (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
-                       (horaActual.Hour == 4 && horaActual.Minute <= 30))
+                    if (string.IsNullOrEmpty(turnoEfectivo) || turnoEfectivo == "null")
                     {
-                        TurnoStar = TurnoStar.AddDays(-1);
-                        TurnoEnd = TurnoEnd.AddDays(-1);
-                        TurnoScrapStar = TurnoScrapStar.AddDays(-1);
-                        TurnoScrapEnd = TurnoScrapEnd.AddDays(-1);
+                        bool esTurno1PorHora = horaActual >= horaInicioTurno && horaActual <= horaFinTurno;
+                        turnoEfectivo = esTurno1PorHora ? "1" : "2";
+                    }
+
+                    if (turnoEfectivo == "1")
+                    {
+                        turno = 1;
+
+                        // Turno 1: 4:30:01am a 4:30pm del mismo día
+                        TurnoStar = fechaIni.AddHours(4.5).AddSeconds(1);
+                        TurnoEnd = fechaFinDia.AddHours(16.5);
+
+                        TurnoScrapStar = fechaIni.AddHours(5).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = fechaFinDia.AddHours(17).AddMinutes(45);
+                    }
+                    else // turnoEfectivo == "2"
+                    {
+                        turno = 2;
+
+                        // Turno 2: 4:30:01pm del día a 4:30am del día siguiente
+                        TurnoStar = fechaIni.AddHours(16.5).AddSeconds(1);
+                        TurnoEnd = fechaFinDia.AddDays(1).AddHours(4.5);
+
+                        TurnoScrapStar = fechaIni.AddHours(17).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = fechaFinDia.AddDays(1).AddHours(5).AddMinutes(45);
+                    }
+                }
+                else if (FiltroTurno == null || FiltroTurno == "null")
+                {
+                    // Asignar turno y rangos de fechas (lógica original: turno actual por hora del sistema)
+                    if (horaActual >= horaInicioTurno && horaActual <= horaFinTurno)
+                    {
+                        turno = 1;
+
+                        TurnoStar = DateTime.Today.AddHours(4.5).AddSeconds(1);
+                        TurnoEnd = DateTime.Today.AddHours(16.5);
+                        TurnoScrapStar = DateTime.Today.AddHours(5).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = DateTime.Today.AddHours(17).AddMinutes(45);
+                    }
+                    else
+                    {
+                        turno = 2;
+
+                        TurnoStar = DateTime.Today.AddHours(16.5).AddSeconds(1);
+                        TurnoEnd = DateTime.Today.AddDays(1).AddHours(4.5);
+                        TurnoScrapStar = DateTime.Today.AddHours(17).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = DateTime.Today.AddDays(1).AddHours(5).AddMinutes(45);
+
+                        if (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
+                           (horaActual.Hour == 4 && horaActual.Minute <= 30))
+                        {
+                            TurnoStar = TurnoStar.AddDays(-1);
+                            TurnoEnd = TurnoEnd.AddDays(-1);
+                            TurnoScrapStar = TurnoScrapStar.AddDays(-1);
+                            TurnoScrapEnd = TurnoScrapEnd.AddDays(-1);
+                        }
+                    }
+                }
+                else
+                {
+                    if (FiltroTurno == "1")
+                    {
+                        turno = 1;
+
+                        TurnoStar = DateTime.Today.AddHours(4.5).AddSeconds(1);
+                        TurnoEnd = DateTime.Today.AddHours(16.5);
+                        TurnoScrapStar = DateTime.Today.AddHours(5).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = DateTime.Today.AddHours(17).AddMinutes(45);
+                    }
+                    else
+                    {
+                        turno = 2;
+
+                        TurnoStar = DateTime.Today.AddHours(16.5).AddSeconds(1);
+                        TurnoEnd = DateTime.Today.AddDays(1).AddHours(4.5);
+                        TurnoScrapStar = DateTime.Today.AddHours(17).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = DateTime.Today.AddDays(1).AddHours(5).AddMinutes(45);
+
+                        if (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
+                           (horaActual.Hour == 4 && horaActual.Minute <= 30))
+                        {
+                            TurnoStar = TurnoStar.AddDays(-1);
+                            TurnoEnd = TurnoEnd.AddDays(-1);
+                            TurnoScrapStar = TurnoScrapStar.AddDays(-1);
+                            TurnoScrapEnd = TurnoScrapEnd.AddDays(-1);
+                        }
                     }
                 }
 
@@ -1327,9 +1560,37 @@ namespace MantenimientosPTM.Controllers
                             {
                                 // Agregar columna Turno con el valor calculado, replicado en todas las filas
                                 tabla1.Columns.Add("Turno", typeof(int));
+                                tabla1.Columns.Add("PesoMinimo", typeof(decimal));
+                                tabla1.Columns.Add("KgsDia", typeof(decimal));
                                 foreach (DataRow row in tabla1.Rows)
                                 {
+                                    // ✅ Preparar parámetros para el SP
+                                    var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                                    {
+                                        { "P_QUERY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                        { "P_USUARIO", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                        { "P_PLANTA", (plantaHeader, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                        { "P_LINEA", (row["Id_Linea"], ParameterDirection.Input, HanaDbType.NVarChar) },
+                                        { "P_GRUPO_ART", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
+                                        { "P_VALIDAR_CAP", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
+                                        { "P_ITEMCODE", (row["Codigo"], ParameterDirection.Input, HanaDbType.NVarChar) }
+                                    };
+
+                                    // ✅ Ejecutar el Stored Procedure
+                                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                                        logicaPlaneacion.AD.GCBuscarArticulos, // ⬅️ Nombre de tu SP
+                                        parameters
+                                    );
+
+                                    JArray Articulo = JArray.Parse(resultHana.JsonResult);
+                                    decimal KgsDia = Convert.ToDecimal(Articulo[0]["KgsDia"] != null ? (decimal.Parse(Articulo[0]["KgsDia"].ToString()) / 24).ToString() : "0");
+                                    decimal PesoMinimo = Convert.ToDecimal(Articulo[0]["PesoMinimo"] != null ? Articulo[0]["PesoMinimo"].ToString() : "0");
+
                                     row["Turno"] = turno;
+
+                                    row["PesoMinimo"] = PesoMinimo;
+
+                                    row["KgsDia"] = KgsDia;
                                 }
 
                                 JSONstringSp = JsonConvert.SerializeObject(tabla1);

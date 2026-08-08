@@ -12,6 +12,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Web.Mvc;
+using static MantenimientosPTM.AccesoDatosEquipos;
 
 namespace MantenimientosPTM.Controllers
 {
@@ -114,6 +115,9 @@ namespace MantenimientosPTM.Controllers
                 string searchValue = !string.IsNullOrEmpty(search) ? search : "";
                 string FiltroBusqueda = searchValue;
 
+
+
+
                 // ✅ Parámetros de filtros
                 string FiltroIDSolicitud = Request.Form["FiltroSolicitud"];
                 string FiltroFechaInicio = Request.Form["FiltroFechaInicio"];
@@ -126,6 +130,12 @@ namespace MantenimientosPTM.Controllers
                 string FiltroExcluirSincronizadosPVC = Request.Form["FiltroExcluirSincronizadosPVC"];
                 string FiltroExcluirSincronizadosPEADLISO = Request.Form["FiltroExcluirSincronizadosPEADLISO"];
                 string FiltroExcluirSincronizadosPEADCORR = Request.Form["FiltroExcluirSincronizadosPEADCORR"];
+                string FiltroPosicionId = Request.Form["FiltroPosicionId"];
+
+                // Leer desde config las restricciones a las posiciones que se le aplicara
+                string IdsHerr = System.Configuration.ConfigurationManager.AppSettings["PosicionesHerr"];
+                string IdsMtto = System.Configuration.ConfigurationManager.AppSettings["PosicionesMtto"];
+
 
                 if (FiltroArea != string.Empty || FiltroLinea != string.Empty || FiltroOrdenTrabajo != string.Empty)
                     AditionalFilter = true;
@@ -161,7 +171,10 @@ namespace MantenimientosPTM.Controllers
                     { "P_FILTRO_BUSQUEDA", (string.IsNullOrEmpty(FiltroBusqueda) ? (object)null : FiltroBusqueda, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_EXCLUIR_SINCRONIZADOS_PVC", (string.IsNullOrEmpty(FiltroExcluirSincronizadosPVC) ? (object)null : FiltroExcluirSincronizadosPVC, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_EXCLUIR_SINCRONIZADOS_PEADLISO", (string.IsNullOrEmpty(FiltroExcluirSincronizadosPEADLISO) ? (object)null : FiltroExcluirSincronizadosPEADLISO, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_EXCLUIR_SINCRONIZADOS_CORRUGADO ", (string.IsNullOrEmpty(FiltroExcluirSincronizadosPEADCORR) ? (object)null : FiltroExcluirSincronizadosPEADCORR, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_EXCLUIR_SINCRONIZADOS_CORRUGADO ", (string.IsNullOrEmpty(FiltroExcluirSincronizadosPEADCORR) ? (object)null : FiltroExcluirSincronizadosPEADCORR, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_FILTRO_POSICION_ID", (string.IsNullOrEmpty(FiltroPosicionId) ? (object)null : FiltroPosicionId, ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_IDS_HERR", (string.IsNullOrEmpty(IdsHerr) ? (object)null : IdsHerr, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_IDS_MTTO", (string.IsNullOrEmpty(IdsMtto) ? (object)null : IdsMtto, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -780,7 +793,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarEmpleados(int? planta, string query)
+        public JsonResult BuscarEmpleados(int? planta, string query, string posicionId, string usuarioWeb, string tipoUsuario)
         {
             try
             {
@@ -790,11 +803,18 @@ namespace MantenimientosPTM.Controllers
                     return Json(new List<object>(), JsonRequestBehavior.AllowGet);
                 }
 
+                string posicionIdFinal = string.IsNullOrEmpty(posicionId) ? null : posicionId;
+                string usuarioWebFinal = string.IsNullOrEmpty(usuarioWeb) ? null : usuarioWeb;
+                string tipoUsuarioFinal = string.IsNullOrEmpty(tipoUsuario) ? null : tipoUsuario;
+
                 // ✅ Preparar parámetros para el SP
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
                     { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) }
+                    { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_POSICION",(posicionIdFinal,  ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_USUARIOWEB",(usuarioWebFinal,  ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TIPOUSUARIO",(tipoUsuarioFinal, ParameterDirection.Input, HanaDbType.NVarChar) },
                 };
 
                 // ✅ Ejecutar el Stored Procedure

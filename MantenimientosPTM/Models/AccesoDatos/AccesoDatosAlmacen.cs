@@ -554,6 +554,8 @@ namespace MantenimientosPTM
             public string UsuarioSolicita { get; set; }
             [JsonProperty("Planta")]
             public int? Planta { get; set; }
+            [JsonProperty("CodigoEmpleado")]
+            public int CodigoEmpleado { get; set; }
         }
 
         public class RequisicionModel
@@ -894,7 +896,6 @@ namespace MantenimientosPTM
             public int IdMantenimiento { get; set; }
             public string NombreEmpleado { get; set; }
             public string AlmacenistaEntrega { get; set; }
-
             public List<Contabilizacion> Contabilizacion { get; set; } = new List<Contabilizacion>();
             public DataMovimiento DataMovimiento { get; set; } = new DataMovimiento();
         }
