@@ -186,11 +186,25 @@ class CalendarManager {
                             <b>Área:</b> ${info.event.extendedProps.areaDescripcion}<br>
                             <b>Línea:</b> ${info.event.extendedProps.lineaDescripcion}<br>
                             <b>Estatus:</b> ${tiposMap[keyTooltip] || 'Sin estatus'}<br>
+
                             <b>${info.event.extendedProps.tipo === 'Correctivo' ? 'Fecha:' : 'Periodo:'}</b>
-                            ${info.event.extendedProps.tipo === 'Correctivo'
-                                            ? info.event.extendedProps.fechaInicio
-                                            : info.event.extendedProps.periodoMantenimiento
-                            }
+                            ${(() => {
+                                const p = info.event.extendedProps;
+                                const fmt = (f) => f ? f.substring(0, 10).split('-').reverse().join('/') : '';
+                                if (p.tipo === 'Correctivo') return p.fechaInicio;
+                                if (!p.enviarSiguienteMes && p.fechaRealInicio && p.fechaRealFin &&
+                                    (p.estatusSolicitud === 'NA' || p.estatusSolicitud === 'Aceptada')) {
+                                    return `${fmt(p.fechaRealInicio)} al ${fmt(p.fechaRealFin)}`;
+                                }
+                                if (p.enviarSiguienteMes && p.estatusSolicitud === 'Aceptada') {
+                                    const fechaInicio = new Date(p.fechaEventoCalculada + 'T00:00:00');
+                                    const ultimoDia = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth() + 1, 0);
+                                    const fmtDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                                    return `${fmtDate(fechaInicio)} al ${fmtDate(ultimoDia)}`;
+                                }
+                                return p.periodoMantenimiento;
+                            })()}
+
                         </div>
                     `
                 });
@@ -268,31 +282,104 @@ class CalendarManager {
 
     // ✅ Función para transformar datos de HANA a formato FullCalendar
     transformarEventosCalendario(datosHana) {
+        // const eventos = [];
+
+        // // 🎨 Colores según tipo de mantenimiento
+        // const colores = {
+        //     'Preventivo': '#28a745',  // Verde
+        //     'Correctivo': '#dc3545'   // Rojo
+        // };
+
+        // datosHana.forEach((item) => {
+        //     // Determinar color según tipo
+        //     const colorEvento = colores[item.TIPO_MANTENIMIENTO] || '#6c757d';
+
+        //     // Formatear fechas - con fallback: FECHA_COMPLETADO → HORA_APERTURA → fecha actual
+        //     const fechaInicio = new Date(item.FECHA_INICIO);
+        //     const fechaFin = new Date(item.FECHA_FIN);
+        //     const fechaCompletado = new Date(item.FECHA_COMPLETADO || item.HORA_APERTURA || new Date());
+
+        //     // ✅ SOLO pintar el día que fue completado (no rango)
+        //     const fechaCompletadoStr = fechaCompletado.toISOString().split('T')[0];
+
+        //     const evento = {
+        //         id: item.ID_MANTENIMIENTO,
+        //         title: `${item.TIPO_MANTENIMIENTO} - ${item.NOMBRE_EQUIPO}`,
+        //         start: fechaCompletadoStr,  // ✅ Solo fecha completado
+        //         allDay: true,                // ✅ Evento de día completo
+        //         color: colorEvento,
+        //         extendedProps: {
+        //             id_mantenimiento: item.ID_MANTENIMIENTO,
+        //             numero_orden: item.NUMERO_ORDEN,
+        //             id_equipo: item.ID_EQUIPO,
+        //             equipment: item.NOMBRE_EQUIPO,
+        //             description: item.DESCRIPCION_EQUIPO,
+        //             area: item.AREA,
+        //             areaDescripcion: item.AREA_DESCRIPCION,
+        //             line: item.LINEA_PRODUCCION,
+        //             lineaDescripcion: item.LINEA_DESCRIPCION,
+        //             type: item.TIPO_MANTENIMIENTO,
+        //             tipo: item.TIPO_MANTENIMIENTO,
+        //             fechaInicio: fechaInicio.toLocaleDateString('es-ES'),
+        //             fechaFin: fechaFin.toLocaleDateString('es-ES'),
+        //             fechaCompletado: fechaCompletado.toLocaleDateString('es-ES'),
+        //             periodoMantenimiento: `${fechaInicio.toLocaleDateString('es-ES')} al ${fechaFin.toLocaleDateString('es-ES')}`,
+        //             id_status: item.ID_ESTATUS,
+        //             status: item.ESTATUS,
+        //             orden_trabajo_finalizada: item.ORDEN_TRABAJO_FINALIZADA,
+        //             solicitante: item.SOLICITANTE || 'No especificado',
+        //             ubicacion_tecnica: item.UBICACION_TECNICA || 'No especificada',
+        //             duracion_hrs: item.DURACION_HRS || 0,
+        //             texto_corto: item.TEXTO_CORTO || '',
+        //             texto_secuencia: item.TEXTO_SECUENCIA || '',
+        //             tecnicos_ids: item.TECNICOS_ASIGNADOS_IDS || '',
+        //             tecnicos_nombres: item.TECNICOS_ASIGNADOS_NOMBRES || 'No asignados'
+        //         }
+        //     };
+
+        //     eventos.push(evento);
+        // });
+
+        // return eventos;
         const eventos = [];
 
-        // 🎨 Colores según tipo de mantenimiento
         const colores = {
-            'Preventivo': '#28a745',  // Verde
-            'Correctivo': '#dc3545'   // Rojo
+            'Preventivo': '#28a745',
+            'Correctivo': '#dc3545'
         };
 
         datosHana.forEach((item) => {
-            // Determinar color según tipo
             const colorEvento = colores[item.TIPO_MANTENIMIENTO] || '#6c757d';
 
-            // Formatear fechas - con fallback: FECHA_COMPLETADO → HORA_APERTURA → fecha actual
             const fechaInicio = new Date(item.FECHA_INICIO);
             const fechaFin = new Date(item.FECHA_FIN);
             const fechaCompletado = new Date(item.FECHA_COMPLETADO || item.HORA_APERTURA || new Date());
 
-            // ✅ SOLO pintar el día que fue completado (no rango)
-            const fechaCompletadoStr = fechaCompletado.toISOString().split('T')[0];
+            // ✅ LÓGICA DE FECHA DEL EVENTO
+            let fechaEvento;
+
+            const tieneFechasReales = item.FECHA_REAL_INICIO && item.FECHA_REAL_FIN;
+            const enviarSiguienteMes = item.ENVIAR_SIGUIENTE_MES;
+            const estatusSolicitud = item.ESTATUS_SOLICITUD;
+
+            if (!enviarSiguienteMes && tieneFechasReales && (estatusSolicitud === 'NA' || estatusSolicitud === 'Aceptada')) {
+                // ✅ Tiene fechas reales y no es siguiente mes → pintar en FECHA_REAL_INICIO
+                fechaEvento = new Date(item.FECHA_REAL_INICIO).toISOString().split('T')[0];
+            } else if (enviarSiguienteMes && estatusSolicitud === 'Aceptada') {
+                // ✅ Enviar siguiente mes y fue aceptada → primer día del mes siguiente
+                const hoy = new Date(item.FECHA_INICIO);
+                const primerDiaSiguienteMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
+                fechaEvento = primerDiaSiguienteMes.toISOString().split('T')[0];
+            } else {
+                // ✅ null, Rechazada, Pendiente o sin solicitud → fecha completado actual
+                fechaEvento = fechaCompletado.toISOString().split('T')[0];
+            }
 
             const evento = {
                 id: item.ID_MANTENIMIENTO,
                 title: `${item.TIPO_MANTENIMIENTO} - ${item.NOMBRE_EQUIPO}`,
-                start: fechaCompletadoStr,  // ✅ Solo fecha completado
-                allDay: true,                // ✅ Evento de día completo
+                start: fechaEvento,
+                allDay: true,
                 color: colorEvento,
                 extendedProps: {
                     id_mantenimiento: item.ID_MANTENIMIENTO,
@@ -319,7 +406,12 @@ class CalendarManager {
                     texto_corto: item.TEXTO_CORTO || '',
                     texto_secuencia: item.TEXTO_SECUENCIA || '',
                     tecnicos_ids: item.TECNICOS_ASIGNADOS_IDS || '',
-                    tecnicos_nombres: item.TECNICOS_ASIGNADOS_NOMBRES || 'No asignados'
+                    tecnicos_nombres: item.TECNICOS_ASIGNADOS_NOMBRES || 'No asignados',
+                    estatusSolicitud: item.ESTATUS_SOLICITUD,
+                    fechaRealInicio: item.FECHA_REAL_INICIO,
+                    fechaRealFin: item.FECHA_REAL_FIN,
+                    enviarSiguienteMes: item.ENVIAR_SIGUIENTE_MES,
+                    fechaEventoCalculada: fechaEvento,
                 }
             };
 
@@ -529,7 +621,25 @@ class CalendarManager {
 
         // Fechas y Duración
         $('#modalFechaCompletado').text(props.fechaCompletado);
-        $('#modalPeriodoMantenimiento').text(props.tipo === 'Correctivo' ? "N/A" : props.periodoMantenimiento);
+
+        const fmt = (f) => f ? f.substring(0, 10).split('-').reverse().join('/') : '';
+        let periodoMostrar = props.periodoMantenimiento;
+
+        if (props.tipo === 'Correctivo') {
+            periodoMostrar = 'N/A';
+        } else if (!props.enviarSiguienteMes && props.fechaRealInicio && props.fechaRealFin &&
+            (props.estatusSolicitud === 'NA' || props.estatusSolicitud === 'Aceptada')) {
+            periodoMostrar = `${fmt(props.fechaRealInicio)} al ${fmt(props.fechaRealFin)}`;
+        } else if (props.enviarSiguienteMes && props.estatusSolicitud === 'Aceptada') {
+            const fechaInicio = new Date(props.fechaEventoCalculada + 'T00:00:00');
+            const ultimoDia = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth() + 1, 0);
+            const fmtDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+            periodoMostrar = `${fmtDate(fechaInicio)} al ${fmtDate(ultimoDia)}`;
+        }
+
+        $('#modalPeriodoMantenimiento').text(periodoMostrar);
+
+
         $('#modalDuracion').text(props.duracion_hrs + ' hrs');
 
         // Técnicos Asignados
