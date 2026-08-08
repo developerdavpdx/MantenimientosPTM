@@ -410,7 +410,7 @@ namespace MantenimientosPTM
                 var serie = GetSerieByName(payload.Contabilizacion[0].Cedis);
 
                 //La serie debe ser igual al CEDIS
-                dictGI["Series"] = serie;
+                dictGI["Series"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["SeriesP1"] : ConfigurationManager.AppSettings["SeriesP2"]);
 
 
 
@@ -656,7 +656,7 @@ namespace MantenimientosPTM
                 //FALTA SERIE = CEDIS
 
                 var serie = GetSerieByName(payload.Contabilizacion[0].Cedis);
-                dictGR["Serie"] = serie;
+                dictGR["Series"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["SeriesP1"] : ConfigurationManager.AppSettings["SeriesP2"]);
 
 
                 foreach (var linea in articulosData)
