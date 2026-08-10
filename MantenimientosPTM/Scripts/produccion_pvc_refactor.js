@@ -123,7 +123,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             false
         );
         // 📧 CONSULTAR DATOS
-        this.consultarDatos(null, null, null, null, null);
+        this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
         console.log('✅ Sistema PVC inicializado');
     }
 
@@ -353,7 +353,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
         return false;
     }
 
-    async consultarDatos(fechaInicio, fechaFin, FiltroTurno, FiltroLinea, filtroProducto) {
+    async consultarDatos(fechaInicio, fechaFin, planta, FiltroTurno, FiltroLinea, filtroProducto) {
 
         try {
 
@@ -367,6 +367,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     FiltroFechaInicio: fechaInicio,
                     FiltroFechaFin: fechaFin,
                     FiltroLinea: FiltroLinea,
+                    FiltroPlanta: planta,
                     FiltroTurno: FiltroTurno || '',        // 🔥 NUEVO
                     FiltroProducto: filtroProducto || ''   // 🔥 NUEVO
                 }
@@ -1754,7 +1755,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 const filtroProducto = $('#FiltroProducto').val(); // 🔥 NUEVO
                 const FiltroLinea = $('#FiltroLinea').val(); // 🔥 NUEVO
 
-                await this.consultarDatos(fechaInicio, fechaFin, filtroTurno, FiltroLinea, filtroProducto);
+                await this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, filtroTurno, FiltroLinea, filtroProducto);
             } finally {
                 $btn.prop('disabled', false);
             }
@@ -1783,7 +1784,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             $('#FiltroProducto').val('');
             $('#FiltroLinea').val('');
 
-            this.consultarDatos(null, null, null, null, null);
+            this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
         });
 
 
@@ -1798,7 +1799,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     FechaTexto
                 );
 
-                this.consultarDatos(fechaInicio, fechaFin, null, null, null);
+                this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, null, null, null);
 
             });
     }
@@ -1885,7 +1886,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     this.cambiosPendientes = [];
 
                     // 🔥 REFRESCAR GRID
-                    await this.consultarDatos(null, null, null, null, null);
+                    await this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
 
                 } else {
 

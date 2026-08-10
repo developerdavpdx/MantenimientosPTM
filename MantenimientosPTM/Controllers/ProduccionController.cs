@@ -44,6 +44,7 @@ namespace MantenimientosPTM.Controllers
         {
             return View();
         }
+       
         public ActionResult ParosProduccion()
         {
             return View();
@@ -647,6 +648,7 @@ namespace MantenimientosPTM.Controllers
         public JsonResult GetTiemposMuertosINY(
         string FiltroFechaInicio,
         string FiltroFechaFin,
+        string FiltroPlanta,
         string FiltroLinea,
         string FiltroTurno,      // 🔥 NUEVO
         string FiltroProducto)
@@ -672,11 +674,12 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-            {
-                { "P_FECHA_INICIO", (dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                { "P_FECHA_FIN", (dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
-                { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) }
-            };
+                {
+                    { "P_FECHA_INICIO", (dtFechaInicio.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN", (dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta)   ? (object)null : FiltroPlanta,   ParameterDirection.Input, HanaDbType.NVarChar) },
+                };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                     Logic.AD.GCConsultarTiemposMuertosINY,

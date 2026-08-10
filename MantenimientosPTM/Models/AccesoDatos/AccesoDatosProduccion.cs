@@ -94,8 +94,14 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminaParoProduccion\"";
             }
         }
-
-        public string GCConsultarTiemposMuertosINY = "NOMBRE_DEL_SP_CONSULTA_INY";
+                
+        public string GCConsultarTiemposMuertosINY
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOConsultarTiemposMuertosINY\"";
+            }
+        }
 
         public string GCGuardarTiemposMuertosINY = "NOMBRE_DEL_SP_GUARDAR_INY";
 

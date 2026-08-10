@@ -45,8 +45,8 @@ class GestionProduccionINY extends GestionProduccionBase {
         this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos";
         this.URLBaseMantenimientosPreventivos = "MantenimientosPreventivos";
         // 🔥 TODO: reemplazar con el ID_AREA real de INY PL2
-        this.ID_AREA_CORRECTIVOS = null;
-        this.ID_AREA_PREVENTIVOS = null;
+        this.ID_AREA_CORRECTIVOS = (datos_usuario[0].PLANTA == "1" ? 15 : 15); // 🔥 INY Se dejo el mismo por que no existe INYECCION para planta 1
+        this.ID_AREA_PREVENTIVOS = (datos_usuario[0].PLANTA == "1" ? 15 : 15); // 🔥 INY Se dejo el mismo por que no existe INYECCION para planta 1
     }
 
     async inicializar() {
@@ -57,7 +57,7 @@ class GestionProduccionINY extends GestionProduccionBase {
         this.correctosManager.setAppProduccion(this);
         this.correctosManager.inicializar();
 
-        this.consultarDatos(null, null, null);
+        this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
         console.log('✅ Sistema INY inicializado');
     }
 
@@ -237,7 +237,7 @@ class GestionProduccionINY extends GestionProduccionBase {
     // ========================================
     // CONSULTAR DATOS PRINCIPALES
     // ========================================
-    async consultarDatos(fechaInicio, fechaFin, FiltroTurno, linea) {
+    async consultarDatos(fechaInicio, fechaFin, planta, FiltroTurno, linea, filtroProducto) {
         try {
             GlobalUtil.mostrarLoader(true);
             $("#tablaProduccion").addClass("d-none");
@@ -248,7 +248,9 @@ class GestionProduccionINY extends GestionProduccionBase {
                 data: {
                     FiltroFechaInicio: fechaInicio,
                     FiltroFechaFin: fechaFin,
-                    FiltroLinea: linea
+                    FiltroPlanta: planta,
+                    FiltroLinea: linea,
+                    FiltroProducto: filtroProducto || ''
                 }
             });
 
@@ -317,7 +319,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     FiltroOrdenTrabajo: "",
                     FiltroPlanta: this.datos_usuario[0].PLANTA,
                     FiltroEstatusOT: "4",
-                    FiltroExcluirSincronizadosINY: "S"
+                    FiltroExcluirSincronizadosINY: "S" // 🔥 nombre correcto, el que usa el SP
                 }
             });
 
@@ -1149,10 +1151,14 @@ class GestionProduccionINY extends GestionProduccionBase {
     }
 
     calcularPorcentajeDisponibilidad(row) {
-        const horas = parseFloat(row.HorasProgramadas) || 0;
+
         const disponible = parseFloat(row.TiempoDisponible) || 0;
-        if (horas <= 0) return 0;
-        return (disponible / horas) * 100;
+        const productivo = parseFloat(row.TiempoProductivo) || 0;
+
+        if (disponible <= 0) return 0;
+
+        return (productivo / disponible) * 100;
+
     }
 
     // ========================================
@@ -1234,8 +1240,11 @@ class GestionProduccionINY extends GestionProduccionBase {
         });
 
         // % Disponibilidad del total
-        if (totales.HorasProgramadas > 0) {
-            totales.PorcentajeDisponibilidad = (totales.TiempoDisponible / totales.HorasProgramadas) * 100;
+        if (totales.TiempoDisponible > 0) {
+            totales.PorcentajeDisponibilidad =
+                (totales.TiempoProductivo / totales.TiempoDisponible) * 100;
+        } else {
+            totales.PorcentajeDisponibilidad = 0;
         }
 
         return totales;
@@ -1352,7 +1361,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                         $("#btnGuardarCambios").prop("disabled", false);
                     }, 3000);
                     this.cambiosPendientes = [];
-                    await this.consultarDatos(null, null, null);
+                    await this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
                 } else {
                     AlertManager.mostrar(response.Message, "warning");
                     $("#btnGuardarCambios").html('<i class="bi bi-save me-1"></i>Guardar');
@@ -1384,13 +1393,13 @@ class GestionProduccionINY extends GestionProduccionBase {
             const fechaInicio = $('#FiltroFechaInicio').val();
             const fechaFin = $('#FiltroFechaFin').val();
             const filtroTurno = $('#FiltroTurno').val();
-            this.consultarDatos(fechaInicio, fechaFin, filtroTurno, null);
+            this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, filtroTurno, null, null);
         });
 
         $('#btnLimpiarFiltros').on('click', () => {
             $('#FiltroFechaInicio').val('');
             $('#FiltroFechaFin').val('');
-            this.consultarDatos(null, null, null);
+            this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
         });
 
         $('#FiltroFechaInicio, #FiltroFechaFin')
@@ -1400,7 +1409,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                 const fechaFin = $('#FiltroFechaFin').val();
                 const FechaTexto = this.formatearRangoFechas(fechaInicio, fechaFin);
                 $("#mesActual").text(FechaTexto);
-                this.consultarDatos(fechaInicio, fechaFin, null);
+                this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, null, null, null);
             });
     }
 
