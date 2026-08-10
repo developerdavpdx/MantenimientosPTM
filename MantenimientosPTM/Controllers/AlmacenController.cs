@@ -2747,6 +2747,59 @@ namespace MantenimientosPTM.Controllers
         }
 
 
+        [HttpPost]
+        public JsonResult AutorizarRefaccion(int idSolicitud, bool aceptadaMantenimiento)
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            try
+            {
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+            {
+                { "P_IDSOLICITUD",            (idSolicitud,            ParameterDirection.Input, HanaDbType.Integer)  },
+                { "P_ORDENTRABAJO",           (null,           ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_REFACCIONSOLICITADA",    (null,                     ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_CANTIDAD",               (null,                      ParameterDirection.Input, HanaDbType.Integer)  },
+                { "P_ESTATUS",                (null,                     ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_USUARIOATIENDE",         (null,                     ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_ACEPTADAMANTENIMIENTO",  (aceptadaMantenimiento,  ParameterDirection.Input, HanaDbType.Boolean)  }
+            };
+
+                var result = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCActualizaSolicitudRefaccion,
+                    parameters
+                );
+
+                if (result.JsonResult.Contains("ERROR") || result.JsonResult.Contains("Error"))
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "Error al autorizar la refacción.";
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse);
+                }
+
+                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+
+                jsonResponse.Status = "OK";
+                jsonResponse.Message = aceptadaMantenimiento
+                    ? "Refacción autorizada correctamente."
+                    : "Refacción rechazada correctamente.";
+                jsonResponse.Data = result.JsonResult;
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                string methodName = MethodBase.GetCurrentMethod().Name;
+                string controllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
+                log.Error($"Error en {controllerName}.{methodName}: {ex.Message}");
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al procesar la autorización: " + ex.Message;
+                return Json(jsonResponse);
+            }
+        }
+
         #endregion
     }
 }

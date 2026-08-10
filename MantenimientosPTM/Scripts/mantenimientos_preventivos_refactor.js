@@ -328,7 +328,7 @@ class MantenimientosPreventivoApp {
         // Lista de refacciones
         $(document).on('click', '.btn-list-refacciones', function () {
             const $btn = $(this);
-            const ordenTrabajo = $btn.data('numeroorden'); // Requiere que el botón tenga data-ot="NUMERO_OT"
+            const ordenTrabajo = $btn.data('numeroorden');
 
             if (!ordenTrabajo) {
                 alert('No se encontró el número de orden de trabajo.');
@@ -341,7 +341,7 @@ class MantenimientosPreventivoApp {
             // Mostrar estado de carga
             $('#bodyRefaccionesOT').html(`
                 <tr>
-                    <td colspan="5" class="text-center text-muted py-4">
+                    <td colspan="6" class="text-center text-muted py-4">
                         <i class="bi bi-hourglass-split me-1"></i>Cargando refacciones...
                     </td>
                 </tr>
@@ -359,16 +359,83 @@ class MantenimientosPreventivoApp {
                 data: { ordenTrabajo: ordenTrabajo },
                 dataType: 'json',
                 success: function (response) {
+                    // 🔥 VERIFICAR TIPO DE USUARIO
+                    const tipoUsuario = AppMantenimientos.datos_usuario[0].TIPOUSUARIO;
+                    const esAdmin = tipoUsuario === "Administrador" || tipoUsuario === "AdminMtto" || tipoUsuario === "SupervisorMantenimiento";
 
                     if (response.Status === 'OK') {
                         let refacciones = JSON.parse(response.Data);
+
+                        // 🔥 VERIFICAR SI HAY ALGÚN ELEMENTO CON ACEPTADA_MANTENIMIENTO ESTABLECIDO
+                        const hayAceptacionMantenimiento = refacciones.some(item =>
+                            item.ACEPTADA_MANTENIMIENTO !== "" && item.ACEPTADA_MANTENIMIENTO !== null
+                        );
+
+                        // 🔥 MOSTRAR/OCULTAR COLUMNA BASADO EN LOS DATOS
+                        if (esAdmin || hayAceptacionMantenimiento) {
+                            $('#tablaRefaccionesOT thead th:last-child').show();
+                        } else {
+                            $('#tablaRefaccionesOT thead th:last-child').hide();
+                        }
+
                         let html = '';
                         refacciones.forEach(item => {
 
                             let classBadge = `bg-warning text-dark`;
 
                             if (item.ESTATUS == 'Atendida') {
-                                classBadge = `bg-sucess`
+                                classBadge = `bg-success text-white`
+                            }
+
+                            // 🔥 Generar botón de acción
+                            let accionesHTML = '';
+                            if (esAdmin) {
+
+                                if (item.ESTATUS === 'Atendida' && (item.ACEPTADA_MANTENIMIENTO == "" || item.ACEPTADA_MANTENIMIENTO == null)) {
+                                    accionesHTML = `
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-ptm-primary btn-autorizar-refaccion" 
+                                                    data-refaccion-id="${item.ID_SOLICITUD || ''}"
+                                                    data-orden-trabajo="${ordenTrabajo}"
+                                                    title="Autorizar esta refacción">
+                                                <i class="bi bi-check-circle me-1"></i>Autorizar
+                                            </button>
+                                        </td>
+                                    `;
+                                }
+                                else if (item.ACEPTADA_MANTENIMIENTO == "true") {
+                                    accionesHTML = `
+                                        <td class="text-center">
+                                             <span class="badge btn-ptm-primary badge-custom">Aceptada por mantenimiento</span>
+                                        </td>
+                                    `;
+                                }
+                                else if (item.ESTATUS === 'Atendida' && item.ACEPTADA_MANTENIMIENTO == "false") {
+                                    accionesHTML = `
+                                        <td class="text-center">
+                                             <span class="badge bg-danger badge-custom">Rechazada por mantenimiento</span>
+                                        </td>
+                                    `;
+                                }
+                                else {
+                                    accionesHTML = `
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-secondary" disabled title="Solo se pueden autorizar refacciones completadas">
+                                                <i class="bi bi-lock me-1"></i>No disponible
+                                            </button>
+                                        </td>
+                                    `;
+                                }
+                            }
+
+                            // 🔥 PARA EL TÉCNICO - mostrar estado si existe ACEPTADA_MANTENIMIENTO
+                            if (!esAdmin && item.ACEPTADA_MANTENIMIENTO != "" && item.ACEPTADA_MANTENIMIENTO != null) {
+                                let badgeClass = (item.ACEPTADA_MANTENIMIENTO == "true") ? "btn-ptm-primary badge-custom" : "bg-danger badge-custom";
+                                let badgeText = (item.ACEPTADA_MANTENIMIENTO == "true") ? "Aceptada por mantenimiento" : "Rechazada por mantenimiento";
+                                accionesHTML = `
+                                    <td class="text-center">
+                                        <span class="badge ${badgeClass}">${badgeText}</span>
+                                    </td>`;
                             }
 
                             html += `
@@ -380,16 +447,19 @@ class MantenimientosPreventivoApp {
                                        ${item.NIVEL_URGENCIA || ''}
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge text-black ${classBadge}">${item.ESTATUS || ''}</span>
+                                        <span class="badge text-white ${classBadge}">${item.ESTATUS || ''}</span>
                                     </td>
+                                    ${accionesHTML}
                                 </tr>
                             `;
                         });
+
                         $('#bodyRefaccionesOT').html(html);
+
                     } else {
                         $('#bodyRefaccionesOT').html(`
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-4">
+                                <td colspan="6" class="text-center text-muted py-4">
                                     <i class="bi bi-info-circle me-1"></i>No hay refacciones registradas para esta orden.
                                 </td>
                             </tr>
@@ -400,7 +470,7 @@ class MantenimientosPreventivoApp {
                     console.error('Error al cargar refacciones:', error);
                     $('#bodyRefaccionesOT').html(`
                         <tr>
-                            <td colspan="5" class="text-center text-danger py-4">
+                            <td colspan="6" class="text-center text-muted py-4">
                                 <i class="bi bi-exclamation-triangle me-1"></i>Error al cargar las refacciones.
                             </td>
                         </tr>
@@ -409,7 +479,123 @@ class MantenimientosPreventivoApp {
             });
         });
 
+        // 🔥 NUEVO: Evento para autorizar refacción (solo para admins)
+        $(document).on('click', '.btn-autorizar-refaccion', function () {
+            const $btn = $(this);
+            const refaccionId = $btn.data('refaccion-id');
+            const ordenTrabajo = $btn.data('orden-trabajo');
 
+            // 🔥 VERIFICAR PERMISOS NUEVAMENTE
+            const tipoUsuario = AppMantenimientos.datos_usuario[0].TIPOUSUARIO;
+            const esAdmin = tipoUsuario === "Administrador" || tipoUsuario === "AdminMtto" || tipoUsuario === "SupervisorMantenimiento";
+
+            if (!esAdmin) {
+                AlertManager.mostrar('No tienes permisos para autorizar refacciones', 'warning');
+                return;
+            }
+
+            if (!refaccionId || !ordenTrabajo) {
+                AlertManager.mostrar('No se pudo obtener los datos de la refacción', 'warning');
+                return;
+            }
+
+            let TipoUsuario = AppMantenimientos.datos_usuario[0].TIPOUSUARIO;
+            // Mostrar confirmación con ReprogramacionConfirmManager (3 botones)
+            ReprogramacionConfirmManager.mostrar({
+                titulo: `¿Autorizar refacción?`,
+                mensaje: `
+                <div style="text-align:left; font-size:0.95rem; line-height:1.6;">
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                        <div style="min-width:180px;"><i class="bi bi-clipboard-data me-2" style="color:#1195d0;"></i><strong>Orden de Trabajo:</strong> ${ordenTrabajo}</div>
+                        <div style="min-width:180px;"><i class="bi bi-tools me-2" style="color:#1195d0;"></i><strong>ID Refacción:</strong> ${refaccionId}</div>
+                    </div>
+                    <hr style="margin:10px 0;">
+                    <div style="font-size:0.85rem;color:#fff7d6;">
+                        <strong>Importante:</strong> Al aceptar, se autorizará esta refacción para mantenimiento. Al rechazar, se marcará como no válida.
+                    </div>
+                </div>
+                `,
+                onSi: () => {
+                    $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Autorizando...').prop('disabled', true);
+
+                    $.ajax({
+                        url: `/Almacen/AutorizarRefaccion`,
+                        type: 'POST',
+                        headers: {
+                            contentType: 'application/x-www-form-urlencoded',
+                            'X-Rol-Usuario': TipoUsuario
+                        },
+                        data: {
+                            idSolicitud: refaccionId,
+                            aceptadaMantenimiento: true
+                        },
+                        dataType: 'json',
+                        success: function (response) {
+                            if (response.Status === 'OK') {
+                                AlertManager.mostrar(response.Message || 'Refacción autorizada correctamente', 'success');
+
+                                // ✅ Cambiar texto del botón a estado de éxito
+                                $btn.html('<i class="bi bi-check-circle-fill me-1"></i>Autorizada').addClass('btn-success').removeClass('btn-ptm-primary');
+
+                                // ✅ Cerrar el modal después de 2 segundos
+                                setTimeout(() => {
+                                    const modalElement = document.getElementById('modalRefaccionesOT');
+                                    const modal = bootstrap.Modal.getInstance(modalElement);
+                                    if (modal) {
+                                        modal.hide();
+                                    }
+                                }, 2000);
+                            } else {
+                                AlertManager.mostrar(response.Message || 'Error al autorizar la refacción', 'warning');
+                                $btn.html('<i class="bi bi-check-circle me-1"></i>Autorizar').prop('disabled', false);
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+                            $btn.html('<i class="bi bi-check-circle me-1"></i>Autorizar').prop('disabled', false);
+                        }
+                    });
+                },
+                onNo: () => {
+                    $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Rechazando...').prop('disabled', true);
+
+                    $.ajax({
+                        url: `/Almacen/AutorizarRefaccion`,
+                        type: 'POST',
+                        contentType: 'application/x-www-form-urlencoded',
+                        data: {
+                            idSolicitud: refaccionId,
+                            aceptadaMantenimiento: false
+                        },
+                        dataType: 'json',
+                        success: function (response) {
+                            if (response.Status === 'OK') {
+                                AlertManager.mostrar(response.Message || 'Refacción rechazada correctamente', 'success');
+
+                                // ✅ Cambiar texto del botón a estado de rechazo
+                                $btn.html('<i class="bi bi-x-circle-fill me-1"></i>Rechazada').addClass('btn-danger').removeClass('btn-ptm-primary');
+
+                                // ✅ Cerrar el modal después de 2 segundos
+                                setTimeout(() => {
+                                    const modalElement = document.getElementById('modalRefaccionesOT');
+                                    const modal = bootstrap.Modal.getInstance(modalElement);
+                                    if (modal) {
+                                        modal.hide();
+                                    }
+                                }, 2000);
+                            } else {
+                                AlertManager.mostrar(response.Message || 'Error al rechazar la refacción', 'warning');
+                                $btn.html('<i class="bi bi-check-circle me-1"></i>Autorizar').prop('disabled', false);
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+                            $btn.html('<i class="bi bi-check-circle me-1"></i>Autorizar').prop('disabled', false);
+                        }
+                    });
+                }
+            });
+        });
     }
 
     configurarEventosPDF() {
@@ -445,7 +631,7 @@ class MantenimientosPreventivoApp {
             let usuarioWeb = this.datos_usuario[0].USUARIOWEB;
             let tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
             let posicionId = null;
-                        
+
             this.parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario);
 
         });
@@ -655,7 +841,7 @@ class MantenimientoManager {
             idSolicitud: "",
             fechaInicioPeriodo: "",
             fechaFinPeriodo: "",
-            enviarSiguienteMes:""
+            enviarSiguienteMes: ""
         };
 
         // ✅ IDs y referencias globales
@@ -698,7 +884,7 @@ class MantenimientoManager {
     // REPROGRAMACIÓN DE MANTENIMIENTO
     // ============================
     abrirModalReprogramacion(btn) {
-               
+
 
         // Limpiar validación
         ValidationManager.limpiarValidacion('#formReprogramacion');
@@ -721,7 +907,7 @@ class MantenimientoManager {
         };
 
         // Obtener si la solicitud ya fue reprogramada
-        let fueReprogramda = this.datosBotón.fueReprogramado; 
+        let fueReprogramda = this.datosBotón.fueReprogramado;
         if (fueReprogramda === 'SI') { // Si ya fue reprogramada no puede volver a reprogramarse, solo asignar nuevas fechas
             $('#enviarSigMes').addClass('d-none');
             $('#chkSiguienteMes').prop('disabled', true);
@@ -797,7 +983,7 @@ class MantenimientoManager {
                 .attr('min', formatDate(primerDiaMes))
                 .attr('max', formatDate(ultimoDiaMes));
 
-                       
+
             //Limitar las fechas reales inicio y fin (Solo mes actual)
             $('#RepFechaActualInicio, #RepFechaActualFin').off('change.reprogramacion').on('change.reprogramacion', function () {
                 const hoy = new Date();
@@ -831,7 +1017,7 @@ class MantenimientoManager {
         // Limpiar campos de reprogramación
         $('#ReprogramacionFechaNovaInicio').val('');
         $('#ReprogramacionFechaNovaFin').val('');
-       
+
 
 
         // Mostrar modal
@@ -840,7 +1026,7 @@ class MantenimientoManager {
 
     enviarSolicitudReprogramacion(e) {
         e.preventDefault();
-        const siguienteMes = $('#chkSiguienteMes').is(':checked');       
+        const siguienteMes = $('#chkSiguienteMes').is(':checked');
 
         // ========================
         // VALIDACIÓN DE FORMULARIO
@@ -920,7 +1106,7 @@ class MantenimientoManager {
                     }, 2000);
                 } else if (response.Status === 'ERROR') {
                     $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
-                    
+
                     AlertManager.mostrar(response.Message || 'Error técnico al procesar la solicitud', 'danger', 'alertReprogramacionContainer');
                 } else {
                     $('#btnEnviarReprogramacion').html('<i class="bi bi-send-fill me-1"></i>Enviar Solicitud');
@@ -2733,7 +2919,7 @@ class MantenimientoManager {
         // if (FirmaTecnico != "") this.gestionFirmas._bloquearFirma("Realizo", true);
         // else this.gestionFirmas.deshabilitarFirma("Realizo", true);
 
-         if (FirmaMantenimiento != "") this.gestionFirmas._bloquearFirma("Mantenimiento", true);
+        if (FirmaMantenimiento != "") this.gestionFirmas._bloquearFirma("Mantenimiento", true);
 
         //BOTON BORRADOR
         $('#btnGuardarBorrador').addClass('d-none').prop('disabled', true);

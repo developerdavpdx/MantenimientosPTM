@@ -514,6 +514,8 @@ namespace MantenimientosPTM
             public string FolioSalida { get; set; }
             [JsonProperty("CANTIDAD_SURTIDA")]
             public string CantidadSurtida { get; set; }
+            [JsonProperty("ACEPTADA_MANTENIMIENTO")]
+            public string AceptadaMantenimiento { get; set; }
         }
 
         // Modelo para cada línea de solicitud
