@@ -171,6 +171,9 @@ class CalendarManager {
                     'NO-4': 'En proceso de firmas',
                     'SI-4': 'Terminado'
                 };
+                const badgeReprogramado = info.event.extendedProps.fueReprogramado === 'SI'
+                    ? `<span>✅ Reprogramado</span>`  // badge verde
+                    : '';   
 
                 $(info.el).tooltip({
                     html: true,
@@ -203,8 +206,9 @@ class CalendarManager {
                                     return `${fmtDate(fechaInicio)} al ${fmtDate(ultimoDia)}`;
                                 }
                                 return p.periodoMantenimiento;
-                            })()}
+                             })()}<br>
 
+                             ${badgeReprogramado}
                         </div>
                     `
                 });
@@ -351,9 +355,14 @@ class CalendarManager {
         datosHana.forEach((item) => {
             const colorEvento = colores[item.TIPO_MANTENIMIENTO] || '#6c757d';
 
-            const fechaInicio = new Date(item.FECHA_INICIO);
-            const fechaFin = new Date(item.FECHA_FIN);
-            const fechaCompletado = new Date(item.FECHA_COMPLETADO || item.HORA_APERTURA || new Date());
+            // const fechaInicio = new Date(item.FECHA_INICIO);
+            // const fechaFin = new Date(item.FECHA_FIN);
+            // const fechaCompletado = new Date(item.FECHA_COMPLETADO || item.HORA_APERTURA || new Date());
+
+            const parseFecha = (v) => v ? new Date(v) : null;
+            const fechaInicio = parseFecha(item.FECHA_INICIO);
+            const fechaFin = parseFecha(item.FECHA_FIN);
+            const fechaCompletado = parseFecha(item.FECHA_COMPLETADO || item.HORA_APERTURA) || new Date();
 
             // ✅ LÓGICA DE FECHA DEL EVENTO
             let fechaEvento;
@@ -367,7 +376,8 @@ class CalendarManager {
                 fechaEvento = new Date(item.FECHA_REAL_INICIO).toISOString().split('T')[0];
             } else if (enviarSiguienteMes && estatusSolicitud === 'Aceptada') {
                 // ✅ Enviar siguiente mes y fue aceptada → primer día del mes siguiente
-                const hoy = new Date(item.FECHA_INICIO);
+                //const hoy = new Date(item.FECHA_INICIO);
+                const hoy = fechaInicio || fechaCompletado; 
                 const primerDiaSiguienteMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
                 fechaEvento = primerDiaSiguienteMes.toISOString().split('T')[0];
             } else {
@@ -393,10 +403,15 @@ class CalendarManager {
                     lineaDescripcion: item.LINEA_DESCRIPCION,
                     type: item.TIPO_MANTENIMIENTO,
                     tipo: item.TIPO_MANTENIMIENTO,
-                    fechaInicio: fechaInicio.toLocaleDateString('es-ES'),
-                    fechaFin: fechaFin.toLocaleDateString('es-ES'),
+                    // fechaInicio: (fechaInicio || fechaCompletado).toLocaleDateString('es-ES'),
+                    // fechaFin: fechaFin.toLocaleDateString('es-ES'),
+                    // fechaCompletado: fechaCompletado.toLocaleDateString('es-ES'),
+                    fechaInicio: (fechaInicio || fechaCompletado).toLocaleDateString('es-ES'),
+                    fechaFin: (fechaFin || fechaCompletado).toLocaleDateString('es-ES'),
                     fechaCompletado: fechaCompletado.toLocaleDateString('es-ES'),
-                    periodoMantenimiento: `${fechaInicio.toLocaleDateString('es-ES')} al ${fechaFin.toLocaleDateString('es-ES')}`,
+                    periodoMantenimiento: (fechaInicio && fechaFin)
+                        ? `${fechaInicio.toLocaleDateString('es-ES')} al ${fechaFin.toLocaleDateString('es-ES')}`
+                        : '',                    
                     id_status: item.ID_ESTATUS,
                     status: item.ESTATUS,
                     orden_trabajo_finalizada: item.ORDEN_TRABAJO_FINALIZADA,
@@ -412,6 +427,7 @@ class CalendarManager {
                     fechaRealFin: item.FECHA_REAL_FIN,
                     enviarSiguienteMes: item.ENVIAR_SIGUIENTE_MES,
                     fechaEventoCalculada: fechaEvento,
+                    fueReprogramado: item.FUE_REPROGRAMADO,
                 }
             };
 
