@@ -297,6 +297,7 @@ class ProduccionManager {
         this.llenarTablaParos();
         EquiposUtil.llenarProcesos(this.PLANTA, null, "FiltroProceso");
         EquiposUtil.llenarCategoriasParo("ParoCategoria");
+        this.initHubParos(); //Inicializar HUB mantenimientos correctivos
         console.log('✅ Calendar Manager inicializado correctamente');
     }
     // ========================================
@@ -464,7 +465,7 @@ class ProduccionManager {
                         render: (data, type, row) => {
                             const codigo = row.ARTICULO || '';
                             const desc = row.ARTICULO_DESC || '';
-                            const texto = codigo ? (desc ? `${codigo} — ${desc}` : codigo) : (desc || 'N/A');
+                            const texto = codigo ? (desc ? `${codigo} — ${desc}` : codigo) : (desc || '');
                             return `<i class="bi bi-box-seam-fill me-1"></i>${texto}`;
                         }
                     },
@@ -529,22 +530,51 @@ class ProduccionManager {
                             return `<i class="bi bi-chat-left-text me-1 text-muted"></i>${data || ''}`;
                         }
                     },
-                    // Columna: Estado
+                    // ✅ Columna: Estatus Orden
                     {
-                        data: "ESTATUS",
-                        className: "all text-center",
+                        data: null,
+                        className: "text-center",
                         render: (data, type, row) => {
-                            if (data === 'O') {
-                                return `<span class="badge bg-danger badge-custom">
-                                <i class="bi bi-record-circle me-1"></i>Activo
-                            </span>`;
+                            let status = row.DESC_ESTATUS_ORDEN;
+
+                            if (row.ORDEN_TRABAJO_FINALIZADA === "NO" && row.ESTATUS == 4) {
+                                status = "En proceso de firmas";
                             }
-                            if (data === 'C') {
-                                return `<span class="badge bg-secondary badge-custom">
-                                <i class="bi bi-check-circle me-1"></i>Cerrado
-                            </span>`;
+
+                            let badgeClass = 'bg-secondary';
+                            let badgeIcon = '';
+
+                            switch (status) {
+                                case 'Liberado':
+                                    badgeClass = 'btn-ptm-primary';
+                                    badgeIcon = '<i class="bi bi-check-circle me-1"></i>';
+                                    break;
+                                case 'En espera de refacción':
+                                    badgeClass = 'bg-warning';
+                                    badgeIcon = '<i class="bi bi-tools me-1"></i>';
+                                    break;
+                                case 'En proceso de firmas':
+                                    badgeClass = 'bg-dark';
+                                    badgeIcon = '<i class="bi bi-pen me-1"></i>';
+                                    break;
+                                case 'Cerrado':
+                                    badgeClass = 'bg-primary';
+                                    badgeIcon = '<i class="bi bi-lock me-1"></i>';
+                                    break;
+                                case 'Cancelado':
+                                    badgeClass = 'bg-danger';
+                                    badgeIcon = '<i class="bi bi-x-circle me-1"></i>';
+                                    break;
+                                    dafault:
+                                    badgeClass = 'btn-ptm-primary';
+                                    badgeIcon = '<i class="bi bi-x-circle me-1"></i>';
+                                    status = 'N/A';
+                                    break;
                             }
-                            return `<span class="badge bg-secondary badge-custom">${data || 'N/A'}</span>`;
+
+                            return `<span class="badge ${badgeClass} badge-custom">
+                            ${badgeIcon}${status}
+                        </span>`;
                         }
                     },
                 ],
@@ -552,7 +582,7 @@ class ProduccionManager {
                 columnDefs: [
                     // Ajustes tras agregar la columna ARTICULO (desplaza índices a la derecha a partir de la posición 3)
                     { orderable: false, targets: [0, 1, 8, 9] },
-                    { visible: false, targets: [8, 11] },
+                    { visible: false, targets: [8] },
                     { className: "text-center", targets: [0, 2, 5, 6, 7, 8, 10] },
 
                     // Prioridades responsive (ahora 11 columnas: 0..10)
@@ -1304,6 +1334,113 @@ class ProduccionManager {
             $('#btnExportarParos')
                 .html('<i class="bi bi-file-earmark-excel-fill me-1"></i>Exportar')
                 .prop('disabled', false);
+        }
+    }
+
+    // ========================================
+    // SIGNALR MANAGER - PAROS
+    // ========================================
+    initHubParos() {
+        const self = this;
+        const hub = $.connection.mantenimientoHub;
+        let reconnectDelay = 5000;
+        let modalActualizacion = null;
+
+        const miRol = self.datos_usuario[0].TIPOUSUARIO;
+
+        // ── Todos reciben el aviso excepto quien hizo el cambio ──
+        const debeRecibirAviso = (rolQueCambio) => miRol !== rolQueCambio;
+
+        // ── Inicializar modal una sola vez ──
+        const $modalEl = document.getElementById('actualizacionDatosModal');
+        if ($modalEl) {
+            modalActualizacion = new bootstrap.Modal($modalEl, { backdrop: 'static', keyboard: false });
+
+            document.getElementById('btnConfirmarActualizacion')
+                .addEventListener('click', function () {
+                    modalActualizacion.hide();
+                    self._recargarTablaParos();
+                });
+        }
+
+        // ========================================
+        // 📡 EVENTO PRINCIPAL
+        // ========================================
+        hub.client.actualizarTablaParos = function (rolQueCambio) {
+            console.warn("📡 Actualización recibida desde SignalR | Origen:", rolQueCambio || "desconocido");
+
+            // if (!debeRecibirAviso(rolQueCambio)) {
+            //     console.info("🔕 Aviso ignorado — no corresponde a este rol:", miRol);
+            //     return;
+            // }
+
+            if ($modalEl && $modalEl.classList.contains('show')) return;
+
+            if (self._isReloadingParos) return;
+
+            modalActualizacion
+                ? modalActualizacion.show()
+                : self._recargarTablaParos();
+        };
+
+        // ========================================
+        // 🚀 START HUB (con fallback controlado)
+        // ========================================
+        $.connection.hub.start({
+            transport: ['webSockets', 'longPolling']
+        }).done(function () {
+            console.log("✅ SignalR conectado | Rol:", miRol);
+            console.log("🚚 Transporte:", $.connection.hub.transport.name);
+        }).fail(function (error) {
+            console.error("❌ Error al conectar SignalR:", error);
+        });
+
+        // ========================================
+        // 🔄 RECONNECTING
+        // ========================================
+        $.connection.hub.reconnecting(function () {
+            console.warn("🔄 SignalR reconectando...");
+        });
+
+        // ========================================
+        // 🔁 RECONNECTED — recarga silenciosa
+        // ========================================
+        $.connection.hub.reconnected(function () {
+            console.info("✅ SignalR reconectado | Rol:", miRol);
+            self._recargarTablaParos();
+            reconnectDelay = 5000;
+        });
+
+        // ========================================
+        // ❌ DISCONNECTED (retry exponencial)
+        // ========================================
+        $.connection.hub.disconnected(function () {
+            console.error("❌ SignalR desconectado");
+            setTimeout(function () {
+                console.warn(`🔁 Reintentando conexión en ${reconnectDelay / 1000}s...`);
+                $.connection.hub.start();
+                reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+            }, reconnectDelay);
+        });
+    }
+
+    // ========================================
+    // 🔁 RECARGA CENTRALIZADA PAROS
+    // ========================================
+    _recargarTablaParos() {
+        $('.modal.show').modal('hide');
+
+        if (this._isReloadingParos) return;
+
+        this._isReloadingParos = true;
+
+        if ($.fn.DataTable.isDataTable('#HistorialParos')) {
+            $('#HistorialParos').DataTable().ajax.reload(() => {
+                this._isReloadingParos = false;
+            }, false);
+        } else {
+            this.llenarTablaParos(); // 🔥 ajusta al método real
+            this._isReloadingParos = false;
         }
     }
 

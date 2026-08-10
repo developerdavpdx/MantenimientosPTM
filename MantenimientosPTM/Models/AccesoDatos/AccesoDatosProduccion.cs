@@ -167,6 +167,8 @@ namespace MantenimientosPTM
             public string USUARIO { get; set; }
             public string COMENTARIOS { get; set; }
             public string ESTATUS { get; set; }
+            public string ORDEN_TRABAJO_FINALIZADA { get; set; }
+            public string DESC_ESTATUS_ORDEN { get; set; }
             public string FECHA_PARO_STRING { get; set; }
             public string FECHA_REANUDACION_STRING { get; set; }
             public decimal? DURACION_HRS { get; set; }

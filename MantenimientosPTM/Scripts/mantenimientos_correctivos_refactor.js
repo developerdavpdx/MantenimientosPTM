@@ -1378,6 +1378,20 @@ class MantenimientoManager {
                     console.warn("⚠️ Error parseando horaApertura:", data.horaApertura);
                 }
             }
+            // ========================================
+            // 5️ FECHA/HORA CIERRE
+            // ========================================
+            if (data.horaCierre) {
+                try {
+                    const [fechaParte, horaParte] = data.horaCierre.split(' ');
+                    const [dia, mes, anio] = fechaParte.split('/');
+                    const HoraCierreOT = horaParte.substring(0, 5);
+                    $("#FechaFinExtrema").val(`${anio}-${mes}-${dia}`);
+                    $("#HoraCierre").val(HoraCierreOT);
+                } catch (err) {
+                    console.warn("⚠️ Error parseando horaApertura:", data.horaApertura);
+                }
+            }
 
             $("#Scrap").val(data.scrap);
             $("#HoraCierreMan").val(data.horaCierreMan);

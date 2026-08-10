@@ -235,11 +235,11 @@ namespace MantenimientosPTM.Controllers
                 );
 
                 // ── Deserializar resultado ────────────────────────────────────────────
-                List<AccesoDatosProduccion.ParoProduccionSS> filas = new List<AccesoDatosProduccion.ParoProduccionSS>();
+                List<AccesoDatosProduccion.ParoProduccionSS> filas = new List<ParoProduccionSS>();
 
                 if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
                 {
-                    filas = JsonConvert.DeserializeObject<List<AccesoDatosProduccion.ParoProduccionSS>>(resultHana.JsonResult);
+                    filas = JsonConvert.DeserializeObject<List<ParoProduccionSS>>(resultHana.JsonResult);
                 }
 
                 // ── Paginación ────────────────────────────────────────────────────────

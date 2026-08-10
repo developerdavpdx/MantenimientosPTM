@@ -78,6 +78,9 @@ namespace MantenimientosPTM.Controllers
                     string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
                     var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
                     context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
+
+                    //NOTIFICAR EN LA WEB EN LA VISTA PAROS SOBRE ACTUALIZACIONES (SIGNAL R)
+                    context.Clients.All.actualizarTablaParos(rolQueCambio);
                 }
 
                 return Json(jsonResponse);

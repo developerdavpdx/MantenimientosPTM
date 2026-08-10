@@ -24,5 +24,11 @@ namespace MantenimientosPTM.Hubs
         {
             Clients.All.actualizarTablaSolicitudCompra(planta);
         }
+
+        // ✅ NUEVO: Notificación de nuevos mantenimeintos correctivos en la vista paros
+        public void NotificarMantenimientosCorrectivos()
+        {
+            Clients.All.actualizarTablaParos();
+        }
     }
 }
