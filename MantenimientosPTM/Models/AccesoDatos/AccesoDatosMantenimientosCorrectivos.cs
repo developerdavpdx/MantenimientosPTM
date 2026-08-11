@@ -253,6 +253,8 @@ namespace MantenimientosPTM
             // Nuevo campo: indicador si la máquina estaba detenida (1 = detenido, 0 = funcionando)
             [JsonProperty("MAQUINA_DETENIDA")]
             public int MaquinaDetenida { get; set; }
+            [JsonProperty("TIENE_REFACCIONES")]
+            public string TieneRefacciones { get; set; }
         }
         public class MantenimientoPreventivoGenerado
         {

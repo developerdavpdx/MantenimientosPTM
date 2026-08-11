@@ -591,7 +591,7 @@
                                         <i class="bi bi-hourglass-split"></i> Duración Hrs<span class="text-danger">*</span>
                                     </label>
                                     <input type="text" class="form-control-custom" id="DuracionHrs" name="DuracionHrs"
-                                           placeholder="0.0" required readonly autocomplete="off"  data-bs-toggle="tooltip" data-bs-placement="top" title="⏳ Tiempo de espera: tiempo transcurrido desde la hora de inicio técnico hasta la hora fin técnico">
+                                           placeholder="0.0" required readonly autocomplete="off" data-bs-toggle="tooltip" data-bs-placement="top" title="⏳ Tiempo de espera: tiempo transcurrido desde la hora de inicio técnico hasta la hora fin técnico">
                                     <div class="modal-error-msg invalid-feedback"><img src="~/Content/Images/alerta.gif" width="24" class"me-3"> Indique la duración en horas.</div>
                                 </div>
                                 <div class="col-md-6">
@@ -787,11 +787,10 @@
 <!-- ══════════════════════════════════════════════
      MODAL ACTUALIZACIÓN DE DATOS — MANTENIMIENTOS PREVENTIVOS
 ═══════════════════════════════════════════════════ -->
-<div class="modal fade" id="actualizacionDatosModal" tabindex="-1" aria-hidden="true"
+<div class="modal fade actualizacionDatosModal" id="actualizacionDatosModal" tabindex="-1" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-
             <!-- ── Header ── -->
             <div class="modal-header-custom">
                 <div class="d-flex align-items-center gap-3">
@@ -800,7 +799,7 @@
                     </div>
                     <div>
                         <div class="modal-title-custom">Actualización disponible</div>
-                        <div class="modal-subtitle-custom">Mantenimientos preventivos</div>
+                        <div class="modal-subtitle-custom">Mantenimientos correctivos</div>
                     </div>
                 </div>
             </div>
@@ -838,6 +837,69 @@
     </div>
 </div>
 
+<!-- ════════════════════════════════════════════
+     MODAL: REFACCIONES DE LA ORDEN DE TRABAJO
+     ════════════════════════════════════════════ -->
+<div class="modal fade" id="modalRefaccionesOT" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:80%">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="modal-header-custom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-wrap">
+                        <i class="bi bi-box-seam-fill"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title-custom">Refacciones de la Orden de Trabajo</div>
+                        <div class="modal-subtitle-custom">OT: <span id="refaccionesOTNumero"></span></div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body-custom">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
+                    <table class="table table-sm table-hover table-bordered mb-0 CustomTableResponsive" id="tablaRefaccionesOT">
+                        <thead class="table-light text-center position-sticky top-0" style="z-index: 1;">
+                            <tr>
+                                <th>Código</th>
+                                <th>Artículo</th>
+                                <th style="width: 100px;">Cantidad</th>
+                                <th style="width: 120px;">Urgencia</th>
+                                <th style="width: 120px;">Estatus</th>
+                                <th style="width: 120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bodyRefaccionesOT">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="bi bi-info-circle me-1"></i>Seleccione una orden para ver sus refacciones...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer-custom">
+        <button type="button" class="btn-modal-cancelar" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-1"></i> Cerrar
+        </button>
+    </div>
+</div>
 
 <!-- Container para alerts de Bootstrap -->
 <div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;">
