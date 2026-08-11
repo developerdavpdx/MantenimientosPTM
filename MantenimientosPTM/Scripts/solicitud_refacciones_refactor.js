@@ -336,7 +336,7 @@ class SolicitudRefaccionesApp {
             $('#fechaDia').val(hoy);
 
             // Firmas
-            this.solicitudManager.llenarFirmas();
+            await this.solicitudManager.llenarFirmas();
 
             $('#solicitante').val(solicita);
             $('#numEmpleado').val(numeroempleado);
@@ -1570,72 +1570,58 @@ class SolicitudManager {
     // MÉTODOS DE FIRMAS Y AUTORIZACIONES
     // ========================================
 
-    llenarFirmas() {
-        $("#firmaAlmacen").empty();
-        $("#firmaAutoriza").empty();
-        $("#devolucionEntrega").empty();
-        $("#devolucionRecibe").empty();
+    async llenarFirmas() {
+        // Limpiar todos los selects
+        const selectsAlmacen = ["#firmaAlmacen", "#devolucionEntrega"];
+        const selectsAutoriza = ["#firmaAutoriza", "#devolucionRecibe"];
 
-        const templateOption = `<option value="{{NOMBRE}}">{{NOMBRE}}</option>`;
+        [...selectsAlmacen, ...selectsAutoriza].forEach(sel => {
+            $(sel).empty().append(`<option value="">Cargando...</option>`).prop('disabled', true);
+        });
 
-        // ✅ Configuración por planta
-        let autorizadores = [];
-        let almacenistas = [];
+        try {
+            const [entregadores, autorizadores] = await Promise.all([
+                this.obtenerEmpleadosAlmacenPorRol('ENTREGADOR'),
+                this.obtenerEmpleadosAlmacenPorRol('AUTORIZADOR')
+            ]);
 
-        const planta = this.datos_usuario[0].PLANTA;
+            // ✅ Llenar entregadores (firmaAlmacen + devolucionEntrega)
+            const opcionesEntregadores = entregadores.length > 0
+                ? entregadores.map(e =>
+                    `<option value="${e.IDENTIFICADOR || e.NOMBRE_COMPLETO}">${e.NOMBRE_COMPLETO}</option>`
+                ).join('')
+                : `<option value="">Sin entregadores disponibles</option>`;
 
-        if (planta == 1) {
-            // Planta 1
-            autorizadores = [
-                { Nombre: "SIMP1" }, { Nombre: "MPVCS" }, { Nombre: "MPVCC" },
-                { Nombre: "MPEADC" }, { Nombre: "MPEADS" }, { Nombre: "HP1C" },
-                { Nombre: "HPVCS" }, { Nombre: "HPEADS" }
-            ];
-            almacenistas = [
-                { Nombre: "TMPVC1" }, { Nombre: "TMPVC2" }, { Nombre: "TMPVC3" },
-                { Nombre: "TMPVC4" }, { Nombre: "TMPEAD1" }, { Nombre: "TMPEAD2" },
-                { Nombre: "TMPEAD3" }, { Nombre: "TMPEAD4" }, { Nombre: "TMPEAD5" },
-                { Nombre: "THPVC1" }, { Nombre: "THPVC2" }, { Nombre: "THPVC3" },
-                { Nombre: "THPVC4" }, { Nombre: "THPEAD1" }, { Nombre: "THPEAD2" },
-                { Nombre: "THPEAD3" }, { Nombre: "THPEAD4" }
-            ];
-        } else {
-            // Otras plantas
-            autorizadores = [
-                { Nombre: "JM001" }, { Nombre: "SM001" }, { Nombre: "SH001" }
-            ];
-            almacenistas = [
-                { Nombre: "TM001" }, { Nombre: "TM002" }, { Nombre: "TM003" },
-                { Nombre: "TM004" }, { Nombre: "TM005" }, { Nombre: "TM006" },
-                { Nombre: "TM007" }, { Nombre: "TM008" }, { Nombre: "TM009" },
-                { Nombre: "TM010" }, { Nombre: "TH001" }, { Nombre: "TH002" },
-                { Nombre: "TH003" }, { Nombre: "TH004" }, { Nombre: "TH005" },
-                { Nombre: "TH006" }, { Nombre: "TH007" }, { Nombre: "TH008" },
-                { Nombre: "TH009" }, { Nombre: "TH010" }
-            ];
+            selectsAlmacen.forEach(sel => {
+                $(sel).empty().append(opcionesEntregadores).prop('disabled', false);
+            });
+
+            // ✅ Llenar autorizadores (firmaAutoriza + devolucionRecibe)
+            const opcionesAutorizadores = autorizadores.length > 0
+                ? autorizadores.map(e =>
+                    `<option value="${e.IDENTIFICADOR || e.NOMBRE_COMPLETO}">${e.NOMBRE_COMPLETO}</option>`
+                ).join('')
+                : `<option value="">Sin autorizadores disponibles</option>`;
+
+            selectsAutoriza.forEach(sel => {
+                $(sel).empty().append(opcionesAutorizadores).prop('disabled', false);
+            });
+
+            console.log(`✅ Firmas cargadas — Entregadores: ${entregadores.length} | Autorizadores: ${autorizadores.length}`);
+
+        } catch (error) {
+            console.error('Error al llenar firmas:', error);
+            [...selectsAlmacen, ...selectsAutoriza].forEach(sel => {
+                $(sel).empty().append(`<option value="">Error al cargar</option>`);
+            });
         }
-
-        let opcionesAuth = "";
-        autorizadores.forEach(a => {
-            opcionesAuth += templateOption.replaceAll('{{NOMBRE}}', a.Nombre);
-        });
-
-        let opcionesAlm = "";
-        almacenistas.forEach(a => {
-            opcionesAlm += templateOption.replaceAll('{{NOMBRE}}', a.Nombre);
-        });
-
-        $("#firmaAlmacen").append(opcionesAlm);
-        $("#firmaAutoriza").append(opcionesAuth);
-        $("#devolucionEntrega").append(opcionesAlm);
-        $("#devolucionRecibe").append(opcionesAuth);
     }
 
     // ========================================
     // MÉTODO PARA ABRIR MODAL DE DEVOLUCIÓN
     // ========================================
 
-    abrirModalDevolucion(articulosAtendidos) {
+   async abrirModalDevolucion(articulosAtendidos) {
 
         this.articulosAtendidos = articulosAtendidos;
         $("#btnRechazarDev").removeClass("d-none");
@@ -1770,7 +1756,7 @@ class SolicitudManager {
         this._configurarEventosDevolucion();
 
         // Inicializar firmas
-        this.llenarFirmas();
+        await this.llenarFirmas();
 
         // Limpiar formulario
         $('#devolucionSolicitante').val('');
@@ -2475,6 +2461,27 @@ class SolicitudManager {
 
         // ✅ Reinicializar tooltips
         $('[data-bs-toggle="tooltip"]').tooltip();
+    }
+
+    async obtenerEmpleadosAlmacenPorRol(rol) {
+        try {
+            const planta = this.datos_usuario[0].PLANTA;
+            const response = await $.ajax({
+                url: `/${this.URLBase}/GetEmpleadosAlmacenPorRol`,
+                method: 'GET',
+                data: { planta, rol },
+                dataType: 'json'
+            });
+
+            if (response.Status === 'OK') {
+                return JSON.parse(response.Data);
+            }
+            console.warn(`Sin empleados para rol ${rol}:`, response.Message);
+            return [];
+        } catch (error) {
+            console.error(`Error al obtener empleados rol ${rol}:`, error);
+            return [];
+        }
     }
 }
 

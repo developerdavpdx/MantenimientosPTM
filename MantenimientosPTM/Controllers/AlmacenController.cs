@@ -2546,6 +2546,60 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        [HttpGet]
+        public JsonResult GetEmpleadosAlmacenPorRol(int planta, string rol)
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            try
+            {
+                if (string.IsNullOrEmpty(rol))
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "El rol es requerido.";
+                    jsonResponse.Data = "[]";
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer)  },
+                    { "P_ROL",    (rol,    ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetEmpleadosAlmacenPorRol,
+                    parameters
+                );
+
+                if (resultHana.JsonResult.Contains("ERROR"))
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "No fue posible obtener los empleados.";
+                    jsonResponse.Data = "[]";
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+
+                List<EmpleadoRol> empleados = new List<EmpleadoRol>();
+                if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
+                {
+                    empleados = JsonConvert.DeserializeObject<List<EmpleadoRol>>(resultHana.JsonResult);
+                }
+
+                jsonResponse.Status = "OK";
+                jsonResponse.Message = $"Se obtuvieron {empleados.Count} empleado(s).";
+                jsonResponse.Data = JsonConvert.SerializeObject(empleados);
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al obtener los empleados: " + ex.Message;
+                jsonResponse.Data = "[]";
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+
         [HttpPost]
         public JsonResult GetReporteStock()
         {

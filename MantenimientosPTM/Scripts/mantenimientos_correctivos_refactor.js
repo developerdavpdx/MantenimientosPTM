@@ -246,27 +246,28 @@ class MantenimientosPreventivoApp {
                 );
             });
 
+        
         // Lista de refacciones
         $(document).on('click', '.btn-list-refacciones', function () {
-            const $btn = $(this);
-            const ordenTrabajo = $btn.data('numeroorden');
+                const $btn = $(this);
+                const ordenTrabajo = $btn.data('numeroorden');
 
-            if (!ordenTrabajo) {
-                alert('No se encontró el número de orden de trabajo.');
-                return;
-            }
+                if (!ordenTrabajo) {
+                    alert('No se encontró el número de orden de trabajo.');
+                    return;
+                }
 
-            // Actualizar subtítulo del modal con el número de OT
-            $('#refaccionesOTNumero').text(ordenTrabajo);
+                // Actualizar subtítulo del modal con el número de OT
+                $('#refaccionesOTNumero').text(ordenTrabajo);
 
-            // Mostrar estado de carga
-            $('#bodyRefaccionesOT').html(`
-                <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
-                        <i class="bi bi-hourglass-split me-1"></i>Cargando refacciones...
-                    </td>
-                </tr>
-            `);
+                // Mostrar estado de carga
+                $('#bodyRefaccionesOT').html(`
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                    <i class="bi bi-hourglass-split me-1"></i>Cargando refacciones...
+                </td>
+            </tr>
+        `);
 
             // Mostrar modal
             const modalElement = document.getElementById('modalRefaccionesOT');
@@ -303,49 +304,78 @@ class MantenimientosPreventivoApp {
                         refacciones.forEach(item => {
 
                             let classBadge = `bg-warning text-dark`;
-
                             if (item.ESTATUS == 'Atendida') {
-                                classBadge = `bg-success text-white`
+                                classBadge = `bg-success text-white`;
+                            }
+
+                            // 🔥 Celda de cantidades surtidas/devueltas/consumidas
+                            let cantidadHTML = '';
+                            const surtida = parseFloat(item.CANTIDAD_SURTIDA) || 0;
+                            const devuelta = parseFloat(item.CANTIDAD_DEVUELTA) || 0;
+                            const consumida = parseFloat(item.CANTIDAD_CONSUMIDA) || 0;
+
+                            if (surtida === 0) {
+                                cantidadHTML = `
+                            <td class="text-center text-muted">
+                                <small>—</small>
+                            </td>`;
+                            } else if (devuelta > 0) {
+                                cantidadHTML = `
+                            <td class="text-center">
+                                <span class="d-block" title="Cantidad surtida por almacén">
+                                    📦 ${surtida}+
+                                </span>
+                                <span class="d-block text-danger" title="Cantidad devuelta">
+                                    ↩️ ${devuelta}-
+                                </span>
+                                <hr class="my-1"/>
+                                <span class="d-block fw-bold" title="Consumo neto">
+                                   ✅ ${consumida}
+                                </span>
+                            </td>`;
+                            } else {
+                                cantidadHTML = `
+                            <td class="text-center">
+                                <span title="Cantidad surtida / consumida">
+                                    <i class="bi bi-check2-circle me-1 text-success"></i>${surtida}
+                                </span>
+                            </td>`;
                             }
 
                             // 🔥 Generar botón de acción
                             let accionesHTML = '';
                             if (esAdmin) {
-
                                 if (item.ESTATUS === 'Atendida' && (item.ACEPTADA_MANTENIMIENTO == "" || item.ACEPTADA_MANTENIMIENTO == null)) {
                                     accionesHTML = `
-                                        <td class="text-center">
-                                            <button class="btn btn-sm btn-ptm-primary btn-autorizar-refaccion" 
-                                                    data-refaccion-id="${item.ID_SOLICITUD || ''}"
-                                                    data-orden-trabajo="${ordenTrabajo}"
-                                                    title="Autorizar esta refacción">
-                                                <i class="bi bi-check-circle me-1"></i>Autorizar
-                                            </button>
-                                        </td>
-                                    `;
-                                }
-                                else if (item.ACEPTADA_MANTENIMIENTO == "true") {
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-ptm-primary btn-autorizar-refaccion" 
+                                            data-refaccion-id="${item.ID_SOLICITUD || ''}"
+                                            data-orden-trabajo="${ordenTrabajo}"
+                                            title="Autorizar esta refacción">
+                                        <i class="bi bi-check-circle me-1"></i>Autorizar
+                                    </button>
+                                </td>
+                            `;
+                                } else if (item.ACEPTADA_MANTENIMIENTO == "true") {
                                     accionesHTML = `
-                                        <td class="text-center">
-                                             <span class="badge btn-ptm-primary badge-custom">Aceptada por mantenimiento</span>
-                                        </td>
-                                    `;
-                                }
-                                else if (item.ESTATUS === 'Atendida' && item.ACEPTADA_MANTENIMIENTO == "false") {
+                                <td class="text-center">
+                                    <span class="badge btn-ptm-primary badge-custom">Aceptada por mantenimiento</span>
+                                </td>
+                            `;
+                                } else if (item.ESTATUS === 'Atendida' && item.ACEPTADA_MANTENIMIENTO == "false") {
                                     accionesHTML = `
-                                        <td class="text-center">
-                                             <span class="badge bg-danger badge-custom">Rechazada por mantenimiento</span>
-                                        </td>
-                                    `;
-                                }
-                                else {
+                                <td class="text-center">
+                                    <span class="badge bg-danger badge-custom">Rechazada por mantenimiento</span>
+                                </td>
+                            `;
+                                } else {
                                     accionesHTML = `
-                                        <td class="text-center">
-                                            <button class="btn btn-sm btn-secondary" disabled title="Solo se pueden autorizar refacciones completadas">
-                                                <i class="bi bi-lock me-1"></i>No disponible
-                                            </button>
-                                        </td>
-                                    `;
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-secondary" disabled title="Solo se pueden autorizar refacciones completadas">
+                                        <i class="bi bi-lock me-1"></i>No disponible
+                                    </button>
+                                </td>
+                            `;
                                 }
                             }
 
@@ -354,48 +384,47 @@ class MantenimientosPreventivoApp {
                                 let badgeClass = (item.ACEPTADA_MANTENIMIENTO == "true") ? "btn-ptm-primary badge-custom" : "bg-danger badge-custom";
                                 let badgeText = (item.ACEPTADA_MANTENIMIENTO == "true") ? "Aceptada por mantenimiento" : "Rechazada por mantenimiento";
                                 accionesHTML = `
-                                    <td class="text-center">
-                                        <span class="badge ${badgeClass}">${badgeText}</span>
-                                    </td>`;
+                            <td class="text-center">
+                                <span class="badge ${badgeClass}">${badgeText}</span>
+                            </td>`;
                             }
 
                             html += `
-                                <tr>
-                                    <td>${item.REFACCION_SOLICITADA || ''}</td>
-                                    <td>${item.NOMBRE_ARTICULO || ''}</td>
-                                    <td class="text-center">${item.CANTIDAD || 0}</td>
-                                    <td class="text-center">
-                                       ${item.NIVEL_URGENCIA || ''}
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge text-white ${classBadge}">${item.ESTATUS || ''}</span>
-                                    </td>
-                                    ${accionesHTML}
-                                </tr>
-                            `;
+                        <tr>
+                            <td>${item.REFACCION_SOLICITADA || ''}</td>
+                            <td>${item.NOMBRE_ARTICULO || ''}</td>
+                            <td class="text-center">${item.CANTIDAD || 0}</td>
+                            <td class="text-center">${item.NIVEL_URGENCIA || ''}</td>
+                            <td class="text-center">
+                                <span class="badge text-white ${classBadge}">${item.ESTATUS || ''}</span>
+                            </td>
+                            ${cantidadHTML}
+                            ${accionesHTML}
+                        </tr>
+                    `;
                         });
 
                         $('#bodyRefaccionesOT').html(html);
 
                     } else {
                         $('#bodyRefaccionesOT').html(`
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4">
-                                    <i class="bi bi-info-circle me-1"></i>No hay refacciones registradas para esta orden.
-                                </td>
-                            </tr>
-                        `);
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="bi bi-info-circle me-1"></i>No hay refacciones registradas para esta orden.
+                        </td>
+                    </tr>
+                `);
                     }
                 },
                 error: function (xhr, status, error) {
                     console.error('Error al cargar refacciones:', error);
                     $('#bodyRefaccionesOT').html(`
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                <i class="bi bi-exclamation-triangle me-1"></i>Error al cargar las refacciones.
-                            </td>
-                        </tr>
-                    `);
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Error al cargar las refacciones.
+                    </td>
+                </tr>
+            `);
                 }
             });
         });

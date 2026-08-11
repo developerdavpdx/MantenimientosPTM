@@ -8,6 +8,14 @@ namespace MantenimientosPTM
     public class AccesoDatosAlmacen
     {
         #region GeneralCommands(Procedure declaration)
+        public string GCGetEmpleadosAlmacenPorRol
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGetEmpleadosAlmacenPorRol\"";
+            }
+        }
+
         public string GCConsultaSolicitudesRefaccionesMP
         {
             get
@@ -40,7 +48,6 @@ namespace MantenimientosPTM
             }
         }
 
-
         public string GCInsertarSolicitudCompraMP
         {
             get
@@ -56,6 +63,7 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarSolicitudCompraDetalleMP\"";
             }
         }
+
         public string GCActualizarCabeceraSolicitudCompraMP
         {
             get
@@ -63,6 +71,7 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOActualizarCabeceraSolicitudCompraMP\"";
             }
         }
+
         public string GCActualizarSolicitudCompraDetalleMP
         {
             get
@@ -70,6 +79,7 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOActualizarSolicitudCompraDetalleMP\"";
             }
         }
+
         public string GCConsultaSolicitudesCompraMP
         {
             get
@@ -93,6 +103,7 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGetDetallesSolicitudCompraMP\"";
             }
         }
+
         public string GCGetSolicitudesCompraFiltradoMP
         {
             get
@@ -116,6 +127,7 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGetCostCenters\"";
             }
         }
+
         public string GCConsultaProveedores
         {
             get
@@ -123,7 +135,6 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOBuscarProveedores\"";
             }
         }
-
 
         public string GCUpdateEstatusAuthSC
         {
@@ -140,8 +151,6 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOUpdateEstatusComAuthSC\"";
             }
         }
-
-
 
         public string GCSActualizarSolicitudCompraDetalleMP
         {
@@ -259,8 +268,6 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGetMovimientoSalidaPorSolicitud\"";
             }
         }
-
-
 
         /// <summary>
         /// Inserta los movimientos (Salidas,Devoluciones) de almacen
@@ -512,10 +519,18 @@ namespace MantenimientosPTM
             public string FolioCompra { get; set; }
             [JsonProperty("FOLIO_SALIDA")]
             public string FolioSalida { get; set; }
-            [JsonProperty("CANTIDAD_SURTIDA")]
-            public string CantidadSurtida { get; set; }
+
             [JsonProperty("ACEPTADA_MANTENIMIENTO")]
             public string AceptadaMantenimiento { get; set; }
+
+            [JsonProperty("CANTIDAD_SURTIDA")]
+            public decimal CantidadSurtida { get; set; }
+
+            [JsonProperty("CANTIDAD_DEVUELTA")]
+            public decimal CantidadDevuelta { get; set; }
+
+            [JsonProperty("CANTIDAD_CONSUMIDA")]
+            public decimal CantidadConsumida { get; set; }
         }
 
         // Modelo para cada línea de solicitud
@@ -1018,6 +1033,57 @@ namespace MantenimientosPTM
 
             [JsonProperty("USUARIOATIENDE")]
             public string UsuarioAtiende { get; set; }
+        }
+
+        public class EmpleadoRol
+        {
+            [JsonProperty("IDENTIFICADOR")]
+            public string Identificador { get; set; }
+
+            [JsonProperty("CODIGO_EMPLEADO")]
+            public string CodigoEmpleado { get; set; }
+
+            [JsonProperty("EMP_ID")]
+            public int EmpId { get; set; }
+
+            [JsonProperty("NUM_NOMINA")]
+            public string NumNomina { get; set; }
+
+            [JsonProperty("EMAIL")]
+            public string Email { get; set; }
+
+            [JsonProperty("NOMBRE_COMPLETO")]
+            public string NombreCompleto { get; set; }
+
+            [JsonProperty("TITULO_PUESTO")]
+            public string TituloPuesto { get; set; }
+
+            [JsonProperty("PUESTO")]
+            public string Puesto { get; set; }
+
+            [JsonProperty("DEPARTAMENTO")]
+            public string Departamento { get; set; }
+
+            [JsonProperty("PLANTA")]
+            public int Planta { get; set; }
+
+            [JsonProperty("USUARIO_WEB")]
+            public string UsuarioWeb { get; set; }
+
+            [JsonProperty("TIPO_USUARIO")]
+            public string TipoUsuario { get; set; }
+
+            [JsonProperty("AUTORIZADOR_ID")]
+            public int AutorizadorId { get; set; }
+
+            [JsonProperty("AUTORIZADOR_CODIGO")]
+            public string AutorizadorCodigo { get; set; }
+
+            [JsonProperty("AUTORIZADOR_NOMBRE")]
+            public string AutorizadorNombre { get; set; }
+
+            [JsonProperty("AUTORIZADOR_EMAIL")]
+            public string AutorizadorEmail { get; set; }
         }
 
         #endregion
