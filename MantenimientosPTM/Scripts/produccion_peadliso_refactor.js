@@ -126,7 +126,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             false
         );
         // 🔥 CONSULTAR DATOS (firma actualizada con 5 params, igual que PVC)
-        this.consultarDatos(null, null, null, null, null);
+        this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
         console.log('✅ Sistema PEAD LISO inicializado');
     }
 
@@ -288,7 +288,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
     }
 
-    async consultarDatos(fechaInicio, fechaFin, FiltroTurno, FiltroLinea, filtroProducto) {
+    async consultarDatos(fechaInicio, fechaFin, FitroPlanta, FiltroTurno, FiltroLinea, filtroProducto) {
 
         try {
             GlobalUtil.mostrarLoader(true);
@@ -301,6 +301,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     FiltroFechaInicio: fechaInicio,
                     FiltroFechaFin: fechaFin,
                     FiltroLinea: FiltroLinea,
+                    FiltroPlanta: FitroPlanta,
                     FiltroTurno: FiltroTurno || '',        // 🔥 NUEVO
                     FiltroProducto: filtroProducto || ''   // 🔥 NUEVO
                 }
@@ -2055,7 +2056,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 const filtroProducto = $('#FiltroProducto').val();
                 const FiltroLinea = $('#FiltroLinea').val();
 
-                await this.consultarDatos(fechaInicio, fechaFin, filtroTurno, FiltroLinea, filtroProducto);
+                await this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, filtroTurno, FiltroLinea, filtroProducto);
             } finally {
                 $btn.prop('disabled', false);
             }
@@ -2084,7 +2085,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             $("#FiltroProducto").val("");
             $("#FiltroLinea").val("");
 
-            this.consultarDatos(null, null, null, null, null);
+            this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
 
         });
 
@@ -2097,7 +2098,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 const FechaTexto = this.formatearRangoFechas(fechaInicio, fechaFin);
                 $("#mesActual").text(FechaTexto);
 
-                this.consultarDatos(fechaInicio, fechaFin, null, null, null);
+                this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, null, null, null);
 
             });
 
@@ -2262,7 +2263,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 this.cambiosPendientes = [];
 
                 // 🔥 refrescar grid
-                this.consultarDatos(null, null, null, null, null);
+                this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
 
             } else {
 

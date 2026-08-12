@@ -2949,6 +2949,12 @@ class SessionManager {
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#MetricasURL").addClass("d-none"); //METRICAS
+            if (planta == 2) {
+                $("#RegistroProduccionCorrugadoURL").addClass("d-none");
+                $("#RegistroProduccionPLURL").addClass("d-none");
+            } else {
+                $("#RegistroProduccionINYURL").addClass("d-none");                
+            } 
         }
 
         return true;
