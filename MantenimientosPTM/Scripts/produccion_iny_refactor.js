@@ -41,7 +41,7 @@ class UIManager_INY {
 // ========================================
 class GestionProduccionINY extends GestionProduccionBase {
     constructor(datos_usuario, URLBase) {
-        super(datos_usuario, URLBase, 120); // 🔥 ID_PROCESO distinto al PVC
+        super(datos_usuario, URLBase, 110); // 🔥 ID_PROCESO distinto al PVC
         this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos";
         this.URLBaseMantenimientosPreventivos = "MantenimientosPreventivos";
         // 🔥 TODO: reemplazar con el ID_AREA real de INY PL2
@@ -737,7 +737,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                         field: 'Mes',
                         headerName: 'Mes',
                         editable: false,
-                        width: 130,
+                        width: 150,
                         cellClass: 'celda-gris',
                         pinned: 'left',
                         // 🔥 Renderer con emoji + tooltip + punto pulsante
