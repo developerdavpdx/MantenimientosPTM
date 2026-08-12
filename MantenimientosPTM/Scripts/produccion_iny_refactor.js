@@ -172,7 +172,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     Mes: item.MES || this.obtenerNombreMes(item.FECHA),
                     Fecha: item.FECHA,
                     Linea: item.LINEA,
-                    Inyectora: item.INYECTORA,
+                    Inyectora: item.NombreEquipo,
                     Producto: item.PRODUCTO,
                     Descripcion: item.DESCRIPCION,
                     OP: item.OP,
@@ -272,7 +272,7 @@ class GestionProduccionINY extends GestionProduccionBase {
 
             // Productos terminados
             let PLANTA = this.datos_usuario[0].PLANTA;
-            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PINY');
+            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'INY'); //Antes PINY
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
 
             // Si no hay nada, mostrar placeholder
@@ -361,7 +361,7 @@ class GestionProduccionINY extends GestionProduccionBase {
             nuevaFila.OTMC = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
             nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
-            nuevaFila.TiempoMuertoCorrectivos = parseFloat(item.DuracionHrs) || 0;
+            nuevaFila.TiempoMuertoCorrectivos = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
 
             nuevaFila._origen = 'CORRECTIVO';
             nuevaFila._marcador = '🔧';
@@ -377,6 +377,8 @@ class GestionProduccionINY extends GestionProduccionBase {
                 nuevaFila.Linea = null;
                 lineasNoEncontradas.push(item.NumeroOrden);
             }
+
+            nuevaFila.Inyectora = item.NombreEquipo || '';
 
             this.recalcularFila(nuevaFila);
             filasNuevas.push(nuevaFila);
@@ -1271,7 +1273,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     MES: node.data.Mes,
                     FECHA: node.data.Fecha,
                     LINEA: node.data.Linea,
-                    INYECTORA: node.data.Inyectora,
+                    INYECTORA: node.data.NombreEquipo,
                     PRODUCTO: node.data.Producto,
                     DESCRIPCION: node.data.Descripcion,
                     OP: node.data.OP,
