@@ -2326,11 +2326,21 @@ class EquipoManager {
                     EquiposUtil.llenarTipoEquipos();
 
                 } else {
-                    let customMessage = JSON.parse(response.Data);
-                    let FinalMessage = response.Message + " " + customMessage[0].Message;
                     $("#btnGuardarTipoEquipo").html('<i class="bi bi-save me-1"></i>Guardar');
                     $("#btnGuardarTipoEquipo").prop("disabled", false);
-                    AlertManager.mostrar(FinalMessage + "." || 'Error al insertar nueva línea', 'warning', "alertTipoEquipoContainer");
+
+                    let FinalMessage = response.Message;
+                    try {
+                        let customMessage = JSON.parse(response.Data);
+                        if (customMessage && customMessage.length > 0 && customMessage[0].Message) {
+                            FinalMessage = response.Message + " " + customMessage[0].Message;
+                        }
+                    } catch (e) {
+                        // Si no es JSON válido, usar solo el mensaje de respuesta
+                        FinalMessage = response.Message;
+                    }
+
+                    AlertManager.mostrar(FinalMessage + "." || 'Error al insertar tipo de equipo', 'warning', "alertTipoEquipoContainer");
                 }
             },
             error: (xhr, status, error) => {

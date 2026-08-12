@@ -694,16 +694,15 @@ namespace MantenimientosPTM.Controllers
                 );
 
                 // Respuesta
-                jsonResponse.Status = resultHana.JsonResult.Contains("ERROR") ? "NO" : "SI";
-                jsonResponse.Message = resultHana.JsonResult.Contains("ERROR")
-                    ? "No fue posible insertar el tipo de equipo."
-                    : "Tipo de equipo insertado correctamente.";
+                bool hasError = resultHana.JsonResult.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0;
+                bool hasDuplicate = resultHana.JsonResult.IndexOf("DUPLICADO", StringComparison.OrdinalIgnoreCase) >= 0;
 
-                // Respuesta
-                jsonResponse.Status = resultHana.JsonResult.Contains("DUPLICADO") ? "NO" : "SI";
-                jsonResponse.Message = resultHana.JsonResult.Contains("ERROR")
-                    ? "No fue posible insertar el tipo de equipo."
-                    : "Tipo de equipo insertado correctamente.";
+                jsonResponse.Status = (hasError || hasDuplicate) ? "NO" : "SI";
+                jsonResponse.Message = hasDuplicate
+                    ? "El tipo de equipo ya existe."
+                    : hasError
+                        ? "No fue posible insertar el tipo de equipo."
+                        : "Tipo de equipo insertado correctamente.";
 
                 jsonResponse.Data = resultHana.JsonResult;
 
