@@ -277,6 +277,7 @@ namespace MantenimientosPTM.Controllers
                 string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
                 var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
                 context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+                context.Clients.All.actualizarCalendarioMantenimientos();
 
                 return Json(jsonResponse);
             }
@@ -411,6 +412,7 @@ namespace MantenimientosPTM.Controllers
                 string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
                 var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
                 context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+                context.Clients.All.actualizarCalendarioMantenimientos();
 
                 // ✅ Verificar resultado
                 if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")

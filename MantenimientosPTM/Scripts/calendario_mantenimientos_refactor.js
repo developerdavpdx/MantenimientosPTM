@@ -4,8 +4,9 @@
 class GestionEventosApp {
     constructor() {
         this.URLBase = "Calendario";
-        this.datos_usuario = GlobalUtil.getDatosUsuario(); // ✅ Variable local
+        this.datos_usuario = GlobalUtil.getDatosUsuario();
         this.calendarManager = new CalendarManager(this.URLBase, this.datos_usuario);
+        this._isReloading = false; // 🔥 flag para evitar recargas simultáneas
     }
 
     inicializar() {
@@ -30,14 +31,10 @@ class GestionEventosApp {
                 this.calendarManager.aplicarFiltros();
             });
 
-        // Cargar líneas de producción únicas para el filtro (se cargará después de obtener datos)
-
         $("#FiltroArea")
             .off('change')
             .on('change', (e) => {
-
                 let Area = $(e.currentTarget).val();
-
                 EquiposUtil.llenarLineas(
                     this.datos_usuario[0].PLANTA,
                     Area,
@@ -46,9 +43,122 @@ class GestionEventosApp {
                     null
                 );
             });
-        // ✅ Cargar líneas de producción para el filtro
+
         EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, null, "FiltroArea");
+
+        // 🔥 NUEVO: Inicializar HUB de SignalR para el calendario
+        this.initHubCalendarioMantenimientos();
+
         console.log('✅ Sistema Completo de Gestión de Eventos inicializado correctamente');
+    }
+
+    // ========================================
+    // 📡 SIGNALR MANAGER - CALENDARIO MANTENIMIENTOS
+    // ========================================
+    initHubCalendarioMantenimientos() {
+        const self = this;
+
+        // ✅ Validar que exista el objeto de conexión antes de usarlo
+        if (typeof $.connection === 'undefined' || !$.connection.mantenimientoHub) {
+            console.error('❌ SignalR no está disponible. Verifica que /signalr/hubs esté cargado en esta vista.');
+            return;
+        }
+
+        const hub = $.connection.mantenimientoHub;
+        let reconnectDelay = 5000;
+        let modalActualizacion = null;
+
+        // ── Inicializar modal una sola vez (si existe en esta vista) ──
+        const $modalEl = document.getElementById('actualizacionDatosModal');
+        if ($modalEl) {
+            modalActualizacion = new bootstrap.Modal($modalEl, { backdrop: 'static', keyboard: false });
+
+            const btnConfirmar = document.getElementById('btnConfirmarActualizacion');
+            if (btnConfirmar) {
+                btnConfirmar.addEventListener('click', function () {
+                    modalActualizacion.hide();
+                    self._recargarCalendarioMantenimientos();
+                });
+            }
+        }
+
+        // ========================================
+        // 📡 EVENTO PRINCIPAL
+        // ========================================
+        // El servidor debe invocar:
+        //   Clients.All.actualizarCalendarioMantenimientos()
+        // (o Clients.Others si quieres excluir a quien generó el cambio)
+        hub.client.actualizarCalendarioMantenimientos = function () {
+            console.warn("📡 Actualización calendario recibida desde SignalR");
+
+            // 🔥 Evitar múltiples modales apilados
+            if ($modalEl && $modalEl.classList.contains('show')) return;
+
+            // 🔥 Evitar aviso si ya hay un reload en curso
+            if (self._isReloading) return;
+
+            modalActualizacion
+                ? modalActualizacion.show()
+                : self._recargarCalendarioMantenimientos();
+        };
+
+        // ========================================
+        // 🚀 START HUB (con fallback controlado)
+        // ========================================
+        $.connection.hub.start({
+            transport: ['webSockets', 'longPolling']
+        }).done(function () {
+            console.log("✅ SignalR Calendario conectado");
+            console.log("🚚 Transporte:", $.connection.hub.transport.name);
+        }).fail(function (error) {
+            console.error("❌ Error al conectar SignalR Calendario:", error);
+        });
+
+        // ========================================
+        // 🔄 RECONNECTING
+        // ========================================
+        $.connection.hub.reconnecting(function () {
+            console.warn("🔄 SignalR Calendario reconectando...");
+        });
+
+        // ========================================
+        // 🔁 RECONNECTED — recarga silenciosa
+        // ========================================
+        $.connection.hub.reconnected(function () {
+            console.info("✅ SignalR Calendario reconectado");
+            self._recargarCalendarioMantenimientos();
+            reconnectDelay = 5000;
+        });
+
+        // ========================================
+        // ❌ DISCONNECTED (retry exponencial)
+        // ========================================
+        $.connection.hub.disconnected(function () {
+            console.error("❌ SignalR Calendario desconectado");
+            setTimeout(function () {
+                console.warn(`🔁 Reintentando conexión en ${reconnectDelay / 1000}s...`);
+                $.connection.hub.start();
+                reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+            }, reconnectDelay);
+        });
+    }
+
+    // ========================================
+    // 🔁 RECARGA CENTRALIZADA (reutilizable)
+    // ========================================
+    _recargarCalendarioMantenimientos() {
+        $('.modal.show').modal('hide');
+
+        if (this._isReloading) return;
+
+        this._isReloading = true;
+
+        // 🔥 CalendarManager usa FullCalendar, no DataTable,
+        // así que recargamos llamando directo a su método de carga
+        this.calendarManager.cargarEventosReales()
+            .finally(() => {
+                this._isReloading = false;
+            });
     }
 
     guardarEvento() {
