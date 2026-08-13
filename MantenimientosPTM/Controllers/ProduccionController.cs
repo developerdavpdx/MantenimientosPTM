@@ -1592,6 +1592,17 @@ namespace MantenimientosPTM.Controllers
                                         );
 
                                         JArray Articulo = JArray.Parse(resultHana.JsonResult);
+
+                                        // ✅ Si viene vacío, skip
+                                        if (!Articulo.Any())
+                                        {
+                                            row["Turno"] = turno;
+                                            row["PesoMinimo"] = 0;
+                                            row["KgsDia"] = 0;
+                                            continue;
+                                        }
+
+
                                         decimal KgsDia = Convert.ToDecimal(Articulo[0]["KgsDia"] != null ? (decimal.Parse(Articulo[0]["KgsDia"].ToString()) / 24).ToString() : "0");
                                         decimal PesoMinimo = Convert.ToDecimal(Articulo[0]["PesoMinimo"] != null ? Articulo[0]["PesoMinimo"].ToString() : "0");
 

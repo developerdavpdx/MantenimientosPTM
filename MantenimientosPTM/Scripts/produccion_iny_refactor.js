@@ -569,7 +569,9 @@ class GestionProduccionINY extends GestionProduccionBase {
                 url: `/${this.URLBase}/GetProductoTerminadoNewScale`,
                 type: "GET",
                 headers: {
-                    "Planta": planta || this.datos_usuario[0].PLANTA,
+                    "FechaInicio": FechaInicio,
+                    "FechaFin": FechaFin,
+                    "Planta": this.datos_usuario[0].PLANTA,
                     "Turno": FiltroTurno || null,
                     "Proceso": proceso || ""
                 },
@@ -1391,11 +1393,36 @@ class GestionProduccionINY extends GestionProduccionBase {
             modal.show();
         });
 
-        $('#btnAplicarFiltros').on('click', () => {
-            const fechaInicio = $('#FiltroFechaInicio').val();
-            const fechaFin = $('#FiltroFechaFin').val();
-            const filtroTurno = $('#FiltroTurno').val();
-            this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, filtroTurno, null, null);
+        $('#btnAplicarFiltros').on('click', async () => {
+            const $btn = $('#btnAplicarFiltros');
+            $btn.prop('disabled', true);
+
+            try {
+                const fechaInicio = $('#FiltroFechaInicio').val();
+                const fechaFin = $('#FiltroFechaFin').val();
+                const filtroTurno = $('#FiltroTurno').val();
+                const filtroProducto = $('#FiltroProducto').val(); // 🔥 NUEVO
+                const FiltroLinea = $('#FiltroLinea').val(); // 🔥 NUEVO
+
+                await this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, filtroTurno, FiltroLinea, filtroProducto);
+            } finally {
+                $btn.prop('disabled', false);
+            }
+        });
+
+        $('#btnAplicarFiltrosPT').on('click', async () => {
+            const $btn = $('#btnAplicarFiltrosPT');
+            $btn.prop('disabled', true);
+
+            try {
+                const fechaInicio = $('#FiltroFechaInicioPT').val();
+                const fechaFin = $('#FiltroFechaFinPT').val();
+                const filtroTurno = $('#FiltroTurnoPT').val();
+                const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, 'INY');
+                const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
+            } finally {
+                $btn.prop('disabled', false);
+            }
         });
 
         $('#btnLimpiarFiltros').on('click', () => {
@@ -1406,12 +1433,18 @@ class GestionProduccionINY extends GestionProduccionBase {
 
         $('#FiltroFechaInicio, #FiltroFechaFin')
             .off('change')
+            
             .on('change', () => {
+
                 const fechaInicio = $('#FiltroFechaInicio').val();
                 const fechaFin = $('#FiltroFechaFin').val();
                 const FechaTexto = this.formatearRangoFechas(fechaInicio, fechaFin);
-                $("#mesActual").text(FechaTexto);
+                $("#mesActual").text(
+                    FechaTexto
+                );
+
                 this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, null, null, null);
+
             });
     }
 
