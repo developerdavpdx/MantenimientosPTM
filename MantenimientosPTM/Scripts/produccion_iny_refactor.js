@@ -272,7 +272,7 @@ class GestionProduccionINY extends GestionProduccionBase {
 
             // Productos terminados
             let PLANTA = this.datos_usuario[0].PLANTA;
-            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'INY'); //Antes PINY
+            const productosTerminados = await this.ObtenerProductoTerminado(null, null, PLANTA, FiltroTurno, 'INY'); //Antes PINY
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
 
             // Si no hay nada, mostrar placeholder
@@ -561,7 +561,7 @@ class GestionProduccionINY extends GestionProduccionBase {
     // ========================================
     // OBTENER PRODUCTO TERMINADO
     // ========================================
-    async ObtenerProductoTerminado(planta, FiltroTurno, proceso) {
+    async ObtenerProductoTerminado(FechaInicio, FechaFin, FiltroTurno, proceso) {
         try {
             GlobalUtil.mostrarLoader(true);
 
