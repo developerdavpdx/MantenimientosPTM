@@ -2320,7 +2320,6 @@ class EquipoManager {
 
                     setTimeout(function () {
                         $("#btnGuardarTipoEquipo").html('<i class="bi bi-save me-1"></i>Guardar');
-                        $("#modalAgregarTipoEquipo").modal('hide');
                     }, 3000);
 
                     EquiposUtil.llenarTipoEquipos();
