@@ -415,7 +415,7 @@ class MantenimientosPreventivoApp {
                                 cantidadHTML = `
                             <td class="text-center">
                                 <span title="Cantidad surtida / consumida">
-                                    <i class="bi bi-check2-circle me-1 text-success"></i>${surtida}
+                                    ✅ ${surtida}
                                 </span>
                             </td>`;
                             }
@@ -2194,15 +2194,36 @@ class MantenimientoManager {
             return;
         }
 
+        // ✅ NUEVA: Obtener cantidades actuales de la tabla (editadas por el usuario)
+        const articulosActualizados = articulos.map((art, index) => {
+            const cantidadInput = $(`.cantidad-articulo[data-index="${index}"]`);
+            const cantidadActual = cantidadInput.length > 0 ? parseInt(cantidadInput.val()) : art.Cantidad;
+            return {
+                ...art,
+                Cantidad: cantidadActual
+            };
+        });
+
+        // ✅ NUEVA VALIDACIÓN: Verificar que todas las cantidades sean mayores a 0 y no negativas
+        const articulosInvalidos = articulosActualizados.filter(art => {
+            const cantidad = parseFloat(art.Cantidad);
+            return !art.Cantidad || cantidad <= 0 || cantidad < 0;
+        });
+
+        if (articulosInvalidos.length > 0) {
+            AlertManager.mostrar('Todos los artículos deben tener una cantidad válida mayor a 0. No se permiten valores negativos o cero.', 'warning', 'alertRefaccionContainer');
+            return;
+        }
+
         // Validar prioridad y descripción
         if (!ValidationManager.validarFormulario('#formSolicitarRefaccion')) {
             AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', 'alertRefaccionContainer');
             return false;
         }
 
-        // ✅ Recopilar los datos con múltiples artículos
+        // ✅ Recopilar los datos con múltiples artículos (USANDO LAS CANTIDADES ACTUALIZADAS)
         const datos = {
-            Articulos: articulos.map(art => ({
+            Articulos: articulosActualizados.map(art => ({
                 RefaccionSolicitada: art.CodigoArticulo,
                 Cantidad: art.Cantidad,
                 IdEquipo: this.ID_EQUIPO,
@@ -2234,7 +2255,7 @@ class MantenimientoManager {
             type: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Rol-Usuario': TipoUsuario  // 👈 esto
+                'X-Rol-Usuario': TipoUsuario
             },
             contentType: 'application/json; charset=utf-8',
             data: JSON.stringify(datos),
