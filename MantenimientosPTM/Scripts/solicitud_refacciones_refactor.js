@@ -929,7 +929,7 @@ class SolicitudManager {
                     $input.val(maximo);
 
                     AlertManager.mostrar(
-                        `La cantidad máxima permitida es ${maximo} de acuerdo al nivel de stock actual`,
+                        `La cantidad máxima permitida es ${maximo} de acuerdo a la cantidad pediente de surtir`,
                         'warning'
                     );
                 }
@@ -1342,7 +1342,7 @@ class SolicitudManager {
         if (!articulos || articulos.length === 0) {
             tbody.html(`
             <tr>
-                <td colspan="14" class="text-center text-muted py-4">
+                <td colspan="19" class="text-center text-muted py-4">
                     <i class="bi bi-inbox me-2"></i>No hay artículos disponibles
                 </td>
             </tr>
@@ -1351,17 +1351,20 @@ class SolicitudManager {
             return;
         }
 
-        // ✅ NUEVO: Verificar si TODOS los artículos están "Atendida"
-        const todosAtendidos = articulos.every(art =>
-            art.ESTATUS === 'Atendida' || art.ESTATUS === 'ATENDIDA'
-        );
+        // ✅ Verificar si hay cantidad PENDIENTE POR SURTIR
+        const hayPendiente = articulos.some(art => {
+            const cantidadOriginal = art.CANTIDAD || art.Cantidad || 0;
+            const CantidadConsumidaTotal = art.CANTIDAD_CONSUMIDA ?? 0;
+            const pendiente = cantidadOriginal - CantidadConsumidaTotal;
+            return pendiente > 0;
+        });
 
         // ✅ Datos comunes del usuario
         const dept = this.datosUsuarioSalida.dept || '';
         const cedis = this.datosUsuarioSalida.cedis || '';
         const nombreEmpleado = this.datosUsuarioSalida.nombre || '';
 
-        // ✅ Obtener opciones de selects (procesos y gastos)
+        // ✅ Obtener opciones de selects
         const departamentosHtml = this.buildOptions(this.ListDepartamentos, 'PrcCode', dept);
         const procesosHtml = this.buildOptions(this.ListProcesos, 'PrcCode', 'PCPVC');
         const gastosHtml = this.buildOptions(this.ListGastos, 'PrcCode', 'GIF');
@@ -1372,26 +1375,28 @@ class SolicitudManager {
         articulos.forEach((art, index) => {
             // ✅ Acceso directo a las propiedades
             const FolioSalida = art.FOLIO_SALIDA ?? art.Folio_Salida ?? "";
-            const CantidadSurtida = art.CANTIDAD_SURTIDA ?? art.Cantidad_Surtida ?? "";
-            const refaccionSolicitada = art.REFACCION_SOLICITADA || '';
             const cantidadOriginal = art.CANTIDAD || art.Cantidad || 0;
+            const CantidadSurtida = art.CANTIDAD_SURTIDA ?? art.Cantidad_Surtida ?? "";
+            const CantidadConsumidaTotal = art.CANTIDAD_CONSUMIDA ?? 0;
+            const refaccionSolicitada = art.REFACCION_SOLICITADA || '';
             const nombreMostrar = art.NOMBRE_ARTICULO || art.NombreArticulo || refaccionSolicitada || 'N/A';
-            const minStock = art.MIN_STOCK ?? art.MinStock ?? art.minStock ?? 0;
-            const maxStock = art.MAX_STOCK ?? art.MaxStock ?? art.maxStock ?? 0;
+            const minStock = art.MIN_STOCK ?? art.MinStock ?? 0;
+            const maxStock = art.MAX_STOCK ?? art.MaxStock ?? 0;
 
-            // ✅ Calcular cantidad disponible restando salidas ya realizadas
-            const salidaExistente = salidas.find(s => s.ItemCode === refaccionSolicitada);
-            const cantidadDisponible = salidaExistente
-                ? Math.max(0, cantidadOriginal - (salidaExistente.CantidadTotal || 0))
-                : cantidadOriginal;
+            // ✅ Calcular cantidad PENDIENTE
+            const cantidadPendiente = Math.max(0, cantidadOriginal - CantidadConsumidaTotal);
+            const completamenteSurtido = cantidadPendiente <= 0;
+            const isReadOnly = (completamenteSurtido ? 'readonly' : '');
 
-            // ✅ Estados y clases
-            const isAtendida = art.ESTATUS === 'Atendida';
-            const isReadOnly = (isAtendida ? 'readonly' : '');
             const urgenciaClass = this._getUrgenciaClass(art.NIVEL_URGENCIA);
-            const estatusClass = isAtendida ? 'badge btn-ptm-primary badge-custom' : 'bg-warning text-dark';
+            const estatusClass = completamenteSurtido ? 'badge btn-ptm-primary badge-custom' : 'bg-warning text-dark';
             const urgenciaText = art.NIVEL_URGENCIA || 'N/A';
             const estatusText = art.ESTATUS || 'N/A';
+
+            // ✅ Indicador visual de pendiente
+            const indicadorPendiente = cantidadPendiente > 0
+                ? `<span class="badge bg-danger ms-2 fw-semibold">${cantidadPendiente} pendiente</span>`
+                : '';
 
             let botonesAccion = `
             <button class="btn btn-sm btn-ptm-edit btn-del-ref"
@@ -1413,7 +1418,7 @@ class SolicitudManager {
                 <i class="bi bi-arrow-repeat fs-6"></i>
             </button>`;
 
-            if (isAtendida) {
+            if (completamenteSurtido) {
                 botonesAccion = `
             <button class="btn btn-sm btn-ptm-edit btn-del-ref disabled">
                 <i class="bi bi-x-circle fs-6"></i>
@@ -1423,11 +1428,30 @@ class SolicitudManager {
             </button>`;
             }
 
+            // ✅ CRÍTICO: Construir contenido del popover PRIMERO y escapar las comillas
+            const popoverContent = this._construirContenidoPopover(art, CantidadConsumidaTotal, cantidadOriginal);
+            const popoverContentEscaped = popoverContent.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
             tbody.append(`
-                <tr class="${isAtendida ? 'salida_completada' : ''}" ${isAtendida ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Atendida"` : ''}>
+                <tr class="${completamenteSurtido ? 'salida_completada' : ''}" ${completamenteSurtido ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Completamente Surtida"` : ''}>
                     <td class="text-center align-middle">${index + 1}</td>
                     <td class="text-center align-middle">
-                        <i class="bi bi-file-earmark-text text-info me-1"></i>${FolioSalida}
+                        <div class="folios-container position-relative">
+                            <i class="bi bi-file-earmark-text text-info me-1"></i>
+                            <span class="folio-principal fw-semibold text-monospace">${FolioSalida || 'Sin folio'}</span>
+                            <span class="badge bg-secondary ms-2 cursor-pointer folio-badge" 
+                                  role="button"
+                                  tabindex="0"
+                                  data-bs-toggle="popover"
+                                  data-bs-trigger="focus"
+                                  data-bs-html="true"
+                                  data-bs-placement="left"
+                                  data-bs-custom-class="popover-folios"
+                                  title="&lt;i class=&quot;bi bi-history me-2&quot;&gt;&lt;/i&gt;Historial de Salidas"
+                                  data-bs-content="${popoverContentEscaped}">
+                                <i class="bi bi-info-circle"></i>
+                            </span>
+                        </div>
                     </td>
                     <td class="text-center align-middle">
                         <input type="checkbox" class="form-check-input chk-articuloSalida"
@@ -1436,13 +1460,14 @@ class SolicitudManager {
                                data-nombrearticulo="${art.NOMBRE_ARTICULO}"
                                data-ordentrabajo="${art.ORDEN_TRABAJO}"
                                data-nombre="${nombreMostrar}"
-                               data-cantidad="${cantidadDisponible}"
+                               data-cantidad="${cantidadPendiente}"
                                data-cantidadoriginal="${cantidadOriginal}"
-                               ${isAtendida ? 'disabled' : ''}>
+                               data-cantidadconsumida="${CantidadConsumidaTotal}"
+                               ${completamenteSurtido ? 'disabled' : ''}>
                     </td>
                     <td class="text-center align-middle">${botonesAccion}</td>
                     <td class="text-center align-middle">
-                        ${!isAtendida ? `<span class="punto-pulso-absolute"></span>` : ''}
+                        ${cantidadPendiente > 0 ? `<span class="punto-pulso-absolute"></span>` : ''}
                         <span class="badge bg-dark"><i class="bi bi-upc-scan me-1"></i>${refaccionSolicitada || 'N/A'}</span>
                     </td>
                     <td class="align-middle">
@@ -1452,13 +1477,20 @@ class SolicitudManager {
                         <i class="bi bi-boxes text-info me-1"></i>${cantidadOriginal}
                     </td>
                     <td class="text-center align-middle">
-                        <input type="number" min="1" max="${art.STOCK || maxStock}"
-                               class="form-control form-control-sm text-center fw-bold cantidadEditable" ${isAtendida ? 'disabled' : ''}
+                        <input type="number" min="1" max="${cantidadPendiente || maxStock}"
+                               class="form-control form-control-sm text-center fw-bold cantidadEditable" ${completamenteSurtido ? 'disabled' : ''}
                                value="${CantidadSurtida}"
                                data-stock="${art.STOCK || 0}"
                                data-min="${minStock}"
                                data-max="${maxStock}"
-                               ${isAtendida ? 'readonly' : ''}>
+                               data-pendiente="${cantidadPendiente}"
+                               ${completamenteSurtido ? 'readonly' : ''}>
+                    </td>
+                    <td class="text-center align-middle">
+                        <span class="badge bg-info badge-custom fw-semibold">
+                            <i class="bi bi-check-circle me-1"></i>${CantidadConsumidaTotal || 0}
+                        </span>
+                        ${indicadorPendiente}
                     </td>
                     <td class="text-center align-middle">
                         <i class="bi bi-box-seam text-info me-1"></i>${art.STOCK || 0}
@@ -1480,40 +1512,37 @@ class SolicitudManager {
                         </span>
                     </td>
                     <td class="text-center align-middle">
-                        <select ${isReadOnly} class="form-select form-select-sm departamento" ${todosAtendidos ? 'disabled' : ''}>
+                        <select ${isReadOnly} class="form-select form-select-sm departamento" ${!hayPendiente ? 'disabled' : ''}>
                         ${departamentosHtml}    
                         </select>
                     </td>
                     <td class="text-center align-middle">
-                        <select ${isReadOnly} class="form-select form-select-sm proceso" ${todosAtendidos ? 'disabled' : ''}>
+                        <select ${isReadOnly} class="form-select form-select-sm proceso" ${!hayPendiente ? 'disabled' : ''}>
                             ${procesosHtml}
                         </select>
                     </td>
                     <td class="text-center align-middle">
-                        <select ${isReadOnly} class="form-select form-select-sm gastos" ${todosAtendidos ? 'disabled' : ''}>
+                        <select ${isReadOnly} class="form-select form-select-sm gastos" ${!hayPendiente ? 'disabled' : ''}>
                             ${gastosHtml}
                         </select>
                     </td>
                     <td class="text-center align-middle">
-                    <select ${isReadOnly} class="form-select form-select-sm cedis" ${todosAtendidos ? 'disabled' : ''}>
+                        <select ${isReadOnly} class="form-select form-select-sm cedis" ${!hayPendiente ? 'disabled' : ''}>
                             ${cedisHtml}
                         </select>
                     </td>
                     <td class="text-center align-middle">
                         <input ${isReadOnly} type="text" class="form-control form-control-sm nombre_empleado text-center"
-                               value="${nombreEmpleado}" ${todosAtendidos ? 'disabled' : ''}>
+                               value="${nombreEmpleado}" ${!hayPendiente ? 'disabled' : ''}>
                     </td>
                 </tr>
             `);
         });
 
-        // ✅ NUEVO: Ocultar botón si TODOS están atendidos
-        if (todosAtendidos) {
+        // ✅ Ocultar botón solo si NO hay pendiente
+        if (!hayPendiente) {
             $("#btnGuardarVale").addClass("d-none");
-            // También deshabilitar el checkbox de seleccionar todos
             $("#chkSelAllArticulos").prop('disabled', true);
-
-            // ✅ NUEVO: Deshabilitar campos cuando todos están atendidos
             $("#solicitante").prop('disabled', true);
             $("#numEmpleado").prop('disabled', true);
             $("#area").prop('disabled', true);
@@ -1522,8 +1551,6 @@ class SolicitudManager {
         } else {
             $("#btnGuardarVale").removeClass("d-none");
             $("#chkSelAllArticulos").prop('disabled', false);
-
-            // ✅ NUEVO: Habilitar campos cuando NO todos están atendidos
             $("#solicitante").prop('disabled', false);
             $("#numEmpleado").prop('disabled', false);
             $("#area").prop('disabled', false);
@@ -1531,8 +1558,105 @@ class SolicitudManager {
             $("#firmaAutoriza").prop('disabled', false);
         }
 
-        // ✅ Reinicializar tooltips para los nuevos elementos
+        // ✅ Reinicializar tooltips y popovers
         $('[data-bs-toggle="tooltip"]').tooltip();
+        this._inicializarPopoversFolios();
+    }
+
+    _inicializarPopoversFolios() {
+        // Destruir popovers anteriores
+        $('[data-bs-toggle="popover"]').each(function () {
+            const popover = bootstrap.Popover.getInstance(this);
+            if (popover) popover.dispose();
+        });
+
+        // Reinicializar popovers
+        const popoverTriggerList = [].slice.call(
+            document.querySelectorAll('[data-bs-toggle="popover"]')
+        );
+
+        popoverTriggerList.forEach((popoverTriggerEl) => {
+            return new bootstrap.Popover(popoverTriggerEl, {
+                trigger: 'focus',
+                html: true
+            });
+        });
+
+        // Evento para cerrar popover al hacer click fuera
+        $(document).on('click', (e) => {
+            if (!$(e.target).closest('.folio-badge, .popover').length) {
+                $('[data-bs-toggle="popover"]').popover('hide');
+            }
+        });
+    }
+
+    // ========================================
+    // MÉTODOS DE APOYO PARA FOLIOS
+    // ========================================
+
+    _construirDatosFolios(art) {
+        // Aquí iría la lógica para obtener el historial
+        // Por ahora retornamos un string vacío
+        return JSON.stringify({
+            folios: art.FOLIOS_HISTORIAL || [],
+            cantidadConsumida: art.CANTIDAD_CONSUMIDA || 0,
+            cantidadOriginal: art.CANTIDAD || 0
+        });
+    }
+
+    _construirContenidoPopover(art, cantidadConsumida, cantidadOriginal) {
+        const folio = art.FOLIO_SALIDA || 'Sin folio';
+        const cantidadPendiente = Math.max(0, cantidadOriginal - cantidadConsumida);
+        const porcentajeSurtido = cantidadOriginal > 0
+            ? Math.round((cantidadConsumida / cantidadOriginal) * 100)
+            : 0;
+
+        // Simular historial (esto vendría del servidor en producción)
+        const folios = (folio && folio.includes(','))
+            ? folio.split(',').map(f => f.trim())
+            : [folio];
+
+        let contenidoFolios = folios.map((f, idx) => {
+            const cantidad = Math.ceil(cantidadConsumida / folios.length);
+            return `
+                <div class="folio-item d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        <span class="fw-semibold text-monospace">${f}</span>
+                    </div>
+                    <small class="text-muted">${cantidad} pz</small>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="popover-folios-content">
+                <div class="folios-list" style="max-height: 200px; overflow-y: auto;">
+                    ${contenidoFolios}
+                </div>
+                <div class="popover-footer py-2 border-top mt-2">
+                    <div class="d-flex justify-content-between mb-2">
+                        <small><strong>Total Surtido:</strong></small>
+                        <small class="text-success fw-bold">${cantidadConsumida} de ${cantidadOriginal} pz</small>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <small><strong>Pendiente:</strong></small>
+                        <small class="text-warning fw-bold">${cantidadPendiente} pz ⏳</small>
+                    </div>
+                    <div class="mt-2">
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-success" 
+                                 role="progressbar" 
+                                 style="width: ${porcentajeSurtido}%"
+                                 aria-valuenow="${porcentajeSurtido}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted d-block mt-1">${porcentajeSurtido}% completado</small>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     // ========================================

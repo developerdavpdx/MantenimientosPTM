@@ -269,3 +269,85 @@
     font-style: italic;
     margin-top: 0.25rem;
 }
+
+/* Estilos para Popover de Folios */
+.folios-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.folio-principal {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #0D6EFD;
+}
+
+.folio-badge {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #6C757D !important;
+}
+
+    .folio-badge:hover {
+        background-color: #5A6268 !important;
+        transform: scale(1.1);
+    }
+
+    .folio-badge:focus {
+        outline: 2px solid #0D6EFD;
+        outline-offset: 2px;
+    }
+
+/* Popover personalizado */
+.popover-folios {
+    --bs-popover-max-width: 350px;
+}
+
+.popover-folios-content {
+    padding: 0;
+    font-size: 0.875rem;
+}
+
+.folios-list {
+    scrollbar-width: thin;
+    scrollbar-color: #CED4DA #F8F9FA;
+}
+
+    .folios-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .folios-list::-webkit-scrollbar-track {
+        background: #F8F9FA;
+        border-radius: 10px;
+    }
+
+    .folios-list::-webkit-scrollbar-thumb {
+        background: #CED4DA;
+        border-radius: 10px;
+    }
+
+        .folios-list::-webkit-scrollbar-thumb:hover {
+            background: #ADB5BD;
+        }
+
+.folio-item {
+    transition: background-color 0.2s ease;
+}
+
+    .folio-item:hover {
+        background-color: #F8F9FA;
+    }
+
+.popover-footer {
+    background-color: #F8F9FA;
+    border-radius: 4px;
+    padding: 8px 12px !important;
+}
+
+.progress {
+    background-color: #E9ECEF;
+    border-radius: 3px;
+}
