@@ -1341,15 +1341,25 @@ class SolicitudManager {
 
         if (!articulos || articulos.length === 0) {
             tbody.html(`
-            <tr>
-                <td colspan="19" class="text-center text-muted py-4">
-                    <i class="bi bi-inbox me-2"></i>No hay artículos disponibles
-                </td>
-            </tr>
-        `);
+        <tr>
+            <td colspan="19" class="text-center text-muted py-4">
+                <i class="bi bi-inbox me-2"></i>No hay artículos disponibles
+            </td>
+        </tr>
+    `);
             $('#badgeTotalArticulos').text('0');
             return;
         }
+
+        // ✅ NUEVO: agrupar el historial REAL de salidas por ID_SOLICITUD
+        // (el SP SpPdxMTTOGetSalidasPorOT ahora regresa un renglón por CADA
+        // movimiento de salida, no solo el último)
+        const salidasPorSolicitud = {};
+        (salidas || []).forEach(mov => {
+            const key = mov.ID_SOLICITUD;
+            if (!salidasPorSolicitud[key]) salidasPorSolicitud[key] = [];
+            salidasPorSolicitud[key].push(mov);
+        });
 
         // ✅ Verificar si hay cantidad PENDIENTE POR SURTIR
         const hayPendiente = articulos.some(art => {
@@ -1383,6 +1393,9 @@ class SolicitudManager {
             const minStock = art.MIN_STOCK ?? art.MinStock ?? 0;
             const maxStock = art.MAX_STOCK ?? art.MaxStock ?? 0;
 
+            // ✅ Historial real de movimientos de salida para ESTA solicitud
+            const historialSalidas = salidasPorSolicitud[art.ID_SOLICITUD] || [];
+
             // ✅ Calcular cantidad PENDIENTE
             const cantidadPendiente = Math.max(0, cantidadOriginal - CantidadConsumidaTotal);
             const completamenteSurtido = cantidadPendiente <= 0;
@@ -1399,144 +1412,151 @@ class SolicitudManager {
                 : '';
 
             let botonesAccion = `
-            <button class="btn btn-sm btn-ptm-edit btn-del-ref"
-                    data-idsolicitud="${art.ID_SOLICITUD}"
-                    data-codigo="${refaccionSolicitada}"
-                    data-nombrearticulo="${art.NOMBRE_ARTICULO}"
-                    data-ordentrabajo="${art.ORDEN_TRABAJO}"
-                    data-bs-toggle="tooltip"
-                    title="❌ Eliminar refacción">
-                <i class="bi bi-x-circle fs-6"></i>
-            </button>
-            <button class="btn btn-sm btn-ptm-edit btn-change-ref"
-                    data-idsolicitud="${art.ID_SOLICITUD}"
-                    data-codigo="${refaccionSolicitada}"
-                    data-nombrearticulo="${art.NOMBRE_ARTICULO}"
-                    data-ordentrabajo="${art.ORDEN_TRABAJO}"
-                    data-bs-toggle="tooltip"
-                    title="🔄 Cambiar refacción">
-                <i class="bi bi-arrow-repeat fs-6"></i>
-            </button>`;
+        <button class="btn btn-sm btn-ptm-edit btn-del-ref"
+                data-idsolicitud="${art.ID_SOLICITUD}"
+                data-codigo="${refaccionSolicitada}"
+                data-nombrearticulo="${art.NOMBRE_ARTICULO}"
+                data-ordentrabajo="${art.ORDEN_TRABAJO}"
+                data-bs-toggle="tooltip"
+                title="❌ Eliminar refacción">
+            <i class="bi bi-x-circle fs-6"></i>
+        </button>
+        <button class="btn btn-sm btn-ptm-edit btn-change-ref"
+                data-idsolicitud="${art.ID_SOLICITUD}"
+                data-codigo="${refaccionSolicitada}"
+                data-nombrearticulo="${art.NOMBRE_ARTICULO}"
+                data-ordentrabajo="${art.ORDEN_TRABAJO}"
+                data-bs-toggle="tooltip"
+                title="🔄 Cambiar refacción">
+            <i class="bi bi-arrow-repeat fs-6"></i>
+        </button>`;
 
             if (completamenteSurtido) {
                 botonesAccion = `
-            <button class="btn btn-sm btn-ptm-edit btn-del-ref disabled">
-                <i class="bi bi-x-circle fs-6"></i>
-            </button>
-            <button class="btn btn-sm btn-ptm-edit btn-change-ref disabled">
-                <i class="bi bi-arrow-repeat fs-6"></i>
-            </button>`;
+        <button class="btn btn-sm btn-ptm-edit btn-del-ref disabled">
+            <i class="bi bi-x-circle fs-6"></i>
+        </button>
+        <button class="btn btn-sm btn-ptm-edit btn-change-ref disabled">
+            <i class="bi bi-arrow-repeat fs-6"></i>
+        </button>`;
             }
 
-            // ✅ CRÍTICO: Construir contenido del popover PRIMERO y escapar las comillas
-            const popoverContent = this._construirContenidoPopover(art, CantidadConsumidaTotal, cantidadOriginal);
+            // ✅ CRÍTICO: Construir contenido del popover con el historial REAL
+            // (ya no se simula dividiendo un folio con comas)
+            const popoverContent = this._construirContenidoPopover(historialSalidas, CantidadConsumidaTotal, cantidadOriginal);
             const popoverContentEscaped = popoverContent.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
+            // ✅ Folio principal a mostrar: el de la salida MÁS RECIENTE del historial real
+            const folioMasReciente = historialSalidas.length > 0
+                ? (historialSalidas[historialSalidas.length - 1].FOLIO_SALIDA || 'Sin folio')
+                : (FolioSalida || 'Sin folio');
+
+            // ✅ Badge con el conteo de movimientos, solo si hay más de uno
+            const badgeConteo = historialSalidas.length > 1
+                ? `<span class="badge bg-primary ms-1" title="${historialSalidas.length} movimientos de salida">${historialSalidas.length}</span>`
+                : '';
+
             tbody.append(`
-                <tr class="${completamenteSurtido ? 'salida_completada' : ''}" ${completamenteSurtido ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Completamente Surtida"` : ''}>
-                    <td class="text-center align-middle">${index + 1}</td>
-                    <td class="text-center align-middle">
-                        <div class="folios-container position-relative">
-                            <i class="bi bi-file-earmark-text text-info me-1"></i>
-                            <span class="folio-principal fw-semibold text-monospace">${FolioSalida || 'Sin folio'}</span>
-                            <span class="badge bg-secondary ms-2 cursor-pointer folio-badge" 
-                                  role="button"
-                                  tabindex="0"
-                                  data-bs-toggle="popover"
-                                  data-bs-trigger="focus"
-                                  data-bs-html="true"
-                                  data-bs-placement="left"
-                                  data-bs-custom-class="popover-folios"
-                                  title="&lt;i class=&quot;bi bi-history me-2&quot;&gt;&lt;/i&gt;Historial de Salidas"
-                                  data-bs-content="${popoverContentEscaped}">
-                                <i class="bi bi-info-circle"></i>
-                            </span>
-                        </div>
-                    </td>
-                    <td class="text-center align-middle">
-                        <input type="checkbox" class="form-check-input chk-articuloSalida"
-                               data-idsolicitud="${art.ID_SOLICITUD}"
-                               data-codigo="${refaccionSolicitada}"
-                               data-nombrearticulo="${art.NOMBRE_ARTICULO}"
-                               data-ordentrabajo="${art.ORDEN_TRABAJO}"
-                               data-nombre="${nombreMostrar}"
-                               data-cantidad="${cantidadPendiente}"
-                               data-cantidadoriginal="${cantidadOriginal}"
-                               data-cantidadconsumida="${CantidadConsumidaTotal}"
-                               ${completamenteSurtido ? 'disabled' : ''}>
-                    </td>
-                    <td class="text-center align-middle">${botonesAccion}</td>
-                    <td class="text-center align-middle">
-                        ${cantidadPendiente > 0 ? `<span class="punto-pulso-absolute"></span>` : ''}
-                        <span class="badge bg-dark"><i class="bi bi-upc-scan me-1"></i>${refaccionSolicitada || 'N/A'}</span>
-                    </td>
-                    <td class="align-middle">
-                        <i class="bi bi-box-seam text-muted me-1"></i>${nombreMostrar}
-                    </td>
-                    <td class="text-center align-middle">
-                        <i class="bi bi-boxes text-info me-1"></i>${cantidadOriginal}
-                    </td>
-                    <td class="text-center align-middle">
-                        <input type="number" min="1" max="${cantidadPendiente || maxStock}"
-                               class="form-control form-control-sm text-center fw-bold cantidadEditable" ${completamenteSurtido ? 'disabled' : ''}
-                               value="${CantidadSurtida}"
-                               data-stock="${art.STOCK || 0}"
-                               data-min="${minStock}"
-                               data-max="${maxStock}"
-                               data-pendiente="${cantidadPendiente}"
-                               ${completamenteSurtido ? 'readonly' : ''}>
-                    </td>
-                    <td class="text-center align-middle">
-                        <span class="badge bg-info badge-custom fw-semibold">
-                            <i class="bi bi-check-circle me-1"></i>${CantidadConsumidaTotal || 0}
-                        </span>
-                        ${indicadorPendiente}
-                    </td>
-                    <td class="text-center align-middle">
-                        <i class="bi bi-box-seam text-info me-1"></i>${art.STOCK || 0}
-                    </td>
-                    <td class="text-center align-middle">
-                        <i class="bi bi-arrow-down-circle text-warning me-1"></i>${minStock}
-                    </td>
-                    <td class="text-center align-middle">
-                        <i class="bi bi-arrow-up-circle text-success me-1"></i>${maxStock}
-                    </td>
-                    <td class="text-center align-middle">
-                        <span class="badge ${urgenciaClass}">
-                            <i class="bi bi-exclamation-triangle-fill me-1"></i>${urgenciaText}
-                        </span>
-                    </td>
-                    <td class="text-center align-middle">
-                        <span class="badge ${estatusClass}">
-                            <i class="bi bi-flag-fill me-1"></i>${estatusText}
-                        </span>
-                    </td>
-                    <td class="text-center align-middle">
-                        <select ${isReadOnly} class="form-select form-select-sm departamento" ${!hayPendiente ? 'disabled' : ''}>
-                        ${departamentosHtml}    
-                        </select>
-                    </td>
-                    <td class="text-center align-middle">
-                        <select ${isReadOnly} class="form-select form-select-sm proceso" ${!hayPendiente ? 'disabled' : ''}>
-                            ${procesosHtml}
-                        </select>
-                    </td>
-                    <td class="text-center align-middle">
-                        <select ${isReadOnly} class="form-select form-select-sm gastos" ${!hayPendiente ? 'disabled' : ''}>
-                            ${gastosHtml}
-                        </select>
-                    </td>
-                    <td class="text-center align-middle">
-                        <select ${isReadOnly} class="form-select form-select-sm cedis" ${!hayPendiente ? 'disabled' : ''}>
-                            ${cedisHtml}
-                        </select>
-                    </td>
-                    <td class="text-center align-middle">
-                        <input ${isReadOnly} type="text" class="form-control form-control-sm nombre_empleado text-center"
-                               value="${nombreEmpleado}" ${!hayPendiente ? 'disabled' : ''}>
-                    </td>
-                </tr>
-            `);
+            <tr class="${completamenteSurtido ? 'salida_completada' : ''}" ${completamenteSurtido ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Completamente Surtida"` : ''}>
+                <td class="text-center align-middle">${index + 1}</td>
+                <td class="text-center align-middle">
+                <div class="folios-container position-relative d-flex justify-content-center align-items-center">
+                    <span class="badge bg-secondary cursor-pointer folio-badge"
+                          role="button"
+                          tabindex="0"
+                          data-bs-toggle="popover"
+                          data-bs-trigger="focus"
+                          data-bs-html="true"
+                          data-bs-placement="left"
+                          data-bs-custom-class="popover-folios"
+                          title="&lt;i class=&quot;bi bi-history me-2&quot;&gt;&lt;/i&gt;Historial de Salidas"
+                          data-bs-content="${popoverContentEscaped}">
+                        <i class="bi bg-info bi-info-circle"></i>
+                    </span>
+                </div>
+            </td>
+                <td class="text-center align-middle">
+                    <input type="checkbox" class="form-check-input chk-articuloSalida"
+                           data-idsolicitud="${art.ID_SOLICITUD}"
+                           data-codigo="${refaccionSolicitada}"
+                           data-nombrearticulo="${art.NOMBRE_ARTICULO}"
+                           data-ordentrabajo="${art.ORDEN_TRABAJO}"
+                           data-nombre="${nombreMostrar}"
+                           data-cantidad="${cantidadPendiente}"
+                           data-cantidadoriginal="${cantidadOriginal}"
+                           data-cantidadconsumida="${CantidadConsumidaTotal}"
+                           ${completamenteSurtido ? 'disabled' : ''}>
+                </td>
+                <td class="text-center align-middle">${botonesAccion}</td>
+                <td class="text-center align-middle">
+                    ${cantidadPendiente > 0 ? `<span class="punto-pulso-absolute"></span>` : ''}
+                    <span class="badge bg-dark"><i class="bi bi-upc-scan me-1"></i>${refaccionSolicitada || 'N/A'}</span>
+                </td>
+                <td class="align-middle">
+                    <i class="bi bi-box-seam text-muted me-1"></i>${nombreMostrar}
+                </td>
+                <td class="text-center align-middle">
+                    <i class="bi bi-boxes text-info me-1"></i>${cantidadOriginal}
+                </td>
+                <td class="text-center align-middle">
+                    <input type="number" min="1" max="${cantidadPendiente || maxStock}"
+                           class="form-control form-control-sm text-center fw-bold cantidadEditable" ${completamenteSurtido ? 'disabled' : ''}
+                           value="${completamenteSurtido ? 0 : CantidadSurtida}"
+                           data-stock="${art.STOCK || 0}"
+                           data-min="${minStock}"
+                           data-max="${maxStock}"
+                           data-pendiente="${cantidadPendiente}"
+                           ${completamenteSurtido ? 'readonly' : ''}>
+                </td>
+                <td class="text-center align-middle">
+                        <i class="bi bi-check-circle text-info me-1"></i>${CantidadConsumidaTotal || 0}
+                    ${indicadorPendiente}
+                </td>
+                <td class="text-center align-middle">
+                    <i class="bi bi-box-seam text-info me-1"></i>${art.STOCK || 0}
+                </td>
+                <td class="text-center align-middle">
+                    <i class="bi bi-arrow-down-circle text-warning me-1"></i>${minStock}
+                </td>
+                <td class="text-center align-middle">
+                    <i class="bi bi-arrow-up-circle text-success me-1"></i>${maxStock}
+                </td>
+                <td class="text-center align-middle">
+                    <span class="badge ${urgenciaClass}">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>${urgenciaText}
+                    </span>
+                </td>
+                <td class="text-center align-middle">
+                    <span class="badge ${estatusClass}">
+                        <i class="bi bi-flag-fill me-1"></i>${estatusText}
+                    </span>
+                </td>
+                <td class="text-center align-middle">
+                    <select ${isReadOnly} class="form-select form-select-sm departamento" ${!hayPendiente ? 'disabled' : ''}>
+                    ${departamentosHtml}    
+                    </select>
+                </td>
+                <td class="text-center align-middle">
+                    <select ${isReadOnly} class="form-select form-select-sm proceso" ${!hayPendiente ? 'disabled' : ''}>
+                        ${procesosHtml}
+                    </select>
+                </td>
+                <td class="text-center align-middle">
+                    <select ${isReadOnly} class="form-select form-select-sm gastos" ${!hayPendiente ? 'disabled' : ''}>
+                        ${gastosHtml}
+                    </select>
+                </td>
+                <td class="text-center align-middle">
+                    <select ${isReadOnly} class="form-select form-select-sm cedis" ${!hayPendiente ? 'disabled' : ''}>
+                        ${cedisHtml}
+                    </select>
+                </td>
+                <td class="text-center align-middle">
+                    <input ${isReadOnly} type="text" class="form-control form-control-sm nombre_empleado text-center"
+                           value="${nombreEmpleado}" ${!hayPendiente ? 'disabled' : ''}>
+                </td>
+            </tr>
+        `);
         });
 
         // ✅ Ocultar botón solo si NO hay pendiente
@@ -1594,69 +1614,77 @@ class SolicitudManager {
     // MÉTODOS DE APOYO PARA FOLIOS
     // ========================================
 
-    _construirDatosFolios(art) {
-        // Aquí iría la lógica para obtener el historial
-        // Por ahora retornamos un string vacío
-        return JSON.stringify({
-            folios: art.FOLIOS_HISTORIAL || [],
-            cantidadConsumida: art.CANTIDAD_CONSUMIDA || 0,
-            cantidadOriginal: art.CANTIDAD || 0
-        });
-    }
-
-    _construirContenidoPopover(art, cantidadConsumida, cantidadOriginal) {
-        const folio = art.FOLIO_SALIDA || 'Sin folio';
+    /**
+     * ✅ NUEVO: construye el popover a partir del historial REAL de movimientos
+     * de salida (uno por cada renglón que regresa SpPdxMTTOGetSalidasPorOT
+     * para el ID_SOLICITUD correspondiente), en vez de simularlo.
+     *
+     * @param {Array} historialSalidas - Movimientos reales: [{FOLIO_SALIDA, CANTIDAD_SALIDA, FECHA_INGRESO, ...}, ...]
+     * @param {Number} cantidadConsumida - Total ya surtido (CANTIDAD_CONSUMIDA)
+     * @param {Number} cantidadOriginal - Cantidad solicitada originalmente
+     */
+    _construirContenidoPopover(historialSalidas, cantidadConsumida, cantidadOriginal) {
         const cantidadPendiente = Math.max(0, cantidadOriginal - cantidadConsumida);
         const porcentajeSurtido = cantidadOriginal > 0
             ? Math.round((cantidadConsumida / cantidadOriginal) * 100)
             : 0;
 
-        // Simular historial (esto vendría del servidor en producción)
-        const folios = (folio && folio.includes(','))
-            ? folio.split(',').map(f => f.trim())
-            : [folio];
+        let contenidoFolios;
 
-        let contenidoFolios = folios.map((f, idx) => {
-            const cantidad = Math.ceil(cantidadConsumida / folios.length);
-            return `
+        if (!historialSalidas || historialSalidas.length === 0) {
+            contenidoFolios = `
+            <div class="text-center text-muted py-2">
+                <i class="bi bi-inbox me-1"></i>Sin movimientos de salida registrados
+            </div>
+        `;
+        } else {
+            contenidoFolios = historialSalidas.map(mov => {
+                const folio = mov.FOLIO_SALIDA || 'Sin folio';
+                const cantidad = mov.CANTIDAD_SALIDA ?? mov.CANTIDAD_REAL ?? 0;
+                const fecha = mov.FECHA_INGRESO || '';
+                return `
                 <div class="folio-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-check-circle-fill text-success me-2"></i>
-                        <span class="fw-semibold text-monospace">${f}</span>
+                    <div class="d-flex flex-column">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            <span class="fw-semibold text-monospace">${folio}</span>
+                        </div>
+                        ${fecha ? `<small class="text-muted ms-4">${fecha}</small>` : ''}
                     </div>
                     <small class="text-muted">${cantidad} pz</small>
                 </div>
             `;
-        }).join('');
+            }).join('');
+        }
 
         return `
-            <div class="popover-folios-content">
-                <div class="folios-list" style="max-height: 200px; overflow-y: auto;">
-                    ${contenidoFolios}
+        <div class="popover-folios-content">
+            <div class="folios-list" style="max-height: 200px; overflow-y: auto;">
+                ${contenidoFolios}
+            </div>
+            <div class="popover-footer py-2 border-top mt-2">
+                <div class="d-flex justify-content-between mb-2">
+                    <small><strong>Total Surtido:</strong></small>
+                    <small class="text-success fw-bold">${cantidadConsumida} de ${cantidadOriginal} pz</small>
                 </div>
-                <div class="popover-footer py-2 border-top mt-2">
-                    <div class="d-flex justify-content-between mb-2">
-                        <small><strong>Total Surtido:</strong></small>
-                        <small class="text-success fw-bold">${cantidadConsumida} de ${cantidadOriginal} pz</small>
+                <div class="d-flex justify-content-between">
+                    <small><strong>Pendiente:</strong></small>
+                    <small class="text-warning fw-bold">${cantidadPendiente} pz ⏳</small>
+                </div>
+                <div class="mt-2">
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" 
+                             role="progressbar" 
+                             style="width: ${porcentajeSurtido}%"
+                             aria-valuenow="${porcentajeSurtido}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100"></div>
                     </div>
-                    <div class="d-flex justify-content-between">
-                        <small><strong>Pendiente:</strong></small>
-                        <small class="text-warning fw-bold">${cantidadPendiente} pz ⏳</small>
-                    </div>
-                    <div class="mt-2">
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-success" 
-                                 role="progressbar" 
-                                 style="width: ${porcentajeSurtido}%"
-                                 aria-valuenow="${porcentajeSurtido}" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="100"></div>
-                        </div>
-                        <small class="text-muted d-block mt-1">${porcentajeSurtido}% completado</small>
-                    </div>
+                    <small class="text-muted d-block mt-1">${porcentajeSurtido}% completado</small>
                 </div>
             </div>
-        `;
+        </div>
+    `;
     }
 
     // ========================================

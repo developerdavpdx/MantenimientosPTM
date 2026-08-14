@@ -287,13 +287,17 @@
 .folio-badge {
     cursor: pointer;
     transition: all 0.2s ease;
-    background-color: #6C757D !important;
+    background-color: #0dcaf0 !important;
 }
 
     .folio-badge:hover {
-        background-color: #5A6268 !important;
+        background-color: gray !important;
         transform: scale(1.1);
     }
+        .folio-badge:hover i {
+            background-color: gray !important;
+            color: #ffffff !important;
+        }
 
     .folio-badge:focus {
         outline: 2px solid #0D6EFD;
