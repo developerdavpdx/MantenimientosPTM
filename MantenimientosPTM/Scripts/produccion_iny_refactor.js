@@ -47,11 +47,25 @@ class GestionProduccionINY extends GestionProduccionBase {
         // 🔥 TODO: reemplazar con el ID_AREA real de INY PL2
         this.ID_AREA_CORRECTIVOS = (datos_usuario[0].PLANTA == "1" ? 15 : 15); // 🔥 INY Se dejo el mismo por que no existe INYECCION para planta 1
         this.ID_AREA_PREVENTIVOS = (datos_usuario[0].PLANTA == "1" ? 15 : 15); // 🔥 INY Se dejo el mismo por que no existe INYECCION para planta 1
+
+        // ✅ Mapa de líneas INY P2: Match ya que en NW vienen diferentes
+        this.MAPA_LINEAS_INY = {
+            21: 'Linea 1 INY',
+            22: 'Linea 2 INY',
+            23: 'Linea 3 INY',
+            24: 'Linea 4 INY',
+            25: 'Linea 5 INY',
+            26: 'Linea 6 INY',
+            27: 'Linea 7 INY',
+            28: 'Linea 8 INY',
+            29: 'Linea 9 INY'
+        };
     }
 
     async inicializar() {
         await this.inicializarCommon();
-
+        // 🔥 Habilitar menú contextual del grid
+        this.configurarMenuContextual();
         // Inicializar gestor de correos
         this.correctosManager = new CorreosManagerINY();
         this.correctosManager.setAppProduccion(this);
@@ -273,7 +287,7 @@ class GestionProduccionINY extends GestionProduccionBase {
             // Productos terminados
             let PLANTA = this.datos_usuario[0].PLANTA;
             const productosTerminados = await this.ObtenerProductoTerminado(null, null, PLANTA, FiltroTurno, 'INY'); //Antes PINY
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
+            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, false);
 
             // Si no hay nada, mostrar placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
@@ -470,6 +484,7 @@ class GestionProduccionINY extends GestionProduccionBase {
             nuevaFila._marcador = '🛠️';
             nuevaFila._rowClass = 'row-preventivo';
 
+
             const lineaEncontrada = this.listaLineas.find(
                 l => String(l.value) === String(item.IdLineaProduccion)
             );
@@ -480,7 +495,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                 nuevaFila.Linea = null;
                 lineasNoEncontradas.push(item.NumeroOrden);
             }
-
+            nuevaFila.Inyectora = item.NombreEquipo || '';
             this.recalcularFila(nuevaFila);
             filasNuevas.push(nuevaFila);
         });
@@ -663,8 +678,11 @@ class GestionProduccionINY extends GestionProduccionBase {
                     l => String(l.value) === String(item.Id_Linea)
                 );
 
-                if (lineaEncontrada) {
-                    nuevaFila.Linea = lineaEncontrada.label;
+                                          
+                const lineaLabel = this.MAPA_LINEAS_INY[item.Id_Linea];
+
+                if (lineaLabel) {
+                    nuevaFila.Linea = lineaLabel;
                 } else {
                     nuevaFila.Linea = null;
                     lineasNoEncontradas.push(`${item.Codigo} (Línea ${item.Id_Linea})`);
@@ -679,6 +697,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                 this.gridApi.applyTransaction({ add: filasNuevas });
                 this.inicializarTooltipsGrid();
                 console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados al grid`);
+                this.agregarFilaTotales();
             }
 
             if (lineasNoEncontradas.length > 0) {
@@ -718,7 +737,8 @@ class GestionProduccionINY extends GestionProduccionBase {
             TiempoMuertoArranques: null, FallaMaterial: null,
             FaltaPersonal: null, FallaElectrica: null, TiempoMuertoProceso: null,
             // KPIS
-            TiempoDisponible: 0, TiempoProductivo: 0, PorcentajeDisponibilidad: 0
+            TiempoDisponible: 0, TiempoProductivo: 0, PorcentajeDisponibilidad: 0,
+            
         };
     }
 
@@ -1006,6 +1026,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                 headerName: 'KPIS',
                 headerClass: 'header-grupo-verde-fuerte',
                 children: [
+
                     {
                         field: 'TiempoDisponible',
                         headerName: 'TIEMPO DISPONIBLE',
@@ -1014,6 +1035,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                         cellClass: 'celda-azul-claro',
                         valueFormatter: params => this.formatearNumero(params.value)
                     },
+
                     {
                         field: 'TiempoProductivo',
                         headerName: 'TIEMPO PRODUCTIVO',
@@ -1021,10 +1043,96 @@ class GestionProduccionINY extends GestionProduccionBase {
                         width: 130,
                         cellClass: 'celda-verde-fuerte',
                         valueFormatter: params => this.formatearNumero(params.value)
-                    },
+                    }
+                ]
+            },
+            {
+                headerName: 'RENDIMIENTO Y OEE',
+                headerClass: 'header-grupo-verde-fuerte',
+                children: [
+
                     {
-                        field: 'PorcentajeDisponibilidad',
+                        field: 'DisponibilidadPorcentaje',
                         headerName: 'DISPONIBILIDAD %',
+                        editable: false,
+                        width: 130,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearPorcentaje(params.value)
+                    },
+
+                    {
+                        field: 'KgPorTiempoDisponible',
+                        headerName: 'KG POR TIEMPO DISPONIBLE',
+                        editable: false,
+                        width: 150,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearNumero(params.value)
+                    },
+
+                    {
+                        field: 'KgHrLinea',
+                        headerName: 'KG/HR X LINEA (capacidad Instalada)',
+                        editable: false,
+                        width: 150,
+                        cellClass: 'celda-rosa',
+                        valueFormatter: params => this.formatearNumero(params.value)
+                    },
+
+                    {
+                        field: 'KgHrProducto',
+                        headerName: 'KG/HR X PRODUCTO (historial)',
+                        editable: false,
+                        width: 150,
+                        cellClass: 'celda-rosa',
+                        valueFormatter: params => this.formatearNumero(params.value)
+                    },
+
+                    {
+                        field: 'KgNetosHrReales',
+                        headerName: 'KG NETOS/HR REALES (tiempo productivo)',
+                        editable: false,
+                        width: 150,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearNumero(params.value)
+                    },
+
+                    {
+                        field: 'PorcentajeRendimiento',
+                        headerName: '% RENDIMIENTO',
+                        editable: false,
+                        width: 120,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearPorcentaje(params.value)
+                    },
+
+                    {
+                        field: 'PorcentajeCalidad',
+                        headerName: '% CALIDAD',
+                        editable: false,
+                        width: 110,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearPorcentaje(params.value)
+                    },
+
+                    {
+                        field: 'PorcentajeOEE',
+                        headerName: '% OEE',
+                        editable: false,
+                        width: 110,
+                        cellClass: 'celda-verde-fuerte',
+                        valueFormatter: params => this.formatearPorcentaje(params.value)
+                    },
+
+                    {
+                        field: 'ObjetivoEficiencia',
+                        headerName: 'OBJETIVO DE EFICIENCIA %',
+                        width: 140,
+                        ...this.getColumnaNumerica('celda-amarilla')
+                    },
+
+                    {
+                        field: 'EficienciaOperativa',
+                        headerName: 'EFICIENCIA OPERATIVA',
                         editable: false,
                         width: 130,
                         cellClass: 'celda-verde-fuerte',
@@ -1200,8 +1308,25 @@ class GestionProduccionINY extends GestionProduccionBase {
     }
 
     agregarFilaTotales() {
+        // 🔥 Si ya existe una fila de TOTALES, la quitamos primero
+        // para que siempre quede una sola, y al final de todo
+        let filaTotalesVieja = null;
+
+        this.gridApi.forEachNode(node => {
+            if (node.data?.id === 'TOTALES') {
+                filaTotalesVieja = node.data;
+            }
+        });
+
+        if (filaTotalesVieja) {
+            this.gridApi.applyTransaction({ remove: [filaTotalesVieja] });
+        }
+
         const totales = this.obtenerTotalesGrid();
-        this.gridApi.applyTransaction({ add: [totales] });
+
+        this.gridApi.applyTransaction({
+            add: [totales]
+        });
     }
 
     obtenerTotalesGrid() {
@@ -1420,6 +1545,25 @@ class GestionProduccionINY extends GestionProduccionBase {
                 const filtroTurno = $('#FiltroTurnoPT').val();
                 const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, 'INY');
                 const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
+
+                // ✅ Siempre borrar fila vacía ANTES de agregar productos
+                const filasVacias = [];
+                this.gridApi.forEachNode(node => {
+                    if (node.data &&
+                        !node.data.ID_REGISTRO &&
+                        !node.data.OTMC &&
+                        !node.data.OTMP &&
+                        !node.data.ID_PRODUCTO_TERMINADO &&
+                        !node.data.Fecha &&
+                        node.data.id !== 'TOTALES'
+                    ) {
+                        filasVacias.push(node.data);
+                    }
+                });
+                if (seAgregaronProductosTerminados && filasVacias.length > 0) {
+                    this.gridApi.applyTransaction({ remove: filasVacias });
+                }
+
             } finally {
                 $btn.prop('disabled', false);
             }
@@ -1514,6 +1658,9 @@ class GestionProduccionINY extends GestionProduccionBase {
     // MENÚ CONTEXTUAL
     // ========================================
     configurarMenuContextual() {
+        if (this.menuContextualConfigurado) return;
+        this.menuContextualConfigurado = true;
+
         const menu = document.getElementById("menuContextual");
         const tabla = document.querySelector('#tablaProduccion');
         if (!tabla) return;
@@ -1529,13 +1676,20 @@ class GestionProduccionINY extends GestionProduccionBase {
 
             this.filaSeleccionada = this.gridApi.getDisplayedRowAtIndex(rowIndex);
 
+
+
             if (this.filaSeleccionada?.data?.id === 'TOTALES') {
                 menu.style.display = "none";
                 return;
             }
 
             const eliminar = menu.querySelector('[data-action="eliminar"]');
-            eliminar.style.display = this.filaSeleccionada?.data?.ID_REGISTRO ? "none" : "block";
+            // 🔥 Ocultar eliminar si tiene ID
+            if (this.filaSeleccionada?.data?.ID_REGISTRO) {
+                eliminar.style.display = "none";
+            } else {
+                eliminar.style.display = "block";
+            }
         });
 
         document.addEventListener("click", () => { menu.style.display = "none"; });

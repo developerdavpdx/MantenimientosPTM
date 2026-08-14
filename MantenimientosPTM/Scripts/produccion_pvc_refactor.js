@@ -104,6 +104,26 @@ class GestionProduccionPVC extends GestionProduccionBase {
         this.URLBaseMantenimientosPreventivos = "MantenimientosPreventivos";
         this.ID_AREA_CORRECTIVOS = (datos_usuario[0].PLANTA == "1" ? 1 : 14); // 🔥 PVC
         this.ID_AREA_PREVENTIVOS = (datos_usuario[0].PLANTA == "1" ? 1 : 14); // 🔥 PVC
+
+        // ✅ Mapa de líneas PVC P2: Match ya que en NW vienen diferentes
+        this.MAPA_LINEAS_INY = {
+            1: 'Linea 1 PVC',
+            2: 'Linea 2 PVC',
+            3: 'Linea 3 PVC',
+            4: 'Linea 4 PVC',
+            5: 'Linea 5 PVC',
+            6: 'Linea 6 PVC',
+            7: 'Linea 7 PVC',
+            8: 'Linea 8 PVC',
+            9: 'Linea 9 PVC',
+            10: 'Linea 10 PVC',
+            11: 'Linea 11 PVC',
+            12: 'Linea 12 PVC',
+            13: 'Linea 13 PVC',
+            14: 'Linea 14 PVC',
+            15: 'Linea 15 PVC',
+
+        };
     }
 
     async inicializar() {
@@ -836,16 +856,26 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     return;
                 }
 
-                const lineaEncontrada = this.listaLineas.find(
-                    l => String(l.value) === String(item.Id_Linea)
-                );
-
-                if (!lineaEncontrada) {
-                    lineasNoEncontradas.push(`${item.Codigo} (Línea ${item.Id_Linea})`);
-                }
-
+                                
                 const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
                     'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+                let lineaLabel = null;
+
+                if (this.datos_usuario[0].PLANTA == 1) {
+                    const lineaEncontrada = this.listaLineas.find(
+                        l => String(l.value) === String(item.Id_Linea)
+                    );
+                    lineaLabel = lineaEncontrada ? lineaEncontrada.label : null;
+                } else {
+                    lineaLabel = this.MAPA_LINEAS_INY[item.Id_Linea] || null;
+                }
+                // ✅ Si no se encontró línea, skip (no agregar fila vacía)
+                if (!lineaLabel) {
+                    lineasNoEncontradas.push(`${item.Codigo} (Línea ${item.Id_Linea})`);
+                    return; // 👈 esto evita la fila vacía
+                }
+
 
                 const nodoExistente = nodosExistentes.get(String(item.Id));
 
@@ -859,7 +889,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     dataActualizada.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
                     dataActualizada.PorcentajeScrap = 0;
                     dataActualizada.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
-                    dataActualizada.Linea = lineaEncontrada ? lineaEncontrada.label : null;
+                   
+                    dataActualizada.Linea = lineaLabel;                    
                     dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
 
                     dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
@@ -886,7 +917,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     nuevaFila.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
                     nuevaFila.PorcentajeScrap = 0;
                     nuevaFila.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
-                    nuevaFila.Linea = lineaEncontrada ? lineaEncontrada.label : null;
+                    nuevaFila.Linea = lineaLabel;
                     nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
 
                     nuevaFila.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
@@ -1769,8 +1800,30 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 const fechaInicio = $('#FiltroFechaInicioPT').val();
                 const fechaFin = $('#FiltroFechaFinPT').val();
                 const filtroTurno = $('#FiltroTurnoPT').val();
+
                 const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
                 const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
+
+                // ✅ Siempre borrar fila vacía ANTES de agregar productos
+                const filasVacias = [];
+                this.gridApi.forEachNode(node => {
+                    if (node.data &&
+                        !node.data.ID_REGISTRO &&
+                        !node.data.OTMC &&
+                        !node.data.OTMP &&
+                        !node.data.ID_PRODUCTO_TERMINADO &&
+                        !node.data.Fecha &&
+                        node.data.id !== 'TOTALES'
+                    ) {
+                        filasVacias.push(node.data);
+                    }
+                });
+                if (seAgregaronProductosTerminados && filasVacias.length > 0) {
+                    this.gridApi.applyTransaction({ remove: filasVacias });
+                }
+                               
+
+
             } finally {
                 $btn.prop('disabled', false);
             }
