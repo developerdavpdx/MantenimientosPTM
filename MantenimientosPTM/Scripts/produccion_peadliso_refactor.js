@@ -2071,7 +2071,26 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 const fechaFin = $('#FiltroFechaFinPT').val();
                 const filtroTurno = $('#FiltroTurnoPT').val();
                 const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, 'PPEADLISO');
-                await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
+                const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
+
+                // ✅ Siempre borrar fila vacía ANTES de agregar productos
+                const filasVacias = [];
+                this.gridApi.forEachNode(node => {
+                    if (node.data &&
+                        !node.data.ID_REGISTRO &&
+                        !node.data.OTMC &&
+                        !node.data.OTMP &&
+                        !node.data.ID_PRODUCTO_TERMINADO &&
+                        !node.data.Fecha &&
+                        node.data.id !== 'TOTALES'
+                    ) {
+                        filasVacias.push(node.data);
+                    }
+                });
+                if (seAgregaronProductosTerminados && filasVacias.length > 0) {
+                    this.gridApi.applyTransaction({ remove: filasVacias });
+                }
+
             } finally {
                 $btn.prop('disabled', false);
             }
