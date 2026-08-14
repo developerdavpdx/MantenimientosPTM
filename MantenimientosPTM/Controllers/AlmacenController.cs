@@ -2547,7 +2547,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetEmpleadosAlmacenPorRol(int planta, string rol)
+        public JsonResult GetEmpleadosAlmacenPorRol(int planta, string rol,string codigoEmpleado)
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
             try
@@ -2563,7 +2563,8 @@ namespace MantenimientosPTM.Controllers
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
                     { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer)  },
-                    { "P_ROL",    (rol,    ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_ROL",    (rol,    ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CODIGO_EMPLEADO", (codigoEmpleado,    ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(

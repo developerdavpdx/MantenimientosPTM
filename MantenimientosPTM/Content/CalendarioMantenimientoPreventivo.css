@@ -9,254 +9,425 @@
 .fc-prev-button, .fc-next-button {
     border-color: #dee2e6 !important;
     background: linear-gradient(135deg, #0ea5d8 0%, #1a6fbd 100%) !important;
+    border: none !important;
+    transition: all 0.3s ease !important;
+}
+
+.fc-prev-button:hover, .fc-next-button:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 4px 12px rgba(14, 165, 216, 0.3) !important;
 }
 
 #calendar {
-    background-color: white;
-    border-radius: 0.375rem;
-    padding: 1rem;
+    background-color: #fafafa;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.evento-preventivo {
-    background-color: #28a745;
-    border-color: #28a745;
+/* ✅ Días de otros meses - fondo gris más oscuro */
+.fc-day-other {
+    background-color: #f3f4f6 !important;
+    cursor: not-allowed !important;
 }
 
-.evento-correctivo {
-    background-color: #dc3545;
-    border-color: #dc3545;
+/* ✅ Ocultar completamente eventos en días de otros meses */
+.fc-day-other .fc-event {
+    display: none !important;
 }
 
-.evento-predictivo {
-    background-color: #ffc107;
-    border-color: #ffc107;
-    color: #000;
+/* Números de días de otros meses más tenues */
+.fc-day-other .fc-daygrid-day-number {
+    color: #9ca3af !important;
 }
 
-    /* ✅ Días de otros meses - fondo gris más oscuro */
-    .fc-day-other {
-        background-color: #e9ecef !important;
-        cursor: not-allowed !important;
-    }
-
-    /* ✅ Ocultar completamente eventos en días de otros meses */
-    .fc-day-other .fc-event {
-        display: none !important;
-    }
-
-    /* Números de días de otros meses más tenues */
-    .fc-day-other .fc-daygrid-day-number {
-        color: #000000 !important; /* Gris medio */
-    }
-
-    /* Los eventos mantienen su color normal */
-    .fc-day-other .fc-event {
-        opacity: 1 !important;
-    }
-
-
-    /* ✅ IMPORTANTE: Aplicar cursor a los elementos internos también */
-    .fc-day-other * {
-        cursor: not-allowed !important;
-    }
-
-    /* ✅ Específicamente al frame del día */
-    .fc-day-other .fc-daygrid-day-frame {
-        cursor: not-allowed !important;
-    }
-
-    /* ✅ Al número del día */
-    .fc-day-other .fc-daygrid-day-number {
-        cursor: not-allowed !important;
-    }
-
-    /* ✅ A los eventos dentro de días de otros meses mantenerlos con cursor pointer */
-    .fc-day-other .fc-event {
-        cursor: pointer !important; /* Los eventos sí deben ser clickeables */
-    }
-
-
-/* Eventos planificados con mejor diseño */
-.evento-planificado {
-    border-left: 4px solid rgba(255, 255, 255, 0.5) !important;
-    font-weight: 600 !important;
-    font-size: 0.85rem !important;
+/* Los eventos mantienen su color normal */
+.fc-day-other .fc-event {
+    opacity: 1 !important;
 }
 
-    /* Efecto hover en eventos planificados */
-    .evento-planificado:hover {
-        opacity: 0.85 !important;
-        cursor: pointer !important;
-        transform: scale(1.02);
-        transition: all 0.2s ease;
-    }
+/* ✅ IMPORTANTE: Aplicar cursor a los elementos internos también */
+.fc-day-other * {
+    cursor: not-allowed !important;
+}
 
+/* ✅ Específicamente al frame del día */
+.fc-day-other .fc-daygrid-day-frame {
+    cursor: not-allowed !important;
+}
+
+/* ✅ Al número del día */
+.fc-day-other .fc-daygrid-day-number {
+    cursor: not-allowed !important;
+}
+
+/* ✅ A los eventos dentro de días de otros meses mantenerlos con cursor pointer */
+.fc-day-other .fc-event {
+    cursor: pointer !important;
+}
 
 /* ============================================
-🏷️ ESTILO ETIQUETA REALISTA (Vecteezy Style)
+🎨 HEADER Y ESTILOS GENERALES DEL CALENDARIO
 ============================================ */
 
-.fc-event,
-.demo-event {
-    position: relative;
-    padding: 5px 18px 5px 18px !important;
-    margin: 2px 8px !important;
-    border: none !important;
-    border-radius: 6px !important;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden !important;
-    min-height: 33px;
-    display: flex;
-    align-items: center;
+/* Encabezado mejorado */
+.fc-col-header-cell {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    color: #1e293b !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0.5px !important;
+    text-transform: capitalize !important;
+    padding: 1rem 0.5rem !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
 }
 
-    .fc-event:nth-child(even),
-    .demo-event:nth-child(even) {
-        transform: rotate(1deg);
-    }
+/* Números de días mejorados */
+.fc-daygrid-day-number {
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    color: #334155 !important;
+    padding: 0.75rem !important;
+}
 
-    /* Brillo diagonal en la etiqueta */
-    .fc-event::before,
-    .demo-event::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -10%;
-        width: 40%;
-        height: 100%;
-        background: linear-gradient( 90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100% );
-        transform: skewX(-20deg);
-        pointer-events: none;
-    }
+/* Días actuales */
+.fc-daygrid-day.fc-day-today {
+    background-color: #f0f9ff !important;
+}
 
-    /* Agujero metálico de la etiqueta */
-    .fc-event .tag-hole,
-    .demo-event .tag-hole {
-        position: absolute;
-        right: 20px;
-        top: 6px;
-        width: 18px;
-        height: 18px;
-        background: #00a1cd;
-        border-radius: 50%;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.4), inset 0 -1px 2px rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.2);
-        border: 2px solid rgba(0,0,0,0.15);
-        z-index: 3;
-    }
+.fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+    background: linear-gradient(135deg, #0ea5d8 0%, #1a6fbd 100%) !important;
+    color: white !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
 
-        /* Agujero interior (más profundidad) */
-        .fc-event .tag-hole::after,
-        .demo-event .tag-hole::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 8px;
-            height: 8px;
-            background: #ffffff;
-            border-radius: 50%;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
-        }
+/* ============================================
+🎨 ESTILOS MEJORADOS PARA BARRAS DE EVENTOS
+============================================ */
 
-    /* Hover effect - Se levanta como etiqueta real */
-    .fc-event:hover,
-    .demo-event:hover {
-        transform: rotate(0deg) translateY(-8px) scale(1.03);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.25), 0 6px 12px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.3) !important;
-        cursor: pointer;
-        z-index: 100;
-    }
+/* Base de eventos - Estilos generales */
+.fc-event {
+    border: none !important;
+    border-radius: 8px !important;
+    box-shadow: 
+        0 1px 3px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.1),
+        0 8px 20px rgba(0, 0, 0, 0.06) !important;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    overflow: hidden !important;
+    position: relative !important;
+    backdrop-filter: blur(0px) !important;
+}
+
+/* Efecto de brillo/lustre en la parte superior */
+.fc-event::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5) 50%, transparent);
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+/* Efecto de brillo inferior */
+.fc-event::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.1) 50%, transparent);
+    pointer-events: none;
+}
 
 /* Título del evento */
-.fc-event-title,
-.demo-event-title {
+.fc-event-title {
     color: white !important;
     font-weight: 700 !important;
-    font-size: 0.75rem !important;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    letter-spacing: 0.3px;
-    width: 100%;
-    padding-top: 4px;
+    font-size: 0.88rem !important;
+    text-shadow: 
+        0 1px 2px rgba(0, 0, 0, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    letter-spacing: 0.4px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 14px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
 }
 
-/* Iconos de inicio/fin */
-.event-icon {
-    font-size: 1.1rem;
-    font-weight: bold;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+/* Hover effect - Elevación y brillo premium */
+.fc-event:hover {
+    transform: translateY(-4px) scale(1.025) !important;
+    box-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.12),
+        0 8px 20px rgba(0, 0, 0, 0.15),
+        0 12px 32px rgba(0, 0, 0, 0.1) !important;
+    cursor: pointer !important;
+    z-index: 20 !important;
+}
+
+/* Click effect */
+.fc-event:active {
+    transform: translateY(-2px) scale(0.98) !important;
 }
 
 /* ============================================
-🎨 COLORES ESTILO VECTEEZY
+🟢 EVENTOS PREVENTIVOS - VERDE PREMIUM
 ============================================ */
 
-/* Azul Cyan - Principal */
-.evento-turno-12 {
-    background: linear-gradient(145deg, #00b4d8 0%, #0096c7 100%) !important;
-    border-bottom: 3px solid rgba(0, 100, 140, 0.4) !important;
-}
-
-/* Amarillo/Dorado */
-.evento-turno-24 {
-    background: linear-gradient(145deg, #fbbf24 0%, #f59e0b 100%) !important;
-    border-bottom: 3px solid rgba(180, 100, 0, 0.4) !important;
-}
-
-/* Naranja */
-.evento-naranja {
-    background: linear-gradient(145deg, #fb923c 0%, #f97316 100%) !important;
-    border-bottom: 3px solid rgba(180, 80, 0, 0.4) !important;
-}
-
-/* Azul Oscuro */
-.evento-azul-oscuro {
-    background: linear-gradient(145deg, #3b82f6 0%, #2563eb 100%) !important;
-    border-bottom: 3px solid rgba(30, 60, 150, 0.4) !important;
-}
-
-/* Gris Oscuro */
-.evento-gris {
-    background: linear-gradient(145deg, #6b7280 0%, #4b5563 100%) !important;
-    border-bottom: 3px solid rgba(40, 50, 60, 0.4) !important;
-}
-
-/* Verde Lima */
-.evento-verde {
-    background: linear-gradient(145deg, #84cc16 0%, #65a30d 100%) !important;
-    border-bottom: 3px solid rgba(80, 120, 0, 0.4) !important;
-}
-
-/* Preventivo - Verde */
 .evento-preventivo {
-    background: linear-gradient(145deg, #10b981 0%, #059669 100%) !important;
-    border-bottom: 3px solid rgba(0, 100, 70, 0.4) !important;
+    background: linear-gradient(135deg, #059669 0%, #10b981 50%, #06b6d4 100%) !important;
+    border-left: 6px solid #047857 !important;
+    box-shadow: 
+        0 1px 3px rgba(5, 150, 105, 0.15),
+        0 4px 12px rgba(5, 150, 105, 0.12),
+        0 8px 20px rgba(5, 150, 105, 0.08) !important;
+    position: relative;
 }
 
-/* Correctivo - Rojo */
+.evento-preventivo::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6) 50%, transparent) !important;
+}
+
+.evento-preventivo:hover {
+    box-shadow: 
+        0 2px 4px rgba(5, 150, 105, 0.2),
+        0 8px 24px rgba(5, 150, 105, 0.25),
+        0 12px 32px rgba(5, 150, 105, 0.15) !important;
+    background: linear-gradient(135deg, #047857 0%, #059669 50%, #0891b2 100%) !important;
+}
+
+/* ============================================
+🔴 EVENTOS CORRECTIVOS - ROJO PREMIUM
+============================================ */
+
 .evento-correctivo {
-    background: linear-gradient(145deg, #f43f5e 0%, #e11d48 100%) !important;
-    border-bottom: 3px solid rgba(150, 20, 50, 0.4) !important;
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f87171 100%) !important;
+    border-left: 6px solid #b91c1c !important;
+    box-shadow: 
+        0 1px 3px rgba(220, 38, 38, 0.15),
+        0 4px 12px rgba(220, 38, 38, 0.12),
+        0 8px 20px rgba(220, 38, 38, 0.08) !important;
+    position: relative;
+}
+
+.evento-correctivo::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6) 50%, transparent) !important;
+}
+
+.evento-correctivo:hover {
+    box-shadow: 
+        0 2px 4px rgba(220, 38, 38, 0.2),
+        0 8px 24px rgba(220, 38, 38, 0.25),
+        0 12px 32px rgba(220, 38, 38, 0.15) !important;
+    background: linear-gradient(135deg, #b91c1c 0%, #dc2626 50%, #f43f5e 100%) !important;
+}
+
+/* ============================================
+🟡 EVENTOS PREDICTIVOS - AMARILLO PREMIUM
+============================================ */
+
+.evento-predictivo {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #fbbf24 100%) !important;
+    border-left: 6px solid #b45309 !important;
+    box-shadow: 
+        0 1px 3px rgba(217, 119, 6, 0.15),
+        0 4px 12px rgba(217, 119, 6, 0.12),
+        0 8px 20px rgba(217, 119, 6, 0.08) !important;
+}
+
+.evento-predictivo .fc-event-title {
+    color: #1f2937 !important;
+    text-shadow: 
+        0 1px 2px rgba(255, 255, 255, 0.4),
+        0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.evento-predictivo::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7) 50%, transparent) !important;
+}
+
+.evento-predictivo:hover {
+    box-shadow: 
+        0 2px 4px rgba(217, 119, 6, 0.2),
+        0 8px 24px rgba(217, 119, 6, 0.25),
+        0 12px 32px rgba(217, 119, 6, 0.15) !important;
+    background: linear-gradient(135deg, #b45309 0%, #d97706 50%, #fcd34d 100%) !important;
+}
+
+/* ============================================
+✨ ANIMACIONES ELEGANTES
+============================================ */
+
+@keyframes pulso-elegante {
+    0%, 100% {
+        box-shadow: 
+            0 1px 3px rgba(0, 0, 0, 0.08),
+            0 4px 12px rgba(0, 0, 0, 0.1),
+            0 8px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    50% {
+        box-shadow: 
+            0 2px 4px rgba(0, 0, 0, 0.12),
+            0 8px 20px rgba(0, 0, 0, 0.15),
+            0 12px 32px rgba(0, 0, 0, 0.1);
+    }
+}
+
+@keyframes brillo {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.evento-reciente {
+    animation: pulso-elegante 2.5s ease-in-out infinite !important;
+}
+
+/* ============================================
+🎯 EFECTO MULTI-LÍNEA Y ESPACIADO
+============================================ */
+
+.fc-daygrid-day-frame .fc-event {
+    margin: 4px 6px !important;
+    padding: 2px !important;
+}
+
+.fc-daygrid .fc-event-title {
+    word-wrap: break-word;
+    white-space: normal !important;
+    overflow: visible !important;
+}
+
+/* ============================================
+📱 RESPONSIVE - Diseño profesional en móvil
+============================================ */
+
+@media (max-width: 1024px) {
+    .fc-event-title {
+        font-size: 0.8rem !important;
+        padding: 6px 10px !important;
+    }
+
+    .fc-event {
+        border-radius: 6px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #calendar {
+        padding: 1rem;
+    }
+
+    .fc-event-title {
+        font-size: 0.75rem !important;
+        padding: 5px 8px !important;
+    }
+
+    .fc-event {
+        border-radius: 5px !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .evento-preventivo,
+    .evento-correctivo,
+    .evento-predictivo {
+        border-left: 4px solid !important;
+    }
+
+    .fc-daygrid-day-number {
+        font-size: 0.85rem !important;
+    }
+}
+
+/* ============================================
+🌈 VARIACIONES DE COLORES ADICIONALES PREMIUM
+============================================ */
+
+.evento-turno-12 {
+    background: linear-gradient(135deg, #0891b2 0%, #06b6d4 50%, #22d3ee 100%) !important;
+    border-left: 6px solid #0e7490 !important;
+    box-shadow: 0 1px 3px rgba(8, 145, 178, 0.15), 0 4px 12px rgba(8, 145, 178, 0.12), 0 8px 20px rgba(8, 145, 178, 0.08) !important;
+}
+
+.evento-turno-12:hover {
+    background: linear-gradient(135deg, #0e7490 0%, #0891b2 50%, #06b6d4 100%) !important;
+    box-shadow: 0 2px 4px rgba(8, 145, 178, 0.2), 0 8px 24px rgba(8, 145, 178, 0.25), 0 12px 32px rgba(8, 145, 178, 0.15) !important;
+}
+
+.evento-turno-24 {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #fbbf24 100%) !important;
+    border-left: 6px solid #b45309 !important;
+    box-shadow: 0 1px 3px rgba(217, 119, 6, 0.15), 0 4px 12px rgba(217, 119, 6, 0.12), 0 8px 20px rgba(217, 119, 6, 0.08) !important;
+}
+
+.evento-turno-24:hover {
+    background: linear-gradient(135deg, #b45309 0%, #d97706 50%, #fcd34d 100%) !important;
+    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2), 0 8px 24px rgba(217, 119, 6, 0.25), 0 12px 32px rgba(217, 119, 6, 0.15) !important;
+}
+
+.evento-naranja {
+    background: linear-gradient(135deg, #ea580c 0%, #fb923c 50%, #fdba74 100%) !important;
+    border-left: 6px solid #c2410c !important;
+    box-shadow: 0 1px 3px rgba(234, 88, 12, 0.15), 0 4px 12px rgba(234, 88, 12, 0.12), 0 8px 20px rgba(234, 88, 12, 0.08) !important;
+}
+
+.evento-naranja:hover {
+    background: linear-gradient(135deg, #c2410c 0%, #ea580c 50%, #fdba74 100%) !important;
+    box-shadow: 0 2px 4px rgba(234, 88, 12, 0.2), 0 8px 24px rgba(234, 88, 12, 0.25), 0 12px 32px rgba(234, 88, 12, 0.15) !important;
+}
+
+.evento-azul-oscuro {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%) !important;
+    border-left: 6px solid #1e3a8a !important;
+    box-shadow: 0 1px 3px rgba(30, 64, 175, 0.15), 0 4px 12px rgba(30, 64, 175, 0.12), 0 8px 20px rgba(30, 64, 175, 0.08) !important;
+}
+
+.evento-azul-oscuro:hover {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #3b82f6 100%) !important;
+    box-shadow: 0 2px 4px rgba(30, 64, 175, 0.2), 0 8px 24px rgba(30, 64, 175, 0.25), 0 12px 32px rgba(30, 64, 175, 0.15) !important;
+}
+
+.evento-gris {
+    background: linear-gradient(135deg, #4b5563 0%, #6b7280 50%, #9ca3af 100%) !important;
+    border-left: 6px solid #374151 !important;
+    box-shadow: 0 1px 3px rgba(75, 85, 99, 0.15), 0 4px 12px rgba(75, 85, 99, 0.12), 0 8px 20px rgba(75, 85, 99, 0.08) !important;
+}
+
+.evento-gris:hover {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 50%, #6b7280 100%) !important;
+    box-shadow: 0 2px 4px rgba(75, 85, 99, 0.2), 0 8px 24px rgba(75, 85, 99, 0.25), 0 12px 32px rgba(75, 85, 99, 0.15) !important;
+}
+
+.evento-verde {
+    background: linear-gradient(135deg, #4d7c0f 0%, #84cc16 50%, #a3e635 100%) !important;
+    border-left: 6px solid #3f6212 !important;
+    box-shadow: 0 1px 3px rgba(77, 124, 15, 0.15), 0 4px 12px rgba(77, 124, 15, 0.12), 0 8px 20px rgba(77, 124, 15, 0.08) !important;
+}
+
+.evento-verde:hover {
+    background: linear-gradient(135deg, #3f6212 0%, #4d7c0f 50%, #84cc16 100%) !important;
+    box-shadow: 0 2px 4px rgba(77, 124, 15, 0.2), 0 8px 24px rgba(77, 124, 15, 0.25), 0 12px 32px rgba(77, 124, 15, 0.15) !important;
 }
 
 #alertaParoActivo {
     border-left: 4px solid #dc3545;
-    animation: pulso 2s infinite;
-}
-
-@keyframes pulso {
-    0%, 100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.85;
-    }
+    animation: pulso-elegante 2.5s ease-in-out infinite;
 }

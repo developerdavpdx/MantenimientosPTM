@@ -389,9 +389,10 @@ class SolicitudRefaccionesApp {
         const numEmpleado = $("#numEmpleado").val().trim();
         const area = $("#area").val().trim();
         const entrega = $("#firmaAlmacen").val();
+        const autoriza = $("#firmaAutoriza").val();
 
-        if (!solicitante || !numEmpleado || !area || !entrega) {
-            AlertManager.mostrar('Por favor complete los campos requeridos (Número de empleado, Área)', 'warning');
+        if (!solicitante || !numEmpleado || !area || !entrega || !autoriza) {
+            AlertManager.mostrar('Por favor complete los campos requeridos (Número de empleado, Área, Firma Entrega, Firma Autoriza)', 'warning');
             $btn.prop('disabled', false).html('<i class="bi bi-save me-1"></i>Guardar');
             return;
         }
@@ -1726,21 +1727,17 @@ class SolicitudManager {
         // Limpiar todos los selects
         const selectsAlmacen = ["#firmaAlmacen", "#devolucionEntrega"];
         const selectsAutoriza = ["#firmaAutoriza", "#devolucionRecibe"];
-
         [...selectsAlmacen, ...selectsAutoriza].forEach(sel => {
             $(sel).empty().append(`<option value="">Cargando...</option>`).prop('disabled', true);
         });
-
         try {
-            const [entregadores, autorizadores] = await Promise.all([
-                this.obtenerEmpleadosAlmacenPorRol('ENTREGADOR'),
-                this.obtenerEmpleadosAlmacenPorRol('AUTORIZADOR')
+            const [entregadores] = await Promise.all([
+                this.obtenerEmpleadosAlmacenPorRol('ENTREGADOR')
             ]);
 
-            // ✅ Llenar entregadores (firmaAlmacen + devolucionEntrega)
             const opcionesEntregadores = entregadores.length > 0
                 ? entregadores.map(e =>
-                    `<option value="${e.IDENTIFICADOR || e.NOMBRE_COMPLETO}">${e.NOMBRE_COMPLETO}</option>`
+                    `<option value="${e.IDENTIFICADOR || e.NOMBRE_COMPLETO}" data-codigo="${e.CODIGO_EMPLEADO || ''}">${e.NOMBRE_COMPLETO}</option>`
                 ).join('')
                 : `<option value="">Sin entregadores disponibles</option>`;
 
@@ -1748,24 +1745,52 @@ class SolicitudManager {
                 $(sel).empty().append(opcionesEntregadores).prop('disabled', false);
             });
 
-            // ✅ Llenar autorizadores (firmaAutoriza + devolucionRecibe)
-            const opcionesAutorizadores = autorizadores.length > 0
-                ? autorizadores.map(e =>
-                    `<option value="${e.IDENTIFICADOR || e.NOMBRE_COMPLETO}">${e.NOMBRE_COMPLETO}</option>`
-                ).join('')
-                : `<option value="">Sin autorizadores disponibles</option>`;
-
             selectsAutoriza.forEach(sel => {
-                $(sel).empty().append(opcionesAutorizadores).prop('disabled', false);
+                $(sel).empty().append(`<option value="">Selecciona primero un entregador</option>`).prop('disabled', true);
             });
 
-            console.log(`✅ Firmas cargadas — Entregadores: ${entregadores.length} | Autorizadores: ${autorizadores.length}`);
+            // ✅ Evento: al cambiar el entregador seleccionado, buscar su gerente/autorizador
+            $("#firmaAlmacen").off('change').on('change', (e) => this.onEntregadorSeleccionado(e, "#firmaAutoriza"));
+            $("#devolucionEntrega").off('change').on('change', (e) => this.onEntregadorSeleccionado(e, "#devolucionRecibe"));
+
+            // ✅ Disparar manualmente el evento para el valor que quedó seleccionado por default
+            if (entregadores.length > 0) {
+                $("#firmaAlmacen").trigger('change');
+                $("#devolucionEntrega").trigger('change');
+            }
 
         } catch (error) {
             console.error('Error al llenar firmas:', error);
             [...selectsAlmacen, ...selectsAutoriza].forEach(sel => {
                 $(sel).empty().append(`<option value="">Error al cargar</option>`);
             });
+        }
+    }
+
+    async onEntregadorSeleccionado(event, selectorDestino) {
+        const codigoEmpleado = $(event.currentTarget).find(':selected').data('codigo');
+
+        if (!codigoEmpleado) {
+            $(selectorDestino).empty().append(`<option value="">Sin autorizador</option>`).prop('disabled', true);
+            return;
+        }
+
+        $(selectorDestino).empty().append(`<option value="">Cargando...</option>`).prop('disabled', true);
+
+        try {
+            const autorizadores = await this.obtenerEmpleadosAlmacenPorRol('AUTORIZADOR', codigoEmpleado);
+
+            const opciones = autorizadores.length > 0
+                ? autorizadores.map(a =>
+                    `<option value="${a.IDENTIFICADOR || a.NOMBRE_COMPLETO}">${a.NOMBRE_COMPLETO}</option>`
+                ).join('')
+                : `<option value="">Sin autorizador disponible</option>`;
+
+            $(selectorDestino).empty().append(opciones).prop('disabled', false);
+
+        } catch (error) {
+            console.error('Error al buscar autorizador:', error);
+            $(selectorDestino).empty().append(`<option value="">Error al cargar</option>`).prop('disabled', true);
         }
     }
 
@@ -2615,16 +2640,22 @@ class SolicitudManager {
         $('[data-bs-toggle="tooltip"]').tooltip();
     }
 
-    async obtenerEmpleadosAlmacenPorRol(rol) {
+    async obtenerEmpleadosAlmacenPorRol(rol, codigoEmpleado = null) {
         try {
             const planta = this.datos_usuario[0].PLANTA;
+            const data = { planta, rol };
+
+            // Solo se manda cuando aplica (rol AUTORIZADOR)
+            if (codigoEmpleado) {
+                data.codigoEmpleado = codigoEmpleado;
+            }
+
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetEmpleadosAlmacenPorRol`,
                 method: 'GET',
-                data: { planta, rol },
+                data: data,
                 dataType: 'json'
             });
-
             if (response.Status === 'OK') {
                 return JSON.parse(response.Data);
             }

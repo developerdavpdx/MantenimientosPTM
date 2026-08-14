@@ -2912,7 +2912,7 @@ class SessionManager {
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
-            $("#MetricasURL").addClass("d-none"); //METRICAS
+            /*$("#MetricasURL").addClass("d-none"); //METRICAS*/
             $("#MCProgramarURL").addClass("d-none");
         }
         //SUPERVISOR MANTENIMIENTO
@@ -2928,7 +2928,7 @@ class SessionManager {
             $("#MantenimientosMainContainer").addClass("d-none"); //MANTENIMIENTOS 
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
-            $("#MetricasURL").addClass("d-none"); //METRICAS
+            //$("#MetricasURL").addClass("d-none"); //METRICAS
         }
 
         //PLANEACION
@@ -2939,7 +2939,7 @@ class SessionManager {
             $("#MCProgramadoURL").addClass("d-none"); //CALENDARIO MANTENIMIENTO URL
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
-            $("#MetricasURL").addClass("d-none"); //METRICAS
+            //$("#MetricasURL").addClass("d-none"); //METRICAS
         }
 
         //PRODUCCION
@@ -2948,7 +2948,7 @@ class SessionManager {
             $("#CalendarioManttoURL").addClass("d-none"); //CALENDARIO MANTENIMIENTO URL
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
-            $("#MetricasURL").addClass("d-none"); //METRICAS
+            //$("#MetricasURL").addClass("d-none"); //METRICAS
             if (planta == 2) {
                 $("#RegistroProduccionCorrugadoURL").addClass("d-none");
                 $("#RegistroProduccionPLURL").addClass("d-none");

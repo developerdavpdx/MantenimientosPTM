@@ -295,6 +295,7 @@ class CalendarManager {
                                 ℹ️ <b>Información del mantenimiento</b>
                             </div>
 
+                            <b>Orden Trabajo:</b> ${info.event.extendedProps.numero_orden}<br>
                             <b>Equipo:</b> ${info.event.extendedProps.equipment}<br>
                             <b>Área:</b> ${info.event.extendedProps.areaDescripcion}<br>
                             <b>Línea:</b> ${info.event.extendedProps.lineaDescripcion}<br>
@@ -394,67 +395,7 @@ class CalendarManager {
         });
     }
 
-    // ✅ Función para transformar datos de HANA a formato FullCalendar
     transformarEventosCalendario(datosHana) {
-        // const eventos = [];
-
-        // // 🎨 Colores según tipo de mantenimiento
-        // const colores = {
-        //     'Preventivo': '#28a745',  // Verde
-        //     'Correctivo': '#dc3545'   // Rojo
-        // };
-
-        // datosHana.forEach((item) => {
-        //     // Determinar color según tipo
-        //     const colorEvento = colores[item.TIPO_MANTENIMIENTO] || '#6c757d';
-
-        //     // Formatear fechas - con fallback: FECHA_COMPLETADO → HORA_APERTURA → fecha actual
-        //     const fechaInicio = new Date(item.FECHA_INICIO);
-        //     const fechaFin = new Date(item.FECHA_FIN);
-        //     const fechaCompletado = new Date(item.FECHA_COMPLETADO || item.HORA_APERTURA || new Date());
-
-        //     // ✅ SOLO pintar el día que fue completado (no rango)
-        //     const fechaCompletadoStr = fechaCompletado.toISOString().split('T')[0];
-
-        //     const evento = {
-        //         id: item.ID_MANTENIMIENTO,
-        //         title: `${item.TIPO_MANTENIMIENTO} - ${item.NOMBRE_EQUIPO}`,
-        //         start: fechaCompletadoStr,  // ✅ Solo fecha completado
-        //         allDay: true,                // ✅ Evento de día completo
-        //         color: colorEvento,
-        //         extendedProps: {
-        //             id_mantenimiento: item.ID_MANTENIMIENTO,
-        //             numero_orden: item.NUMERO_ORDEN,
-        //             id_equipo: item.ID_EQUIPO,
-        //             equipment: item.NOMBRE_EQUIPO,
-        //             description: item.DESCRIPCION_EQUIPO,
-        //             area: item.AREA,
-        //             areaDescripcion: item.AREA_DESCRIPCION,
-        //             line: item.LINEA_PRODUCCION,
-        //             lineaDescripcion: item.LINEA_DESCRIPCION,
-        //             type: item.TIPO_MANTENIMIENTO,
-        //             tipo: item.TIPO_MANTENIMIENTO,
-        //             fechaInicio: fechaInicio.toLocaleDateString('es-ES'),
-        //             fechaFin: fechaFin.toLocaleDateString('es-ES'),
-        //             fechaCompletado: fechaCompletado.toLocaleDateString('es-ES'),
-        //             periodoMantenimiento: `${fechaInicio.toLocaleDateString('es-ES')} al ${fechaFin.toLocaleDateString('es-ES')}`,
-        //             id_status: item.ID_ESTATUS,
-        //             status: item.ESTATUS,
-        //             orden_trabajo_finalizada: item.ORDEN_TRABAJO_FINALIZADA,
-        //             solicitante: item.SOLICITANTE || 'No especificado',
-        //             ubicacion_tecnica: item.UBICACION_TECNICA || 'No especificada',
-        //             duracion_hrs: item.DURACION_HRS || 0,
-        //             texto_corto: item.TEXTO_CORTO || '',
-        //             texto_secuencia: item.TEXTO_SECUENCIA || '',
-        //             tecnicos_ids: item.TECNICOS_ASIGNADOS_IDS || '',
-        //             tecnicos_nombres: item.TECNICOS_ASIGNADOS_NOMBRES || 'No asignados'
-        //         }
-        //     };
-
-        //     eventos.push(evento);
-        // });
-
-        // return eventos;
         const eventos = [];
 
         const colores = {
@@ -465,10 +406,6 @@ class CalendarManager {
         datosHana.forEach((item) => {
             const colorEvento = colores[item.TIPO_MANTENIMIENTO] || '#6c757d';
 
-            // const fechaInicio = new Date(item.FECHA_INICIO);
-            // const fechaFin = new Date(item.FECHA_FIN);
-            // const fechaCompletado = new Date(item.FECHA_COMPLETADO || item.HORA_APERTURA || new Date());
-
             const parseFecha = (v) => v ? new Date(v) : null;
             const fechaInicio = parseFecha(item.FECHA_INICIO);
             const fechaFin = parseFecha(item.FECHA_FIN);
@@ -476,29 +413,42 @@ class CalendarManager {
 
             // ✅ LÓGICA DE FECHA DEL EVENTO
             let fechaEvento;
+            let fechaFinEvento;
 
             const tieneFechasReales = item.FECHA_REAL_INICIO && item.FECHA_REAL_FIN;
             const enviarSiguienteMes = item.ENVIAR_SIGUIENTE_MES;
             const estatusSolicitud = item.ESTATUS_SOLICITUD;
 
             if (!enviarSiguienteMes && tieneFechasReales && (estatusSolicitud === 'NA' || estatusSolicitud === 'Aceptada')) {
-                // ✅ Tiene fechas reales y no es siguiente mes → pintar en FECHA_REAL_INICIO
+                // ✅ Tiene fechas reales y no es siguiente mes → pintar desde FECHA_REAL_INICIO hasta FECHA_REAL_FIN
                 fechaEvento = new Date(item.FECHA_REAL_INICIO).toISOString().split('T')[0];
+                // 🔥 IMPORTANTE: Sumar 1 día a fechaFinEvento porque FullCalendar trata end como EXCLUSIVO
+                const fechaRealFin = new Date(item.FECHA_REAL_FIN);
+                fechaRealFin.setDate(fechaRealFin.getDate() + 1);
+                fechaFinEvento = fechaRealFin.toISOString().split('T')[0];
             } else if (enviarSiguienteMes && estatusSolicitud === 'Aceptada') {
-                // ✅ Enviar siguiente mes y fue aceptada → primer día del mes siguiente
-                //const hoy = new Date(item.FECHA_INICIO);
-                const hoy = fechaInicio || fechaCompletado; 
+                // ✅ Enviar siguiente mes y fue aceptada → pintar desde primer día hasta último día del mes siguiente
+                const hoy = fechaInicio || fechaCompletado;
                 const primerDiaSiguienteMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
+                const ultimoDiaSiguienteMes = new Date(hoy.getFullYear(), hoy.getMonth() + 2, 0);
+                // 🔥 Sumar 1 día al último día para que se incluya en FullCalendar
+                ultimoDiaSiguienteMes.setDate(ultimoDiaSiguienteMes.getDate() + 1);
                 fechaEvento = primerDiaSiguienteMes.toISOString().split('T')[0];
+                fechaFinEvento = ultimoDiaSiguienteMes.toISOString().split('T')[0];
             } else {
-                // ✅ null, Rechazada, Pendiente o sin solicitud → fecha completado actual
+                // ✅ null, Rechazada, Pendiente o sin solicitud → usar fecha completado (solo un día)
                 fechaEvento = fechaCompletado.toISOString().split('T')[0];
+                // Para eventos de un solo día, FullCalendar necesita que end sea el día siguiente
+                const proximoDia = new Date(fechaCompletado);
+                proximoDia.setDate(proximoDia.getDate() + 1);
+                fechaFinEvento = proximoDia.toISOString().split('T')[0];
             }
 
             const evento = {
                 id: item.ID_MANTENIMIENTO,
                 title: `${item.TIPO_MANTENIMIENTO} - ${item.NOMBRE_EQUIPO}`,
                 start: fechaEvento,
+                end: fechaFinEvento,  // ✅ Ya incluye +1 día para FullCalendar
                 allDay: true,
                 color: colorEvento,
                 extendedProps: {
@@ -513,15 +463,12 @@ class CalendarManager {
                     lineaDescripcion: item.LINEA_DESCRIPCION,
                     type: item.TIPO_MANTENIMIENTO,
                     tipo: item.TIPO_MANTENIMIENTO,
-                    // fechaInicio: (fechaInicio || fechaCompletado).toLocaleDateString('es-ES'),
-                    // fechaFin: fechaFin.toLocaleDateString('es-ES'),
-                    // fechaCompletado: fechaCompletado.toLocaleDateString('es-ES'),
                     fechaInicio: (fechaInicio || fechaCompletado).toLocaleDateString('es-ES'),
                     fechaFin: (fechaFin || fechaCompletado).toLocaleDateString('es-ES'),
                     fechaCompletado: fechaCompletado.toLocaleDateString('es-ES'),
                     periodoMantenimiento: (fechaInicio && fechaFin)
                         ? `${fechaInicio.toLocaleDateString('es-ES')} al ${fechaFin.toLocaleDateString('es-ES')}`
-                        : '',                    
+                        : '',
                     id_status: item.ID_ESTATUS,
                     status: item.ESTATUS,
                     orden_trabajo_finalizada: item.ORDEN_TRABAJO_FINALIZADA,
