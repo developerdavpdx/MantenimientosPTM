@@ -1553,47 +1553,69 @@ namespace MantenimientosPTM.Controllers
                         command.Parameters.AddWithValue("@FechaTurnoInicioScrap", TurnoScrapStar);
                         command.Parameters.AddWithValue("@FechaTurnoFinScrap", TurnoScrapEnd);
 
+                        // 🔥 Agrega esto para ver exactamente qué parámetros van
+                        System.Diagnostics.Debug.WriteLine($"turno={turno} proceso={proceso} planta={numplanta}");
+                        System.Diagnostics.Debug.WriteLine($"inicio={TurnoStar} fin={TurnoEnd}, hora= {horasT}, FechaTurnoInicioScrap={TurnoScrapStar}, FechaTurnoFinScrap={TurnoScrapEnd}");
+
                         using (SqlDataAdapter da = new SqlDataAdapter(command))
                         using (DataSet ds = new DataSet())
                         {
                             da.Fill(ds);
                             DataTable tabla1 = ds.Tables[0];
 
+                            System.Diagnostics.Debug.WriteLine($"Filas: {tabla1.Rows.Count}"); // 🔥
+
                             using (tabla1)
                             {
-                                // Agregar columna Turno con el valor calculado, replicado en todas las filas
                                 tabla1.Columns.Add("Turno", typeof(int));
                                 tabla1.Columns.Add("PesoMinimo", typeof(decimal));
                                 tabla1.Columns.Add("KgsDia", typeof(decimal));
-                                foreach (DataRow row in tabla1.Rows)
+
+                                try
                                 {
-                                    // ✅ Preparar parámetros para el SP
-                                    var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                                    foreach (DataRow row in tabla1.Rows)
                                     {
-                                        { "P_QUERY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                        { "P_USUARIO", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                        { "P_PLANTA", (plantaHeader, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                        { "P_LINEA", (row["Id_Linea"], ParameterDirection.Input, HanaDbType.NVarChar) },
-                                        { "P_GRUPO_ART", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
-                                        { "P_VALIDAR_CAP", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
-                                        { "P_ITEMCODE", (row["Codigo"], ParameterDirection.Input, HanaDbType.NVarChar) }
-                                    };
+                                        var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                                        {
+                                            { "P_QUERY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                            { "P_USUARIO", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                            { "P_PLANTA", (plantaHeader, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                            { "P_LINEA", (row["Id_Linea"], ParameterDirection.Input, HanaDbType.NVarChar) },
+                                            { "P_GRUPO_ART", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
+                                            { "P_VALIDAR_CAP", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
+                                            { "P_ITEMCODE", (row["Codigo"], ParameterDirection.Input, HanaDbType.NVarChar) }
+                                        };
 
-                                    // ✅ Ejecutar el Stored Procedure
-                                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                                        logicaPlaneacion.AD.GCBuscarArticulos, // ⬅️ Nombre de tu SP
-                                        parameters
-                                    );
+                                        var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                                            logicaPlaneacion.AD.GCBuscarArticulos,
+                                            parameters
+                                        );
 
-                                    JArray Articulo = JArray.Parse(resultHana.JsonResult);
-                                    decimal KgsDia = Convert.ToDecimal(Articulo[0]["KgsDia"] != null ? (decimal.Parse(Articulo[0]["KgsDia"].ToString()) / 24).ToString() : "0");
-                                    decimal PesoMinimo = Convert.ToDecimal(Articulo[0]["PesoMinimo"] != null ? Articulo[0]["PesoMinimo"].ToString() : "0");
+                                        JArray Articulo = JArray.Parse(resultHana.JsonResult);
 
-                                    row["Turno"] = turno;
+                                        // ✅ Si viene vacío, skip
+                                        if (!Articulo.Any())
+                                        {
+                                            row["Turno"] = turno;
+                                            row["PesoMinimo"] = 0;
+                                            row["KgsDia"] = 0;
+                                            continue;
+                                        }
 
-                                    row["PesoMinimo"] = PesoMinimo;
 
-                                    row["KgsDia"] = KgsDia;
+                                        decimal KgsDia = Convert.ToDecimal(Articulo[0]["KgsDia"] != null ? (decimal.Parse(Articulo[0]["KgsDia"].ToString()) / 24).ToString() : "0");
+                                        decimal PesoMinimo = Convert.ToDecimal(Articulo[0]["PesoMinimo"] != null ? Articulo[0]["PesoMinimo"].ToString() : "0");
+
+                                        row["Turno"] = turno;
+                                        row["PesoMinimo"] = PesoMinimo;
+                                        row["KgsDia"] = KgsDia;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"ERROR foreach: {ex.Message}"); // 🔥
+                                    System.Diagnostics.Debug.WriteLine($"Inner: {ex.InnerException?.Message}"); // 🔥
+                                    throw; // para que también lo veas en el catch del método
                                 }
 
                                 JSONstringSp = JsonConvert.SerializeObject(tabla1);

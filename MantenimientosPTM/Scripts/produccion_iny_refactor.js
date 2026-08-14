@@ -172,7 +172,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     Mes: item.MES || this.obtenerNombreMes(item.FECHA),
                     Fecha: item.FECHA,
                     Linea: item.LINEA,
-                    Inyectora: item.INYECTORA,
+                    Inyectora: item.NombreEquipo,
                     Producto: item.PRODUCTO,
                     Descripcion: item.DESCRIPCION,
                     OP: item.OP,
@@ -272,7 +272,7 @@ class GestionProduccionINY extends GestionProduccionBase {
 
             // Productos terminados
             let PLANTA = this.datos_usuario[0].PLANTA;
-            const productosTerminados = await this.ObtenerProductoTerminado(PLANTA, FiltroTurno, 'PINY');
+            const productosTerminados = await this.ObtenerProductoTerminado(null, null, PLANTA, FiltroTurno, 'INY'); //Antes PINY
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados);
 
             // Si no hay nada, mostrar placeholder
@@ -361,7 +361,7 @@ class GestionProduccionINY extends GestionProduccionBase {
             nuevaFila.OTMC = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
             nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
-            nuevaFila.TiempoMuertoCorrectivos = parseFloat(item.DuracionHrs) || 0;
+            nuevaFila.TiempoMuertoCorrectivos = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
 
             nuevaFila._origen = 'CORRECTIVO';
             nuevaFila._marcador = '🔧';
@@ -377,6 +377,8 @@ class GestionProduccionINY extends GestionProduccionBase {
                 nuevaFila.Linea = null;
                 lineasNoEncontradas.push(item.NumeroOrden);
             }
+
+            nuevaFila.Inyectora = item.NombreEquipo || '';
 
             this.recalcularFila(nuevaFila);
             filasNuevas.push(nuevaFila);
@@ -559,7 +561,7 @@ class GestionProduccionINY extends GestionProduccionBase {
     // ========================================
     // OBTENER PRODUCTO TERMINADO
     // ========================================
-    async ObtenerProductoTerminado(planta, FiltroTurno, proceso) {
+    async ObtenerProductoTerminado(FechaInicio, FechaFin, FiltroTurno, proceso) {
         try {
             GlobalUtil.mostrarLoader(true);
 
@@ -567,7 +569,9 @@ class GestionProduccionINY extends GestionProduccionBase {
                 url: `/${this.URLBase}/GetProductoTerminadoNewScale`,
                 type: "GET",
                 headers: {
-                    "Planta": planta || this.datos_usuario[0].PLANTA,
+                    "FechaInicio": FechaInicio,
+                    "FechaFin": FechaFin,
+                    "Planta": this.datos_usuario[0].PLANTA,
                     "Turno": FiltroTurno || null,
                     "Proceso": proceso || ""
                 },
@@ -1271,7 +1275,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     MES: node.data.Mes,
                     FECHA: node.data.Fecha,
                     LINEA: node.data.Linea,
-                    INYECTORA: node.data.Inyectora,
+                    INYECTORA: node.data.NombreEquipo,
                     PRODUCTO: node.data.Producto,
                     DESCRIPCION: node.data.Descripcion,
                     OP: node.data.OP,
@@ -1389,11 +1393,36 @@ class GestionProduccionINY extends GestionProduccionBase {
             modal.show();
         });
 
-        $('#btnAplicarFiltros').on('click', () => {
-            const fechaInicio = $('#FiltroFechaInicio').val();
-            const fechaFin = $('#FiltroFechaFin').val();
-            const filtroTurno = $('#FiltroTurno').val();
-            this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, filtroTurno, null, null);
+        $('#btnAplicarFiltros').on('click', async () => {
+            const $btn = $('#btnAplicarFiltros');
+            $btn.prop('disabled', true);
+
+            try {
+                const fechaInicio = $('#FiltroFechaInicio').val();
+                const fechaFin = $('#FiltroFechaFin').val();
+                const filtroTurno = $('#FiltroTurno').val();
+                const filtroProducto = $('#FiltroProducto').val(); // 🔥 NUEVO
+                const FiltroLinea = $('#FiltroLinea').val(); // 🔥 NUEVO
+
+                await this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, filtroTurno, FiltroLinea, filtroProducto);
+            } finally {
+                $btn.prop('disabled', false);
+            }
+        });
+
+        $('#btnAplicarFiltrosPT').on('click', async () => {
+            const $btn = $('#btnAplicarFiltrosPT');
+            $btn.prop('disabled', true);
+
+            try {
+                const fechaInicio = $('#FiltroFechaInicioPT').val();
+                const fechaFin = $('#FiltroFechaFinPT').val();
+                const filtroTurno = $('#FiltroTurnoPT').val();
+                const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, 'INY');
+                const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
+            } finally {
+                $btn.prop('disabled', false);
+            }
         });
 
         $('#btnLimpiarFiltros').on('click', () => {
@@ -1404,12 +1433,18 @@ class GestionProduccionINY extends GestionProduccionBase {
 
         $('#FiltroFechaInicio, #FiltroFechaFin')
             .off('change')
+            
             .on('change', () => {
+
                 const fechaInicio = $('#FiltroFechaInicio').val();
                 const fechaFin = $('#FiltroFechaFin').val();
                 const FechaTexto = this.formatearRangoFechas(fechaInicio, fechaFin);
-                $("#mesActual").text(FechaTexto);
+                $("#mesActual").text(
+                    FechaTexto
+                );
+
                 this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, null, null, null);
+
             });
     }
 

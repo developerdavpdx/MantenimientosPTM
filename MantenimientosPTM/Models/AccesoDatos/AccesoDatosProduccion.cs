@@ -882,6 +882,7 @@ namespace MantenimientosPTM
             public decimal KgPproducto { get; set; }
             public string Item { get; set; }
             public string HorasTrabajo { get; set; } //
+            public string Proceso { get; set; }
         }
 
         public class TiemposMuertosProduccionINY
