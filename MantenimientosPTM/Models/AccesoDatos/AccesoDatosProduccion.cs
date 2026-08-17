@@ -103,7 +103,12 @@ namespace MantenimientosPTM
             }
         }
 
-        public string GCGuardarTiemposMuertosINY = "NOMBRE_DEL_SP_GUARDAR_INY";
+        public string GCGuardarTiemposMuertosINY {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGuardarTiemposMuertosINY\"";
+            }
+        }
 
         #endregion
 
@@ -892,6 +897,7 @@ namespace MantenimientosPTM
             public string OTMP { get; set; }
             public string ID_PRODUCTO_TERMINADO { get; set; }
             public DateTime? FECHA { get; set; }
+            public string MES { get; set; }
             public string LINEA { get; set; }
             public string INYECTORA { get; set; }
             public string PRODUCTO { get; set; }
@@ -919,6 +925,17 @@ namespace MantenimientosPTM
             public decimal TIEMPO_DISPONIBLE { get; set; }
             public decimal TIEMPO_PRODUCTIVO { get; set; }
             public decimal PORCENTAJE_DISPONIBILIDAD { get; set; }
+            public decimal PESO_MINIMO { get; set; }
+            public decimal KG_HR_LINEA { get; set; }
+            public decimal KG_HR_PRODUCTO { get; set; }
+            public decimal OBJETIVO_EFICIENCIA { get; set; }
+            public decimal KG_POR_TIEMPO_DISPONIBLE { get; set; }
+            public decimal KG_NETOS_HR_REALES { get; set; }
+            public decimal PORCENTAJE_RENDIMIENTO { get; set; }
+            public decimal PORCENTAJE_CALIDAD { get; set; }
+            public decimal PORCENTAJE_OEE { get; set; }
+            public decimal PORCENTAJE_EFICIENCIA_PRODUCTO { get; set; }
+            public decimal EFICIENCIA_OPERATIVA { get; set; }
             public string USUARIO { get; set; }
             public string PLANTA { get; set; }
         }
