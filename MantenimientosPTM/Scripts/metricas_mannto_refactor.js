@@ -129,7 +129,7 @@ class FiltrosManager {
 
     inicializar() {
         EquiposUtil.llenarLineas(this.datos_usuario[0].PLANTA, "none", "FiltroLinea");
-        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, "none", "FiltroProceso");
+        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA,1, "none", "FiltroProceso");
         console.log('✅ FiltrosManager inicializado');
     }
 
@@ -164,17 +164,24 @@ class MetricasManager {
 
 
         // 🔥 Mapa ID → clave de proceso
-        this.mapaProcesos = {
+        this.mapaProcesosP1 = {
             '1': 'PVC',
             '7': 'PEAD_CORR',
             '9': 'PEAD_LISO'
+        };
+
+        // 🔥 Mapa ID → clave de proceso
+        this.mapaProcesosP2 = {
+            '14': 'PVC',
+            '15': 'INY'
         };
 
         // 🔥 Mapa proceso → endpoint
         this.endpointsPorProceso = {
             'PVC': 'GetMetricasOEE_PVC',
             'PEAD_LISO': 'GetMetricasOEE_PeadLiso',
-            'PEAD_CORR': 'GetMetricasOEE_Corrugado'
+            'PEAD_CORR': 'GetMetricasOEE_Corrugado',
+            'INY': 'GetMetricasOEE_INY'   // 🔥 nuevo
         };
     }
 
@@ -204,12 +211,21 @@ class MetricasManager {
         // Sin proceso seleccionado
         if (!proceso) {
             if (showwarning)
-            AlertManager.mostrar('Selecciona un proceso', 'warning','alertMainContainer');
+                AlertManager.mostrar('Selecciona un proceso', 'warning', 'alertMainContainer');
             return;
         }
-
+        const Planta = this.datos_usuario[0].PLANTA;
         // 🔥 Si viene como ID numérico, lo convierte a clave
-        const clavesProceso = this.mapaProcesos[String(proceso)] ?? proceso;
+        let clavesProceso;
+
+        switch (Planta) {
+            case 1:
+              clavesProceso = this.mapaProcesosP1[String(proceso)] ?? proceso;
+                break;
+            case 2:
+                clavesProceso = this.mapaProcesosP2[String(proceso)] ?? proceso;
+                break;
+        }
 
         const endpoint = this.endpointsPorProceso[clavesProceso];
 
@@ -591,7 +607,7 @@ class MetricasManager {
                 $('#lbl-tiempo-espera-total').text(tiempoEsperaTotalVal.toFixed(1) + ' hr');
                 $('#lbl-tiempo-espera-total-ots').text(tiempoEsperaOtsVal);
 
-                
+
                 // Actualizar gráficas
                 this.actualizarGraficaOEE(dispVal, rendVal, calVal);
                 this.actualizarGraficaTiempoMuerto(tiempoNoDisponibleVal, tiempoNoProductivoVal);

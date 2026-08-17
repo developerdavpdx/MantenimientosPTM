@@ -146,7 +146,7 @@ class CalendarManager {
         this.lineaColorIdx = 0;
 
         EquiposUtil.llenarLineas(this.PLANTA, "FiltroLinea", "ParoLinea");
-        EquiposUtil.llenarProcesos(this.PLANTA, "FiltroProceso", null);
+        EquiposUtil.llenarProcesos(this.PLANTA,1, "FiltroProceso", null);
 
 
     }

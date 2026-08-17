@@ -187,6 +187,58 @@ namespace MantenimientosPTM.Controllers
         }
 
         // ========================================
+        // INYECCIÓN
+        // ========================================
+        [HttpGet]
+        public JsonResult GetMetricasOEE_INY(
+            DateTime? FiltroFechaInicio,
+            DateTime? FiltroFechaFin,
+            string FiltroLinea,
+            string FiltroPlanta,
+            string FiltroProceso)
+        {
+            GlobalCommands.JsonResponseMtto jsonResponse;
+
+            try
+            {
+                DateTime dtFechaInicio, dtFechaFin;
+
+                if (FiltroFechaInicio == null || FiltroFechaFin == null)
+                {
+                    DateTime hoy = DateTime.Now;
+                    dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1);
+                    dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1);
+                }
+                else
+                {
+                    dtFechaInicio = (DateTime)FiltroFechaInicio;
+                    dtFechaFin = (DateTime)FiltroFechaFin;
+                }
+
+                var parameters = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
+                {
+                    { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN",    (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)  ? (object)null : FiltroLinea,  ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_AREA",         (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetMetricasOEE_INY,
+                    parameters
+                );
+
+                jsonResponse = BuildResponse(resultHana.JsonResult);
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new GlobalCommands.JsonResponseMtto { Status = "ERROR", Message = ex.ToString() });
+            }
+        }
+
+        // ========================================
         // 🔥 HELPER — evita repetir el if/else en los 3
         // ========================================
         private GlobalCommands.JsonResponseMtto BuildResponse(string jsonResult)

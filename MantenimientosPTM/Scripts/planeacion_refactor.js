@@ -342,7 +342,7 @@ class PlaneacionManager {
     // ─────────────────────────────────────────────
     inicializar() {
         this.llenarTablaPlanProduccion(); // ✅ Sigue siendo el punto de entrada
-        EquiposUtil.llenarProcesos(this.PLANTA, "PlanProceso", "FiltroProceso");
+        EquiposUtil.llenarProcesos(this.PLANTA,1, "PlanProceso", "FiltroProceso");
         console.log('✅ Planeación inicializado correctamente');
     }
 

@@ -174,7 +174,7 @@ class GestionEventosApp {
 
         $('#FiltroPlantaParo').on('change', () => {
             const Planta = $("#FiltroPlantaParo").val();
-            EquiposUtil.llenarProcesos(Planta, null, "FiltroProcesoParo");
+            EquiposUtil.llenarProcesos(Planta,1, null, "FiltroProcesoParo");
             if (Planta) {
                 $('#FiltroPlantaParo option[value=""]').hide();
             }
@@ -295,7 +295,7 @@ class ProduccionManager {
     // ✅ Función para inicializar el calendario
     inicializar() {
         this.llenarTablaParos();
-        EquiposUtil.llenarProcesos(this.PLANTA, null, "FiltroProceso");
+        EquiposUtil.llenarProcesos(this.PLANTA,1, null, "FiltroProceso");
         EquiposUtil.llenarCategoriasParo("ParoCategoria");
         this.initHubParos(); //Inicializar HUB mantenimientos correctivos
         console.log('✅ Calendar Manager inicializado correctamente');

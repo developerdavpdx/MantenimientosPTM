@@ -418,7 +418,7 @@ class EquipoManager {
         this.Email = datos_usuario[0].EMAIL;
         this.llenarEquipos();
         EquiposUtil.llenarTipoEquipos();
-        EquiposUtil.llenarProcesos(this.PLANTA, "Area", "FiltroProceso");
+        EquiposUtil.llenarProcesos(this.PLANTA,1, "Area", "FiltroProceso");
         EquiposUtil.llenarRangoDias();
         this.inicializarCorreos(); // 🔥 AGREGAR AQUÍ
         this.llenarPeriodicidad("PeriodicidadesMantenimiento");
@@ -1401,7 +1401,7 @@ class EquipoManager {
         ValidationManager.limpiarValidacion('#formLinea'); // AGREGAR ESTA LÍNEA
         $('#PlantaLine').val(`${this.PLANTA}`);
         // Llenar select de áreas para la línea
-        EquiposUtil.llenarProcesos(this.PLANTA, 'AreaLine', null);
+        EquiposUtil.llenarProcesos(this.PLANTA,1,'AreaLine', null);
         // Activar pestaña 'Alta' y mostrar modal
         try {
             const tabEl = document.getElementById('tab-alta');
@@ -2388,7 +2388,7 @@ class EquipoManager {
                         $("#btnGuardarArea").html('<i class="bi bi-save me-1"></i>Guardar');
                     }, 3000);
 
-                    EquiposUtil.llenarProcesos(this.PLANTA, 'GestionArea', 'AreaLine');
+                    EquiposUtil.llenarProcesos(this.PLANTA,1, 'GestionArea', 'AreaLine');
 
                 } else {
                     let customMessage = JSON.parse(response.Data);
@@ -2661,7 +2661,7 @@ class EquipoManager {
 
         $('#GestionPlanta').val(this.PLANTA);
         // Llenar select de áreas (usa la misma función que ya existe)
-        EquiposUtil.llenarProcesos(this.PLANTA, 'GestionArea', 'AreaLine');
+        EquiposUtil.llenarProcesos(this.PLANTA,1, 'GestionArea', 'AreaLine');
 
         // Cargar líneas inicialmente
         this.renderListarLineas();

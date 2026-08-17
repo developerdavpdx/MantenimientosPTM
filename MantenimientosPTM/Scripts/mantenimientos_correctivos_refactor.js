@@ -935,7 +935,7 @@ class MantenimientoManager {
         }
 
         EquiposUtil.llenarLineas(this.datos_usuario[0].PLANTA, "none", "FiltroLinea");
-        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, "none", "FiltroArea");
+        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA,1, "none", "FiltroArea");
 
         console.log('✅ MantenimientoManager inicializado correctamente');
     }

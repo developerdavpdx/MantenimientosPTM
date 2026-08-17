@@ -93,7 +93,7 @@ class GestionCalendarioProduccion extends GestionProduccionBase {
     // Carga procesos y líneas usando las utilidades de Global.js
     async _cargarSelects() {
         const planta = this.datos_usuario?.[0]?.PLANTA || 1;
-        EquiposUtil.llenarProcesos(planta, 'CalFiltroProceso', null);
+        EquiposUtil.llenarProcesos(planta,1, 'CalFiltroProceso', null);
 
         // Al cambiar proceso → cargar líneas
 

@@ -44,7 +44,7 @@ class GestionEventosApp {
                 );
             });
 
-        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, null, "FiltroArea");
+        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA,1, null, "FiltroArea");
 
         // 🔥 NUEVO: Inicializar HUB de SignalR para el calendario
         this.initHubCalendarioMantenimientos();

@@ -1793,7 +1793,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetProcesosPorPlanta(int? PLANTA)
+        public JsonResult GetProcesosPorPlanta(int? PLANTA,int? Produccion)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
             AccesoDatosEquipos.PlantaSeleccionada RequestData;
@@ -1803,10 +1803,11 @@ namespace MantenimientosPTM.Controllers
 
                 RequestData = new AccesoDatosEquipos.PlantaSeleccionada();
                 RequestData.Planta = PLANTA;
+                RequestData.Produccion = Produccion;
                 // Convertir modelo a parámetros HANA
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
 
-                var excludedParams = new[] { "P_AREA", "P_PRODUCCION" }; // Cambié a mayúsculas
+                var excludedParams = new[] { "P_AREA" }; // Cambié a mayúsculas
                 var parameters = allparameters
                     .Where(p => !excludedParams.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value);

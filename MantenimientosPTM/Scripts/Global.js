@@ -2257,7 +2257,7 @@ class EquiposUtil {
         });
     }
 
-    static llenarProcesos(Planta, Fieldoptiongroup, Fieldfilter) {
+    static llenarProcesos(Planta,Produccion, Fieldoptiongroup, Fieldfilter) {
 
         const selectElement = $(`#${Fieldoptiongroup}`);
         const FiltroProceso = $(`#${Fieldfilter}`);
@@ -2269,7 +2269,7 @@ class EquiposUtil {
         $.ajax({
             url: `/${GlobalUtil.URLBaseEquipos}/GetProcesosPorPlanta`,
             type: 'GET',
-            data: { "Planta": Planta },
+            data: { "Planta": Planta, "Produccion": Produccion },
             headers: {
                 'Content-Type': 'application/json'
             },

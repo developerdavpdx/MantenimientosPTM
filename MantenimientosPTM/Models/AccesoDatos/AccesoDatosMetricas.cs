@@ -29,6 +29,14 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOMetricasOEE_Corrugado\"";
             }
         }
+
+        public string GCGetMetricasOEE_INY
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOMetricasOEE_INY\"";
+            }
+        }
         #endregion
 
         #region AditionalClassModel
