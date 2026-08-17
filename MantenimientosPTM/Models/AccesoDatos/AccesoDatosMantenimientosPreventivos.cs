@@ -30,6 +30,13 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertarSolicitudRefaccion\"";
             }
         }
+        public string GCActualizaSolicitudRefaccion
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOActualizarSolicitudRefaccion\"";
+            }
+        }
         public string GCActualizaMP
         {
             get

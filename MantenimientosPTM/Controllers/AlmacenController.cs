@@ -1206,12 +1206,13 @@ namespace MantenimientosPTM.Controllers
                         contextSC.Clients.All.actualizarTablaSolicitudCompra(planta);
 
                     }
-                    else {
+                    else
+                    {
                         ViewBag.Estado = "Error";
                         ViewBag.Folio = folio;
                         ViewBag.Mensaje = "No fue posible actualizar solicitud de compra: " + Environment.NewLine + sapResp.Message;
                     }
-                   
+
                     return View("AprobacionSolicitud");
 
                 }
@@ -2490,7 +2491,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetArticulosPorOrdenTrabajo(string ordenTrabajo, int? planta)
+        public JsonResult GetArticulosPorOrdenTrabajo(string ordenTrabajo, int? planta,string Estatus)
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
 
@@ -2509,7 +2510,8 @@ namespace MantenimientosPTM.Controllers
 
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
-                    { "P_FILTRO_ORDEN", (ordenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FILTRO_ORDEN", (ordenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_FILTRO_ESTATUS", (Estatus != null ? Estatus : null, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -2547,7 +2549,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetEmpleadosAlmacenPorRol(int planta, string rol,string codigoEmpleado)
+        public JsonResult GetEmpleadosAlmacenPorRol(int planta, string rol, string codigoEmpleado)
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
             try
@@ -2842,6 +2844,93 @@ namespace MantenimientosPTM.Controllers
                 jsonResponse.Message = aceptadaMantenimiento
                     ? "Refacción autorizada correctamente."
                     : "Refacción rechazada correctamente.";
+                jsonResponse.Data = result.JsonResult;
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                string methodName = MethodBase.GetCurrentMethod().Name;
+                string controllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
+                log.Error($"Error en {controllerName}.{methodName}: {ex.Message}");
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al procesar la autorización: " + ex.Message;
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult ActualizarSolicitudRefaccion(int idSolicitud, string Usuario, int IdOrdenTrabajo, string TipoMantenimiento)
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            try
+            {
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+            {
+                { "P_IDSOLICITUD",            (idSolicitud,            ParameterDirection.Input, HanaDbType.Integer)  },
+                { "P_ORDENTRABAJO",           (null,           ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_REFACCIONSOLICITADA",    (null,                     ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_CANTIDAD",               (null,                      ParameterDirection.Input, HanaDbType.Integer)  },
+                { "P_ESTATUS",                ("Cerrada",                     ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_USUARIOATIENDE",         (Usuario,                     ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_ACEPTADAMANTENIMIENTO",  (null,  ParameterDirection.Input, HanaDbType.Boolean)  }
+            };
+
+                var result = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCActualizaSolicitudRefaccion,
+                    parameters
+                );
+
+                if (result.JsonResult.Contains("ERROR") || result.JsonResult.Contains("Error"))
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "Error al actualizar la solicitud de la refacción.";
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse);
+                }
+
+                switch (TipoMantenimiento)
+                {
+
+                    case "Preventivo":
+                        //Marcar la orden de trabajo como liberada
+                        var parametrosFinOT = new
+                        {
+                            P_ID_MANTENIMIENTO = IdOrdenTrabajo,
+                            P_ORDENTRABAJO = string.Empty,
+                            P_ESTATUS = 2,
+                            P_USUARIOACTUALIZA = Usuario
+                        };
+
+                        var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, false, null);
+                        var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD._datosPreventivos.GCActualizaMP, allparameters);
+
+                        //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                        string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                        var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                        context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
+                        break;
+
+                    case "Correctivo":
+                        //Marcar la orden de trabajo como liberada
+                        var parametrosFinOTMC = new
+                        {
+                            P_ID_MANTENIMIENTO = IdOrdenTrabajo,
+                            P_ESTATUS = 2,
+                            P_USUARIOACTUALIZA = Usuario
+                        };
+
+                        var allparametersMC = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOTMC, false, null);
+                        var ActualizaOTMC = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD._datosCorrectivos.GCActualizaMC, allparametersMC);
+
+                        //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                        string rolQueCambioMC = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+                        var contextMC = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                        contextMC.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambioMC);
+                        break;
+                }
+
+                jsonResponse.Status = "OK";
+                jsonResponse.Message = "Solicitud de refacción cerrada correctamente.";
                 jsonResponse.Data = result.JsonResult;
                 return Json(jsonResponse);
             }

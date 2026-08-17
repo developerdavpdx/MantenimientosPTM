@@ -952,6 +952,7 @@ class SolicitudManager {
                 url: `/${this.URLBase}/GetArticulosPorOrdenTrabajo`,
                 method: 'GET',
                 data: { ordenTrabajo, planta: PLANTA },
+                //Estatus: "ELIMINADA,Cerrada"
                 dataType: 'json'
             });
 
@@ -1339,15 +1340,15 @@ class SolicitudManager {
     renderTablaArticulosSalida(articulos, salidas = []) {
         const tbody = $('#bodyArticulosSalida');
         tbody.empty();
-
+        console.log(articulos);
         if (!articulos || articulos.length === 0) {
             tbody.html(`
-        <tr>
-            <td colspan="19" class="text-center text-muted py-4">
-                <i class="bi bi-inbox me-2"></i>No hay artículos disponibles
-            </td>
-        </tr>
-    `);
+            <tr>
+                <td colspan="19" class="text-center text-muted py-4">
+                    <i class="bi bi-inbox me-2"></i>No hay artículos disponibles
+                </td>
+            </tr>
+        `);
             $('#badgeTotalArticulos').text('0');
             return;
         }
@@ -1362,12 +1363,16 @@ class SolicitudManager {
             salidasPorSolicitud[key].push(mov);
         });
 
-        // ✅ Verificar si hay cantidad PENDIENTE POR SURTIR
+        // ✅ Verificar si hay cantidad PENDIENTE POR SURTIR (excluyendo canceladas)
         const hayPendiente = articulos.some(art => {
             const cantidadOriginal = art.CANTIDAD || art.Cantidad || 0;
             const CantidadConsumidaTotal = art.CANTIDAD_CONSUMIDA ?? 0;
             const pendiente = cantidadOriginal - CantidadConsumidaTotal;
-            return pendiente > 0;
+
+            const estatusOriginal = (art.ESTATUS || '').trim();
+            const esCanceladaCheck = estatusOriginal === 'Cerrada' || estatusOriginal === 'ELIMINADA' || estatusOriginal === 'Cancelada';
+
+            return pendiente > 0 && !esCanceladaCheck;
         });
 
         // ✅ Datos comunes del usuario
@@ -1400,47 +1405,63 @@ class SolicitudManager {
             // ✅ Calcular cantidad PENDIENTE
             const cantidadPendiente = Math.max(0, cantidadOriginal - CantidadConsumidaTotal);
             const completamenteSurtido = cantidadPendiente <= 0;
-            const isReadOnly = (completamenteSurtido ? 'readonly' : '');
+
+            // ✅ NUEVO: Verificar si la solicitud fue Cerrada/Eliminada (cancelada) - no debe ser editable
+            const estatusOriginal = (art.ESTATUS || '').trim();
+            const esCancelada = estatusOriginal === 'Cerrada' || estatusOriginal === 'ELIMINADA' || estatusOriginal === 'Cancelada';
+
+            // 🔥 Bandera combinada para deshabilitar inputs/selects/botones
+            const noEditable = completamenteSurtido || esCancelada;
+            const isReadOnly = (noEditable ? 'readonly' : '');
 
             const urgenciaClass = this._getUrgenciaClass(art.NIVEL_URGENCIA);
-            const estatusClass = completamenteSurtido ? 'badge btn-ptm-primary badge-custom' : 'bg-warning text-dark';
+
+            // ✅ Clase de estatus con color según el caso
+            let estatusClass = 'bg-warning text-dark'; // Pendiente por defecto
+            if (esCancelada) {
+                estatusClass = 'badge-cancelada'; // 🔥 Clase propia con más contraste
+            } else if (completamenteSurtido) {
+                estatusClass = 'badge btn-ptm-primary badge-custom'; // Verde/Azul para Atendida
+            }
+
             const urgenciaText = art.NIVEL_URGENCIA || 'N/A';
             const estatusText = art.ESTATUS || 'N/A';
 
-            // ✅ Indicador visual de pendiente
-            const indicadorPendiente = cantidadPendiente > 0
+            // ✅ Indicador visual de pendiente (NO mostrar si está cancelada)
+            const indicadorPendiente = (cantidadPendiente > 0 && !esCancelada)
                 ? `<span class="badge bg-danger ms-2 fw-semibold">${cantidadPendiente} pendiente</span>`
                 : '';
 
             let botonesAccion = `
-        <button class="btn btn-sm btn-ptm-edit btn-del-ref"
-                data-idsolicitud="${art.ID_SOLICITUD}"
-                data-codigo="${refaccionSolicitada}"
-                data-nombrearticulo="${art.NOMBRE_ARTICULO}"
-                data-ordentrabajo="${art.ORDEN_TRABAJO}"
-                data-bs-toggle="tooltip"
-                title="❌ Eliminar refacción">
-            <i class="bi bi-x-circle fs-6"></i>
-        </button>
-        <button class="btn btn-sm btn-ptm-edit btn-change-ref"
-                data-idsolicitud="${art.ID_SOLICITUD}"
-                data-codigo="${refaccionSolicitada}"
-                data-nombrearticulo="${art.NOMBRE_ARTICULO}"
-                data-ordentrabajo="${art.ORDEN_TRABAJO}"
-                data-bs-toggle="tooltip"
-                title="🔄 Cambiar refacción">
-            <i class="bi bi-arrow-repeat fs-6"></i>
-        </button>`;
+            <button class="btn btn-sm btn-ptm-edit btn-del-ref"
+                    data-idsolicitud="${art.ID_SOLICITUD}"
+                    data-codigo="${refaccionSolicitada}"
+                    data-nombrearticulo="${art.NOMBRE_ARTICULO}"
+                    data-ordentrabajo="${art.ORDEN_TRABAJO}"
+                    data-bs-toggle="tooltip"
+                    title="❌ Eliminar refacción">
+                <i class="bi bi-x-circle fs-6"></i>
+            </button>
+            <button class="btn btn-sm btn-ptm-edit btn-change-ref"
+                    data-idsolicitud="${art.ID_SOLICITUD}"
+                    data-codigo="${refaccionSolicitada}"
+                    data-nombrearticulo="${art.NOMBRE_ARTICULO}"
+                    data-ordentrabajo="${art.ORDEN_TRABAJO}"
+                    data-bs-toggle="tooltip"
+                    title="🔄 Cambiar refacción">
+                <i class="bi bi-arrow-repeat fs-6"></i>
+            </button>`;
 
-            if (completamenteSurtido) {
-                botonesAccion = `
-        <button class="btn btn-sm btn-ptm-edit btn-del-ref disabled">
-            <i class="bi bi-x-circle fs-6"></i>
-        </button>
-        <button class="btn btn-sm btn-ptm-edit btn-change-ref disabled">
-            <i class="bi bi-arrow-repeat fs-6"></i>
-        </button>`;
-            }
+                    // ✅ Deshabilitar botones si está completamente surtido O cancelada
+                    if (noEditable) {
+                        botonesAccion = `
+            <button class="btn btn-sm btn-ptm-edit btn-del-ref disabled">
+                <i class="bi bi-x-circle fs-6"></i>
+            </button>
+            <button class="btn btn-sm btn-ptm-edit btn-change-ref disabled">
+                <i class="bi bi-arrow-repeat fs-6"></i>
+            </button>`;
+                    }
 
             // ✅ CRÍTICO: Construir contenido del popover con el historial REAL
             // (ya no se simula dividiendo un folio con comas)
@@ -1457,107 +1478,113 @@ class SolicitudManager {
                 ? `<span class="badge bg-primary ms-1" title="${historialSalidas.length} movimientos de salida">${historialSalidas.length}</span>`
                 : '';
 
+            // ✅ NUEVO: Clase de fila y tooltip según el caso (cancelada / surtida / normal)
+            const claseFila = esCancelada ? 'salida_cancelada' : (completamenteSurtido ? 'salida_completada' : '');
+            const tooltipFila = esCancelada
+                ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Solicitud Cerrada/Cancelada - No disponible"`
+                : (completamenteSurtido ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Completamente Surtida"` : '');
+
             tbody.append(`
-            <tr class="${completamenteSurtido ? 'salida_completada' : ''}" ${completamenteSurtido ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Completamente Surtida"` : ''}>
-                <td class="text-center align-middle">${index + 1}</td>
-                <td class="text-center align-middle">
-                <div class="folios-container position-relative d-flex justify-content-center align-items-center">
-                    <span class="badge bg-secondary cursor-pointer folio-badge"
-                          role="button"
-                          tabindex="0"
-                          data-bs-toggle="popover"
-                          data-bs-trigger="focus"
-                          data-bs-html="true"
-                          data-bs-placement="left"
-                          data-bs-custom-class="popover-folios"
-                          title="&lt;i class=&quot;bi bi-history me-2&quot;&gt;&lt;/i&gt;Historial de Salidas"
-                          data-bs-content="${popoverContentEscaped}">
-                        <i class="bi bg-info bi-info-circle"></i>
-                    </span>
-                </div>
+        <tr class="${claseFila}" ${tooltipFila}>
+            <td class="text-center align-middle">${index + 1}</td>
+            <td class="text-center align-middle">
+            <div class="folios-container position-relative d-flex justify-content-center align-items-center">
+                <span class="badge bg-secondary cursor-pointer folio-badge"
+                      role="button"
+                      tabindex="0"
+                      data-bs-toggle="popover"
+                      data-bs-trigger="focus"
+                      data-bs-html="true"
+                      data-bs-placement="left"
+                      data-bs-custom-class="popover-folios"
+                      title="&lt;i class=&quot;bi bi-history me-2&quot;&gt;&lt;/i&gt;Historial de Salidas"
+                      data-bs-content="${popoverContentEscaped}">
+                    <i class="bi bg-info bi-info-circle"></i>
+                </span>
+            </div>
+        </td>
+            <td class="text-center align-middle">
+                <input type="checkbox" class="form-check-input chk-articuloSalida"
+                       data-idsolicitud="${art.ID_SOLICITUD}"
+                       data-codigo="${refaccionSolicitada}"
+                       data-nombrearticulo="${art.NOMBRE_ARTICULO}"
+                       data-ordentrabajo="${art.ORDEN_TRABAJO}"
+                       data-nombre="${nombreMostrar}"
+                       data-cantidad="${cantidadPendiente}"
+                       data-cantidadoriginal="${cantidadOriginal}"
+                       data-cantidadconsumida="${CantidadConsumidaTotal}"
+                       ${noEditable ? 'disabled' : ''}>
             </td>
-                <td class="text-center align-middle">
-                    <input type="checkbox" class="form-check-input chk-articuloSalida"
-                           data-idsolicitud="${art.ID_SOLICITUD}"
-                           data-codigo="${refaccionSolicitada}"
-                           data-nombrearticulo="${art.NOMBRE_ARTICULO}"
-                           data-ordentrabajo="${art.ORDEN_TRABAJO}"
-                           data-nombre="${nombreMostrar}"
-                           data-cantidad="${cantidadPendiente}"
-                           data-cantidadoriginal="${cantidadOriginal}"
-                           data-cantidadconsumida="${CantidadConsumidaTotal}"
-                           ${completamenteSurtido ? 'disabled' : ''}>
-                </td>
-                <td class="text-center align-middle">${botonesAccion}</td>
-                <td class="text-center align-middle">
-                    ${cantidadPendiente > 0 ? `<span class="punto-pulso-absolute"></span>` : ''}
-                    <span class="badge bg-dark"><i class="bi bi-upc-scan me-1"></i>${refaccionSolicitada || 'N/A'}</span>
-                </td>
-                <td class="align-middle">
-                    <i class="bi bi-box-seam text-muted me-1"></i>${nombreMostrar}
-                </td>
-                <td class="text-center align-middle">
-                    <i class="bi bi-boxes text-info me-1"></i>${cantidadOriginal}
-                </td>
-                <td class="text-center align-middle">
-                    <input type="number" min="1" max="${cantidadPendiente || maxStock}"
-                           class="form-control form-control-sm text-center fw-bold cantidadEditable" ${completamenteSurtido ? 'disabled' : ''}
-                           value="${completamenteSurtido ? 0 : CantidadSurtida}"
-                           data-stock="${art.STOCK || 0}"
-                           data-min="${minStock}"
-                           data-max="${maxStock}"
-                           data-pendiente="${cantidadPendiente}"
-                           ${completamenteSurtido ? 'readonly' : ''}>
-                </td>
-                <td class="text-center align-middle">
-                        <i class="bi bi-check-circle text-info me-1"></i>${CantidadConsumidaTotal || 0}
-                    ${indicadorPendiente}
-                </td>
-                <td class="text-center align-middle">
-                    <i class="bi bi-box-seam text-info me-1"></i>${art.STOCK || 0}
-                </td>
-                <td class="text-center align-middle">
-                    <i class="bi bi-arrow-down-circle text-warning me-1"></i>${minStock}
-                </td>
-                <td class="text-center align-middle">
-                    <i class="bi bi-arrow-up-circle text-success me-1"></i>${maxStock}
-                </td>
-                <td class="text-center align-middle">
-                    <span class="badge ${urgenciaClass}">
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i>${urgenciaText}
-                    </span>
-                </td>
-                <td class="text-center align-middle">
-                    <span class="badge ${estatusClass}">
-                        <i class="bi bi-flag-fill me-1"></i>${estatusText}
-                    </span>
-                </td>
-                <td class="text-center align-middle">
-                    <select ${isReadOnly} class="form-select form-select-sm departamento" ${!hayPendiente ? 'disabled' : ''}>
-                    ${departamentosHtml}    
-                    </select>
-                </td>
-                <td class="text-center align-middle">
-                    <select ${isReadOnly} class="form-select form-select-sm proceso" ${!hayPendiente ? 'disabled' : ''}>
-                        ${procesosHtml}
-                    </select>
-                </td>
-                <td class="text-center align-middle">
-                    <select ${isReadOnly} class="form-select form-select-sm gastos" ${!hayPendiente ? 'disabled' : ''}>
-                        ${gastosHtml}
-                    </select>
-                </td>
-                <td class="text-center align-middle">
-                    <select ${isReadOnly} class="form-select form-select-sm cedis" ${!hayPendiente ? 'disabled' : ''}>
-                        ${cedisHtml}
-                    </select>
-                </td>
-                <td class="text-center align-middle">
-                    <input ${isReadOnly} type="text" class="form-control form-control-sm nombre_empleado text-center"
-                           value="${nombreEmpleado}" ${!hayPendiente ? 'disabled' : ''}>
-                </td>
-            </tr>
-        `);
+            <td class="text-center align-middle">${botonesAccion}</td>
+            <td class="text-center align-middle">
+                ${cantidadPendiente > 0 && !esCancelada ? `<span class="punto-pulso-absolute"></span>` : ''}
+                <span class="badge bg-dark"><i class="bi bi-upc-scan me-1"></i>${refaccionSolicitada || 'N/A'}</span>
+            </td>
+            <td class="align-middle">
+                <i class="bi bi-box-seam text-muted me-1"></i>${nombreMostrar}
+            </td>
+            <td class="text-center align-middle">
+                <i class="bi bi-boxes text-info me-1"></i>${cantidadOriginal}
+            </td>
+            <td class="text-center align-middle">
+                <input type="number" min="1" max="${cantidadPendiente || maxStock}"
+                       class="form-control form-control-sm text-center fw-bold cantidadEditable" ${noEditable ? 'disabled' : ''}
+                       value="${noEditable ? 0 : CantidadSurtida}"
+                       data-stock="${art.STOCK || 0}"
+                       data-min="${minStock}"
+                       data-max="${maxStock}"
+                       data-pendiente="${cantidadPendiente}"
+                       ${noEditable ? 'readonly' : ''}>
+            </td>
+            <td class="text-center align-middle">
+                    <i class="bi bi-check-circle text-info me-1"></i>${CantidadConsumidaTotal || 0}
+                ${indicadorPendiente}
+            </td>
+            <td class="text-center align-middle">
+                <i class="bi bi-box-seam text-info me-1"></i>${art.STOCK || 0}
+            </td>
+            <td class="text-center align-middle">
+                <i class="bi bi-arrow-down-circle text-warning me-1"></i>${minStock}
+            </td>
+            <td class="text-center align-middle">
+                <i class="bi bi-arrow-up-circle text-success me-1"></i>${maxStock}
+            </td>
+            <td class="text-center align-middle">
+                <span class="badge ${urgenciaClass}">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>${urgenciaText}
+                </span>
+            </td>
+            <td class="text-center align-middle">
+                <span class="badge ${estatusClass}">
+                    <i class="bi bi-flag-fill me-1"></i>${estatusText}
+                </span>
+            </td>
+            <td class="text-center align-middle">
+                <select ${isReadOnly} class="form-select form-select-sm departamento" ${!hayPendiente || noEditable ? 'disabled' : ''}>
+                ${departamentosHtml}    
+                </select>
+            </td>
+            <td class="text-center align-middle">
+                <select ${isReadOnly} class="form-select form-select-sm proceso" ${!hayPendiente || noEditable ? 'disabled' : ''}>
+                    ${procesosHtml}
+                </select>
+            </td>
+            <td class="text-center align-middle">
+                <select ${isReadOnly} class="form-select form-select-sm gastos" ${!hayPendiente || noEditable ? 'disabled' : ''}>
+                    ${gastosHtml}
+                </select>
+            </td>
+            <td class="text-center align-middle">
+                <select ${isReadOnly} class="form-select form-select-sm cedis" ${!hayPendiente || noEditable ? 'disabled' : ''}>
+                    ${cedisHtml}
+                </select>
+            </td>
+            <td class="text-center align-middle">
+                <input ${isReadOnly} type="text" class="form-control form-control-sm nombre_empleado text-center"
+                       value="${nombreEmpleado}" ${!hayPendiente || noEditable ? 'disabled' : ''}>
+            </td>
+        </tr>
+    `);
         });
 
         // ✅ Ocultar botón solo si NO hay pendiente

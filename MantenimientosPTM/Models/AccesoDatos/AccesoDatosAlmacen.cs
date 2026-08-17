@@ -2,12 +2,17 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Web.Mvc;
 
 namespace MantenimientosPTM
 {
     public class AccesoDatosAlmacen
     {
+        public readonly AccesoDatosMantenimientosCorrectivos _datosCorrectivos = new AccesoDatosMantenimientosCorrectivos();
+        public readonly AccesoDatosMantenimientosPreventivos _datosPreventivos = new AccesoDatosMantenimientosPreventivos();
+
         #region GeneralCommands(Procedure declaration)
+
         public string GCGetEmpleadosAlmacenPorRol
         {
             get
@@ -472,6 +477,18 @@ namespace MantenimientosPTM
 
             [JsonProperty("ORDEN_TRABAJO")]
             public string OrdenTrabajo { get; set; }
+
+            [JsonProperty("ID_ORDENTRABAJO")]
+            public int? IdOrdenTrabajo { get; set; }
+
+            [JsonProperty("ESTATUSOT")]
+            public string EstatusOT { get; set; }
+
+            [JsonProperty("ID_ORDENTRABAJOMC")]
+            public int? IdOrdenTrabajoMC { get; set; }
+
+            [JsonProperty("ESTATUSOTMC")]
+            public string EstatusOTMC { get; set; }
 
             [JsonProperty("ID_EQUIPO")]
             public int IdEquipo { get; set; }

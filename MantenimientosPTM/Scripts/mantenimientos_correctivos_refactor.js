@@ -249,19 +249,19 @@ class MantenimientosPreventivoApp {
         
         // Lista de refacciones
         $(document).on('click', '.btn-list-refacciones', function () {
-                const $btn = $(this);
-                const ordenTrabajo = $btn.data('numeroorden');
+            const $btn = $(this);
+            const ordenTrabajo = $btn.data('numeroorden');
 
-                if (!ordenTrabajo) {
-                    alert('No se encontró el número de orden de trabajo.');
-                    return;
-                }
+            if (!ordenTrabajo) {
+                alert('No se encontró el número de orden de trabajo.');
+                return;
+            }
 
-                // Actualizar subtítulo del modal con el número de OT
-                $('#refaccionesOTNumero').text(ordenTrabajo);
+            // Actualizar subtítulo del modal con el número de OT
+            $('#refaccionesOTNumero').text(ordenTrabajo);
 
-                // Mostrar estado de carga
-                $('#bodyRefaccionesOT').html(`
+            // Mostrar estado de carga
+            $('#bodyRefaccionesOT').html(`
             <tr>
                 <td colspan="7" class="text-center text-muted py-4">
                     <i class="bi bi-hourglass-split me-1"></i>Cargando refacciones...
@@ -284,6 +284,7 @@ class MantenimientosPreventivoApp {
                     // 🔥 VERIFICAR TIPO DE USUARIO
                     const tipoUsuario = AppMantenimientos.datos_usuario[0].TIPOUSUARIO;
                     const esAdmin = tipoUsuario === "Administrador" || tipoUsuario === "AdminMtto" || tipoUsuario === "SupervisorMantenimiento";
+                    const esTecnico = tipoUsuario === "TecnicoMtto";
 
                     if (response.Status === 'OK') {
                         let refacciones = JSON.parse(response.Data);
@@ -293,8 +294,13 @@ class MantenimientosPreventivoApp {
                             item.ACEPTADA_MANTENIMIENTO !== "" && item.ACEPTADA_MANTENIMIENTO !== null
                         );
 
+                        // ✅ NUEVO: Verificar si hay alguna solicitud que se pueda cerrar (Pendiente + ESTATUSOT == 3)
+                        const hayCierrePendiente = refacciones.some(item =>
+                            item.ESTATUSOT == 3 && item.ESTATUS === 'Pendiente'
+                        );
+
                         // 🔥 MOSTRAR/OCULTAR COLUMNA BASADO EN LOS DATOS
-                        if (esAdmin || hayAceptacionMantenimiento) {
+                        if (esAdmin || hayAceptacionMantenimiento || (esTecnico && hayCierrePendiente)) {
                             $('#tablaRefaccionesOT thead th:last-child').show();
                         } else {
                             $('#tablaRefaccionesOT thead th:last-child').hide();
@@ -319,8 +325,8 @@ class MantenimientosPreventivoApp {
                             <td class="text-center text-muted">
                                 <small>—</small>
                             </td>`;
-                            } else if (devuelta > 0) {
-                                cantidadHTML = `
+                                            } else if (devuelta > 0) {
+                                                cantidadHTML = `
                             <td class="text-center">
                                 <span class="d-block" title="Cantidad surtida por almacén">
                                     📦 ${surtida}+
@@ -333,20 +339,37 @@ class MantenimientosPreventivoApp {
                                    ✅ ${consumida}
                                 </span>
                             </td>`;
-                            } else {
-                                cantidadHTML = `
+                                            } else {
+                                                cantidadHTML = `
                             <td class="text-center">
                                 <span title="Cantidad surtida / consumida">
-                                    <i class="bi bi-check2-circle me-1 text-success"></i>${surtida}
+                                    ✅ ${surtida}
                                 </span>
                             </td>`;
-                            }
+                                            }
 
-                            // 🔥 Generar botón de acción
-                            let accionesHTML = '';
-                            if (esAdmin) {
-                                if (item.ESTATUS === 'Atendida' && (item.ACEPTADA_MANTENIMIENTO == "" || item.ACEPTADA_MANTENIMIENTO == null)) {
-                                    accionesHTML = `
+                                            // 🔥 Generar botón de acción
+                                            let accionesHTML = '';
+
+                                            // ✅ NUEVO: Botón para CERRAR solicitud - aplica tanto para ADMIN como para TÉCNICO
+                                            const puedeCerrarSolicitud = (esAdmin || esTecnico) && item.ESTATUSOTMC == 3 && item.ESTATUS === 'Pendiente';
+
+                                            if (puedeCerrarSolicitud) {
+                                                accionesHTML = `
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-danger btn-cerrar-solicitud" 
+                                            data-refaccion-id="${item.ID_SOLICITUD || ''}"
+                                            data-orden-trabajo="${ordenTrabajo}"
+                                            data-id-orden-trabajo="${item.ID_ORDENTRABAJOMC}"
+                                            title="Cerrar esta solicitud">
+                                        <i class="bi bi-x-circle me-1"></i>Cerrar Solicitud
+                                    </button>
+                                </td>
+                            `;
+                                            }
+                                            else if (esAdmin) {
+                                                if (item.ESTATUS === 'Atendida' && (item.ACEPTADA_MANTENIMIENTO == "" || item.ACEPTADA_MANTENIMIENTO == null)) {
+                                                    accionesHTML = `
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-ptm-primary btn-autorizar-refaccion" 
                                             data-refaccion-id="${item.ID_SOLICITUD || ''}"
@@ -356,40 +379,40 @@ class MantenimientosPreventivoApp {
                                     </button>
                                 </td>
                             `;
-                                } else if (item.ACEPTADA_MANTENIMIENTO == "true") {
-                                    accionesHTML = `
+                                                } else if (item.ACEPTADA_MANTENIMIENTO == "true") {
+                                                    accionesHTML = `
                                 <td class="text-center">
                                     <span class="badge btn-ptm-primary badge-custom">Aceptada por mantenimiento</span>
                                 </td>
                             `;
-                                } else if (item.ESTATUS === 'Atendida' && item.ACEPTADA_MANTENIMIENTO == "false") {
-                                    accionesHTML = `
+                                                } else if (item.ESTATUS === 'Atendida' && item.ACEPTADA_MANTENIMIENTO == "false") {
+                                                    accionesHTML = `
                                 <td class="text-center">
                                     <span class="badge bg-danger badge-custom">Rechazada por mantenimiento</span>
                                 </td>
                             `;
-                                } else {
-                                    accionesHTML = `
+                                                } else {
+                                                    accionesHTML = `
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-secondary" disabled title="Solo se pueden autorizar refacciones completadas">
                                         <i class="bi bi-lock me-1"></i>No disponible
                                     </button>
                                 </td>
                             `;
-                                }
-                            }
+                                                }
+                                            }
 
-                            // 🔥 PARA EL TÉCNICO - mostrar estado si existe ACEPTADA_MANTENIMIENTO
-                            if (!esAdmin && item.ACEPTADA_MANTENIMIENTO != "" && item.ACEPTADA_MANTENIMIENTO != null) {
-                                let badgeClass = (item.ACEPTADA_MANTENIMIENTO == "true") ? "btn-ptm-primary badge-custom" : "bg-danger badge-custom";
-                                let badgeText = (item.ACEPTADA_MANTENIMIENTO == "true") ? "Aceptada por mantenimiento" : "Rechazada por mantenimiento";
-                                accionesHTML = `
+                                            // 🔥 PARA EL TÉCNICO - mostrar estado si existe ACEPTADA_MANTENIMIENTO (solo si NO se mostró el botón de cerrar)
+                                            if (!esAdmin && !puedeCerrarSolicitud && item.ACEPTADA_MANTENIMIENTO != "" && item.ACEPTADA_MANTENIMIENTO != null) {
+                                                let badgeClass = (item.ACEPTADA_MANTENIMIENTO == "true") ? "btn-ptm-primary badge-custom" : "bg-danger badge-custom";
+                                                let badgeText = (item.ACEPTADA_MANTENIMIENTO == "true") ? "Aceptada por mantenimiento" : "Rechazada por mantenimiento";
+                                                accionesHTML = `
                             <td class="text-center">
                                 <span class="badge ${badgeClass}">${badgeText}</span>
                             </td>`;
-                            }
+                                            }
 
-                            html += `
+                                            html += `
                         <tr>
                             <td>${item.REFACCION_SOLICITADA || ''}</td>
                             <td>${item.NOMBRE_ARTICULO || ''}</td>
@@ -402,12 +425,12 @@ class MantenimientosPreventivoApp {
                             ${accionesHTML}
                         </tr>
                     `;
-                        });
+                                        });
 
-                        $('#bodyRefaccionesOT').html(html);
+                                        $('#bodyRefaccionesOT').html(html);
 
-                    } else {
-                        $('#bodyRefaccionesOT').html(`
+                                    } else {
+                                        $('#bodyRefaccionesOT').html(`
                     <tr>
                         <td colspan="7" class="text-center text-muted py-4">
                             <i class="bi bi-info-circle me-1"></i>No hay refacciones registradas para esta orden.
@@ -543,6 +566,93 @@ class MantenimientosPreventivoApp {
                             $btn.html('<i class="bi bi-check-circle me-1"></i>Autorizar').prop('disabled', false);
                         }
                     });
+                }
+            });
+        });
+
+        // 🔥 NUEVO: Evento para CERRAR solicitud de refacción (solo admins, estatus 3)
+        $(document).on('click', '.btn-cerrar-solicitud', function () {
+            const $btn = $(this);
+            const refaccionId = $btn.data('refaccion-id');
+            const ordenTrabajo = $btn.data('orden-trabajo');
+            const IdordenTrabajo = $btn.data('id-orden-trabajo');
+
+            // Verificar permisos: admin O técnico
+            const tipoUsuario = AppMantenimientos.datos_usuario[0].TIPOUSUARIO;
+            const esAdmin = tipoUsuario === "Administrador" || tipoUsuario === "AdminMtto" || tipoUsuario === "SupervisorMantenimiento";
+            const esTecnico = tipoUsuario === "TecnicoMtto";
+
+            if (!esAdmin && !esTecnico) {
+                AlertManager.mostrar('No tienes permisos para cerrar esta solicitud', 'warning');
+                return;
+            }
+
+            if (!refaccionId) {
+                AlertManager.mostrar('No se pudo obtener el ID de la solicitud', 'warning');
+                return;
+            }
+
+            let TipoUsuario = AppMantenimientos.datos_usuario[0].TIPOUSUARIO;
+            let Usuario = AppMantenimientos.datos_usuario[0].EMAIL;
+
+            ReprogramacionConfirmManager.mostrar({
+                titulo: `¿Cerrar solicitud de refacción?`,
+                mensaje: `
+            <div style="text-align:left; font-size:0.95rem; line-height:1.6;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="min-width:180px;"><i class="bi bi-clipboard-data me-2" style="color:#1195d0;"></i><strong>Orden de Trabajo:</strong> ${ordenTrabajo}</div>
+                    <div style="min-width:180px;"><i class="bi bi-tools me-2" style="color:#1195d0;"></i><strong>ID Solicitud:</strong> ${refaccionId}</div>
+                </div>
+                <hr style="margin:10px 0;">
+                <div style="font-size:0.85rem;color:#fff7d6;">
+                    <strong>Importante:</strong> Esta acción cerrará (cancelará) la solicitud de refacción de forma permanente.
+                </div>
+            </div>
+        `,
+                onSi: () => {
+                    $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Cerrando...').prop('disabled', true);
+
+                    $.ajax({
+                        url: `/Almacen/ActualizarSolicitudRefaccion`,
+                        type: 'POST',
+                        headers: {
+                            'X-Rol-Usuario': TipoUsuario
+                        },
+                        data: {
+                            idSolicitud: refaccionId,
+                            Usuario: Usuario,
+                            IdOrdenTrabajo: IdordenTrabajo,
+                            TipoMantenimiento: "Correctivo"
+                        },
+                        dataType: 'json',
+                        success: function (response) {
+                            if (response.Status === 'OK') {
+                                AlertManager.mostrar(response.Message || 'Solicitud cerrada correctamente', 'success');
+
+                                $btn.html('<i class="bi bi-check-circle-fill me-1"></i>Cerrada').addClass('btn-secondary').removeClass('btn-danger');
+
+                                setTimeout(() => {
+                                    const modalElement = document.getElementById('modalRefaccionesOT');
+                                    const modal = bootstrap.Modal.getInstance(modalElement);
+                                    if (modal) modal.hide();
+
+                                    if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+                                        $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                                    }
+                                }, 2000);
+                            } else {
+                                AlertManager.mostrar(response.Message || 'Error al cerrar la solicitud', 'warning');
+                                $btn.html('<i class="bi bi-x-circle me-1"></i>Cerrar Solicitud').prop('disabled', false);
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+                            $btn.html('<i class="bi bi-x-circle me-1"></i>Cerrar Solicitud').prop('disabled', false);
+                        }
+                    });
+                },
+                onNo: () => {
+                    // No hace nada
                 }
             });
         });
