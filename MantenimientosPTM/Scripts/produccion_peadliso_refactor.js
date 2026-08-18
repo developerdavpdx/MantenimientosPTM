@@ -530,7 +530,14 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             nuevaFila.id = this.generarIdTemporal();
             nuevaFila.OTMC = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
-            nuevaFila.TiempoMuertoCorrectivos = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
+            const tiempoCalculado = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
+
+            //Condiciona si es de herramental pinta el tiempo muerto en herramental
+            if (item.AreaTecnica === 'MANTENIMIENTO HERRAMENTALES') {
+                nuevaFila.TiempoMuertoHerramentales = tiempoCalculado;
+            } else {
+                nuevaFila.TiempoMuertoCorrectivos = tiempoCalculado;
+            }
 
             // ✅ NUEVO: Marcar como correctivo
             nuevaFila._origen = 'CORRECTIVO';
