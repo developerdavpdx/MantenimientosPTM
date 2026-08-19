@@ -380,3 +380,7 @@
     border: 1px solid #343a40;
     opacity: 1 !important;
 }
+
+.bg-orange {
+    background-color: #fd7e14 !important;
+}

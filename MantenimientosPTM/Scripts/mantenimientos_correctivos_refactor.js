@@ -309,24 +309,41 @@ class MantenimientosPreventivoApp {
                         let html = '';
                         refacciones.forEach(item => {
 
-                            let classBadge = `bg-warning text-dark`;
-                            if (item.ESTATUS == 'Atendida') {
-                                classBadge = `bg-success text-white`;
+                            const surtida = parseFloat(item.CANTIDAD_SURTIDA) || 0;
+                            const devuelta = parseFloat(item.CANTIDAD_DEVUELTA) || 0;
+                            const consumida = parseFloat(item.CANTIDAD_CONSUMIDA) || 0;
+
+                            const cantidadSolicitada = parseFloat(item.CANTIDAD) || 0;
+                            const esParcialModal = item.ESTATUS === 'Atendida' && consumida > 0 && consumida < cantidadSolicitada;
+
+                            let classBadge = 'bg-warning text-dark'; // Pendiente
+                            let textoEstatus = item.ESTATUS || '';
+
+                            if (item.ESTATUS === 'Atendida') {
+                                if (esParcialModal) {
+                                    classBadge = 'bg-orange text-dark';
+                                    textoEstatus = 'Atendida Parcialmente';
+                                } else {
+                                    classBadge = 'bg-success text-white';
+                                }
+                            } else if (item.ESTATUS === 'Cerrada') {
+                                classBadge = 'bg-danger text-white';
+                                textoEstatus = 'Cerrada por el técnico';
+                            } else if (item.ESTATUS === 'ELIMINADA') {
+                                classBadge = 'bg-danger text-white';
+                                textoEstatus = 'Eliminada por almacén';
                             }
 
                             // 🔥 Celda de cantidades surtidas/devueltas/consumidas
                             let cantidadHTML = '';
-                            const surtida = parseFloat(item.CANTIDAD_SURTIDA) || 0;
-                            const devuelta = parseFloat(item.CANTIDAD_DEVUELTA) || 0;
-                            const consumida = parseFloat(item.CANTIDAD_CONSUMIDA) || 0;
 
                             if (surtida === 0) {
                                 cantidadHTML = `
                             <td class="text-center text-muted">
                                 <small>—</small>
                             </td>`;
-                                            } else if (devuelta > 0) {
-                                                cantidadHTML = `
+                            } else if (devuelta > 0) {
+                                cantidadHTML = `
                             <td class="text-center">
                                 <span class="d-block" title="Cantidad surtida por almacén">
                                     📦 ${surtida}+
@@ -339,104 +356,104 @@ class MantenimientosPreventivoApp {
                                    ✅ ${consumida}
                                 </span>
                             </td>`;
-                                            } else {
-                                                cantidadHTML = `
+                            } else {
+                                cantidadHTML = `
                             <td class="text-center">
                                 <span title="Cantidad surtida / consumida">
                                     ✅ ${surtida}
                                 </span>
                             </td>`;
-                                            }
+                            }
 
-                                            // 🔥 Generar botón de acción
-                                            let accionesHTML = '';
+                            // 🔥 Generar botón de acción
+                            let accionesHTML = '';
 
-                                            // ✅ NUEVO: Botón para CERRAR solicitud - aplica tanto para ADMIN como para TÉCNICO
-                                            const puedeCerrarSolicitud = (esAdmin || esTecnico) && item.ESTATUSOTMC == 3 && item.ESTATUS === 'Pendiente';
+                            // ✅ NUEVO: Botón para CERRAR solicitud - aplica tanto para ADMIN como para TÉCNICO
+                            const puedeCerrarSolicitud = (esAdmin || esTecnico) && item.ESTATUSOT == 3 && item.ESTATUS === 'Pendiente';
 
-                                            if (puedeCerrarSolicitud) {
-                                                accionesHTML = `
-                                <td class="text-center">
-                                    <button class="btn btn-sm btn-danger btn-cerrar-solicitud" 
-                                            data-refaccion-id="${item.ID_SOLICITUD || ''}"
-                                            data-orden-trabajo="${ordenTrabajo}"
-                                            data-id-orden-trabajo="${item.ID_ORDENTRABAJOMC}"
-                                            title="Cerrar esta solicitud">
-                                        <i class="bi bi-x-circle me-1"></i>Cerrar Solicitud
-                                    </button>
-                                </td>
-                            `;
-                                            }
-                                            else if (esAdmin) {
-                                                if (item.ESTATUS === 'Atendida' && (item.ACEPTADA_MANTENIMIENTO == "" || item.ACEPTADA_MANTENIMIENTO == null)) {
-                                                    accionesHTML = `
-                                <td class="text-center">
-                                    <button class="btn btn-sm btn-ptm-primary btn-autorizar-refaccion" 
-                                            data-refaccion-id="${item.ID_SOLICITUD || ''}"
-                                            data-orden-trabajo="${ordenTrabajo}"
-                                            title="Autorizar esta refacción">
-                                        <i class="bi bi-check-circle me-1"></i>Autorizar
-                                    </button>
-                                </td>
-                            `;
-                                                } else if (item.ACEPTADA_MANTENIMIENTO == "true") {
-                                                    accionesHTML = `
-                                <td class="text-center">
-                                    <span class="badge btn-ptm-primary badge-custom">Aceptada por mantenimiento</span>
-                                </td>
-                            `;
-                                                } else if (item.ESTATUS === 'Atendida' && item.ACEPTADA_MANTENIMIENTO == "false") {
-                                                    accionesHTML = `
-                                <td class="text-center">
-                                    <span class="badge bg-danger badge-custom">Rechazada por mantenimiento</span>
-                                </td>
-                            `;
-                                                } else {
-                                                    accionesHTML = `
-                                <td class="text-center">
-                                    <button class="btn btn-sm btn-secondary" disabled title="Solo se pueden autorizar refacciones completadas">
-                                        <i class="bi bi-lock me-1"></i>No disponible
-                                    </button>
-                                </td>
-                            `;
-                                                }
-                                            }
+                            if (puedeCerrarSolicitud) {
+                                accionesHTML = `
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-danger btn-cerrar-solicitud" 
+                                                    data-refaccion-id="${item.ID_SOLICITUD || ''}"
+                                                    data-orden-trabajo="${item.ORDEN_TRABAJO}"
+                                                    data-id-orden-trabajo="${item.ID_ORDENTRABAJO}"
+                                                    title="Cerrar esta solicitud">
+                                                <i class="bi bi-x-circle me-1"></i>Cerrar Solicitud
+                                            </button>
+                                        </td>
+                                    `;
+                            }
+                            else if (esAdmin) {
+                                if (item.ESTATUS === 'Atendida' && (item.ACEPTADA_MANTENIMIENTO == "" || item.ACEPTADA_MANTENIMIENTO == null)) {
+                                    accionesHTML = `
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-ptm-primary btn-autorizar-refaccion" 
+                                                    data-refaccion-id="${item.ID_SOLICITUD || ''}"
+                                                    data-orden-trabajo="${ordenTrabajo}"
+                                                    title="Autorizar esta refacción">
+                                                <i class="bi bi-check-circle me-1"></i>Autorizar
+                                            </button>
+                                        </td>
+                                    `;
+                                } else if (item.ACEPTADA_MANTENIMIENTO == "true") {
+                                    accionesHTML = `
+                                        <td class="text-center">
+                                            <span class="badge btn-ptm-primary badge-custom">Aceptada por mantenimiento</span>
+                                        </td>
+                                    `;
+                                } else if (item.ESTATUS === 'Atendida' && item.ACEPTADA_MANTENIMIENTO == "false") {
+                                    accionesHTML = `
+                                        <td class="text-center">
+                                            <span class="badge bg-danger badge-custom">Rechazada por mantenimiento</span>
+                                        </td>
+                                    `;
+                                } else {
+                                    accionesHTML = `
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-secondary" disabled title="Solo se pueden autorizar refacciones completadas">
+                                                <i class="bi bi-lock me-1"></i>No disponible
+                                            </button>
+                                        </td>
+                                    `;
+                                }
+                            }
 
-                                            // 🔥 PARA EL TÉCNICO - mostrar estado si existe ACEPTADA_MANTENIMIENTO (solo si NO se mostró el botón de cerrar)
-                                            if (!esAdmin && !puedeCerrarSolicitud && item.ACEPTADA_MANTENIMIENTO != "" && item.ACEPTADA_MANTENIMIENTO != null) {
-                                                let badgeClass = (item.ACEPTADA_MANTENIMIENTO == "true") ? "btn-ptm-primary badge-custom" : "bg-danger badge-custom";
-                                                let badgeText = (item.ACEPTADA_MANTENIMIENTO == "true") ? "Aceptada por mantenimiento" : "Rechazada por mantenimiento";
-                                                accionesHTML = `
-                            <td class="text-center">
-                                <span class="badge ${badgeClass}">${badgeText}</span>
-                            </td>`;
-                                            }
+                            // 🔥 PARA EL TÉCNICO - mostrar estado si existe ACEPTADA_MANTENIMIENTO (solo si NO se mostró el botón de cerrar)
+                            if (!esAdmin && !puedeCerrarSolicitud && item.ACEPTADA_MANTENIMIENTO != "" && item.ACEPTADA_MANTENIMIENTO != null) {
+                                let badgeClass = (item.ACEPTADA_MANTENIMIENTO == "true") ? "btn-ptm-primary badge-custom" : "bg-danger badge-custom";
+                                let badgeText = (item.ACEPTADA_MANTENIMIENTO == "true") ? "Aceptada por mantenimiento" : "Rechazada por mantenimiento";
+                                accionesHTML = `
+                                <td class="text-center">
+                                    <span class="badge ${badgeClass}">${badgeText}</span>
+                                </td>`;
+                            }
 
-                                            html += `
+                            html += `
+                            <tr>
+                                <td>${item.REFACCION_SOLICITADA || ''}</td>
+                                <td>${item.NOMBRE_ARTICULO || ''}</td>
+                                <td class="text-center">${item.CANTIDAD || 0}</td>
+                                <td class="text-center">${item.NIVEL_URGENCIA || ''}</td>
+                                <td class="text-center">
+                                    <span class="badge ${classBadge}">${textoEstatus}</span>
+                                </td>
+                                ${cantidadHTML}
+                                ${accionesHTML}
+                            </tr>
+                        `;
+                        });
+
+                        $('#bodyRefaccionesOT').html(html);
+
+                    } else {
+                        $('#bodyRefaccionesOT').html(`
                         <tr>
-                            <td>${item.REFACCION_SOLICITADA || ''}</td>
-                            <td>${item.NOMBRE_ARTICULO || ''}</td>
-                            <td class="text-center">${item.CANTIDAD || 0}</td>
-                            <td class="text-center">${item.NIVEL_URGENCIA || ''}</td>
-                            <td class="text-center">
-                                <span class="badge text-white ${classBadge}">${item.ESTATUS || ''}</span>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="bi bi-info-circle me-1"></i>No hay refacciones registradas para esta orden.
                             </td>
-                            ${cantidadHTML}
-                            ${accionesHTML}
                         </tr>
-                    `;
-                                        });
-
-                                        $('#bodyRefaccionesOT').html(html);
-
-                                    } else {
-                                        $('#bodyRefaccionesOT').html(`
-                    <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
-                            <i class="bi bi-info-circle me-1"></i>No hay refacciones registradas para esta orden.
-                        </td>
-                    </tr>
-                `);
+                    `);
                     }
                 },
                 error: function (xhr, status, error) {

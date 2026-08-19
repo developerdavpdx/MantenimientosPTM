@@ -289,6 +289,7 @@ class SolicitudRefaccionesApp {
     async _abrirModalSalidaMercancia(e) {
         const $btn = $(e.currentTarget);
         const solicita = $btn.data('solicita');
+        const Nombresolicita = $btn.data('nombresolicita');
         const ordenTrabajo = $btn.data('ordentrabajo');
         const numeroempleado = $btn.data('numeroempleado');
         const departamento = $btn.data('departamento');
@@ -338,13 +339,13 @@ class SolicitudRefaccionesApp {
             // Firmas
             await this.solicitudManager.llenarFirmas();
 
-            $('#solicitante').val(solicita);
+            $('#solicitante').val(Nombresolicita);
             $('#numEmpleado').val(numeroempleado);
             $('#area').val(departamento);
             $("#titleSalidaMercancia").text("Entrega de Materiales");
             $("#btnGuardarVale").attr("operacion", "SALIDA");
             $("#btnGuardarVale").attr("ordentrabajo", ordenTrabajo);
-            $("#btnGuardarVale").attr("solicita", solicita);
+            $("#btnGuardarVale").attr("solicita", Nombresolicita);
 
             $('#salidaMercancia').modal('show');
         } catch (error) {
@@ -1343,12 +1344,12 @@ class SolicitudManager {
         console.log(articulos);
         if (!articulos || articulos.length === 0) {
             tbody.html(`
-            <tr>
-                <td colspan="19" class="text-center text-muted py-4">
-                    <i class="bi bi-inbox me-2"></i>No hay artículos disponibles
-                </td>
-            </tr>
-        `);
+        <tr>
+            <td colspan="19" class="text-center text-muted py-4">
+                <i class="bi bi-inbox me-2"></i>No hay artículos disponibles
+            </td>
+        </tr>
+    `);
             $('#badgeTotalArticulos').text('0');
             return;
         }
@@ -1382,7 +1383,7 @@ class SolicitudManager {
 
         // ✅ Obtener opciones de selects
         const departamentosHtml = this.buildOptions(this.ListDepartamentos, 'PrcCode', dept);
-        const procesosHtml = this.buildOptions(this.ListProcesos, 'PrcCode', 'PCPVC');
+        const procesosHtml = this.buildOptions(this.ListProcesos, 'PrcCode', 'PPVC');
         const gastosHtml = this.buildOptions(this.ListGastos, 'PrcCode', 'GIF');
         const cedisHtml = this.buildOptions(this.ListCedis, 'PrcCode', this.datos_usuario[0].PLANTA == "1" ? 'CCOR' : 'PLANTA2');
 
@@ -1414,25 +1415,64 @@ class SolicitudManager {
             const noEditable = completamenteSurtido || esCancelada;
             const isReadOnly = (noEditable ? 'readonly' : '');
 
+            // 🆕 Deshabilitar btn-change-ref si ya se surtió al menos una pieza
+            const yaSeInicioSurtido = CantidadConsumidaTotal > 0;
+
             const urgenciaClass = this._getUrgenciaClass(art.NIVEL_URGENCIA);
+
+            // 🆕 Disfrazamos el estatus si es Atendida pero surtido parcial
+            const esAtendida = estatusOriginal === 'Atendida';
+            const esParcial = esAtendida && CantidadConsumidaTotal > 0 && CantidadConsumidaTotal < cantidadOriginal;
+            const estatusText = esParcial ? 'Atendida Parcialmente' : (art.ESTATUS || 'N/A');
 
             // ✅ Clase de estatus con color según el caso
             let estatusClass = 'bg-warning text-dark'; // Pendiente por defecto
             if (esCancelada) {
-                estatusClass = 'badge-cancelada'; // 🔥 Clase propia con más contraste
+                estatusClass = 'badge-cancelada';
+            } else if (esParcial) {
+                estatusClass = 'bg-orange text-dark'; // 🆕 Parcialmente surtido
             } else if (completamenteSurtido) {
-                estatusClass = 'badge btn-ptm-primary badge-custom'; // Verde/Azul para Atendida
+                estatusClass = 'badge btn-ptm-primary badge-custom';
             }
 
             const urgenciaText = art.NIVEL_URGENCIA || 'N/A';
-            const estatusText = art.ESTATUS || 'N/A';
 
             // ✅ Indicador visual de pendiente (NO mostrar si está cancelada)
             const indicadorPendiente = (cantidadPendiente > 0 && !esCancelada)
                 ? `<span class="badge bg-danger ms-2 fw-semibold">${cantidadPendiente} pendiente</span>`
                 : '';
 
-            let botonesAccion = `
+            // 🆕 Construcción de botones con lógica separada para btn-change-ref
+            let botonesAccion;
+
+            if (noEditable) {
+                // Completamente surtido o cancelado: ambos deshabilitados
+                botonesAccion = `
+            <button class="btn btn-sm btn-ptm-edit btn-del-ref disabled">
+                <i class="bi bi-x-circle fs-6"></i>
+            </button>
+            <button class="btn btn-sm btn-ptm-edit btn-change-ref disabled">
+                <i class="bi bi-arrow-repeat fs-6"></i>
+            </button>`;
+            } else {
+                // Editable: btn-del siempre activo, btn-change solo si NO se ha surtido nada aún
+                const changeBtnHtml = yaSeInicioSurtido
+                    ? `<button class="btn btn-sm btn-ptm-edit btn-change-ref disabled"
+                           data-bs-toggle="tooltip"
+                           title="No se puede cambiar: ya se surtió al menos una pieza">
+                       <i class="bi bi-arrow-repeat fs-6"></i>
+                   </button>`
+                    : `<button class="btn btn-sm btn-ptm-edit btn-change-ref"
+                           data-idsolicitud="${art.ID_SOLICITUD}"
+                           data-codigo="${refaccionSolicitada}"
+                           data-nombrearticulo="${art.NOMBRE_ARTICULO}"
+                           data-ordentrabajo="${art.ORDEN_TRABAJO}"
+                           data-bs-toggle="tooltip"
+                           title="🔄 Cambiar refacción">
+                       <i class="bi bi-arrow-repeat fs-6"></i>
+                   </button>`;
+
+                botonesAccion = `
             <button class="btn btn-sm btn-ptm-edit btn-del-ref"
                     data-idsolicitud="${art.ID_SOLICITUD}"
                     data-codigo="${refaccionSolicitada}"
@@ -1442,26 +1482,8 @@ class SolicitudManager {
                     title="❌ Eliminar refacción">
                 <i class="bi bi-x-circle fs-6"></i>
             </button>
-            <button class="btn btn-sm btn-ptm-edit btn-change-ref"
-                    data-idsolicitud="${art.ID_SOLICITUD}"
-                    data-codigo="${refaccionSolicitada}"
-                    data-nombrearticulo="${art.NOMBRE_ARTICULO}"
-                    data-ordentrabajo="${art.ORDEN_TRABAJO}"
-                    data-bs-toggle="tooltip"
-                    title="🔄 Cambiar refacción">
-                <i class="bi bi-arrow-repeat fs-6"></i>
-            </button>`;
-
-                    // ✅ Deshabilitar botones si está completamente surtido O cancelada
-                    if (noEditable) {
-                        botonesAccion = `
-            <button class="btn btn-sm btn-ptm-edit btn-del-ref disabled">
-                <i class="bi bi-x-circle fs-6"></i>
-            </button>
-            <button class="btn btn-sm btn-ptm-edit btn-change-ref disabled">
-                <i class="bi bi-arrow-repeat fs-6"></i>
-            </button>`;
-                    }
+            ${changeBtnHtml}`;
+            }
 
             // ✅ CRÍTICO: Construir contenido del popover con el historial REAL
             // (ya no se simula dividiendo un folio con comas)
@@ -1485,106 +1507,106 @@ class SolicitudManager {
                 : (completamenteSurtido ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Completamente Surtida"` : '');
 
             tbody.append(`
-        <tr class="${claseFila}" ${tooltipFila}>
-            <td class="text-center align-middle">${index + 1}</td>
-            <td class="text-center align-middle">
-            <div class="folios-container position-relative d-flex justify-content-center align-items-center">
-                <span class="badge bg-secondary cursor-pointer folio-badge"
-                      role="button"
-                      tabindex="0"
-                      data-bs-toggle="popover"
-                      data-bs-trigger="focus"
-                      data-bs-html="true"
-                      data-bs-placement="left"
-                      data-bs-custom-class="popover-folios"
-                      title="&lt;i class=&quot;bi bi-history me-2&quot;&gt;&lt;/i&gt;Historial de Salidas"
-                      data-bs-content="${popoverContentEscaped}">
-                    <i class="bi bg-info bi-info-circle"></i>
-                </span>
-            </div>
-        </td>
-            <td class="text-center align-middle">
-                <input type="checkbox" class="form-check-input chk-articuloSalida"
-                       data-idsolicitud="${art.ID_SOLICITUD}"
-                       data-codigo="${refaccionSolicitada}"
-                       data-nombrearticulo="${art.NOMBRE_ARTICULO}"
-                       data-ordentrabajo="${art.ORDEN_TRABAJO}"
-                       data-nombre="${nombreMostrar}"
-                       data-cantidad="${cantidadPendiente}"
-                       data-cantidadoriginal="${cantidadOriginal}"
-                       data-cantidadconsumida="${CantidadConsumidaTotal}"
-                       ${noEditable ? 'disabled' : ''}>
+            <tr class="${claseFila}" ${tooltipFila}>
+                <td class="text-center align-middle">${index + 1}</td>
+                <td class="text-center align-middle">${botonesAccion}</td>
+                <td class="text-center align-middle">
+                    <span class="badge ${estatusClass}">
+                        <i class="bi bi-flag-fill me-1"></i>${estatusText}
+                    </span>
+                </td>
+                <td class="text-center align-middle">
+                <div class="folios-container position-relative d-flex justify-content-center align-items-center">
+                    <span class="badge bg-secondary cursor-pointer folio-badge"
+                          role="button"
+                          tabindex="0"
+                          data-bs-toggle="popover"
+                          data-bs-trigger="focus"
+                          data-bs-html="true"
+                          data-bs-placement="left"
+                          data-bs-custom-class="popover-folios"
+                          title="&lt;i class=&quot;bi bi-history me-2&quot;&gt;&lt;/i&gt;Historial de Salidas"
+                          data-bs-content="${popoverContentEscaped}">
+                        <i class="bi bg-info bi-info-circle"></i>
+                    </span>
+                </div>
             </td>
-            <td class="text-center align-middle">${botonesAccion}</td>
-            <td class="text-center align-middle">
-                ${cantidadPendiente > 0 && !esCancelada ? `<span class="punto-pulso-absolute"></span>` : ''}
-                <span class="badge bg-dark"><i class="bi bi-upc-scan me-1"></i>${refaccionSolicitada || 'N/A'}</span>
-            </td>
-            <td class="align-middle">
-                <i class="bi bi-box-seam text-muted me-1"></i>${nombreMostrar}
-            </td>
-            <td class="text-center align-middle">
-                <i class="bi bi-boxes text-info me-1"></i>${cantidadOriginal}
-            </td>
-            <td class="text-center align-middle">
-                <input type="number" min="1" max="${cantidadPendiente || maxStock}"
-                       class="form-control form-control-sm text-center fw-bold cantidadEditable" ${noEditable ? 'disabled' : ''}
-                       value="${noEditable ? 0 : CantidadSurtida}"
-                       data-stock="${art.STOCK || 0}"
-                       data-min="${minStock}"
-                       data-max="${maxStock}"
-                       data-pendiente="${cantidadPendiente}"
-                       ${noEditable ? 'readonly' : ''}>
-            </td>
-            <td class="text-center align-middle">
-                    <i class="bi bi-check-circle text-info me-1"></i>${CantidadConsumidaTotal || 0}
-                ${indicadorPendiente}
-            </td>
-            <td class="text-center align-middle">
-                <i class="bi bi-box-seam text-info me-1"></i>${art.STOCK || 0}
-            </td>
-            <td class="text-center align-middle">
-                <i class="bi bi-arrow-down-circle text-warning me-1"></i>${minStock}
-            </td>
-            <td class="text-center align-middle">
-                <i class="bi bi-arrow-up-circle text-success me-1"></i>${maxStock}
-            </td>
-            <td class="text-center align-middle">
-                <span class="badge ${urgenciaClass}">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i>${urgenciaText}
-                </span>
-            </td>
-            <td class="text-center align-middle">
-                <span class="badge ${estatusClass}">
-                    <i class="bi bi-flag-fill me-1"></i>${estatusText}
-                </span>
-            </td>
-            <td class="text-center align-middle">
-                <select ${isReadOnly} class="form-select form-select-sm departamento" ${!hayPendiente || noEditable ? 'disabled' : ''}>
-                ${departamentosHtml}    
-                </select>
-            </td>
-            <td class="text-center align-middle">
-                <select ${isReadOnly} class="form-select form-select-sm proceso" ${!hayPendiente || noEditable ? 'disabled' : ''}>
-                    ${procesosHtml}
-                </select>
-            </td>
-            <td class="text-center align-middle">
-                <select ${isReadOnly} class="form-select form-select-sm gastos" ${!hayPendiente || noEditable ? 'disabled' : ''}>
-                    ${gastosHtml}
-                </select>
-            </td>
-            <td class="text-center align-middle">
-                <select ${isReadOnly} class="form-select form-select-sm cedis" ${!hayPendiente || noEditable ? 'disabled' : ''}>
-                    ${cedisHtml}
-                </select>
-            </td>
-            <td class="text-center align-middle">
-                <input ${isReadOnly} type="text" class="form-control form-control-sm nombre_empleado text-center"
-                       value="${nombreEmpleado}" ${!hayPendiente || noEditable ? 'disabled' : ''}>
-            </td>
-        </tr>
-    `);
+                <td class="text-center align-middle">
+                    <input type="checkbox" class="form-check-input chk-articuloSalida"
+                           data-idsolicitud="${art.ID_SOLICITUD}"
+                           data-codigo="${refaccionSolicitada}"
+                           data-nombrearticulo="${art.NOMBRE_ARTICULO}"
+                           data-ordentrabajo="${art.ORDEN_TRABAJO}"
+                           data-nombre="${nombreMostrar}"
+                           data-cantidad="${cantidadPendiente}"
+                           data-cantidadoriginal="${cantidadOriginal}"
+                           data-cantidadconsumida="${CantidadConsumidaTotal}"
+                           ${noEditable ? 'disabled' : ''}>
+                </td>
+                <td class="text-center align-middle">
+                    ${cantidadPendiente > 0 && !esCancelada ? `<span class="punto-pulso-absolute"></span>` : ''}
+                    <span class="badge bg-dark"><i class="bi bi-upc-scan me-1"></i>${refaccionSolicitada || 'N/A'}</span>
+                </td>
+                <td class="align-middle">
+                    <i class="bi bi-box-seam text-muted me-1"></i>${nombreMostrar}
+                </td>
+                <td class="text-center align-middle">
+                    <i class="bi bi-boxes text-info me-1"></i>${cantidadOriginal}
+                </td>
+                <td class="text-center align-middle">
+                    <input type="number" min="1" max="${cantidadPendiente || maxStock}"
+                           class="form-control form-control-sm text-center fw-bold cantidadEditable" ${noEditable ? 'disabled' : ''}
+                           value="${noEditable ? 0 : CantidadSurtida}"
+                           data-stock="${art.STOCK || 0}"
+                           data-min="${minStock}"
+                           data-max="${maxStock}"
+                           data-pendiente="${cantidadPendiente}"
+                           ${noEditable ? 'readonly' : ''}>
+                </td>
+                <td class="text-center align-middle">
+                        <i class="bi bi-check-circle text-info me-1"></i>${CantidadConsumidaTotal || 0}
+                    ${indicadorPendiente}
+                </td>
+                <td class="text-center align-middle">
+                    <i class="bi bi-box-seam text-info me-1"></i>${art.STOCK || 0}
+                </td>
+                <td class="text-center align-middle">
+                    <i class="bi bi-arrow-down-circle text-warning me-1"></i>${minStock}
+                </td>
+                <td class="text-center align-middle">
+                    <i class="bi bi-arrow-up-circle text-success me-1"></i>${maxStock}
+                </td>
+                <td class="text-center align-middle">
+                    <span class="badge ${urgenciaClass}">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>${urgenciaText}
+                    </span>
+                </td>
+                <td class="text-center align-middle">
+                    <select ${isReadOnly} class="form-select form-select-sm departamento" ${!hayPendiente || noEditable ? 'disabled' : ''}>
+                    ${departamentosHtml}    
+                    </select>
+                </td>
+                <td class="text-center align-middle">
+                    <select ${isReadOnly} class="form-select form-select-sm proceso" ${!hayPendiente || noEditable ? 'disabled' : ''}>
+                        ${procesosHtml}
+                    </select>
+                </td>
+                <td class="text-center align-middle">
+                    <select ${isReadOnly} class="form-select form-select-sm gastos" ${!hayPendiente || noEditable ? 'disabled' : ''}>
+                        ${gastosHtml}
+                    </select>
+                </td>
+                <td class="text-center align-middle">
+                    <select ${isReadOnly} class="form-select form-select-sm cedis" ${!hayPendiente || noEditable ? 'disabled' : ''}>
+                        ${cedisHtml}
+                    </select>
+                </td>
+                <td class="text-center align-middle">
+                    <input ${isReadOnly} type="text" class="form-control form-control-sm nombre_empleado text-center"
+                           value="${nombreEmpleado}" ${!hayPendiente || noEditable ? 'disabled' : ''}>
+                </td>
+            </tr>
+        `);
         });
 
         // ✅ Ocultar botón solo si NO hay pendiente
@@ -2491,7 +2513,7 @@ class SolicitudManager {
                     return `<input type="checkbox" class="chk-solicitud form-check-input"
                           data-ordentrabajo="${row.OrdenTrabajo || ''}"
                           data-estatus="${row.Estatus || ''}"
-                          data-solicita="${row.UsuarioSolicita || ''}">`;
+                          data-solicita="${row.NombreEmpleado || ''}">`;
                 }
             },
 
@@ -2595,6 +2617,7 @@ class SolicitudManager {
         const ordenTrabajo = row.OrdenTrabajo || '';
         const estatus = row.Estatus || '';
         const solicita = row.UsuarioSolicita || '';
+        const Nombresolicita = row.NombreEmpleado || '';
         const NumeroEmpleado = row.NumeroEmpleado || '';
         const Departamento = row.Departamento || '';
 
@@ -2602,7 +2625,7 @@ class SolicitudManager {
             row.totalPendienteDevolucion || 0;
         const esAdmin = true; // o basado en this.datos_usuario[0].TIPOUSUARIO
 
-        const dataAttrs = `data-ordentrabajo="${ordenTrabajo}" data-estatus="${estatus}" data-solicita="${solicita}" data-numeroempleado="${NumeroEmpleado}" data-departamento="${Departamento}" data-totalatendidas="${totalPendienteDevolucion}"`;
+        const dataAttrs = `data-ordentrabajo="${ordenTrabajo}" data-estatus="${estatus}" data-solicita="${solicita}" data-nombresolicita="${Nombresolicita}" data-numeroempleado="${NumeroEmpleado}" data-departamento="${Departamento}" data-totalatendidas="${totalPendienteDevolucion}"`;
 
         const btn = (color, cssClass, icon, tooltip, attrs = '') =>
             `<button class="btn btn-sm ${color} ${cssClass}" data-bs-toggle="tooltip" data-bs-title="${tooltip}" ${attrs} ${dataAttrs}>

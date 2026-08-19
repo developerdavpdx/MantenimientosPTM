@@ -457,6 +457,9 @@ namespace MantenimientosPTM
             [JsonProperty("USUARIO_SOLICITA")]
             public string UsuarioSolicita { get; set; }
 
+            [JsonProperty("NOMBRE_EMPLEADO")]
+            public string NombreEmpleado { get; set; }
+
             [JsonProperty("USUARIO_ATIENDE")]
             public string UsuarioAtiende { get; set; }
 

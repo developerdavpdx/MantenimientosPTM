@@ -1002,4 +1002,8 @@ textarea.form-control-document {
     animation: pulse-success 2s infinite;
 }
 
+.bg-orange {
+    background-color: #fd7e14 !important;
+}
+
 /* Cuando el banner indica máquina detenida, impedir interacción con el switch vía CSS

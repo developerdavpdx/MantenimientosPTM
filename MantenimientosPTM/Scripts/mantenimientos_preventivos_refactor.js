@@ -387,16 +387,33 @@ class MantenimientosPreventivoApp {
                         let html = '';
                         refacciones.forEach(item => {
 
-                            let classBadge = `bg-warning text-dark`;
-                            if (item.ESTATUS == 'Atendida') {
-                                classBadge = `bg-success text-white`;
+                            const surtida = parseFloat(item.CANTIDAD_SURTIDA) || 0;
+                            const devuelta = parseFloat(item.CANTIDAD_DEVUELTA) || 0;
+                            const consumida = parseFloat(item.CANTIDAD_CONSUMIDA) || 0;
+
+                            const cantidadSolicitada = parseFloat(item.CANTIDAD) || 0;
+                            const esParcialModal = item.ESTATUS === 'Atendida' && consumida > 0 && consumida < cantidadSolicitada;
+
+                            let classBadge = 'bg-warning text-dark'; // Pendiente
+                            let textoEstatus = item.ESTATUS || '';
+
+                            if (item.ESTATUS === 'Atendida') {
+                                if (esParcialModal) {
+                                    classBadge = 'bg-orange text-dark';
+                                    textoEstatus = 'Atendida Parcialmente';
+                                } else {
+                                    classBadge = 'bg-success text-white';
+                                }
+                            } else if (item.ESTATUS === 'Cerrada') {
+                                classBadge = 'bg-danger text-white';
+                                textoEstatus = 'Cerrada por el técnico';
+                            } else if (item.ESTATUS === 'ELIMINADA') {
+                                classBadge = 'bg-danger text-white';
+                                textoEstatus = 'Eliminada por almacén';
                             }
 
                             // 🔥 Celda de cantidades surtidas/devueltas/consumidas
                             let cantidadHTML = '';
-                            const surtida = parseFloat(item.CANTIDAD_SURTIDA) || 0;
-                            const devuelta = parseFloat(item.CANTIDAD_DEVUELTA) || 0;
-                            const consumida = parseFloat(item.CANTIDAD_CONSUMIDA) || 0;
 
                             if (surtida === 0) {
                                 cantidadHTML = `
@@ -497,7 +514,7 @@ class MantenimientosPreventivoApp {
                                 <td class="text-center">${item.CANTIDAD || 0}</td>
                                 <td class="text-center">${item.NIVEL_URGENCIA || ''}</td>
                                 <td class="text-center">
-                                    <span class="badge text-white ${classBadge}">${item.ESTATUS || ''}</span>
+                                    <span class="badge ${classBadge}">${textoEstatus}</span>
                                 </td>
                                 ${cantidadHTML}
                                 ${accionesHTML}
@@ -1698,7 +1715,7 @@ class MantenimientoManager {
                                 } else {
                                     // LÓGICA NORMAL
 
-                                    if (estatusOrden == 3 || estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI") {
+                                    if (estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI") {
                                         refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
                                     } else {
                                         refaccionBtn = btn('btn-ptm-primary', 'btn-solicitar-refaccion', 'tools', 'Solicitar Refacción', dataAttrs);
@@ -2277,14 +2294,15 @@ class MantenimientoManager {
         const estatusOrden = btn.data('estatusorden');
         const descEstatusOrden = btn.data('descestatusorden');
         const idMantenimiento = btn.data('idmantenimiento');
+        const Fecha = DateUtils.obtenerFechaActual();
 
-        // Llenar el modal con los datos
+        //Llenar el modal con los datos
         $("#formSolicitarRefaccion")[0].reset();
         ValidationManager.limpiarValidacion('#formSolicitarRefaccion'); // AGREGAR ESTA LÍNEA
         $('#ROT').val(numeroOrden);
         $('#REquipo').val(nombreEquipo + ' ' + numeroDocPmCalidad);
         $('#RLinea').val(lineaProduccion);
-        $('#RFechaMantenimiento').val(fechaReferencia);
+        $('#RFechaMantenimiento').val(Fecha);
 
         this.appReferencia.gestionArticulosMP.limpiar();
 
@@ -3007,7 +3025,7 @@ class MantenimientoManager {
 
         // 🔥 Si es BORRADOR → cargar/marcar actividades EDITABLE DESPUÉS de que se cargue la rutina
         // ConsultarRutinaServer() trae HTML limpio, necesitamos marcar lo ya guardado en BD
-        if (EstatusOrden == 2 && typeof this.ConsultarActividadesPorOTMPEditable === "function") {
+        if (typeof this.ConsultarActividadesPorOTMPEditable === "function") {
             this.ConsultarActividadesPorOTMPEditable(NumeroOrden, IdEquipo, Planta);
         }
     }
@@ -3048,17 +3066,6 @@ class MantenimientoManager {
         this.gestionFirmas.mostrarFirma('Mantenimiento', true);
         $("#nombreMantenimiento").val(this.datos_usuario[0].NOMBRECOMPLETO.toUpperCase()).attr('readonly', true);
 
-        // bloquear correctamente
-        // if (FirmaTecnico != "")
-        //     this.gestionFirmas._bloquearFirma("Realizo", true);
-        // else
-        //     this.gestionFirmas.deshabilitarFirma("Realizo", true);
-
-        // if (FirmaSuperviso != "")
-        //     this.gestionFirmas._bloquearFirma("Superviso", true);
-        // else
-        //     this.gestionFirmas.deshabilitarFirma("Superviso", true);
-
 
         // 🔥 FIRMAS
         this._configureFirmas({
@@ -3074,9 +3081,6 @@ class MantenimientoManager {
             deshabilitarMantenimiento: (FirmaMantenimiento != "")
         });
 
-        // // bloquear correctamente (ya manejado por helper en la mayoría de casos)
-        // if (FirmaTecnico != "") this.gestionFirmas._bloquearFirma("Realizo", true);
-        // else this.gestionFirmas.deshabilitarFirma("Realizo", true);
 
         if (FirmaMantenimiento != "") this.gestionFirmas._bloquearFirma("Mantenimiento", true);
 

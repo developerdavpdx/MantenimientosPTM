@@ -17,6 +17,7 @@ class ConfirmManager {
 
     // Hooks para estilo de fila de totales
     getTotalsFontColor() { return 'FF0058A1'; }
+
     getTotalsBorderColor() { return 'FF0058A1'; }
 
     // Aplicar estilo a la última fila (TOTALES) si existe
