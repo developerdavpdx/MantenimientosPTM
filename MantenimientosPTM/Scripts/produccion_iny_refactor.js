@@ -50,15 +50,15 @@ class GestionProduccionINY extends GestionProduccionBase {
 
         // ✅ Mapa de líneas INY P2: Match ya que en NW vienen diferentes
         this.MAPA_LINEAS_INY = {
-            21: 'Linea 1 INY',
-            22: 'Linea 2 INY',
-            23: 'Linea 3 INY',
-            24: 'Linea 4 INY',
-            25: 'Linea 5 INY',
-            26: 'Linea 6 INY',
-            27: 'Linea 7 INY',
-            28: 'Linea 8 INY',
-            29: 'Linea 9 INY'
+            21: 'LÍNEA 1 INY',
+            22: 'LÍNEA 2 INY',
+            23: 'LÍNEA 3 INY',
+            24: 'LÍNEA 4 INY',
+            25: 'LÍNEA 5 INY',
+            26: 'LÍNEA 6 INY',
+            27: 'LÍNEA 7 INY',
+            28: 'LÍNEA 8 INY',
+            29: 'LÍNEA 9 INY'
         };
     }
 
@@ -70,6 +70,15 @@ class GestionProduccionINY extends GestionProduccionBase {
         this.correctosManager = new CorreosManagerINY();
         this.correctosManager.setAppProduccion(this);
         this.correctosManager.inicializar();
+        EquiposUtil.llenarLineas(
+            this.datos_usuario[0].PLANTA,
+            (this.datos_usuario[0].PLANTA == "1" ? 15 : 15),
+            1, //produccion
+            "FiltroLinea",
+            null,
+            null,
+            false
+        );
 
         this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
         console.log('✅ Sistema INY inicializado');

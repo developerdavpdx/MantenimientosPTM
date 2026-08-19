@@ -118,7 +118,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         EquiposUtil.llenarLineas(
             this.datos_usuario[0].PLANTA,
             (this.datos_usuario[0].PLANTA == "1" ? 7 : 7), // 🔥 PEAD CORR REVISAR PARA PLANTA 2
-            null,
+            1, //produccion
             "FiltroLinea",
             null,
             null,

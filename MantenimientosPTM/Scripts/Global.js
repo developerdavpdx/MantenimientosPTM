@@ -2958,6 +2958,15 @@ class SessionManager {
             } 
         }
 
+        if (tipoUsuario === "Administrador" || tipoUsuario === "AdminMTTO") {           
+            if (planta == 2) {
+                $("#RegistroProduccionCorrugadoURL").addClass("d-none");
+                $("#RegistroProduccionPLURL").addClass("d-none");
+            } else {
+                $("#RegistroProduccionINYURL").addClass("d-none");
+            }
+        }
+
         return true;
     }
 

@@ -136,7 +136,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
         EquiposUtil.llenarLineas(
             this.datos_usuario[0].PLANTA,
             (this.datos_usuario[0].PLANTA == "1" ? 1 : 14),
-            null,
+            1, //produccion
             "FiltroLinea",
             null,
             null,
@@ -2376,7 +2376,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         try {
 
-            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, (this.datos_usuario[0].PLANTA == "1" ? 1 : 14), null);
+            const lineas = await EquiposUtil.obtenerLineas(this.datos_usuario[0].PLANTA, (this.datos_usuario[0].PLANTA == "1" ? 1 : 14), 1);
 
             this.listaLineas = lineas;
 

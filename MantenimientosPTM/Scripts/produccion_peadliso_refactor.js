@@ -119,7 +119,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         EquiposUtil.llenarLineas(
             this.datos_usuario[0].PLANTA,
             (this.datos_usuario[0].PLANTA == "1" ? 9 : 9), // 🔥 PEAD LISO REVISAR PLANTA 2
-            null,
+            1, //Produccion
             "FiltroLinea",
             null,
             null,
