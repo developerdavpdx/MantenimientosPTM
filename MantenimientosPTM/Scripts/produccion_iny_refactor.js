@@ -411,7 +411,14 @@ class GestionProduccionINY extends GestionProduccionBase {
             nuevaFila.OTMC = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
             nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
-            nuevaFila.TiempoMuertoCorrectivos = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
+           
+            const tiempoCalculado = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
+
+            if (item.AreaTecnica === 'MANTENIMIENTO HERRAMENTALES') {
+                nuevaFila.TiempoMuertoHerramentales = tiempoCalculado;
+            } else {
+                nuevaFila.TiempoMuertoCorrectivos = tiempoCalculado;
+            }
 
             nuevaFila._origen = 'CORRECTIVO';
             nuevaFila._marcador = '🔧';
@@ -1173,7 +1180,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                         field: 'Producto',
                         headerName: 'Producto',
                         editable: true,
-                        width: 140,
+                        width: 180,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'articuloAutocompleteEditor',

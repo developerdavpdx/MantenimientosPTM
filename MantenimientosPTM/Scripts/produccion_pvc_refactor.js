@@ -516,7 +516,13 @@ class GestionProduccionPVC extends GestionProduccionBase {
             nuevaFila.id = this.generarIdTemporal();
             nuevaFila.OTMC = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
-            nuevaFila.MttoCorrectivos = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
+            const tiempoCalculado = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
+
+            if (item.AreaTecnica === 'MANTENIMIENTO HERRAMENTALES') {
+                nuevaFila.Herramental = tiempoCalculado;
+            } else {
+                nuevaFila.MttoCorrectivos = tiempoCalculado;
+            }
 
             // ✅ Marcar como correctivo
             nuevaFila._origen = 'CORRECTIVO';
