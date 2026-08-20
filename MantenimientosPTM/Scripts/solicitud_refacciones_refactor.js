@@ -969,6 +969,45 @@ class SolicitudManager {
         }
     }
 
+    async getLastSM() {
+        try {
+            const response = await $.ajax({
+                url: `/${this.URLBase}/GetLastDocEntrySM`,
+                method: 'GET',
+                dataType: 'json'
+            });
+
+            if (response.Status === "OK") {
+                const data = JSON.parse(response.Data);
+                return data[0] || {};
+            }
+            return {};
+        } catch (error) {
+            console.error('Error al obtener último SM:', error);
+            return {};
+        }
+    }
+
+    async getDepartamentoSucursalUser(correo) {
+        try {
+            const response = await $.ajax({
+                url: `/${this.URLBase}/GetDepSucursalUser`,
+                method: 'GET',
+                data: { email: correo },
+                dataType: 'json'
+            });
+
+            if (response.Status === "OK") {
+                const data = JSON.parse(response.Data);
+                return data[0] || {};
+            }
+            return {};
+        } catch (error) {
+            console.error('Error al obtener departamento:', error);
+            return {};
+        }
+    }
+
     async obtenerSalidasPorOrdenTrabajo(ordenTrabajo) {
         try {
             const response = await $.ajax({
@@ -987,6 +1026,32 @@ class SolicitudManager {
             return [];
         }
     }
+
+    async obtenerCentrosCostos() {
+        try {
+            const [departamentos, procesos, gastos, cedis] = await Promise.all([
+                this.getCentroCostos(1),
+                this.getCentroCostos(2),
+                this.getCentroCostos(3),
+                this.getCentroCostos(4)
+            ]);
+            this.ListDepartamentos = departamentos;
+            this.ListProcesos = procesos;
+            this.ListGastos = gastos;
+            this.ListCedis = cedis;
+
+            console.log('Centros de costo cargados:', { procesos: procesos.length, gastos: gastos.length });
+
+        } catch (error) {
+            console.error('Error al obtener centros de costo:', error);
+            this.ListDepartamentos = [];
+            this.ListProcesos = [];
+            this.ListGastos = [];
+            this.ListCedis = [];
+
+        }
+    }
+
 
     async obtenerDevolucionesPorOrdenTrabajo(ordenTrabajo) {
         try {
@@ -1045,69 +1110,7 @@ class SolicitudManager {
         }
     }
 
-    async getLastSM() {
-        try {
-            const response = await $.ajax({
-                url: `/${this.URLBase}/GetLastDocEntrySM`,
-                method: 'GET',
-                dataType: 'json'
-            });
-
-            if (response.Status === "OK") {
-                const data = JSON.parse(response.Data);
-                return data[0] || {};
-            }
-            return {};
-        } catch (error) {
-            console.error('Error al obtener último SM:', error);
-            return {};
-        }
-    }
-
-    async getDepartamentoSucursalUser(correo) {
-        try {
-            const response = await $.ajax({
-                url: `/${this.URLBase}/GetDepSucursalUser`,
-                method: 'GET',
-                data: { email: correo },
-                dataType: 'json'
-            });
-
-            if (response.Status === "OK") {
-                const data = JSON.parse(response.Data);
-                return data[0] || {};
-            }
-            return {};
-        } catch (error) {
-            console.error('Error al obtener departamento:', error);
-            return {};
-        }
-    }
-
-    async obtenerCentrosCostos() {
-        try {
-            const [departamentos, procesos, gastos, cedis] = await Promise.all([
-                this.getCentroCostos(1),
-                this.getCentroCostos(2),
-                this.getCentroCostos(3),
-                this.getCentroCostos(4)
-            ]);
-            this.ListDepartamentos = departamentos;
-            this.ListProcesos = procesos;
-            this.ListGastos = gastos;
-            this.ListCedis = cedis;
-
-            console.log('Centros de costo cargados:', { procesos: procesos.length, gastos: gastos.length });
-
-        } catch (error) {
-            console.error('Error al obtener centros de costo:', error);
-            this.ListDepartamentos = [];
-            this.ListProcesos = [];
-            this.ListGastos = [];
-            this.ListCedis = [];
-
-        }
-    }
+    
 
     // ========================================
     // MÉTODOS DE UTILIDAD GENERAL
@@ -1849,7 +1852,24 @@ class SolicitudManager {
 
    async abrirModalDevolucion(articulosAtendidos) {
 
-        this.articulosAtendidos = articulosAtendidos;
+       this.articulosAtendidos = articulosAtendidos;
+       // Deduplicar: una fila por ID_SOLICITUD
+       const articulosUnicos = Object.values(
+           articulosAtendidos.reduce((acc, art) => {
+               const key = art.ID_SOLICITUD;
+               if (!acc[key]) {
+                   acc[key] = { ...art };
+               } else {
+                   // Conservar el mayor surtido (ya viene calculado como neto en el SP)
+                   acc[key].CANTIDAD_SURTIDA = Math.max(
+                       Number(acc[key].CANTIDAD_SURTIDA),
+                       Number(art.CANTIDAD_SURTIDA)
+                   );
+               }
+               return acc;
+           }, {})
+       );
+
         $("#btnRechazarDev").removeClass("d-none");
         $('#badgeTotalDevolucion').text(articulosAtendidos.length);
 
@@ -1874,7 +1894,7 @@ class SolicitudManager {
                 art.DEVOLUCION_RECHAZADA === 1 || art.DEVOLUCION_RECHAZADA === '1'
             );
 
-            articulosAtendidos.forEach((art, index) => {
+            articulosUnicos.forEach((art, index) => {
                 const idSolicitud = String(art.ID_SOLICITUD || "")
                 const cantidadSolicitada = Number(art.CANTIDAD_SOLICITADA || 0);
                 const cantidadAtendida = Number(art.CANTIDAD_SURTIDA || 0);
@@ -2596,6 +2616,7 @@ class SolicitudManager {
     _getColumnDefsConfig() {
         return [
             { orderable: false, targets: [0, 1, 2] },
+            { visible: false, targets: [9] },
             { className: "text-center", targets: '_all' },
             // Prioridades responsive
             { responsivePriority: 1, targets: 0 },

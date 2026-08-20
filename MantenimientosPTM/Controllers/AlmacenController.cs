@@ -1746,52 +1746,53 @@ namespace MantenimientosPTM.Controllers
                     { "P_ORDEN_TRABAJO", (payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
-                var resultBalance = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCGetBalanceOT,
-                    parameters
-                );
+                //SE QUITO DE ESTA VERSION POR LA MULTIPLE SOLICITUD DE REFACCIONES SIMULTANEAS
+                //var resultBalance = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                //    Logic.AD.GCGetBalanceOT,
+                //    parameters
+                //);
 
 
-                if (resultBalance.JsonResult.Contains("ERROR") || resultBalance.JsonResult.Contains("Error"))
-                {
-                    log.Info($"🚀 ═══════════════════════════════════════════════════");
-                    log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
-                    log.Info($"🚀 ═══════════════════════════════════════════════════");
+                //if (resultBalance.JsonResult.Contains("ERROR") || resultBalance.JsonResult.Contains("Error"))
+                //{
+                //    log.Info($"🚀 ═══════════════════════════════════════════════════");
+                //    log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                //    log.Info($"🚀 ═══════════════════════════════════════════════════");
 
-                    log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible validar el balance de el estatus de la refacción: " + resultBalance.JsonResult);
-                }
+                //    log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible validar el balance de el estatus de la refacción: " + resultBalance.JsonResult);
+                //}
 
-                else
-                {
-                    balance = JArray.Parse(resultBalance.JsonResult);
+                //else
+                //{
+                //    balance = JArray.Parse(resultBalance.JsonResult);
 
 
-                    bool todosCompletos = balance
-                        .OfType<JObject>()
-                        .All(obj => obj["ESTATUS_SURTIDO"]?.ToObject<string>() == "COMPLETA");
+                //    bool todosCompletos = balance
+                //        .OfType<JObject>()
+                //        .All(obj => obj["ESTATUS_SURTIDO"]?.ToObject<string>() == "COMPLETA");
 
-                    if (todosCompletos)
-                    { //Los balances con 0s todas las salidas ok
-                        var paramUpdateOT = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_OT",     ( payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_ESTATUS", (2, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    };
+                //    if (todosCompletos)
+                //    { //Los balances con 0s todas las salidas ok
+                //        var paramUpdateOT = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                //    {
+                //        { "P_OT",     ( payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.Integer) },
+                //        { "P_ESTATUS", (2, ParameterDirection.Input, HanaDbType.NVarChar) },
+                //    };
 
-                        var resultUpdateOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                            Logic.AD.GCUpdateStatusOT, paramUpdateOT
-                        );
+                //        var resultUpdateOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                //            Logic.AD.GCUpdateStatusOT, paramUpdateOT
+                //        );
 
-                        if (resultUpdateOT.JsonResult.Contains("Error") || resultUpdateOT.JsonResult.Contains("ERROR"))
-                        {
-                            log.Info($"🚀 ═══════════════════════════════════════════════════");
-                            log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
-                            log.Info($"🚀 ═══════════════════════════════════════════════════");
+                //        if (resultUpdateOT.JsonResult.Contains("Error") || resultUpdateOT.JsonResult.Contains("ERROR"))
+                //        {
+                //            log.Info($"🚀 ═══════════════════════════════════════════════════");
+                //            log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                //            log.Info($"🚀 ═══════════════════════════════════════════════════");
 
-                            log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar el estatus de la OT, " + resultBalance.JsonResult);
-                        }
-                    }
-                }
+                //            log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar el estatus de la OT, " + resultBalance.JsonResult);
+                //        }
+                //    }
+                //}
 
                 //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
                 string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";

@@ -509,36 +509,6 @@ namespace MantenimientosPTM
             return responseAbx;
         }
 
-        public async Task<int> GetSerieByName(string Cedis)
-        {
-            var paramgs = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-            {
-                { "P_SERIES_NAME",     (  Cedis ?? string.Empty, ParameterDirection.Input, HanaDbType.Integer) },
-            };
-
-            var resultGS = GlobalCommands.ExecuteProcedureHanaAuto(
-                AD.GCGetSerieByName, paramgs
-            );
-
-
-            string resultadoSerie = resultGS.JsonResult.ToString();
-            if (resultadoSerie.Contains("ERROR") || resultadoSerie.Contains("Error"))
-                throw new Exception("Error al obtner la serie de numeracion: " + resultadoSerie);
-
-            JArray series = JArray.Parse(resultadoSerie);
-
-            if (series.Count > 0)
-            {
-                var first = series[0];
-
-                int serie = first["Series"]?.Value<int>() ?? 0;
-
-                return serie;
-            }
-
-            return 0;
-
-        }
 
         /// <summary>
         /// Crea una Entrada de Mercancía (InventoryGenEntries) en SAP B1 via Service Layer.
@@ -652,6 +622,8 @@ namespace MantenimientosPTM
                 dictGR["Comments"] = $"Devolución de refacciones — {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
                 dictGR["JournalMemo"] = $"Devolución interna solicitud: {payload.Referencia} orden trabajo: {payload.OrdenTrabajo}";
                 dictGR["Reference2"] = payload.DataMovimiento.Recibe;
+                dictGR["U_PDX_ORDEN_TRABAJO"] = payload.OrdenTrabajo;
+                dictGR["U_U_PDX_SOLICITANTE"] = payload.DataMovimiento.NumEmpleado;
                 dictGR["DocumentLines"] = new List<object>();
                 //FALTA SERIE = CEDIS
 
@@ -729,27 +701,27 @@ namespace MantenimientosPTM
 
                     log.Info($"✅ Entrada creada (devolución) — DocNum: {responseAbx.DocNum} | DocEntry: {responseAbx.DocEntry}");
 
-                    // ✅ Actualizar tablas internas
-                    //log.Info($"🔄 Actualizando tablas internas...");
-                    var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    {
-                        { "P_DOCENTRY",     (jsonResponse.DocEntry?.ToString() ?? string.Empty, ParameterDirection.Input, HanaDbType.Integer) },
-                        { "P_FECHA_SOLICITUD", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_FOLIO", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_ORDEN_TRABAJO", (payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_REFACCION_SOLICITADA", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_SOLICITANTE", (payload.DataMovimiento.Solicitante, ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "O_ERROR", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "O_MSG", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
-                    };
+                    //// ✅ Actualizar tablas internas SE QUITO DE ESTA VERSION NO ES NECESARIO
+                    ////log.Info($"🔄 Actualizando tablas internas...");
+                    //var paramUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                    //{
+                    //    { "P_DOCENTRY",     (jsonResponse.DocEntry?.ToString() ?? string.Empty, ParameterDirection.Input, HanaDbType.Integer) },
+                    //    { "P_FECHA_SOLICITUD", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //    { "P_FOLIO", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //    { "P_ORDEN_TRABAJO", (payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //    { "P_REFACCION_SOLICITADA", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //    { "P_SOLICITANTE", (payload.DataMovimiento.Solicitante, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //    { "O_ERROR", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //    { "O_MSG", ("", ParameterDirection.Input, HanaDbType.NVarChar) },
+                    //};
 
-                    var resultUpdate = GlobalCommands.ExecuteProcedureHanaAuto(
-                        AD.GCUpdateUDFEntradaDirecta, paramUpdate
-                    );
+                    //var resultUpdate = GlobalCommands.ExecuteProcedureHanaAuto(
+                    //    AD.GCUpdateUDFEntradaDirecta, paramUpdate
+                    //);
 
-                    string resultadoUpdateEst = resultUpdate.JsonResult.ToString();
-                    if (resultadoUpdateEst.Contains("ERROR") || resultadoUpdateEst.Contains("Error"))
-                        throw new Exception("Error al actualizar los campos definidos de la entrada directa (devolción): " + resultadoUpdateEst);
+                    //string resultadoUpdateEst = resultUpdate.JsonResult.ToString();
+                    //if (resultadoUpdateEst.Contains("ERROR") || resultadoUpdateEst.Contains("Error"))
+                    //    throw new Exception("Error al actualizar los campos definidos de la entrada directa (devolción): " + resultadoUpdateEst);
 
                     log.Info($"✅ Entrada mercancia (devolución) UDFs actualizados correctamente");
 
@@ -796,6 +768,36 @@ namespace MantenimientosPTM
             }
 
             return responseAbx;
+        }
+        public async Task<int> GetSerieByName(string Cedis)
+        {
+            var paramgs = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+            {
+                { "P_SERIES_NAME",     (  Cedis ?? string.Empty, ParameterDirection.Input, HanaDbType.Integer) },
+            };
+
+            var resultGS = GlobalCommands.ExecuteProcedureHanaAuto(
+                AD.GCGetSerieByName, paramgs
+            );
+
+
+            string resultadoSerie = resultGS.JsonResult.ToString();
+            if (resultadoSerie.Contains("ERROR") || resultadoSerie.Contains("Error"))
+                throw new Exception("Error al obtner la serie de numeracion: " + resultadoSerie);
+
+            JArray series = JArray.Parse(resultadoSerie);
+
+            if (series.Count > 0)
+            {
+                var first = series[0];
+
+                int serie = first["Series"]?.Value<int>() ?? 0;
+
+                return serie;
+            }
+
+            return 0;
+
         }
 
         #endregion
