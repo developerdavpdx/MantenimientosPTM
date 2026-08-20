@@ -576,17 +576,17 @@ namespace MantenimientosPTM.Controllers
                     }
                 }
 
-                // ✅ Actualizar estatus del mantenimiento (solo una vez)
-                var parametrosOT = new
-                {
-                    P_ID_MANTENIMIENTO = RequestData.IdMantenimiento,
-                    ORDENTRABAJO = (string)null,
-                    P_ESTATUS = RequestData.Estatus,
-                    P_USUARIOACTUALIZA = RequestData.UsuarioSolicita
-                };
+                // ✅ Actualizar estatus del mantenimiento (solo una vez) //SE QUITO DE ESTA VERSION YA QUE PUEDEN SOLICITAR MULTIPLES REFACCIONES SIN TEMA
+                //var parametrosOT = new
+                //{
+                //    P_ID_MANTENIMIENTO = RequestData.IdMantenimiento,
+                //    ORDENTRABAJO = (string)null,
+                //    P_ESTATUS = RequestData.Estatus,
+                //    P_USUARIOACTUALIZA = RequestData.UsuarioSolicita
+                //};
 
-                var allparametersOT = Logic.GlobalCommands.ConvertToHanaParameters(parametrosOT, false, null);
-                var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparametersOT);
+                //var allparametersOT = Logic.GlobalCommands.ConvertToHanaParameters(parametrosOT, false, null);
+                //var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparametersOT);
 
                 // Construir respuesta
                 if (errores.Count > 0 && insertados == 0)
