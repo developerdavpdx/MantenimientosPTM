@@ -360,14 +360,25 @@ class SolicitudRefaccionesApp {
         const $btn = $(e.currentTarget);
         const ot = $btn.data('ordentrabajo');
         GlobalUtil.mostrarLoader(true);
-
         try {
             const [salidas] = await Promise.all([
                 this.solicitudManager.obtenerSalidasPorOrdenTrabajo(ot)
             ]);
 
-            this.solicitudManager.abrirModalDevolucion(salidas);
+            // 🆕 Solo pasar las que aún tienen algo que devolver:
+            //   - ESTADO_DEVOLUCION != 2 (no devueltas totalmente)
+            //   - CANTIDAD_SURTIDA > 0   (saldo neto positivo)
+            const salidasDevolvibles = salidas.filter(s =>
+                (s.ESTADO_DEVOLUCION ?? 0) !== 2 &&
+                Number(s.CANTIDAD_SURTIDA ?? 0) > 0
+            );
 
+            if (salidasDevolvibles.length === 0) {
+                AlertManager.mostrar('No hay artículos disponibles para devolver.', 'info');
+                return;
+            }
+
+            this.solicitudManager.abrirModalDevolucion(salidasDevolvibles);
         } catch (error) {
             console.error('Error al obtener artículos atendidos:', error);
             AlertManager.mostrar('Error al obtener los artículos atendidos.', 'warning');
@@ -1406,6 +1417,16 @@ class SolicitudManager {
             // ✅ Historial real de movimientos de salida para ESTA solicitud
             const historialSalidas = salidasPorSolicitud[art.ID_SOLICITUD] || [];
 
+            // 🆕 Leer estado de devolución del primer movimiento del historial
+            // (ESTADO_DEVOLUCION y DEVOLUCION_RECHAZADA vienen iguales en todos
+            //  los renglones de la misma solicitud, tomamos el primero)
+            const primerMov = historialSalidas[0] || {};
+            const estadoDevolucion = primerMov.ESTADO_DEVOLUCION ?? 0; // 0=sin dev | 1=parcial | 2=total
+            const devolucionRechazada = primerMov.DEVOLUCION_RECHAZADA ?? 0; // 0=no | 1=sí
+
+            const tienDevolucionTotal = estadoDevolucion === 2;
+            const tieneDevolucionParcial = estadoDevolucion === 1;
+
             // ✅ Calcular cantidad PENDIENTE
             const cantidadPendiente = Math.max(0, cantidadOriginal - CantidadConsumidaTotal);
             const completamenteSurtido = cantidadPendiente <= 0;
@@ -1414,8 +1435,9 @@ class SolicitudManager {
             const estatusOriginal = (art.ESTATUS || '').trim();
             const esCancelada = estatusOriginal === 'Cerrada' || estatusOriginal === 'ELIMINADA' || estatusOriginal === 'Cancelada';
 
-            // 🔥 Bandera combinada para deshabilitar inputs/selects/botones
-            const noEditable = completamenteSurtido || esCancelada;
+            // 🆕 Incorporar devolución total al flag noEditable
+            const noEditable = completamenteSurtido || esCancelada || tienDevolucionTotal;
+
             const isReadOnly = (noEditable ? 'readonly' : '');
 
             // 🆕 Deshabilitar btn-change-ref si ya se surtió al menos una pieza
@@ -1426,16 +1448,29 @@ class SolicitudManager {
             // 🆕 Disfrazamos el estatus si es Atendida pero surtido parcial
             const esAtendida = estatusOriginal === 'Atendida';
             const esParcial = esAtendida && CantidadConsumidaTotal > 0 && CantidadConsumidaTotal < cantidadOriginal;
-            const estatusText = esParcial ? 'Atendida Parcialmente' : (art.ESTATUS || 'N/A');
 
-            // ✅ Clase de estatus con color según el caso
-            let estatusClass = 'bg-warning text-dark'; // Pendiente por defecto
+            // 🆕 Texto y clase de estatus extendidos con devolución
+            let estatusText;
+            let estatusClass;
+
             if (esCancelada) {
+                estatusText = art.ESTATUS;
                 estatusClass = 'badge-cancelada';
+            } else if (tienDevolucionTotal) {
+                estatusText = 'Devuelto';
+                estatusClass = 'badge-cancelada text-white';
+            } else if (tieneDevolucionParcial) {
+                estatusText = 'Dev. Parcial';
+                estatusClass = 'bg-orange text-dark';
             } else if (esParcial) {
-                estatusClass = 'bg-orange text-dark'; // 🆕 Parcialmente surtido
+                estatusText = 'Atendida Parcialmente';
+                estatusClass = 'bg-orange text-dark';
             } else if (completamenteSurtido) {
+                estatusText = art.ESTATUS;
                 estatusClass = 'badge btn-ptm-primary badge-custom';
+            } else {
+                estatusText = art.ESTATUS || 'N/A';
+                estatusClass = 'bg-warning text-dark';
             }
 
             const urgenciaText = art.NIVEL_URGENCIA || 'N/A';
@@ -1503,11 +1538,20 @@ class SolicitudManager {
                 ? `<span class="badge bg-primary ms-1" title="${historialSalidas.length} movimientos de salida">${historialSalidas.length}</span>`
                 : '';
 
-            // ✅ NUEVO: Clase de fila y tooltip según el caso (cancelada / surtida / normal)
-            const claseFila = esCancelada ? 'salida_cancelada' : (completamenteSurtido ? 'salida_completada' : '');
+            // 🆕 Clase de fila extendida
+            const claseFila = esCancelada
+                ? 'salida_cancelada'
+                : (tienDevolucionTotal
+                    ? 'salida_cancelada'   // misma clase gris que cancelada, o crea una nueva
+                    : (completamenteSurtido ? 'salida_completada' : ''));
+
             const tooltipFila = esCancelada
-                ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Solicitud Cerrada/Cancelada - No disponible"`
-                : (completamenteSurtido ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Completamente Surtida"` : '');
+                ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Solicitud Cerrada/Cancelada"`
+                : (tienDevolucionTotal
+                    ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Material devuelto al almacén"`
+                    : (completamenteSurtido
+                        ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="Refacción Completamente Surtida"`
+                        : ''));
 
             tbody.append(`
             <tr class="${claseFila}" ${tooltipFila}>
@@ -2060,7 +2104,7 @@ class SolicitudManager {
             }
         });
     }
-
+    
     actualizarContadorDevolucion() {
         const seleccionados = $('.chk-articulo-devolucion:checked').length;
         $('#contadorDevolucion').text(seleccionados);

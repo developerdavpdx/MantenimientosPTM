@@ -374,7 +374,7 @@ class MantenimientosPreventivoApp {
 
                         // ✅ NUEVO: Verificar si hay alguna solicitud que se pueda cerrar (Pendiente + ESTATUSOT == 3)
                         const hayCierrePendiente = refacciones.some(item =>
-                            item.ESTATUSOT == 3 && item.ESTATUS === 'Pendiente'
+                           item.ESTATUS === 'Pendiente'
                         );
 
                         // 🔥 MOSTRAR/OCULTAR COLUMNA BASADO EN LOS DATOS
@@ -447,7 +447,7 @@ class MantenimientosPreventivoApp {
                             let accionesHTML = '';
 
                             // ✅ NUEVO: Botón para CERRAR solicitud - aplica tanto para ADMIN como para TÉCNICO
-                            const puedeCerrarSolicitud = (esAdmin || esTecnico) && item.ESTATUSOT == 3 && item.ESTATUS === 'Pendiente';
+                            const puedeCerrarSolicitud = (esAdmin || esTecnico) && item.ESTATUS === 'Pendiente';
 
                             if (puedeCerrarSolicitud) {
                                 accionesHTML = `
