@@ -1490,7 +1490,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                         field: 'ObjetivoEficiencia',
                         headerName: 'OBJETIVO DE EFICIENCIA %',
                         width: 140,
-                        ...this.getColumnaNumerica('celda-amarilla')
+                        ...this.getColumnaPorcentaje('celda-amarilla')
                     },
 
                     {
@@ -2275,6 +2275,23 @@ class GestionProduccionINY extends GestionProduccionBase {
             valueFormatter: params => this.formatearNumero(params.value)
         };
     }
+
+    getColumnaPorcentaje(cellClass = '') {
+        return {
+            editable: true,
+            cellEditor: 'agNumberCellEditor',
+            cellClass: cellClass,
+            valueParser: params => {
+                if (params.newValue === null || params.newValue === undefined || params.newValue === '')
+                    return null;
+
+                const valor = GlobalUtil.darFormatoNum(params.newValue);
+                return valor === '' ? null : Number(valor);
+            },
+            valueFormatter: params => this.formatearPorcentaje(params.value)
+        };
+    }
+
 
     formatearNumero(valor) {
         if (valor === null || valor === undefined || valor === '') return '';

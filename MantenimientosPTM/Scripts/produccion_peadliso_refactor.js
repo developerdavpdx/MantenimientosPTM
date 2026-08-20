@@ -820,7 +820,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         width: 130,
                         cellClass: 'celda-azul-claro',
                         valueFormatter: params =>
-                            this.formatearNumero(params.value)
+                            this.formatearPorcentaje(params.value)
                     },
 
                     {
@@ -837,7 +837,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         width: 130,
                         cellClass: 'celda-azul-claro',
                         valueFormatter: params =>
-                            this.formatearNumero(params.value)
+                            this.formatearPorcentaje(params.value)
                     },
 
                     {
@@ -983,7 +983,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     { field: 'PorcentajeRendimiento', headerName: '% RENDIMIENTO', editable: false, width: 120, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
                     { field: 'PorcentajeCalidad', headerName: '% CALIDAD', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
                     { field: 'PorcentajeOEE', headerName: '% OEE', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
-                    { field: 'ObjetivoEficiencia', headerName: 'OBJETIVO DE EFICIENCIA %', width: 140, ...this.getColumnaNumerica('celda-amarilla') },
+                    { field: 'ObjetivoEficiencia', headerName: 'OBJETIVO DE EFICIENCIA %', width: 140, ...this.getColumnaPorcentaje('celda-amarilla') },
                     { field: 'EficienciaOperativa', headerName: 'EFICIENCIA OPERATIVA', editable: false, width: 130, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) }
                 ]
             }
@@ -1550,6 +1550,22 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         };
 
+    }
+
+    getColumnaPorcentaje(cellClass = '') {
+        return {
+            editable: true,
+            cellEditor: 'agNumberCellEditor',
+            cellClass: cellClass,
+            valueParser: params => {
+                if (params.newValue === null || params.newValue === undefined || params.newValue === '')
+                    return null;
+
+                const valor = GlobalUtil.darFormatoNum(params.newValue);
+                return valor === '' ? null : Number(valor);
+            },
+            valueFormatter: params => this.formatearPorcentaje(params.value)
+        };
     }
 
     formatearNumero(valor) {

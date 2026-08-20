@@ -1016,7 +1016,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'agSelectCellEditor',
-                        cellEditorParams: { values: ['60-30', '08-30'] },
+                        cellEditorParams: { values: ['15-30', '30-30', '08-30', '04-30', '60-30'] },
                         valueFormatter: params => params.data?.id === 'TOTALES' ? '' : params.value || ''
                     },
                     {
@@ -1059,12 +1059,12 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     { field: 'TRLiberados', headerName: 'TR LIBERADOS', width: 120, ...this.getColumnaNumerica('celda-azul') },
                     { field: 'ProduccionNeta', headerName: 'PRODUCCIÓN NETA', width: 140, ...this.getColumnaNumerica('celda-azul') },
                     { field: 'PesoEstandar', headerName: 'PESO ESTÁNDAR', editable: false, width: 140, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
-                    { field: 'PorcentajeSobrepeso', headerName: '% SOBREPESO', editable: false, width: 120, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'PorcentajeSobrepeso', headerName: '% SOBREPESO', editable: false, width: 120, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearPorcentaje(params.value) },
                     { field: 'ScrapSinCorteSierra', headerName: 'SCRAP S/CORTES SIERRA', width: 150, ...this.getColumnaNumerica('celda-azul') },
                     { field: 'ScrapCorteSierra', headerName: 'SCRAP CORTES SIERRA', width: 150, ...this.getColumnaNumerica('celda-azul') },
                     { field: 'ScrapTotal', headerName: 'SCRAP TOTAL', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
-                    { field: 'PorcentajeScrapSinCorte', headerName: '% SCRAP S/CORTE', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
-                    { field: 'PorcentajeScrapCorte', headerName: '% SCRAP CORTE', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'PorcentajeScrapSinCorte', headerName: '% SCRAP S/CORTE', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearPorcentaje(params.value) },
+                    { field: 'PorcentajeScrapCorte', headerName: '% SCRAP CORTE', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearPorcentaje(params.value) },
                     { field: 'KgReproceso', headerName: 'KG REPROCESO', width: 130, ...this.getColumnaNumerica('celda-azul') },
                     { field: 'Carbonato', headerName: 'CARBONATO', width: 120, ...this.getColumnaNumerica('celda-azul') }
                 ]
@@ -1119,7 +1119,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     { field: 'PorcentajeRendimiento', headerName: '% RENDIMIENTO', editable: false, width: 120, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
                     { field: 'PorcentajeCalidad', headerName: '% CALIDAD', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
                     { field: 'PorcentajeOEE', headerName: '% OEE', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
-                    { field: 'ObjetivoEficiencia', headerName: 'OBJETIVO DE EFICIENCIA %', width: 140, ...this.getColumnaNumerica('celda-amarilla') },
+                    { field: 'ObjetivoEficiencia', headerName: 'OBJETIVO DE EFICIENCIA %', width: 140, ...this.getColumnaPorcentaje('celda-amarilla') },
                     { field: 'EficienciaOperativa', headerName: 'EFICIENCIA OPERATIVA', editable: false, width: 130, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) }
                 ]
             }
@@ -1822,6 +1822,36 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 return isNaN(numValue) ? null : numValue;
             },
             valueFormatter: params => this.formatearNumero(params.value)
+        };
+    }
+
+    getColumnaPorcentaje(cellClass = '') {
+        return {
+            editable: true,
+            cellEditor: 'agNumberCellEditor',
+            cellClass: cellClass,
+            valueParser: params => {
+                if (params.newValue === null || params.newValue === undefined || params.newValue === '')
+                    return null;
+
+                let valor = params.newValue.toString().trim();
+
+                if (valor.includes(',') && valor.includes('.')) {
+                    const lastComma = valor.lastIndexOf(',');
+                    const lastDot = valor.lastIndexOf('.');
+                    if (lastComma > lastDot) {
+                        valor = valor.replace(/\./g, '').replace(',', '.');
+                    } else {
+                        valor = valor.replace(/,/g, '');
+                    }
+                } else if (valor.includes(',')) {
+                    valor = valor.replace(/,/g, '.');
+                }
+
+                const numValue = parseFloat(valor);
+                return isNaN(numValue) ? null : numValue;
+            },
+            valueFormatter: params => this.formatearPorcentaje(params.value)
         };
     }
 }

@@ -1485,7 +1485,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         field: 'ObjetivoEficiencia',
                         headerName: 'OBJETIVO DE EFICIENCIA %',
                         width: 140,
-                        ...this.getColumnaNumerica('celda-amarilla') // editable por si cambia la meta
+                        ...this.getColumnaPorcentaje('celda-amarilla') // editable por si cambia la meta
                     },
                     {
                         field: 'EficienciaOperativa',
@@ -2401,6 +2401,22 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 return valor === '' ? null : Number(valor);
             },
             valueFormatter: params => this.formatearNumero(params.value)
+        };
+    }
+
+    getColumnaPorcentaje(cellClass = '') {
+        return {
+            editable: true,
+            cellEditor: 'agNumberCellEditor',
+            cellClass: cellClass,
+            valueParser: params => {
+                if (params.newValue === null || params.newValue === undefined || params.newValue === '')
+                    return null;
+
+                const valor = GlobalUtil.darFormatoNum(params.newValue);
+                return valor === '' ? null : Number(valor);
+            },
+            valueFormatter: params => this.formatearPorcentaje(params.value)
         };
     }
 
