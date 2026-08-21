@@ -416,7 +416,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
             // 🔥 Si no hay datos originales, correctivos, preventivos NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
                 this.gridApi.setRowData(this.datosOriginales);
+
             }
+
+            // ✅ NUEVO: Reordenar todo el grid por línea antes de pintar totales
+            this.reordenarGridPorLinea();
 
             // 🔥 AHORA sí, una sola vez, al final de todo
             this.agregarFilaTotales();
@@ -435,6 +439,29 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }, 1000);
         }
 
+    }
+
+    reordenarGridPorLinea() {
+        // 1. Sacar todos los datos del grid (menos TOTALES)
+        const todasLasFilas = [];
+        this.gridApi.forEachNode(node => {
+            if (node.data?.id !== 'TOTALES') {
+                todasLasFilas.push(node.data);
+            }
+        });
+
+        // 2. Ordenar por línea (extrae el número de "Linea 1 PVC" → 1)
+        todasLasFilas.sort((a, b) => {
+            const extraerNumero = (linea) => {
+                if (!linea) return 9999;
+                const match = linea.match(/\d+/);
+                return match ? parseInt(match[0]) : 9999;
+            };
+            return extraerNumero(a.Linea) - extraerNumero(b.Linea);
+        });
+
+        // 3. Repintar el grid con el orden nuevo
+        this.gridApi.setRowData(todasLasFilas);
     }
 
     // ========================================
@@ -971,6 +998,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     "warning"
                 );
             }
+
+            this.reordenarGridPorLinea();
 
             this.agregarFilaTotales();
 
