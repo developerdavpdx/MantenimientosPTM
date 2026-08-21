@@ -156,7 +156,9 @@ class SolicitudRefaccionesApp {
             await self._abrirModalSalidaMercancia(e);
         });
 
-        // Devolución de mercancía
+        // ========================================
+        // TRIGGER: ya no pre-filtramos, mandamos todo crudo al render
+        // ========================================
         $(document).on('click', '#btnGenerarDevolucion, .btn-devolucion-mercancia', async (e) => {
             await self._abrirModalDevolucion(e);
         });
@@ -361,24 +363,18 @@ class SolicitudRefaccionesApp {
         const ot = $btn.data('ordentrabajo');
         GlobalUtil.mostrarLoader(true);
         try {
-            const [salidas] = await Promise.all([
-                this.solicitudManager.obtenerSalidasPorOrdenTrabajo(ot)
+            const [salidas, devoluciones] = await Promise.all([
+                this.solicitudManager.obtenerSalidasPorOrdenTrabajo(ot),
+                this.solicitudManager.obtenerDevolucionesPorOrdenTrabajo(ot)
             ]);
 
-            // 🆕 Solo pasar las que aún tienen algo que devolver:
-            //   - ESTADO_DEVOLUCION != 2 (no devueltas totalmente)
-            //   - CANTIDAD_SURTIDA > 0   (saldo neto positivo)
-            const salidasDevolvibles = salidas.filter(s =>
-                (s.ESTADO_DEVOLUCION ?? 0) !== 2 &&
-                Number(s.CANTIDAD_SURTIDA ?? 0) > 0
-            );
-
-            if (salidasDevolvibles.length === 0) {
+            if (!salidas || salidas.length === 0) {
                 AlertManager.mostrar('No hay artículos disponibles para devolver.', 'info');
                 return;
             }
 
-            this.solicitudManager.abrirModalDevolucion(salidasDevolvibles);
+            // ✅ Ya no filtramos aquí: el render decide qué es editable
+            this.solicitudManager.abrirModalDevolucion(salidas, devoluciones);
         } catch (error) {
             console.error('Error al obtener artículos atendidos:', error);
             AlertManager.mostrar('Error al obtener los artículos atendidos.', 'warning');
@@ -480,27 +476,31 @@ class SolicitudRefaccionesApp {
             $('#bodyArticulosDevolucion tr').each(function () {
                 const $row = $(this);
                 const $chk = $row.find('.chk-articulo-devolucion');
+
                 // Si no hay checkbox, omitir
                 if (!$chk.length) return;
                 if (!$chk.is(':checked')) return;
 
-                const idSolicitud = parseInt($row.find('.cant-devolver').data('idsolicitud') || 0);
-                const ordenTrabajo = $row.find('.cant-devolver').data('ordentrabajo') || $row.find('span.badge').text().trim();
-                const codigo = $row.find('.cant-devolver').data('codigo') || $row.find('small.text-muted').text().trim();
-                const articulo = $row.find('.cant-devolver').data('articulo') || $row.find('td:nth-child(5)').text().trim();
-                const cantidadAtendida = parseInt($row.find('.cant-devolver').data('cantidadatendida') || $row.find('td:nth-child(7)').text().trim() || 0);
-                const cantidadDevolver = parseInt($row.find('.cant-devolver').val() || 0);
-                const departamento = $row.find('td:nth-child(9)').text().trim() || $row.find('.departamento').val() || '';
-                const proceso = $row.find('td:nth-child(10)').text().trim() || $row.find('.proceso').val() || '';
-                const gastos = $row.find('td:nth-child(11)').text().trim() || $row.find('.gastos').val() || '';
-                const cedis = $row.find('td:nth-child(12)').text().trim() || $row.find('.cedis').val() || '';
+                // ✅ CORREGIDO: Usar índices correctos según la estructura de la tabla
+                const idSolicitud = parseInt($chk.data('idsolicitud') || 0);
+                const ordenTrabajo = $row.find('td:eq(2) .badge').text().trim() || $chk.data('ordentrabajo') || '';
+                const codigo = $row.find('td:eq(3) small').text().trim() || $chk.data('codigo') || '';
+                const articulo = $row.find('td:eq(4)').text().trim() || $chk.data('articulo') || '';
+                const cantidadSolicitada = parseInt($row.find('td:eq(5)').text().trim() || 0);
+                const cantidadSurtida = parseInt($row.find('td:eq(6)').text().trim() || 0);
+                const cantidadDevolver = parseInt($row.find('td:eq(8) .cant-devolver').val() || 0);
+                const departamento = $row.find('td:eq(10)').text().trim() || '';
+                const proceso = $row.find('td:eq(11)').text().trim() || '';
+                const gastos = $row.find('td:eq(12)').text().trim() || '';
+                const cedis = $row.find('td:eq(13)').text().trim() || '';
 
                 items.push({
                     IdSolicitud: idSolicitud,
                     OrdenTrabajo: ordenTrabajo,
                     Codigo: codigo,
                     Articulo: articulo,
-                    CantidadAtendida: cantidadAtendida,
+                    CantidadSolicitada: cantidadSolicitada,
+                    CantidadSurtida: cantidadSurtida,
                     CantidadDevolver: cantidadDevolver,
                     Departamento: departamento,
                     Proceso: proceso,
@@ -523,20 +523,62 @@ class SolicitudRefaccionesApp {
             }
 
             // --- VALIDACIÓN DE CAMPOS DEL MODAL ---
-            const solicitante = ($('#devolucionSolicitante').val() || $('#solicitante').val() || $('#nombre').val() || '').toString().trim();
-            const numEmpleado = ($('#devolucionNumEmpleado').val() || $('#numEmpleado').val() || '').toString().trim();
-            const area = ($('#devolucionArea').val() || $('#area').val() || '').toString().trim();
+            // ✅ MEJORADO: Validar explícitamente campos requeridos
+            const solicitante = ($('#devolucionSolicitante').val() || '').toString().trim();
+            const numEmpleado = ($('#devolucionNumEmpleado').val() || '').toString().trim();
+            const area = ($('#devolucionArea').val() || '').toString().trim();
             const entrega = ($('#devolucionEntrega').val() || $('#firmaAlmacen').val() || '').toString().trim();
             const recibe = ($('#devolucionRecibe').val() || $('#firmaAutoriza').val() || '').toString().trim();
 
-            if (!solicitante || !numEmpleado || !area || !entrega || !recibe) {
-                AlertManager.mostrar('Por favor complete los campos requeridos: Solicitante, Número de empleado, Área, Entrega y Recibe.', 'warning', 'alertDevolucionContainer');
-                // Re-habilitar botón si fue pasado
+            // ✅ Validación individual con mensajes específicos
+            if (!solicitante) {
+                AlertManager.mostrar('Por favor ingrese el Solicitante.', 'warning', 'alertDevolucionContainer');
+                $('#devolucionSolicitante').addClass('is-invalid').focus();
                 if ($btn && $btn.length) {
                     $btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
                 }
                 return;
             }
+
+            if (!numEmpleado) {
+                AlertManager.mostrar('Por favor ingrese el Número de Empleado.', 'warning', 'alertDevolucionContainer');
+                $('#devolucionNumEmpleado').addClass('is-invalid').focus();
+                if ($btn && $btn.length) {
+                    $btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
+                }
+                return;
+            }
+
+            if (!area) {
+                AlertManager.mostrar('Por favor ingrese el Área.', 'warning', 'alertDevolucionContainer');
+                $('#devolucionArea').addClass('is-invalid').focus();
+                if ($btn && $btn.length) {
+                    $btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
+                }
+                return;
+            }
+
+            if (!entrega) {
+                AlertManager.mostrar('Por favor complete el campo Entrega.', 'warning', 'alertDevolucionContainer');
+                $('#devolucionEntrega').addClass('is-invalid').focus();
+                if ($btn && $btn.length) {
+                    $btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
+                }
+                return;
+            }
+
+            if (!recibe) {
+                AlertManager.mostrar('Por favor complete el campo Recibe.', 'warning', 'alertDevolucionContainer');
+                $('#devolucionRecibe').addClass('is-invalid').focus();
+                if ($btn && $btn.length) {
+                    $btn.prop('disabled', false).html('<i class="bi bi-floppy-fill me-1"></i> Guardar');
+                }
+                return;
+            }
+
+            // ✅ Limpiar clases de error si todas las validaciones pasaron
+            $('#devolucionSolicitante, #devolucionNumEmpleado, #devolucionArea, #devolucionEntrega, #devolucionRecibe')
+                .removeClass('is-invalid');
 
             // Armar DataMovimiento desde inputs del modal (usando los valores validados)
             const dataMovimiento = {
@@ -1028,6 +1070,29 @@ class SolicitudManager {
                 dataType: 'json'
             });
 
+            console.log("salidas:" + response.Data);
+
+            if (response.Status === 'OK') {
+                return JSON.parse(response.Data);
+            }
+            return [];
+        } catch (error) {
+            console.error('Error al obtener salidas por OT:', error);
+            return [];
+        }
+    }
+
+    async obtenerDevolucionesPorOrdenTrabajo(ordenTrabajo) {
+        try {
+            const response = await $.ajax({
+                url: `/${this.URLBase}/GetDevolucionesPorOrdenTrabajo`,
+                method: 'GET',
+                data: { ordenTrabajo },
+                dataType: 'json'
+            });
+
+            console.log("devoluciones:" + response.Data);
+
             if (response.Status === 'OK') {
                 return JSON.parse(response.Data);
             }
@@ -1060,26 +1125,6 @@ class SolicitudManager {
             this.ListGastos = [];
             this.ListCedis = [];
 
-        }
-    }
-
-
-    async obtenerDevolucionesPorOrdenTrabajo(ordenTrabajo) {
-        try {
-            const response = await $.ajax({
-                url: `/${this.URLBase}/GetDevoPorOrdenTrabajo`,
-                method: 'GET',
-                data: { ordenTrabajo },
-                dataType: 'json'
-            });
-
-            if (response.Status === 'OK') {
-                return JSON.parse(response.Data);
-            }
-            return [];
-        } catch (error) {
-            console.error('Error al obtener devoluciones por OT:', error);
-            return [];
         }
     }
 
@@ -1120,8 +1165,6 @@ class SolicitudManager {
             return [];
         }
     }
-
-    
 
     // ========================================
     // MÉTODOS DE UTILIDAD GENERAL
@@ -1687,22 +1730,40 @@ class SolicitudManager {
             if (popover) popover.dispose();
         });
 
-        // Reinicializar popovers
+        // ✅ Inicializar en modo manual (nosotros controlamos show/hide)
         const popoverTriggerList = [].slice.call(
             document.querySelectorAll('[data-bs-toggle="popover"]')
         );
 
-        popoverTriggerList.forEach((popoverTriggerEl) => {
-            return new bootstrap.Popover(popoverTriggerEl, {
-                trigger: 'focus',
+        const popoverInstances = popoverTriggerList.map((el) => {
+            return new bootstrap.Popover(el, {
+                trigger: 'manual',
                 html: true
             });
         });
 
-        // Evento para cerrar popover al hacer click fuera
-        $(document).on('click', (e) => {
-            if (!$(e.target).closest('.folio-badge, .popover').length) {
-                $('[data-bs-toggle="popover"]').popover('hide');
+        // ✅ Toggle al hacer click en el trigger
+        $('[data-bs-toggle="popover"]').off('click.popoverToggle').on('click.popoverToggle', function (e) {
+            e.stopPropagation();
+            const instance = bootstrap.Popover.getInstance(this);
+            const estaVisible = $(this).attr('aria-describedby'); // Bootstrap marca así cuando está mostrado
+
+            // Cerrar todos los demás popovers abiertos
+            popoverInstances.forEach(p => {
+                if (p !== instance) p.hide();
+            });
+
+            if (estaVisible) {
+                instance.hide();
+            } else {
+                instance.show();
+            }
+        });
+
+        // ✅ Cerrar SOLO si el click fue realmente fuera del popover Y del trigger
+        $(document).off('click.popoverClose').on('click.popoverClose', (e) => {
+            if (!$(e.target).closest('[data-bs-toggle="popover"], .popover').length) {
+                popoverInstances.forEach(p => p.hide());
             }
         });
     }
@@ -1779,6 +1840,48 @@ class SolicitudManager {
                     </div>
                     <small class="text-muted d-block mt-1">${porcentajeSurtido}% completado</small>
                 </div>
+            </div>
+        </div>
+    `;
+    }
+
+    _construirPopoverDevoluciones(historialDev) {
+        if (!historialDev || historialDev.length === 0) {
+            return `
+            <div class="text-center text-muted py-2">
+                <i class="bi bi-inbox me-1"></i>Sin devoluciones registradas
+            </div>
+        `;
+        }
+
+        const filas = historialDev.map((dev, i) => {
+            const fecha = dev.FECHA_DEVOLUCION
+                ? new Date(dev.FECHA_DEVOLUCION).toLocaleDateString('es-MX', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                })
+                : '—';
+            const folio = dev.FOLIO_DEVOLUCION || 'Sin folio';
+            const cantidad = dev.CANTIDAD_DEVUELTA ?? 0;
+
+            return `
+            <div class="folio-item d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div class="d-flex flex-column">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-arrow-return-left text-warning me-2"></i>
+                        <span class="fw-semibold text-monospace">${folio}</span>
+                    </div>
+                    <small class="text-muted ms-4">${fecha}</small>
+                </div>
+                <small class="text-warning fw-bold">${cantidad} pz</small>
+            </div>
+        `;
+        }).join('');
+
+        return `
+        <div class="popover-folios-content">
+            <div class="folios-list" style="max-height: 200px; overflow-y: auto;">
+                ${filas}
             </div>
         </div>
     `;
@@ -1891,39 +1994,41 @@ class SolicitudManager {
     }
 
     // ========================================
-    // MÉTODO PARA ABRIR MODAL DE DEVOLUCIÓN
+    // RENDER: tabla de devoluciones con historial completo
+    // (pendiente, parcial, total, rechazada)
     // ========================================
+    async abrirModalDevolucion(salidas, devoluciones = []) {
 
-   async abrirModalDevolucion(articulosAtendidos) {
+        this.salidasOriginales = salidas;
 
-       this.articulosAtendidos = articulosAtendidos;
-       // Deduplicar: una fila por ID_SOLICITUD
-       const articulosUnicos = Object.values(
-           articulosAtendidos.reduce((acc, art) => {
-               const key = art.ID_SOLICITUD;
-               if (!acc[key]) {
-                   acc[key] = { ...art };
-               } else {
-                   // Conservar el mayor surtido (ya viene calculado como neto en el SP)
-                   acc[key].CANTIDAD_SURTIDA = Math.max(
-                       Number(acc[key].CANTIDAD_SURTIDA),
-                       Number(art.CANTIDAD_SURTIDA)
-                   );
-               }
-               return acc;
-           }, {})
-       );
+        // ✅ CORREGIDO: Agrupar historial REAL de devoluciones por ID_SOLICITUD
+        // Preservando TODOS los registros del historial, no solo agrupando
+        const devolucionesPorSolicitud = {};
+        (devoluciones || []).forEach(dev => {
+            const key = dev.ID_SOLICITUD;
+            if (!devolucionesPorSolicitud[key]) {
+                devolucionesPorSolicitud[key] = [];
+            }
+            devolucionesPorSolicitud[key].push({
+                FOLIO_DEVOLUCION: dev.FOLIO_DEVOLUCION,
+                CANTIDAD_DEVUELTA: dev.CANTIDAD_DEVUELTA,
+                FECHA_DEVOLUCION: dev.FECHA_DEVOLUCION,
+                DEVUELVE: dev.DEVUELVE
+            });
+        });
 
-        $("#btnRechazarDev").removeClass("d-none");
-        $('#badgeTotalDevolucion').text(articulosAtendidos.length);
+        // Base: un renglón por solicitud, con la salida bruta REAL sumada
+        const articulosBase = this._agruparSalidasPorSolicitud(salidas);
+
+        $('#badgeTotalDevolucion').text(articulosBase.length);
 
         const tbody = $('#bodyArticulosDevolucion');
         tbody.empty();
 
-        if (!articulosAtendidos || articulosAtendidos.length === 0) {
+        if (articulosBase.length === 0) {
             tbody.html(`
             <tr>
-                <td colspan="12" class="text-center text-muted py-4">
+                <td colspan="13" class="text-center text-muted py-4">
                     <i class="bi bi-info-circle me-1"></i>
                     No hay artículos para devolver
                 </td>
@@ -1931,109 +2036,158 @@ class SolicitudManager {
         `);
             $("#btnGuardarDevolucion").addClass("d-none");
             $("#btnRechazarDev").addClass("d-none");
-        }
-        else {
-            // ✅ NUEVO: Verificar si TODOS tienen DEVOLUCION_RECHAZADA = 1
-            const todosRechazados = articulosAtendidos.every(art =>
-                art.DEVOLUCION_RECHAZADA === 1 || art.DEVOLUCION_RECHAZADA === '1'
-            );
+        } else {
 
-            articulosUnicos.forEach((art, index) => {
-                const idSolicitud = String(art.ID_SOLICITUD || "")
-                const cantidadSolicitada = Number(art.CANTIDAD_SOLICITADA || 0);
-                const cantidadAtendida = Number(art.CANTIDAD_SURTIDA || 0);
+            $("#btnRechazarDev").removeClass("d-none");
 
-                // ✅ NUEVO: Verificar si esta fila está rechazada
+            // ✅ Verificar si hay AL MENOS UNA fila con algo pendiente por devolver
+            const hayPendienteDevolver = articulosBase.some(art => {
+                const pend = art.CANTIDAD_SALIDA_BRUTA - art.CANTIDAD_DEVUELTA;
+                const rechazado = art.DEVOLUCION_RECHAZADA === 1 || art.DEVOLUCION_RECHAZADA === '1';
+                return pend > 0 && !rechazado;
+            });
+
+            articulosBase.forEach((art, index) => {
+                const idSolicitud = String(art.ID_SOLICITUD || '');
+                const cantidadSolicitada = art.CANTIDAD_SOLICITADA;
+                const cantidadSurtidaBruta = art.CANTIDAD_SALIDA_BRUTA;
+                const cantidadDevuelta = art.CANTIDAD_DEVUELTA;
+
+                // ✅ Lo realmente disponible para devolver AHORA
+                const cantidadPendienteDevolver = Math.max(0, cantidadSurtidaBruta - cantidadDevuelta);
+                const yaDevueltoTotal = cantidadPendienteDevolver <= 0;
+
                 const esRechazado = art.DEVOLUCION_RECHAZADA === 1 || art.DEVOLUCION_RECHAZADA === '1';
-                const claseRechazado = esRechazado ? 'fila-devolucion-rechazada' : '';
-                const motivo = art.MOTIVO || 'Devolución rechazada';
-                const comentario = art.COMENTARIOS || '';
+                const noEditable = yaDevueltoTotal || esRechazado;
 
-                // ✅ Construir tooltip si está rechazado
+                const claseFila = esRechazado
+                    ? 'fila-devolucion-rechazada'
+                    : (yaDevueltoTotal ? 'salida_completada' : '');
+
+                // Tooltip contextual
                 let tooltipAttr = '';
                 if (esRechazado) {
+                    const motivo = art.MOTIVO_RECHAZO || 'Devolución rechazada';
+                    const comentario = art.COMENTARIOS_RECHAZO || '';
                     const textoTooltip = `❌ Devolución Rechazada\nMotivo: ${motivo}${comentario ? '\nComentario: ' + comentario : ''}`;
-                    tooltipAttr = `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="tooltip-devolucion-rechazada" data-bs-title="${textoTooltip.replace(/"/g, '&quot;')}"`;
+                    tooltipAttr = `data-bs-toggle="tooltip" data-bs-placement="top"
+                               data-bs-custom-class="tooltip-devolucion-rechazada"
+                               data-bs-title="${textoTooltip.replace(/"/g, '&quot;')}"`;
+                } else if (yaDevueltoTotal) {
+                    tooltipAttr = `data-bs-toggle="tooltip" data-bs-placement="top"
+                               data-bs-custom-class="custom-tooltip"
+                               data-bs-title="Ya se devolvió el total de esta refacción"`;
                 }
 
-                tbody.append(`
-            <tr class="${claseRechazado}" ${tooltipAttr}>
+                // ✅ Estatus visual (igual patrón que salidas)
+                let estatusText, estatusClass;
+                if (esRechazado) {
+                    estatusText = 'Rechazada';
+                    estatusClass = 'badge-cancelada text-white';
+                } else if (yaDevueltoTotal && cantidadDevuelta > 0) {
+                    estatusText = 'Devuelto Total';
+                    estatusClass = 'badge btn-ptm-primary badge-custom';
+                } else if (cantidadDevuelta > 0) {
+                    estatusText = 'Devolución Parcial';
+                    estatusClass = 'bg-orange text-dark';
+                } else {
+                    estatusText = 'Pendiente';
+                    estatusClass = 'bg-warning text-dark';
+                }
 
-                <td class="text-center">
+                // ✅ CORREGIDO: Obtener historial REAL de devoluciones
+                const historialDev = devolucionesPorSolicitud[art.ID_SOLICITUD] || [];
+                const popoverDevContent = this._construirPopoverDevoluciones(historialDev);
+                const popoverDevEscaped = popoverDevContent.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+                const badgeConteoDev = historialDev.length > 1
+                    ? `<span class="badge bg-warning text-dark ms-1" title="${historialDev.length} devoluciones parciales">${historialDev.length}</span>`
+                    : '';
+
+                // ✅ MOSTRAR SIEMPRE el badge (incluso sin devoluciones)
+                const celdaHistorial = `<span class="badge bg-secondary cursor-pointer folio-badge"
+                       role="button" tabindex="0"
+                       data-bs-toggle="popover"
+                       data-bs-trigger="focus"
+                       data-bs-html="true"
+                       data-bs-placement="left"
+                       data-bs-custom-class="popover-folios"
+                       title="&lt;i class=&quot;bi bi-arrow-return-left me-2&quot;&gt;&lt;/i&gt;Historial de Devoluciones"
+                       data-bs-content="${popoverDevEscaped}">
+                       <i class="bi bi-info-circle"></i>
+                   </span>${badgeConteoDev}`;
+
+
+                // Indicador de pendiente
+                const indicadorPendiente = (cantidadPendienteDevolver > 0 && !esRechazado)
+                    ? `<span class="badge bg-orange ms-2 fw-semibold">${cantidadPendienteDevolver} pendiente</span>`
+                    : '';
+
+                tbody.append(`
+            <tr class="${claseFila}" ${tooltipAttr}>
+
+                <td class="text-center align-middle">
                     ${esRechazado ? '<i class="bi bi-x-circle-fill icono-rechazo-devolucion"></i>' : ''}
                     ${index + 1}
                 </td>
 
-                <td class="text-center">
+                <td class="text-center align-middle">${celdaHistorial}</td>
+
+                <td class="text-center align-middle">
                     <input type="checkbox" data-idsolicitud="${idSolicitud}"
                            class="form-check-input chk-articulo-devolucion"
-                           ${esRechazado ? 'disabled' : 'checked'}>
+                           ${noEditable ? 'disabled' : 'checked'}>
                 </td>
 
-                <td class="text-center">
-                    <span class="badge bg-blue-ptm badge-custom">
-                        ${art.ORDEN_TRABAJO || 'N/A'}
+                <td class="text-center align-middle">
+                    <span class="badge bg-blue-ptm badge-custom">${art.ORDEN_TRABAJO || 'N/A'}</span>
+                </td>
+
+                <td class="text-center align-middle">
+                    <small class="text-muted fw-semibold">${art.ItemCode || 'N/A'}</small>
+                </td>
+
+                <td class="align-middle">${art.ItemName || 'N/A'}</td>
+
+                <td class="text-center align-middle fw-semibold">${cantidadSolicitada}</td>
+
+                <td class="text-center align-middle fw-semibold text-success">${cantidadSurtidaBruta}</td>
+
+                <td class="text-center align-middle">
+                    <span class="badge ${estatusClass}">
+                        <i class="bi bi-flag-fill me-1"></i>${estatusText}
                     </span>
+                    ${indicadorPendiente}
                 </td>
 
-                <td class="text-center">
-                    <small class="text-muted fw-semibold">
-                        ${art.ItemCode || art.REFACCION_SOLICITADA || 'N/A'}
-                    </small>
-                </td>
-
-                <td>
-                    ${art.ItemName || 'N/A'}
-                </td>
-
-                <td class="text-center fw-semibold">
-                    ${cantidadSolicitada}
-                </td>
-
-                <td class="text-center fw-semibold text-success">
-                    ${cantidadAtendida}
-                </td>
-
-                <td class="text-center">
+                <td class="text-center align-middle">
                     <input type="number"
                            class="form-control form-control-sm cant-devolver cantidadEditable text-center"
                            min="1"
-                           max="${cantidadAtendida}"
-                           value="${cantidadAtendida}"
-
+                           max="${cantidadPendienteDevolver}"
+                           value="${noEditable ? 0 : cantidadPendienteDevolver}"
                            data-idsolicitud="${art.ID_SOLICITUD}"
                            data-ordentrabajo="${art.ORDEN_TRABAJO || ''}"
                            data-codigo="${art.ItemCode || ''}"
                            data-articulo="${art.ItemName || ''}"
                            data-cantidadsolicitada="${cantidadSolicitada}"
-                           data-cantidadatendida="${cantidadAtendida}"
-
-                           ${esRechazado ? 'disabled readonly' : ''}
+                           data-cantidadsurtidabruta="${cantidadSurtidaBruta}"
+                           data-cantidadpendiente="${cantidadPendienteDevolver}"
+                           ${noEditable ? 'disabled readonly' : ''}
                            required>
                 </td>
 
-                <td class="text-center fw-semibold">
-                    ${art.DEPT || ''}
-                </td>
-
-                <td class="text-center fw-semibold">
-                    ${art.PROCESO || ''}
-                </td>
-
-                <td class="text-center fw-semibold">
-                    ${art.GASTOS || ''}
-                </td>
-
-                <td class="text-center fw-semibold">
-                    ${art.CEDIS || ''}
-                </td>
+                
+                <td class="text-center align-middle fw-semibold">${art.DEPT}</td>
+                <td class="text-center align-middle fw-semibold">${art.PROCESO}</td>
+                <td class="text-center align-middle fw-semibold">${art.GASTOS}</td>
+                <td class="text-center align-middle fw-semibold">${art.CEDIS}</td>
 
             </tr>
         `);
             });
 
-            // ✅ NUEVO: Ocultar botones si TODOS están rechazados
-            if (todosRechazados) {
+            if (!hayPendienteDevolver) {
                 $("#btnGuardarDevolucion").addClass("d-none");
                 $("#btnRechazarDev").addClass("d-none");
             } else {
@@ -2042,50 +2196,82 @@ class SolicitudManager {
             }
         }
 
-        // Configurar eventos
         this._configurarEventosDevolucion();
-
-        // Inicializar firmas
         await this.llenarFirmas();
 
-        // Limpiar formulario
         $('#devolucionSolicitante').val('');
         $('#devolucionNumEmpleado').val('');
         $('#devolucionArea').val('');
-
-        $('#formDevolucionMercancia')
-            .removeClass('was-validated');
-
+        $('#formDevolucionMercancia').removeClass('was-validated');
         $('#alertDevolucionContainer').empty();
 
-        // Actualizar contador
         this.actualizarContadorDevolucion();
 
-        // ✅ Reinicializar tooltips después de renderizar
         setTimeout(() => {
             $('[data-bs-toggle="tooltip"]').tooltip('dispose');
             $('[data-bs-toggle="tooltip"]').tooltip();
+            this._inicializarPopoversFolios();
         }, 100);
 
-        // Mostrar modal
         $('#devolucionMercancia').modal('show');
     }
 
+    // ========================================
+    // HELPER: agrupa cada movimiento de SALIDA en un renglón único por ID_SOLICITUD
+    // y calcula la salida BRUTA real sumando CANTIDAD_SALIDA de cada movimiento
+    // ========================================
+    _agruparSalidasPorSolicitud(salidas) {
+        const map = {};
+        (salidas || []).forEach(s => {
+            const key = s.ID_SOLICITUD;
+            if (!map[key]) {
+                map[key] = {
+                    ID_SOLICITUD: s.ID_SOLICITUD,
+                    ORDEN_TRABAJO: s.ORDEN_TRABAJO,
+                    ItemCode: s.ItemCode,
+                    ItemName: s.ItemName,
+                    CANTIDAD_SOLICITADA: Number(s.CANTIDAD_SOLICITADA || 0),
+                    CANTIDAD_SALIDA_BRUTA: 0,
+                    CANTIDAD_DEVUELTA: Number(s.CANTIDAD_DEVUELTA ?? 0),
+                    ESTADO_DEVOLUCION: s.ESTADO_DEVOLUCION ?? 0,
+                    DEVOLUCION_RECHAZADA: s.DEVOLUCION_RECHAZADA ?? 0,
+                    MOTIVO_RECHAZO: s.MOTIVO_RECHAZO || '',
+                    COMENTARIOS_RECHAZO: s.COMENTARIOS_RECHAZO || '',
+                    DEPT: s.DEPT || '',
+                    PROCESO: s.PROCESO || '',
+                    GASTOS: s.GASTOS || '',
+                    CEDIS: s.CEDIS || ''
+                };
+            }
+            // Suma la salida bruta real (cada movimiento de salida individual)
+            map[key].CANTIDAD_SALIDA_BRUTA += Number(s.CANTIDAD_SALIDA || 0);
+        });
+        return Object.values(map);
+    }
+
     _configurarEventosDevolucion() {
-        // ✅ Lógica "Seleccionar todos"
+        // ✅ Lógica "Seleccionar todos" - SOLO los que NO están disabled
         $('#chkSelAllDevolucion').off('change').on('change', () => {
             const checked = $('#chkSelAllDevolucion').prop('checked');
-            $('.chk-articulo-devolucion').prop('checked', checked);
-            $('.cant-devolver').prop('disabled', !checked);
+
+            // ✅ NUEVO: Seleccionar SOLO los checkboxes que NO estén disabled
+            $('.chk-articulo-devolucion:not(:disabled)').prop('checked', checked);
+
+            // ✅ Habilitar/deshabilitar inputs de cantidad según corresponda
+            $('.chk-articulo-devolucion:not(:disabled)').each((idx, el) => {
+                const $input = $(el).closest('tr').find('.cant-devolver');
+                $input.prop('disabled', !checked);
+            });
+
             this.actualizarContadorDevolucion();
         });
 
         // ✅ Cuando se desmarca una fila
         $(document).off('change', '.chk-articulo-devolucion').on('change', '.chk-articulo-devolucion', () => {
-            const total = $('.chk-articulo-devolucion').length;
-            const seleccionados = $('.chk-articulo-devolucion:checked').length;
+            const total = $('.chk-articulo-devolucion:not(:disabled)').length;
+            const seleccionados = $('.chk-articulo-devolucion:not(:disabled):checked').length;
 
-            $('#chkSelAllDevolucion').prop('checked', total === seleccionados);
+            $('#chkSelAllDevolucion').prop('checked', total === seleccionados && total > 0);
             $('#chkSelAllDevolucion').prop('indeterminate', seleccionados > 0 && seleccionados < total);
 
             // Habilitar/deshabilitar input según checkbox
@@ -2109,7 +2295,6 @@ class SolicitudManager {
         const seleccionados = $('.chk-articulo-devolucion:checked').length;
         $('#contadorDevolucion').text(seleccionados);
     }
-
 
     // ========================================
     // OBTENER IDS DE DEVOLUCIONES SELECCIONADAS

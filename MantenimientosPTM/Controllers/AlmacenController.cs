@@ -2730,6 +2730,55 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        [HttpGet]
+        public JsonResult GetDevolucionesPorOrdenTrabajo(string ordenTrabajo)
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+
+            try
+            {
+                if (string.IsNullOrEmpty(ordenTrabajo))
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "La orden de trabajo es requerida.";
+                    jsonResponse.Data = "[]";
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_ORDEN_TRABAJO", (ordenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCGetDevolucionesPorOrdenTrabajo,
+                    parameters
+                );
+
+                if (resultHana.JsonResult.Contains("ERROR"))
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "No fue posible obtener las devoluciones de la solicitud.";
+                    jsonResponse.Data = "[]";
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+
+
+                jsonResponse.Status = "OK";
+                jsonResponse.Message = $"Información obtenida correctamente";
+                jsonResponse.Data = resultHana.JsonResult;
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al obtener las devoluciones de la solicitud: " + ex.Message;
+                jsonResponse.Data = "[]";
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+        }
+
 
         [HttpGet]
         public JsonResult GetDevoPorOrdenTrabajo(string ordenTrabajo)

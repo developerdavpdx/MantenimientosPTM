@@ -45,6 +45,14 @@ namespace MantenimientosPTM
             }
         }
 
+        public string GCGetDevolucionesPorOrdenTrabajo
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGetDevolucionesPorOT\"";
+            }
+        }
+
         public string GCGetDevoPorOrdenTrabajo
         {
             get
