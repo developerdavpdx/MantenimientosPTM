@@ -372,6 +372,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 this.gridApi.setRowData(this.datosOriginales);
             }
 
+            this.reordenarGridPorLinea();
+
             // Una sola vez, al final
             this.agregarFilaTotales();
 
@@ -388,6 +390,26 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             }, 1000);
 
         }
+    }
+
+    reordenarGridPorLinea() {
+        const todasLasFilas = [];
+        this.gridApi.forEachNode(node => {
+            if (node.data?.id !== 'TOTALES') {
+                todasLasFilas.push(node.data);
+            }
+        });
+
+        todasLasFilas.sort((a, b) => {
+            const extraerNumero = (linea) => {
+                if (!linea) return 9999;
+                const match = linea.match(/\d+/);
+                return match ? parseInt(match[0]) : 9999;
+            };
+            return extraerNumero(a.Linea) - extraerNumero(b.Linea);
+        });
+
+        this.gridApi.setRowData(todasLasFilas);
     }
 
     // ========================================
@@ -886,6 +908,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     "warning"
                 );
             }
+
+            this.reordenarGridPorLinea(); 
 
             this.agregarFilaTotales();
 
