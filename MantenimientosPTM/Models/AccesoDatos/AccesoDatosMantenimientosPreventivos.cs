@@ -263,6 +263,14 @@ namespace MantenimientosPTM
             [JsonProperty("DURACION_HRS")]
             public string DuracionHrs { get; set; }
 
+            // 🆕 Tiempo de arranque
+            [JsonProperty("TIEMPO_ARRANQUE")]
+            public string TiempoArranque { get; set; }
+
+            // 🆕 Tiempo de liberación de línea
+            [JsonProperty("TIEMPO_LIBERACION_LINEA")]
+            public string TiempoLiberacionLinea { get; set; }
+
             // 🔥 FIRMAS
 
             [JsonProperty("FIRMA_REALIZO")]
@@ -438,6 +446,10 @@ namespace MantenimientosPTM
             public string TecnicosAsignados { get; set; }
             public decimal? DuracionHrs { get; set; }
             public string Usuario { get; set; }
+
+            // ✅ NUEVOS CAMPOS: TIEMPO DE ARRANQUE Y LIBERACIÓN DE LÍNEA
+            public DateTime? TiempoArranque { get; set; }
+            public DateTime? TiempoLiberacionLinea { get; set; }
 
             // 🔥 NUEVOS CAMPOS PARA FIRMAS
             public string FirmaRealizo { get; set; }          // Base64 PNG

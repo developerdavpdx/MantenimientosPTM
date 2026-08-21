@@ -2176,6 +2176,8 @@ class MantenimientoManager {
             horafin: row.HoraFin,
             textosecuencia: row.TextoSecuencia,
             duracionhrs: row.DuracionHrs,
+            tiempoarranque: row.TiempoArranque,               // 🆕 aquí
+            tiempoliberacionlinea: row.TiempoLiberacionLinea, // 🆕 aquí
 
             firmarealizo: row.FirmaRealizo,
             nombrerealizo: row.NombreRealizo,
@@ -2588,6 +2590,11 @@ class MantenimientoManager {
                 $("#HoraFin").val(data.horaFin.substring(0, 5));
             }
 
+            // ✅ Poblar campos nuevos: Tiempo de Arranque y Liberación de Línea
+            // Se llenan SIEMPRE (cerrada, borrador, etc.), solo cambia si son editables o no
+            $("#TiempoArranque").val(this._formatearDatetimeLocal(data.tiempoArranque));
+            $("#TiempoLiberacionLinea").val(this._formatearDatetimeLocal(data.tiempoLiberacionLinea));
+
             $("#TextoSecuencia").val(data.textoSecuencia || '');
             $("#DuracionHrs").val(data.duracionHrs || '');
             $("#DuracionHrs").val(data.duracionHrs || '');
@@ -2724,6 +2731,29 @@ class MantenimientoManager {
         }
     }
 
+    // ========================================
+    // 🆕 Helper: convierte "DD/MM/YYYY HH24:MI:SS" (formato del SP)
+    // a "YYYY-MM-DDTHH:MM" (formato requerido por <input type="datetime-local">)
+    // ========================================
+    _formatearDatetimeLocal(valor) {
+        if (!valor || typeof valor !== 'string' || !valor.includes(' ')) return '';
+
+        try {
+            const [fechaParte, horaParte] = valor.split(' ');
+            const [dia, mes, anio] = fechaParte.split('/');
+
+            if (!dia || !mes || !anio || !horaParte) return '';
+
+            // HH:MM (recortamos segundos, datetime-local no los necesita)
+            const horaCorta = horaParte.substring(0, 5);
+
+            return `${anio}-${mes}-${dia}T${horaCorta}`;
+        } catch (err) {
+            console.warn("⚠️ Error parseando datetime:", valor);
+            return '';
+        }
+    }
+
     getDataFromButtonMP(btn) {
         const d = btn.data();
 
@@ -2753,6 +2783,8 @@ class MantenimientoManager {
             horaFin: d.horafin,
             textoSecuencia: d.textosecuencia,
             duracionHrs: d.duracionhrs,
+            tiempoArranque: d.tiempoarranque,               // 🆕 aquí
+            tiempoLiberacionLinea: d.tiempoliberacionlinea,  // 🆕 aquí
 
             estatusOrden: d.estatusorden,
             descEstatusOrden: d.descestatusorden,
@@ -2902,6 +2934,10 @@ class MantenimientoManager {
             // DURACIÓN
             $("#DuracionHrs").prop('readonly', true).prop('required', false);
 
+            // ✅ TIEMPO DE ARRANQUE Y LIBERACIÓN DE LÍNEA - Deshabilitados cuando estatus es 4
+            $("#TiempoArranque").prop('disabled', true).prop('required', false);
+            $("#TiempoLiberacionLinea").prop('disabled', true).prop('required', false);
+
             // BOTONES
             $('#btnGuardarOT').removeClass('d-none');
             $('#btnExportMantenimientoPDF').removeClass('d-none');
@@ -2982,6 +3018,15 @@ class MantenimientoManager {
 
         // DURACIÓN
         $("#DuracionHrs").prop('readonly', true).prop('required', true); // Sigue readonly (calculado)
+
+        // ✅ TIEMPO DE ARRANQUE Y LIBERACIÓN DE LÍNEA - Solo habilitados si estatus es 2
+        if (EstatusOrden == 2) {
+            $("#TiempoArranque").prop('disabled', false).prop('required', false);
+            $("#TiempoLiberacionLinea").prop('disabled', false).prop('required', false);
+        } else {
+            $("#TiempoArranque").prop('disabled', true).prop('required', false);
+            $("#TiempoLiberacionLinea").prop('disabled', true).prop('required', false);
+        }
 
         // REQUIRED
         $('#EvidenciaOrdenTrabajo input:not(#fileInput)').prop('required', true);
@@ -3549,7 +3594,9 @@ class MantenimientoManager {
             'HoraInicio',
             'HoraFin',
             'TextoSecuencia',
-            'DuracionHrs'
+            'DuracionHrs',
+            'TiempoArranque',
+            'TiempoLiberacionLinea'
         ];
 
         camposFormulario.forEach(campo => {
