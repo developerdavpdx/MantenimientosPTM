@@ -118,6 +118,13 @@ namespace MantenimientosPTM.Controllers
                     dtFechaFin = DateTime.Parse(FiltroFechaFin);
                 }
 
+                // ✅ Detectar si viene de Bitácora (algún filtro de exclusión activo)
+                bool esDesdeBitacora =
+                    FiltroExcluirSincronizadosPVC == "S" ||
+                    FiltroExcluirSincronizadosPEADLISO == "S" ||
+                    FiltroExcluirSincronizadosPEADCORR == "S" ||
+                    FiltroExcluirSincronizadosINY == "S";
+
 
                 //=================================OBTENER DATOS===========================//
                 // ✅ TODOS LOS FILTROS SE ENVÍAN A HANA
@@ -139,7 +146,9 @@ namespace MantenimientosPTM.Controllers
                     { "P_EXCLUIR_SINCRONIZADOS_INY", (string.IsNullOrEmpty(FiltroExcluirSincronizadosINY) ? (object)null : FiltroExcluirSincronizadosINY, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_POSICION_ID", (string.IsNullOrEmpty(FiltroPosicionId) ? (object)null : FiltroPosicionId, ParameterDirection.Input, HanaDbType.Integer) },
                     { "P_IDS_HERR", (string.IsNullOrEmpty(IdsHerr) ? (object)null : IdsHerr, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_IDS_MTTO", (string.IsNullOrEmpty(IdsMtto) ? (object)null : IdsMtto, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_IDS_MTTO", (string.IsNullOrEmpty(IdsMtto) ? (object)null : IdsMtto, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    // ✅ Solo se manda 1 si viene de Bitácora, null en caso contrario
+                    { "P_LINEA_PROD", (esDesdeBitacora ? (object)1 : null, ParameterDirection.Input, HanaDbType.Integer) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
