@@ -483,12 +483,12 @@ class SolicitudRefaccionesApp {
 
                 // ✅ CORREGIDO: Usar índices correctos según la estructura de la tabla
                 const idSolicitud = parseInt($chk.data('idsolicitud') || 0);
-                const ordenTrabajo = $row.find('td:eq(2) .badge').text().trim() || $chk.data('ordentrabajo') || '';
-                const codigo = $row.find('td:eq(3) small').text().trim() || $chk.data('codigo') || '';
-                const articulo = $row.find('td:eq(4)').text().trim() || $chk.data('articulo') || '';
-                const cantidadSolicitada = parseInt($row.find('td:eq(5)').text().trim() || 0);
-                const cantidadSurtida = parseInt($row.find('td:eq(6)').text().trim() || 0);
-                const cantidadDevolver = parseInt($row.find('td:eq(8) .cant-devolver').val() || 0);
+                const ordenTrabajo = $row.find('td:eq(3) .badge').text().trim() || $chk.data('ordentrabajo') || '';
+                const codigo = $row.find('td:eq(4) small').text().trim() || $chk.data('codigo') || '';
+                const articulo = $row.find('td:eq(5)').text().trim() || $chk.data('articulo') || '';
+                const cantidadSolicitada = parseInt($row.find('td:eq(6)').text().trim() || 0);
+                const cantidadSurtida = parseInt($row.find('td:eq(7)').text().trim() || 0);
+                const cantidadDevolver = parseInt($row.find('td:eq(9) .cant-devolver').val() || 0);
                 const departamento = $row.find('td:eq(10)').text().trim() || '';
                 const proceso = $row.find('td:eq(11)').text().trim() || '';
                 const gastos = $row.find('td:eq(12)').text().trim() || '';
@@ -593,7 +593,8 @@ class SolicitudRefaccionesApp {
                 Articulos: items,
                 DataMovimiento: dataMovimiento,
                 Referencia: $('#numAjuste').val() || $('#valeFolio').text().trim() || '',
-                OrdenTrabajo: items[0].OrdenTrabajo || ''
+                OrdenTrabajo: items[0].OrdenTrabajo || '',
+                Planta: this.datos_usuario[0].PLANTA || '',
             };
 
             // Enviar

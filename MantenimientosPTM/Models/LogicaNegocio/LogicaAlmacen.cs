@@ -630,7 +630,7 @@ namespace MantenimientosPTM
                 var serie = GetSerieByName(payload.Contabilizacion[0].Cedis);
                 dictGR["Series"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["SeriesP1"] : ConfigurationManager.AppSettings["SeriesP2"]);
 
-
+                
                 foreach (var linea in articulosData)
                 {
                     var newLine = new ExpandoObject() as IDictionary<string, object>;

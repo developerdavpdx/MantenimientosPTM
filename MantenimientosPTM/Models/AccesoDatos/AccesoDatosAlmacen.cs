@@ -952,6 +952,7 @@ namespace MantenimientosPTM
             public DataMovimiento DataMovimiento { get; set; } = new DataMovimiento();
             public string Referencia { get; set; }
             public string OrdenTrabajo { get; set; }
+            public int Planta { get; set; }
         }
 
         public class ArticuloDevolucion

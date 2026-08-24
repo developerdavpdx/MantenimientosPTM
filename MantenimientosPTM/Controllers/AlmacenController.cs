@@ -1998,6 +1998,7 @@ namespace MantenimientosPTM.Controllers
                     Referencia = payload.Referencia,
                     OrdenTrabajo = payload.OrdenTrabajo,
                     DataMovimiento = payload.DataMovimiento,
+                    Planta = payload.Planta,
                     Contabilizacion = new List<Contabilizacion>()
                 };
 
