@@ -2017,6 +2017,11 @@ class EquipoManager {
                     $("#formEquipo")[0].reset();
                     $("#formEquipo").removeClass("was-validated");
 
+                    // Limpiar Select2 de periodicidades
+                    $('#PeriodicidadesMantenimiento')
+                        .val(null)
+                        .trigger('change');
+
                     // Restaurar el valor
                     $("#Planta").val(valorAMantener);
 
