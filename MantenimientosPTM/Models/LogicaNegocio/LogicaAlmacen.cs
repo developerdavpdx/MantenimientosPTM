@@ -407,12 +407,21 @@ namespace MantenimientosPTM
                 dictGI["Reference2"] = payload.DataMovimiento.Recibe; //AUTORIZA (RECIBE)
                 dictGI["U_U_PDX_SOLICITANTE"] = payload.DataMovimiento.NumEmpleado;
 
-                var serie = GetSerieByName(payload.Contabilizacion[0].Cedis);
-
-                //La serie debe ser igual al CEDIS
-                dictGI["Series"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["SeriesP1"] : ConfigurationManager.AppSettings["SeriesP2"]);
-
-
+                //Obtener la Serie en base a la planta y objectype
+                                
+                //Validar de que CEDIS viene
+                var cedis = "";
+                if (payload.Contabilizacion[0].Cedis == "PLANTA2")
+                {
+                    cedis = "P2";
+                }
+                else
+                {
+                    cedis = "CORP";
+                }
+                //Obtener la serie en base a la planta y objectype
+                var serie = GetSerieByName(cedis, ConfigurationManager.AppSettings["ObjectTypeSalida"]);
+                dictGI["Series"] = serie.Result;
 
                 // ✅ 4 — Enviar a SAP
                 var jsonBody = JsonConvert.SerializeObject(goodsIssue);
@@ -627,8 +636,16 @@ namespace MantenimientosPTM
                 dictGR["DocumentLines"] = new List<object>();
                 //FALTA SERIE = CEDIS
 
-                var serie = GetSerieByName(payload.Contabilizacion[0].Cedis);
-                dictGR["Series"] = (payload.Planta == 1 ? ConfigurationManager.AppSettings["SeriesP1"] : ConfigurationManager.AppSettings["SeriesP2"]);
+                //Validar de que CEDIS viene
+                var cedis = "";
+                if (payload.Contabilizacion[0].Cedis == "PLANTA2") {
+                    cedis = "P2";
+                } else {
+                    cedis = "CORP";
+                }
+
+                var serie = GetSerieByName(cedis, ConfigurationManager.AppSettings["ObjectTypeEntrada"]);
+                dictGR["Series"] = serie.Result;
 
                 
                 foreach (var linea in articulosData)
@@ -769,11 +786,13 @@ namespace MantenimientosPTM
 
             return responseAbx;
         }
-        public async Task<int> GetSerieByName(string Cedis)
+       
+        public async Task<int> GetSerieByName(string Cedis, string objectCode = null)
         {
             var paramgs = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
             {
-                { "P_SERIES_NAME",     (  Cedis ?? string.Empty, ParameterDirection.Input, HanaDbType.Integer) },
+                { "P_SERIES_NAME", (  Cedis ?? string.Empty, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_OBJECT_CODE", ( objectCode, ParameterDirection.Input, HanaDbType.NVarChar) }
             };
 
             var resultGS = GlobalCommands.ExecuteProcedureHanaAuto(
@@ -782,14 +801,19 @@ namespace MantenimientosPTM
 
 
             string resultadoSerie = resultGS.JsonResult.ToString();
-            if (resultadoSerie.Contains("ERROR") || resultadoSerie.Contains("Error"))
-                throw new Exception("Error al obtner la serie de numeracion: " + resultadoSerie);
-
+                       
             JArray series = JArray.Parse(resultadoSerie);
+                 
 
             if (series.Count > 0)
             {
                 var first = series[0];
+
+                //Validar Error real
+                int error = Convert.ToInt32(first ["Error"]);
+                if (error != 0) { 
+                    throw new Exception($"Error al obtener la serie de numeración: " + resultadoSerie);
+                }
 
                 int serie = first["Series"]?.Value<int>() ?? 0;
 
