@@ -29,6 +29,14 @@ namespace MantenimientosPTM
             }
         }
 
+        public string GCBuscarDatosSolicitante
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOConsultaDatosSolicitante\"";
+            }
+        }
+
         public string GCGetArticulosPorOrdenTrabajo
         {
             get
@@ -1113,6 +1121,14 @@ namespace MantenimientosPTM
 
             [JsonProperty("AUTORIZADOR_EMAIL")]
             public string AutorizadorEmail { get; set; }
+        }
+
+        public class Solicitante
+        {
+            public string NOMBRE_COMPLETO { get; set; }
+            public string NUM_NOMINA { get; set; }
+            public string CODIGO_EMPLEADO { get; set; }
+            public string DEPARTAMENTO { get; set; }
         }
 
         #endregion

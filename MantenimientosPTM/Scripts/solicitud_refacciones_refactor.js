@@ -338,12 +338,25 @@ class SolicitudRefaccionesApp {
             const hoy = new Date().toISOString().split('T')[0];
             $('#fechaDia').val(hoy);
 
-            // Firmas
-            await this.solicitudManager.llenarFirmas();
+           
 
-            $('#solicitante').val(Nombresolicita);
-            $('#numEmpleado').val(numeroempleado);
-            $('#area').val(departamento);
+            //Datos del solicitante
+            $('#solicitante').val(Nombresolicita || '');
+            $('#numEmpleado').val(numeroempleado || '');
+            $('#area').val(departamento || '');
+            //Buscamos la informacion correcta del solicitante
+            const datosSolicitante = await this.buscarDatosSolicitante(Nombresolicita, numeroempleado)
+
+            //Se agregan los datos si encontro algo
+            if (datosSolicitante) {
+                $('#solicitante').val(datosSolicitante.NOMBRE_COMPLETO || Nombresolicita || '');
+                $('#numEmpleado').val(datosSolicitante.NUM_NOMINA || numeroempleado || '');
+                $('#area').val(datosSolicitante.DEPARTAMENTO || departamento || '');
+            }                      
+
+            // Firmas
+            await this.solicitudManager.llenarFirmas(datosSolicitante);
+
             $("#titleSalidaMercancia").text("Entrega de Materiales");
             $("#btnGuardarVale").attr("operacion", "SALIDA");
             $("#btnGuardarVale").attr("ordentrabajo", ordenTrabajo);
@@ -356,6 +369,73 @@ class SolicitudRefaccionesApp {
         } finally {
             GlobalUtil.mostrarLoader(false);
         }
+    }
+
+    //Buscar datos del solicitante
+    async buscarDatosSolicitante(nombre, numeroNomina) {
+
+        // Limpiar valores
+        nombre = (nombre || '').toString().trim();
+        numeroNomina = (numeroNomina || '').toString().trim();
+
+        // Si no viene ni nómina ni nombre, no buscar
+        if (!numeroNomina && !nombre) {
+            return null;
+        }
+
+        try {
+
+            const response = await $.ajax({
+                url: `/${this.URLBase}/GetObtenerDatosSolicitante`,
+                type: 'GET',
+                data: {
+                    planta: this.datos_usuario[0].PLANTA,
+                    nombreSolicitante: nombre,
+                    numeroNomina: numeroNomina
+                }
+            });
+
+            return response;
+
+        } catch (error) {
+
+            
+            AlertManager.mostrar('Error al buscar datos del solicitante:' + error, 'warning');
+            return null;
+        }
+    }
+
+    async buscarDatosSolicitanteBlur() {
+
+        const nombre = ($('#solicitante').val() || '').toString().trim();
+        const numeroNomina = ($('#numEmpleado').val() || '').toString().trim();
+
+        if (!nombre && !numeroNomina) {
+            return;
+        }
+
+        const datosSolicitante = await this.buscarDatosSolicitante(
+            nombre,
+            numeroNomina
+        );
+
+        if (datosSolicitante) {
+
+            $('#solicitante').val(
+                datosSolicitante.NOMBRE_COMPLETO || ''
+            );
+
+            $('#numEmpleado').val(
+                datosSolicitante.NUM_NOMINA || ''
+            );
+
+            $('#area').val(
+                datosSolicitante.DEPARTAMENTO || ''
+            );
+        }
+
+        // Firmas
+        await this.solicitudManager.llenarFirmas(datosSolicitante);
     }
 
     async _abrirModalDevolucion(e) {
@@ -1923,7 +2003,7 @@ class SolicitudManager {
     // MÉTODOS DE FIRMAS Y AUTORIZACIONES
     // ========================================
 
-    async llenarFirmas() {
+    async llenarFirmas(datosSolicitante) {
         // Limpiar todos los selects
         const selectsAlmacen = ["#firmaAlmacen", "#devolucionEntrega"];
         const selectsAutoriza = ["#firmaAutoriza", "#devolucionRecibe"];
@@ -1950,8 +2030,8 @@ class SolicitudManager {
             });
 
             // ✅ Evento: al cambiar el entregador seleccionado, buscar su gerente/autorizador
-            $("#firmaAlmacen").off('change').on('change', (e) => this.onEntregadorSeleccionado(e, "#firmaAutoriza"));
-            $("#devolucionEntrega").off('change').on('change', (e) => this.onEntregadorSeleccionado(e, "#devolucionRecibe"));
+            $("#firmaAlmacen").off('change').on('change', (e) => this.onEntregadorSeleccionado(e, "#firmaAutoriza", datosSolicitante));
+            $("#devolucionEntrega").off('change').on('change', (e) => this.onEntregadorSeleccionado(e, "#devolucionRecibe", datosSolicitante));
 
             // ✅ Disparar manualmente el evento para el valor que quedó seleccionado por default
             if (entregadores.length > 0) {
@@ -1967,7 +2047,7 @@ class SolicitudManager {
         }
     }
 
-    async onEntregadorSeleccionado(event, selectorDestino) {
+    async onEntregadorSeleccionado(event, selectorDestino, datosSolicitante) {
         const codigoEmpleado = $(event.currentTarget).find(':selected').data('codigo');
 
         if (!codigoEmpleado) {
@@ -1978,7 +2058,8 @@ class SolicitudManager {
         $(selectorDestino).empty().append(`<option value="">Cargando...</option>`).prop('disabled', true);
 
         try {
-            const autorizadores = await this.obtenerEmpleadosAlmacenPorRol('AUTORIZADOR', codigoEmpleado);
+            /*const autorizadores = await this.obtenerEmpleadosAlmacenPorRol('AUTORIZADOR', codigoEmpleado);*/
+            const autorizadores = await this.obtenerEmpleadosAlmacenPorRol('AUTORIZADOR', datosSolicitante.CODIGO_EMPLEADO);
 
             const opciones = autorizadores.length > 0
                 ? autorizadores.map(a =>
@@ -3321,6 +3402,12 @@ $(document).ready(function () {
         const app = new SolicitudRefaccionesApp();
         app.inicializar();
 
+        $('#solicitante, #numEmpleado').on('blur', async function () {
+
+            await app.buscarDatosSolicitanteBlur();
+
+        });
+
         // ✅ Exponer para debugging (solo desarrollo)
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             window.debugApp = app;
@@ -3364,6 +3451,9 @@ $(document).ready(function () {
             }
         }, 5000);
     }
+
+
+
 });
 
 

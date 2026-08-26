@@ -185,6 +185,73 @@ namespace MantenimientosPTM.Controllers
                 }, JsonRequestBehavior.AllowGet);
             }
         }
+
+        [HttpGet]
+        public JsonResult GetObtenerDatosSolicitante(string planta, string nombreSolicitante, string numeroNomina)
+        {
+            try
+            {
+                // Limpiar valores
+                nombreSolicitante = (nombreSolicitante ?? "").Trim();
+                numeroNomina = (numeroNomina ?? "").Trim();
+                planta = (planta ?? "").Trim();
+
+                // Si no viene ni nómina ni nombre, no buscar
+                if (string.IsNullOrEmpty(numeroNomina) && string.IsNullOrEmpty(nombreSolicitante))
+                {
+                    return Json(null, JsonRequestBehavior.AllowGet);
+                }
+
+                // Parámetros para el SP
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    {
+                        "P_PLANTA", (string.IsNullOrEmpty(planta) ? (object)null : planta, ParameterDirection.Input, HanaDbType.Integer)
+                    },
+                    {
+                        "P_NOMBRE", ( string.IsNullOrEmpty(nombreSolicitante) ? (object)null : nombreSolicitante, ParameterDirection.Input, HanaDbType.NVarChar)
+                    },
+                    {
+                        "P_NUMERO_NOMINA", (string.IsNullOrEmpty(numeroNomina) ? (object)null : numeroNomina, ParameterDirection.Input, HanaDbType.NVarChar)
+                    }
+                    
+                };
+
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCBuscarDatosSolicitante,
+                    parameters
+                );
+
+                // Lista de resultados
+                List<Solicitante> solicitantes = new List<Solicitante>();
+
+                if (!string.IsNullOrEmpty(resultHana.JsonResult) &&
+                    resultHana.JsonResult != "[]")
+                {
+                    solicitantes = JsonConvert.DeserializeObject<List<Solicitante>>(
+                        resultHana.JsonResult
+                    );
+                }
+
+                // Regresar solamente el primer resultado encontrado
+                var solicitante = solicitantes.FirstOrDefault();
+
+                return Json(solicitante, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                string MethodName = MethodBase.GetCurrentMethod().Name;
+                string ControllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
+
+                string msg =
+                    $"Error al buscar datos del solicitante en {MethodName} de {ControllerName}. Error: {ex.Message}";
+
+                log.Error(msg, ex);
+
+                return Json(null, JsonRequestBehavior.AllowGet);
+            }
+        }
+
         public JsonResult GetOrdenesCompra()
         {
             try
