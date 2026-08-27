@@ -9,6 +9,14 @@ class SolicitudRefaccionesApp {
         this._isReloadingRefacciones = false;
         this.idsSeleccionado = [];
 
+        this.datosSolicitanteOriginal = {
+            nombre: '',
+            numeroNomina: ''
+        };
+
+        this.busquedaSolicitantePendiente = null;
+
+       
         // ✅ Guardar referencia para métodos enlazados
         this._recargarTablaSolicitudRefacciones = this._recargarTablaSolicitudRefacciones.bind(this);
 
@@ -296,6 +304,11 @@ class SolicitudRefaccionesApp {
         const numeroempleado = $btn.data('numeroempleado');
         const departamento = $btn.data('departamento');
 
+        this.datosSolicitanteOriginal = {
+            nombre: Nombresolicita || '',
+            numeroNomina: numeroempleado || ''
+        };
+
         GlobalUtil.mostrarLoader(true);
 
         // Limpiar tablas
@@ -349,9 +362,15 @@ class SolicitudRefaccionesApp {
 
             //Se agregan los datos si encontro algo
             if (datosSolicitante) {
-                $('#solicitante').val(datosSolicitante.NOMBRE_COMPLETO || Nombresolicita || '');
-                $('#numEmpleado').val(datosSolicitante.NUM_NOMINA || numeroempleado || '');
-                $('#area').val(datosSolicitante.DEPARTAMENTO || departamento || '');
+                $('#solicitante').val(datosSolicitante.datos.NOMBRE_COMPLETO || Nombresolicita || '');
+                $('#numEmpleado').val(datosSolicitante.datos.NUM_NOMINA || numeroempleado || '');
+                $('#area').val(datosSolicitante.datos.DEPARTAMENTO || departamento || '');
+
+                // Actualizamos la referencia para evitar búsquedas repetidas
+                this.datosSolicitanteOriginal = {
+                    nombre: $('#solicitante').val(),
+                    numeroNomina: $('#numEmpleado').val()
+                };  
             }                      
 
             // Firmas
@@ -395,6 +414,12 @@ class SolicitudRefaccionesApp {
                 }
             });
 
+            // No encontró información
+            if (!response.encontrado) {
+                           
+                return null;
+            }
+
             return response;
 
         } catch (error) {
@@ -405,39 +430,66 @@ class SolicitudRefaccionesApp {
         }
     }
 
-    async buscarDatosSolicitanteBlur() {
+    //Busquda de solicitante en salida de mercancia
+    async buscarDatosSolicitanteChange(tipoBusqueda) {
 
         const nombre = ($('#solicitante').val() || '').toString().trim();
         const numeroNomina = ($('#numEmpleado').val() || '').toString().trim();
 
-        if (!nombre && !numeroNomina) {
+        let nombreBusqueda = '';
+        let nominaBusqueda = '';
+
+        if (tipoBusqueda === 'nombre') {
+
+            nombreBusqueda = nombre;
+
+        } else if (tipoBusqueda === 'nomina') {
+
+            nominaBusqueda = numeroNomina;
+
+        }
+
+        if (!nombreBusqueda && !nominaBusqueda) {
             return;
         }
 
         const datosSolicitante = await this.buscarDatosSolicitante(
-            nombre,
-            numeroNomina
+            nombreBusqueda,
+            nominaBusqueda
         );
 
         if (datosSolicitante) {
 
             $('#solicitante').val(
-                datosSolicitante.NOMBRE_COMPLETO || ''
+                datosSolicitante.datos.NOMBRE_COMPLETO || ''
             );
 
             $('#numEmpleado').val(
-                datosSolicitante.NUM_NOMINA || ''
+                datosSolicitante.datos.NUM_NOMINA || ''
             );
 
             $('#area').val(
-                datosSolicitante.DEPARTAMENTO || ''
+                datosSolicitante.datos.DEPARTAMENTO || ''
+            );
+
+            await this.solicitudManager.llenarFirmas(datosSolicitante);
+
+        } else {
+
+            $('#solicitante').val('');
+            $('#numEmpleado').val('');
+            $('#area').val('');
+
+            await this.solicitudManager.llenarFirmas(null);
+
+            AlertManager.mostrar(
+                'No se encontró el solicitante ingresado. Verifique que el nombre o número de nómina sean correctos y que pertenezca a la misma planta.',
+                'info'
             );
         }
-
-        // Firmas
-        await this.solicitudManager.llenarFirmas(datosSolicitante);
     }
 
+   
     async _abrirModalDevolucion(e) {
         const $btn = $(e.currentTarget);
         const ot = $btn.data('ordentrabajo');
@@ -463,8 +515,13 @@ class SolicitudRefaccionesApp {
         }
     }
 
-    _guardarVale(e) {
+    async _guardarVale(e) {
         e.preventDefault();
+
+        if (this.busquedaSolicitantePendiente) {
+            await this.busquedaSolicitantePendiente;
+            this.busquedaSolicitantePendiente = null;
+        }
 
         const $btn = $(e.currentTarget);
         $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
@@ -550,57 +607,19 @@ class SolicitudRefaccionesApp {
 
     // Construye payload desde el modal de devolución y envía la petición
     async guardarDevolucion($btn = null) {
+
+        if (this.busquedaSolicitanteDevPendiente) {
+            await this.busquedaSolicitanteDevPendiente;
+            this.busquedaSolicitanteDevPendiente = null;
+        }
+
+        if (this.cargaFirmasPendiente) {
+            await this.cargaFirmasPendiente;
+            this.cargaFirmasPendiente = null;
+        }
+
         try {
             const items = [];
-
-            $('#bodyArticulosDevolucion tr').each(function () {
-                const $row = $(this);
-                const $chk = $row.find('.chk-articulo-devolucion');
-
-                // Si no hay checkbox, omitir
-                if (!$chk.length) return;
-                if (!$chk.is(':checked')) return;
-
-                // ✅ CORREGIDO: Usar índices correctos según la estructura de la tabla
-                const idSolicitud = parseInt($chk.data('idsolicitud') || 0);
-                const ordenTrabajo = $row.find('td:eq(3) .badge').text().trim() || $chk.data('ordentrabajo') || '';
-                const codigo = $row.find('td:eq(4) small').text().trim() || $chk.data('codigo') || '';
-                const articulo = $row.find('td:eq(5)').text().trim() || $chk.data('articulo') || '';
-                const cantidadSolicitada = parseInt($row.find('td:eq(6)').text().trim() || 0);
-                const cantidadSurtida = parseInt($row.find('td:eq(7)').text().trim() || 0);
-                const cantidadDevolver = parseInt($row.find('td:eq(9) .cant-devolver').val() || 0);
-                const departamento = $row.find('td:eq(10)').text().trim() || '';
-                const proceso = $row.find('td:eq(11)').text().trim() || '';
-                const gastos = $row.find('td:eq(12)').text().trim() || '';
-                const cedis = $row.find('td:eq(13)').text().trim() || '';
-
-                items.push({
-                    IdSolicitud: idSolicitud,
-                    OrdenTrabajo: ordenTrabajo,
-                    Codigo: codigo,
-                    Articulo: articulo,
-                    CantidadSolicitada: cantidadSolicitada,
-                    CantidadSurtida: cantidadSurtida,
-                    CantidadDevolver: cantidadDevolver,
-                    Departamento: departamento,
-                    Proceso: proceso,
-                    Gastos: gastos,
-                    Cedis: cedis
-                });
-            });
-
-            if (items.length === 0) {
-                AlertManager.mostrar('Debes seleccionar al menos un artículo para devolver.', 'warning', 'alertDevolucionContainer');
-                return;
-            }
-
-            // Validar cantidades
-            for (const it of items) {
-                if (!it.CantidadDevolver || it.CantidadDevolver <= 0) {
-                    AlertManager.mostrar('Ingrese cantidad a devolver mayor a 0 en los artículos seleccionados.', 'warning', 'alertDevolucionContainer');
-                    return;
-                }
-            }
 
             // --- VALIDACIÓN DE CAMPOS DEL MODAL ---
             // ✅ MEJORADO: Validar explícitamente campos requeridos
@@ -655,6 +674,57 @@ class SolicitudRefaccionesApp {
                 }
                 return;
             }
+
+            $('#bodyArticulosDevolucion tr').each(function () {
+                const $row = $(this);
+                const $chk = $row.find('.chk-articulo-devolucion');
+
+                // Si no hay checkbox, omitir
+                if (!$chk.length) return;
+                if (!$chk.is(':checked')) return;
+
+                // ✅ CORREGIDO: Usar índices correctos según la estructura de la tabla
+                const idSolicitud = parseInt($chk.data('idsolicitud') || 0);
+                const ordenTrabajo = $row.find('td:eq(3) .badge').text().trim() || $chk.data('ordentrabajo') || '';
+                const codigo = $row.find('td:eq(4) small').text().trim() || $chk.data('codigo') || '';
+                const articulo = $row.find('td:eq(5)').text().trim() || $chk.data('articulo') || '';
+                const cantidadSolicitada = parseInt($row.find('td:eq(6)').text().trim() || 0);
+                const cantidadSurtida = parseInt($row.find('td:eq(7)').text().trim() || 0);
+                const cantidadDevolver = parseInt($row.find('td:eq(9) .cant-devolver').val() || 0);
+                const departamento = $row.find('td:eq(10)').text().trim() || '';
+                const proceso = $row.find('td:eq(11)').text().trim() || '';
+                const gastos = $row.find('td:eq(12)').text().trim() || '';
+                const cedis = $row.find('td:eq(13)').text().trim() || '';
+
+                items.push({
+                    IdSolicitud: idSolicitud,
+                    OrdenTrabajo: ordenTrabajo,
+                    Codigo: codigo,
+                    Articulo: articulo,
+                    CantidadSolicitada: cantidadSolicitada,
+                    CantidadSurtida: cantidadSurtida,
+                    CantidadDevolver: cantidadDevolver,
+                    Departamento: departamento,
+                    Proceso: proceso,
+                    Gastos: gastos,
+                    Cedis: cedis
+                });
+            });
+
+            if (items.length === 0) {
+                AlertManager.mostrar('Debes seleccionar al menos un artículo para devolver.', 'warning', 'alertDevolucionContainer');
+                return;
+            }
+
+            // Validar cantidades
+            for (const it of items) {
+                if (!it.CantidadDevolver || it.CantidadDevolver <= 0) {
+                    AlertManager.mostrar('Ingrese cantidad a devolver mayor a 0 en los artículos seleccionados.', 'warning', 'alertDevolucionContainer');
+                    return;
+                }
+            }
+
+           
 
             // ✅ Limpiar clases de error si todas las validaciones pasaron
             $('#devolucionSolicitante, #devolucionNumEmpleado, #devolucionArea, #devolucionEntrega, #devolucionRecibe')
@@ -883,6 +953,9 @@ class SolicitudManager {
         // ✅ Bind de métodos que se usan como callbacks
         this.actualizarContadorArticulos = this.actualizarContadorArticulos.bind(this);
         this.llenarSolicitudesRefacciones = this.llenarSolicitudesRefacciones.bind(this);
+
+        this.busquedaSolicitanteDevPendiente = null;
+        this.cargaFirmasPendiente = null;
     }
 
     inicializar() {
@@ -2003,6 +2076,109 @@ class SolicitudManager {
     // MÉTODOS DE FIRMAS Y AUTORIZACIONES
     // ========================================
 
+    async buscarDatosSolicitanteDev(nombre, numeroNomina) {
+
+        // Limpiar valores
+        nombre = (nombre || '').toString().trim();
+        numeroNomina = (numeroNomina || '').toString().trim();
+
+        // Si no viene ni nómina ni nombre, no buscar
+        if (!numeroNomina && !nombre) {
+            return null;
+        }
+
+        try {
+
+            const response = await $.ajax({
+                url: `/${this.URLBase}/GetObtenerDatosSolicitante`,
+                type: 'GET',
+                data: {
+                    planta: this.datos_usuario[0].PLANTA,
+                    nombreSolicitante: nombre,
+                    numeroNomina: numeroNomina
+                }
+            });
+
+            // No encontró información
+            if (!response.encontrado) {
+
+                return null;
+            }
+
+            return response;
+
+        } catch (error) {
+
+
+            AlertManager.mostrar('Error al buscar datos del solicitante:' + error, 'warning');
+            return null;
+        }
+    }
+
+
+    //Busquda de solicitante en devoluciones
+    async buscarDatosSolicitanteChangeDev(tipoBusqueda) {
+
+        const nombre = ($('#devolucionSolicitante').val() || '').toString().trim();
+        const numeroNomina = ($('#devolucionNumEmpleado').val() || '').toString().trim();
+
+        let nombreBusqueda = '';
+        let nominaBusqueda = '';
+
+        if (tipoBusqueda === 'nombre') {
+
+            nombreBusqueda = nombre;
+
+        } else if (tipoBusqueda === 'nomina') {
+
+            nominaBusqueda = numeroNomina;
+
+        }
+
+        if (!nombreBusqueda && !nominaBusqueda) {
+            return;
+        }
+
+        const datosSolicitante = await this.buscarDatosSolicitanteDev(
+            nombreBusqueda,
+            nominaBusqueda
+        );
+
+        if (datosSolicitante) {
+
+            $('#devolucionSolicitante').val(
+                datosSolicitante.datos.NOMBRE_COMPLETO || ''
+            );
+
+            $('#devolucionNumEmpleado').val(
+                datosSolicitante.datos.NUM_NOMINA || ''
+            );
+
+            $('#devolucionArea').val(
+                datosSolicitante.datos.DEPARTAMENTO || ''
+            );
+
+            this.cargaFirmasPendiente = this.llenarFirmas(datosSolicitante);
+
+            await this.cargaFirmasPendiente;
+
+            this.cargaFirmasPendiente = null;
+
+        } else {
+
+            $('#devolucionSolicitante').val('');
+            $('#devolucionNumEmpleado').val('');
+            $('#devolucionArea').val('');
+
+            await this.llenarFirmas(null);
+
+            AlertManager.mostrar(
+                'No se encontró el solicitante ingresado. Verifique que el nombre o número de nómina sean correctos y que pertenezca a la misma planta.',
+                'info'
+            );
+        }
+    }
+
     async llenarFirmas(datosSolicitante) {
         // Limpiar todos los selects
         const selectsAlmacen = ["#firmaAlmacen", "#devolucionEntrega"];
@@ -2025,6 +2201,9 @@ class SolicitudManager {
                 $(sel).empty().append(opcionesEntregadores).prop('disabled', false);
             });
 
+            $("#firmaAlmacen").val($("#firmaAlmacen option:first").val());
+            $("#devolucionEntrega").val($("#devolucionEntrega option:first").val());
+
             selectsAutoriza.forEach(sel => {
                 $(sel).empty().append(`<option value="">Selecciona primero un entregador</option>`).prop('disabled', true);
             });
@@ -2035,8 +2214,19 @@ class SolicitudManager {
 
             // ✅ Disparar manualmente el evento para el valor que quedó seleccionado por default
             if (entregadores.length > 0) {
-                $("#firmaAlmacen").trigger('change');
-                $("#devolucionEntrega").trigger('change');
+
+                await this.onEntregadorSeleccionado(
+                    $("#firmaAlmacen"),
+                    "#firmaAutoriza",
+                    datosSolicitante
+                );
+
+                await this.onEntregadorSeleccionado(
+                    $("#devolucionEntrega"),
+                    "#devolucionRecibe",
+                    datosSolicitante
+                );
+
             }
 
         } catch (error) {
@@ -2048,7 +2238,21 @@ class SolicitudManager {
     }
 
     async onEntregadorSeleccionado(event, selectorDestino, datosSolicitante) {
-        const codigoEmpleado = $(event.currentTarget).find(':selected').data('codigo');
+        const $select = event.currentTarget
+            ? $(event.currentTarget)
+            : $(event);
+
+        const codigoEmpleado = $select.find(':selected').data('codigo');
+
+        if (!datosSolicitante || !datosSolicitante.datos) {
+
+            $(selectorDestino)
+                .empty()
+                .append(`<option value="">Sin autorizador disponible</option>`)
+                .prop('disabled', true);
+
+            return;
+        }
 
         if (!codigoEmpleado) {
             $(selectorDestino).empty().append(`<option value="">Sin autorizador</option>`).prop('disabled', true);
@@ -2059,7 +2263,7 @@ class SolicitudManager {
 
         try {
             /*const autorizadores = await this.obtenerEmpleadosAlmacenPorRol('AUTORIZADOR', codigoEmpleado);*/
-            const autorizadores = await this.obtenerEmpleadosAlmacenPorRol('AUTORIZADOR', datosSolicitante.CODIGO_EMPLEADO);
+            const autorizadores = await this.obtenerEmpleadosAlmacenPorRol('AUTORIZADOR', datosSolicitante.datos.CODIGO_EMPLEADO);
 
             const opciones = autorizadores.length > 0
                 ? autorizadores.map(a =>
@@ -2279,7 +2483,7 @@ class SolicitudManager {
         }
 
         this._configurarEventosDevolucion();
-        await this.llenarFirmas();
+        await this.llenarFirmas(null);
 
         $('#devolucionSolicitante').val('');
         $('#devolucionNumEmpleado').val('');
@@ -2370,6 +2574,22 @@ class SolicitudManager {
             if (!$(this).prop('checked')) {
                 $(this).closest('tr').find('.cant-devolver').prop('disabled', true);
             }
+        });
+
+        //Eventos para busqueda de solicitantes
+        $('#devolucionSolicitante').on('change', () => {
+
+            this.busquedaSolicitanteDevPendiente =
+                this.buscarDatosSolicitanteChangeDev('nombre');
+
+        });
+
+
+        $('#devolucionNumEmpleado').on('change', () => {
+
+            this.busquedaSolicitanteDevPendiente =
+                this.buscarDatosSolicitanteChangeDev('nomina');
+
         });
     }
     
@@ -3402,10 +3622,15 @@ $(document).ready(function () {
         const app = new SolicitudRefaccionesApp();
         app.inicializar();
 
-        $('#solicitante, #numEmpleado').on('blur', async function () {
+        $('#solicitante').on('change', async function () {
+           
+            app.busquedaSolicitantePendiente =
+                app.buscarDatosSolicitanteChange('nombre');
+        });
 
-            await app.buscarDatosSolicitanteBlur();
-
+        $('#numEmpleado').on('change', async function () {
+            app.busquedaSolicitantePendiente =
+                app.buscarDatosSolicitanteChange('nomina');
         });
 
         // ✅ Exponer para debugging (solo desarrollo)

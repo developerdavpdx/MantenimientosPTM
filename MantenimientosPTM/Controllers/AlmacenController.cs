@@ -236,7 +236,23 @@ namespace MantenimientosPTM.Controllers
                 // Regresar solamente el primer resultado encontrado
                 var solicitante = solicitantes.FirstOrDefault();
 
-                return Json(solicitante, JsonRequestBehavior.AllowGet);
+                if (solicitante == null)
+                {
+                    return Json(new
+                    {
+                        encontrado = false,
+                        mensaje = "No se encontró un usuario con los datos ingresados o no pertenece a la planta seleccionada.",
+                        datos = (object)null
+                    }, JsonRequestBehavior.AllowGet);
+                }
+
+                return Json(new
+                {
+                    encontrado = true,
+                    mensaje = "",
+                    datos = solicitante
+                }, JsonRequestBehavior.AllowGet);
+
             }
             catch (Exception ex)
             {

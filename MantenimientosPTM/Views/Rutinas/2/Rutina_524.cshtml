@@ -1,9 +1,7 @@
 ﻿@{
- Layout = null;
-}
-<meta charset="utf-8">
-
-<div id="rutinaChecklist">
+                    Layout = null;
+                }
+                <div id="rutinaChecklist">
 
     <!-- seccion-duracion -->
     <div id="seccion-duracion" class="nota-seccion position-relative p-2" draggable="true">
@@ -307,24 +305,46 @@
     </div>
 
     <!-- Actividad 19 -->
-    <div id="actividad-19" class="mb-3 actividad position-relative p-2" draggable="true">
-        <button type="button" class="btn btn-sm btn-danger btn-eliminar-actividad position-absolute top-0 end-0 m-1 fs-4" title="Eliminar">
-            <i class="bi bi-x-circle"></i>
-        </button>
-        <label class="form-label fw-semibold input-edicion-actividad">
-            <span class="numero-actividad">19.</span>
-            <span class="texto-actividad">Encienda el equipo en general y verifique su correcto funcionamiento</span>
-        </label>
-        <div class="d-flex gap-4 mt-2">
-            <div class="firma-opcion"><span class="fw-semibold">Realizado:</span><div class="linea-firma"></div></div>
-            <div class="firma-opcion"><span class="fw-semibold">No Realizado:</span><div class="linea-firma"></div></div>
-        </div>
-    </div>
+    
 
 </div>
 
 <!-- COMENTARIOS GLOBALES -->
-<div id="seccion-comentarios" class="nota-seccion position-relative p-2" draggable="true">
+
+        <div id="seccion-upload-imagenes" class="nota-seccion p-3 mb-3" style="">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 style="color:var(--modal-primary); font-weight:700; margin:0;">
+                    <i class="bi bi-plus-circle me-2"></i>Agregar más imágenes
+                </h6>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCerrarUpload">
+                    <i class="bi bi-x"></i> Cerrar
+                </button>
+            </div>
+            <div class="upload-area mb-2" id="uploadAreaRutina">
+                <div class="upload-icon">📷</div>
+                <div class="upload-text">Arrastra y suelta imágenes aquí</div>
+                <div class="upload-hint">o haz clic para seleccionar archivos</div>
+                <input type="file" id="fileInputRutina" accept="image/*" multiple="" style="display:none;">
+            </div>
+            <div class="progress-bar" id="progressBarRutina" style="display:none;">
+                <div class="progress-fill" id="progressFillRutina"></div>
+            </div>
+            <div class="upload-info">
+                Formatos: JPG, PNG, GIF, WebP | Tamaño máximo: 5MB por imagen
+            </div>
+            <div class="preview-area" id="previewAreaRutina"><div class="preview-item" data-index="0">
+                    
+                    <div class="preview-overlay">
+                        <div class="file-name">SolicitudBaja.PNG</div>
+                        <div class="file-size">37.74 KB</div>
+                        <button class="delete-btn" data-index="0">🗑️</button>
+                    </div>
+                </div></div>
+            <button type="button" class="btn-clear-all" id="clearAllRutina" style="">
+                🗑️ Limpiar todas las imágenes
+            </button>
+        </div>
+        <div id="seccion-comentarios" class="nota-seccion position-relative p-2" draggable="true">
     <button type="button" class="btn btn-sm btn-danger btn-eliminar-nota position-absolute top-0 end-0 m-1 fs-4" title="Eliminar" style="display:none;">
         <i class="bi bi-x-circle"></i>
     </button>
