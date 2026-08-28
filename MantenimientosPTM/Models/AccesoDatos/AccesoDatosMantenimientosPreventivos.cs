@@ -305,6 +305,9 @@ namespace MantenimientosPTM
             [JsonProperty("ID_SOLICITUD_PENDIENTE")]
             public int IdSolicitudPendiente { get; set; }
 
+            [JsonProperty("ESTATUS")]
+            public string EstatusSolicitudRepro { get; set; }
+
             [JsonProperty("USUARIO")]
             public string UsuarioGenero { get; set; }
         }

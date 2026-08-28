@@ -2044,18 +2044,39 @@ class MantenimientoManager {
                     // }
 
                     // 🔴 PINTAR FILA - lógica nueva con EnviarSiguienteMes y fechas reales
-                    const enviarSiguiente = data.EnviarSiguienteMes === 1;
-                    const tieneFechaRealInicio = data.FechaRealInicio !== null && data.FechaRealInicio !== undefined && data.FechaRealInicio !== '';
-                    const tieneFechaRealFin = data.FechaRealFin !== null && data.FechaRealFin !== undefined && data.FechaRealFin !== '';
+                    // const enviarSiguiente = data.EnviarSiguienteMes === 1;
+                    // const tieneFechaRealInicio = data.FechaRealInicio !== null && data.FechaRealInicio !== undefined && data.FechaRealInicio !== '';
+                    // const tieneFechaRealFin = data.FechaRealFin !== null && data.FechaRealFin !== undefined && data.FechaRealFin !== '';
 
-                    if (enviarSiguiente && !tieneFechaRealInicio && !tieneFechaRealFin) {
-                        $(row).addClass('reprogramacion-pendiente');
-                    }
+                    // // 🟢 PINTAR FILA SI YA FUE REPROGRAMADO
+                    // if (data.FueReprogramado === 'SI') {
+                    //     $(row).addClass('mantenimiento-reprogramado');
+                    // }
 
-                    // 🟢 PINTAR FILA SI YA FUE REPROGRAMADO
-                    if (data.FueReprogramado === 'SI') {
+                    const enviarSiguiente = data.EnviarSiguienteMes === true;
+
+                    const tieneFechaRealInicio =
+                        data.FechaRealInicio !== null &&
+                        data.FechaRealInicio !== undefined &&
+                        data.FechaRealInicio !== '';
+
+                    const tieneFechaRealFin =
+                        data.FechaRealFin !== null &&
+                        data.FechaRealFin !== undefined &&
+                        data.FechaRealFin !== '';
+
+                    const estatusReprogramacion = data.EstatusSolicitudRepro;
+
+                    // 🔵 Reprogramado (Mes Siguiente)
+                    if (estatusReprogramacion === 'Aceptada' && enviarSiguiente) {
                         $(row).addClass('mantenimiento-reprogramado');
                     }
+                    // 🟢 Reprogramado
+                    else if (!enviarSiguiente && tieneFechaRealInicio && tieneFechaRealFin) {
+                        $(row).addClass('mantenimiento-reprogramadoFRE');
+                    }
+
+
                 },
                 drawCallback: function () {
 
