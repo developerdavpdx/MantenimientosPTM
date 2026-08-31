@@ -608,15 +608,11 @@ class SolicitudRefaccionesApp {
     // Construye payload desde el modal de devolución y envía la petición
     async guardarDevolucion($btn = null) {
 
-        if (this.busquedaSolicitanteDevPendiente) {
-            await this.busquedaSolicitanteDevPendiente;
-            this.busquedaSolicitanteDevPendiente = null;
-        }
-
-        if (this.cargaFirmasPendiente) {
-            await this.cargaFirmasPendiente;
-            this.cargaFirmasPendiente = null;
-        }
+        // Esperar búsqueda del solicitante si existe
+        if (this.solicitudManager.busquedaSolicitanteDevPendiente) {
+            await this.solicitudManager.busquedaSolicitanteDevPendiente;
+            this.solicitudManager.busquedaSolicitanteDevPendiente = null;
+        }     
 
         try {
             const items = [];
@@ -626,8 +622,11 @@ class SolicitudRefaccionesApp {
             const solicitante = ($('#devolucionSolicitante').val() || '').toString().trim();
             const numEmpleado = ($('#devolucionNumEmpleado').val() || '').toString().trim();
             const area = ($('#devolucionArea').val() || '').toString().trim();
-            const entrega = ($('#devolucionEntrega').val() || $('#firmaAlmacen').val() || '').toString().trim();
-            const recibe = ($('#devolucionRecibe').val() || $('#firmaAutoriza').val() || '').toString().trim();
+            const entrega = ($('#devolucionEntrega').val() || '').toString().trim();
+            const recibe = ($('#devolucionRecibe').val() || '').toString().trim();
+
+            //const entrega = ($('#devolucionEntrega').val() || $('#firmaAlmacen').val() || '').toString().trim();
+            //const recibe = ($('#devolucionRecibe').val() || $('#firmaAutoriza').val() || '').toString().trim();
 
             // ✅ Validación individual con mensajes específicos
             if (!solicitante) {
@@ -2577,20 +2576,24 @@ class SolicitudManager {
         });
 
         //Eventos para busqueda de solicitantes
-        $('#devolucionSolicitante').on('change', () => {
+        $('#devolucionSolicitante')
+            .off('change.buscarSolicitanteDev')
+            .on('change.buscarSolicitanteDev', () => {
 
-            this.busquedaSolicitanteDevPendiente =
-                this.buscarDatosSolicitanteChangeDev('nombre');
+                this.busquedaSolicitanteDevPendiente =
+                    this.buscarDatosSolicitanteChangeDev('nombre');
 
-        });
+            });
 
 
-        $('#devolucionNumEmpleado').on('change', () => {
+        $('#devolucionNumEmpleado')
+            .off('change.buscarSolicitanteDev')
+            .on('change.buscarSolicitanteDev', () => {
 
-            this.busquedaSolicitanteDevPendiente =
-                this.buscarDatosSolicitanteChangeDev('nomina');
+                this.busquedaSolicitanteDevPendiente =
+                    this.buscarDatosSolicitanteChangeDev('nomina');
 
-        });
+            });
     }
     
     actualizarContadorDevolucion() {
@@ -3622,13 +3625,13 @@ $(document).ready(function () {
         const app = new SolicitudRefaccionesApp();
         app.inicializar();
 
-        $('#solicitante').on('change', async function () {
+        $('#solicitante').on('change', function () {
            
             app.busquedaSolicitantePendiente =
                 app.buscarDatosSolicitanteChange('nombre');
         });
 
-        $('#numEmpleado').on('change', async function () {
+        $('#numEmpleado').on('change', function () {
             app.busquedaSolicitantePendiente =
                 app.buscarDatosSolicitanteChange('nomina');
         });
