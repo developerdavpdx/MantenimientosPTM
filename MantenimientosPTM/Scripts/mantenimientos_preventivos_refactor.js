@@ -280,30 +280,129 @@ class MantenimientosPreventivoApp {
             }
         });
 
+        //Validar que el campo de horas venga completo
+        function validarHoraCompletaPM(selector, nombreCampo) {
+
+            const valor = $(selector).val();
+
+            // ========================================
+            // VALIDAR QUE TENGA VALOR
+            // ========================================
+            if (!valor) {
+
+                AlertManager.mostrar(
+                    `Debe ingresar la ${nombreCampo} completa con a.m o p.m`,
+                    'warning'
+                );
+
+                $(selector).focus();
+
+                return false;
+            }
+
+            // ========================================
+            // VALIDAR QUE TENGA HORA Y MINUTOS
+            // ========================================
+            const partes = valor.split(':');
+
+            if (
+                partes.length !== 2 ||
+                partes[0] === '' ||
+                partes[1] === ''
+            ) {
+
+                AlertManager.mostrar(
+                    `Debe ingresar la ${nombreCampo} completa, incluyendo hora y minutos.`,
+                    'warning'
+                );
+
+                $(selector).val('').focus();
+
+                return false;
+            }
+
+            // ========================================
+            // VALIDAR QUE SEA PM
+            // ========================================
+            const hora = parseInt(partes[0], 10);
+
+            if (hora < 12) {
+
+                AlertManager.mostrar(
+                    `La ${nombreCampo} debe indicar PM.`,
+                    'warning'
+                );
+
+                $(selector).val('').focus();
+
+                return false;
+            }
+
+            return true;
+        }
+
         $('#HoraInicio, #HoraFin').on('change', () => {
+
             const inicio = $('#HoraInicio').val();
             const fin = $('#HoraFin').val();
 
-            if (!inicio || !fin) return;
+            // Si falta alguna hora, no hacemos ninguna validación todavía
+            if (!inicio || !fin) {
+                $("#DuracionHrs").val('');
+                return;
+            }
 
+            // ========================================
+            // CONVERTIR HORAS
+            // ========================================
             const toDate = (t) => new Date(`1970-01-01T${t}`);
 
             const d1 = toDate(inicio);
             const d2 = toDate(fin);
 
-            if (isNaN(d1) || isNaN(d2)) {
+            // ========================================
+            // VALIDAR QUE SEAN VÁLIDAS
+            // ========================================
+            if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
+                AlertManager.mostrar(
+                    'Ingrese correctamente la hora de inicio y la hora de fin.',
+                    'warning'
+                );
+
                 $("#DuracionHrs").val('');
                 return;
             }
 
-            // 🔥 Validación
+            // ========================================
+            // VALIDAR HORA FIN < HORA INICIO
+            // ========================================
             if (d2 < d1) {
-                alert('La hora fin no puede ser menor a la hora inicio.');
+                AlertManager.mostrar(
+                    'La hora fin no puede ser menor a la hora inicio.',
+                    'warning'
+                );
+
                 $('#HoraFin').val('');
                 $("#DuracionHrs").val('');
                 return;
             }
 
+            // ========================================
+            // VALIDAR PM
+            // ========================================
+            if (!validarHoraCompletaPM('#HoraInicio', 'Hora Inicio')) {
+                $("#DuracionHrs").val('');
+                return;
+            }
+
+            if (!validarHoraCompletaPM('#HoraFin', 'Hora Fin')) {
+                $("#DuracionHrs").val('');
+                return;
+            }
+
+            // ========================================
+            // CALCULAR DURACIÓN
+            // ========================================
             const diffMs = d2 - d1;
             const horas = diffMs / (1000 * 60 * 60);
 
@@ -751,6 +850,9 @@ class MantenimientosPreventivoApp {
                 }
             });
         });
+
+        // EXPONER LA FUNCIÓN EN LA INSTANCIA
+        this.validarHoraCompletaPM = validarHoraCompletaPM;
     }
 
     configurarEventosPDF() {
@@ -1006,6 +1108,82 @@ class MantenimientoManager {
         this.PLANTA_PDF = "";
         this.pdfTemporalRutina = null;
     }
+
+    // ========================================
+    // LIMITAR FECHAS AL MES ACTUAL
+    // ========================================
+    // configurarLimiteFechasMesActual() {
+
+    //     const hoy = new Date();
+
+    //     // Último día del mes actual a las 23:59
+    //     const ultimoDiaMes = new Date(
+    //         hoy.getFullYear(),
+    //         hoy.getMonth() + 1,
+    //         0,
+    //         23,
+    //         59,
+    //         59
+    //     );
+
+    //     // Formato YYYY-MM-DDTHH:mm
+    //     const maxFecha =
+    //         `${ultimoDiaMes.getFullYear()}-` +
+    //         `${String(ultimoDiaMes.getMonth() + 1).padStart(2, '0')}-` +
+    //         `${String(ultimoDiaMes.getDate()).padStart(2, '0')}T23:59`;
+
+    //     // ========================================
+    //     // 1. LIMITAR EL CALENDARIO
+    //     // ========================================
+    //     $('#TiempoArranque, #TiempoLiberacionLinea')
+    //         .attr('max', maxFecha);
+
+
+    //     // ========================================
+    //     // 2. VALIDAR FECHA INGRESADA MANUALMENTE
+    //     // ========================================
+    //     $('#TiempoArranque, #TiempoLiberacionLinea')
+    //         .off('change.limiteMes')
+    //         .on('change.limiteMes', function () {
+
+    //             const valor = $(this).val();
+
+    //             // Si está vacío, no hacemos nada
+    //             if (!valor) {
+    //                 return;
+    //             }
+
+    //             const fechaSeleccionada = new Date(valor);
+
+    //             // Validar fecha inválida
+    //             if (isNaN(fechaSeleccionada.getTime())) {
+
+    //                 AlertManager.mostrar(
+    //                     'La fecha ingresada no es válida.',
+    //                     'warning'
+    //                 );
+
+    //                 $(this).val('');
+
+    //                 return;
+    //             }
+
+    //             // ========================================
+    //             // FECHA POSTERIOR AL MES ACTUAL
+    //             // ========================================
+    //             if (fechaSeleccionada > ultimoDiaMes) {
+
+    //                 AlertManager.mostrar(
+    //                     'No puedes seleccionar una fecha posterior al mes actual.',
+    //                     'warning'
+    //                 );
+
+    //                 $(this).val('');
+
+    //                 return;
+    //             }
+    //         });
+    // }
 
     // ============================
     // GUARDAR DATOS DEL BOTÓN
@@ -2613,8 +2791,11 @@ class MantenimientoManager {
 
             // ✅ Poblar campos nuevos: Tiempo de Arranque y Liberación de Línea
             // Se llenan SIEMPRE (cerrada, borrador, etc.), solo cambia si son editables o no
-            $("#TiempoArranque").val(this._formatearDatetimeLocal(data.tiempoArranque));
-            $("#TiempoLiberacionLinea").val(this._formatearDatetimeLocal(data.tiempoLiberacionLinea));
+            // $("#TiempoArranque").val(this._formatearDatetimeLocal(data.tiempoArranque));
+            // $("#TiempoLiberacionLinea").val(this._formatearDatetimeLocal(data.tiempoLiberacionLinea));
+
+            // 🔥 Limitar fechas hasta el último día del mes actual
+            // this.configurarLimiteFechasMesActual();
 
             $("#TextoSecuencia").val(data.textoSecuencia || '');
             $("#DuracionHrs").val(data.duracionHrs || '');
@@ -2954,10 +3135,6 @@ class MantenimientoManager {
 
             // DURACIÓN
             $("#DuracionHrs").prop('readonly', true).prop('required', false);
-
-            // ✅ TIEMPO DE ARRANQUE Y LIBERACIÓN DE LÍNEA - Deshabilitados cuando estatus es 4
-            $("#TiempoArranque").prop('disabled', true).prop('required', false);
-            $("#TiempoLiberacionLinea").prop('disabled', true).prop('required', false);
 
             // BOTONES
             $('#btnGuardarOT').removeClass('d-none');
@@ -3398,6 +3575,17 @@ class MantenimientoManager {
     async guardarOT(e) {
         e.preventDefault();
 
+        // ========================================
+        // VALIDAR HORAS
+        // ========================================
+        // if (!this.appReferencia.validarHoraCompletaPM('#HoraInicio', 'Hora Inicio')) {
+        //     return false;
+        // }
+
+        // if (!this.appReferencia.validarHoraCompletaPM('#HoraFin', 'Hora Fin')) {
+        //     return false;
+        // }
+
         // Validar formulario
         if (!ValidationManager.validarFormulario('#formOrdenMantenimiento')) {
             AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', "alertOrdenContainer");
@@ -3513,6 +3701,15 @@ class MantenimientoManager {
     // 🔥 MÉTODO PARA GUARDAR BORRADOR (sin validaciones estrictas)
     async guardarBorrador(e) {
         if (e) e.preventDefault();
+
+        //
+        // if (!this.appReferencia.validarHoraCompletaPM('#HoraInicio', 'Hora Inicio')) {
+        //     return false;
+        // }
+
+        // if (!this.appReferencia.validarHoraCompletaPM('#HoraFin', 'Hora Fin')) {
+        //     return false;
+        // }
 
         // ✅ Validar solo campo crítico: Número de Orden
         const numeroOrden = $('#NumeroOrden').val();
@@ -4859,6 +5056,7 @@ class MantenimientoManager {
             $('#btnExportarExcel').html('<i class="bi bi-file-earmark-excel-fill me-1"></i>Exportar').prop('disabled', false);
         }
     }
+
 }
 
 
@@ -5629,7 +5827,7 @@ class PrintManagerMantenimiento {
             });
         });
         return actividades;
-    }
+    } MantenimientoManager 
 
     imprimirOrdenMantenimiento(datos, win) {
         try {
