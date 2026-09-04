@@ -384,3 +384,13 @@
 .bg-orange {
     background-color: #fd7e14 !important;
 }
+
+.fila-cantidad-invalida {
+    background-color: #f8d7da !important;
+    border: 2px solid #f5c6cb !important;
+}
+
+    .fila-cantidad-invalida td {
+        color: #721c24;
+        font-weight: 500;
+    }

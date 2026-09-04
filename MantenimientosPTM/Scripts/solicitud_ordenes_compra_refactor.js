@@ -254,25 +254,22 @@ class SolicitudCompraApp {
             }
         });
 
-
-
-
-        //COMPLETAR SOLICITUD DE COMPRA
         $("#completeSolCompra").on("click", async () => {
 
             // ─── Validar y recolectar proveedores por fila ─────────────────────────
             const articulos = [];
             let proveedorFaltante = false;
+            let cantidadInvalida = false;
 
             $('#bodyRequisicionArticulos tr').each(function () {
                 const fila = $(this);
                 const gestion = fila.find('.sol-buscar-proveedor').data('gestion');
 
-                if (!gestion || !gestion.tieneProveedorSeleccionado()) {
-                    fila.find('.sol-buscar-proveedor').addClass('is-invalid');
-                    proveedorFaltante = true;
-                    return;
-                }
+                //if (!gestion || !gestion.tieneProveedorSeleccionado()) {
+                //    fila.find('.sol-buscar-proveedor').addClass('is-invalid');
+                //    proveedorFaltante = true;
+                //    return;
+                //}
 
                 fila.find('.sol-buscar-proveedor').removeClass('is-invalid');
 
@@ -291,6 +288,15 @@ class SolicitudCompraApp {
                     cantidadTotal = parseInt(textocelda) || 0;
                 }
 
+                // ✅ VALIDAR QUE LA CANTIDAD SEA MAYOR A CEROs
+                if (cantidadTotal <= 0) {
+                    fila.addClass('fila-cantidad-invalida');
+                    cantidadInvalida = true;
+                    return;
+                } else {
+                    fila.removeClass('fila-cantidad-invalida');
+                }
+
                 articulos.push({
                     IdsDetalle: JSON.parse(fila.attr('data-idsdetalle')), // ✅ array de IDs
                     CodigoArticulo: fila.data('codigoarticulo'),
@@ -300,10 +306,16 @@ class SolicitudCompraApp {
                 });
             });
 
-            if (proveedorFaltante) {
-                AlertManager.mostrar('Selecciona un proveedor para cada artículo.', 'warning');
+            // ✅ VALIDAR SI HAY CANTIDADES INVÁLIDAS — MUESTRA TODAS LAS FILAS EN ROJO
+            if (cantidadInvalida) {
+                AlertManager.mostrar('La cantidad de artículos debe ser mayor a 0. Verifica las filas marcadas en rojo.', 'warning');
                 return;
             }
+
+            //if (proveedorFaltante) {
+            //    AlertManager.mostrar('Selecciona un proveedor para cada artículo.', 'warning');
+            //    return;
+            //}
 
             // ─── Validar centros de costo ──────────────────────────────────────────
             const centrosValidos = Object.values(this.centrosCosto).every(g => g.tieneCentroSeleccionado());

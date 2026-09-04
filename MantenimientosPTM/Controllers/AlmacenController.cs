@@ -1050,7 +1050,7 @@ namespace MantenimientosPTM.Controllers
                 // ✅ Preparar parámetros para el SP
                 var parametersEmail = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
             {
-                { "P_PLANTA", (Planta, ParameterDirection.Input, HanaDbType.Integer) },
+                { "P_PLANTA", (null, ParameterDirection.Input, HanaDbType.Integer) },
                 { "P_TIPO", (ConfigurationManager.AppSettings["Email.ReqCom"], ParameterDirection.Input, HanaDbType.NVarChar) },
                 { "P_CODE", (codigoEmpleado, ParameterDirection.Input, HanaDbType.Integer) }
             };

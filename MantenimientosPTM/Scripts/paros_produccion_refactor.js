@@ -20,7 +20,7 @@ class GestionEventosApp {
 
     inicializar() {
 
-        UIManager.inicializarUI();
+        UIManager.inicializarUI(this.datos_usuario[0].PLANTA);
 
         this.ProduccionManager.inicializar();
 
@@ -265,7 +265,7 @@ $(document).ready(function () {
 // GESTOR DE UI
 // ========================================
 class UIManager {
-    static inicializarUI() {
+    static inicializarUI(planta) {
         $("#ProduccionContainer").addClass("selected");
         $("#ProduccionContainer a").addClass("whiteText");
         $("#produccion-collapse").addClass("show");
@@ -273,6 +273,7 @@ class UIManager {
 
         $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
         $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
+        $("#FiltroPlanta").val(planta);
     }
 }
 
