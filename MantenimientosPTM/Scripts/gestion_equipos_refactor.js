@@ -418,7 +418,7 @@ class EquipoManager {
         this.Email = datos_usuario[0].EMAIL;
         this.llenarEquipos();
         EquiposUtil.llenarTipoEquipos();
-        EquiposUtil.llenarProcesos(this.PLANTA,1, "Area", "FiltroProceso");
+        EquiposUtil.llenarProcesos(this.PLANTA,null, "Area", "FiltroProceso");
         EquiposUtil.llenarRangoDias();
         this.inicializarCorreos(); // 🔥 AGREGAR AQUÍ
         this.llenarPeriodicidad("PeriodicidadesMantenimiento");
