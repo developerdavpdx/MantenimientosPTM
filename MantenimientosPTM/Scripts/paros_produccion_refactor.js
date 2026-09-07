@@ -787,10 +787,10 @@ class ProduccionManager {
                 .val()
                 .trim();
 
-            // 🔥 VALIDAR AUTOCOMPLETE REAL
+            // 🔥 VALIDAR AUTOCOMPLETE REAL - Solo si hay contenido
             const articuloData = $(this).data('articulo');
 
-            if (!articuloData || articulo !== articuloData.CodigoArticulo) {
+            if (articulo && (!articuloData || articulo !== articuloData.CodigoArticulo)) {
 
                 errorArticulo = true;
 

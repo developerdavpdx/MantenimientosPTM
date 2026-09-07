@@ -1,0 +1,203 @@
+/* =========================================================
+   ONBOARDING TOUR - Estilos
+   Guía de usuario tipo "spotlight" con tooltip paso a paso
+   ========================================================= */
+
+:root {
+    --tour-primary: #0ea5d8;
+    --tour-dark: #0b3d5c;
+}
+
+/* Capa oscura que cubre toda la pantalla */
+.tour-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 20, 30, 0.65);
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.tour-overlay.tour-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* "Hueco" iluminado sobre el elemento resaltado */
+.tour-spotlight {
+    position: fixed;
+    z-index: 9999;
+    border-radius: 10px;
+    box-shadow: 0 0 0 6000px rgba(10, 20, 30, 0.65);
+    pointer-events: none;
+    transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+    outline: 3px solid var(--tour-primary);
+    outline-offset: 4px;
+}
+
+/* Tarjeta con el texto explicativo */
+.tour-tooltip {
+    position: fixed;
+    z-index: 10000;
+    max-width: 320px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+    padding: 18px 20px 16px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.2s ease, transform 0.2s ease, top 0.25s ease, left 0.25s ease;
+    pointer-events: none;
+}
+
+.tour-tooltip.tour-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.tour-tooltip::before {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    transform: rotate(45deg);
+}
+
+.tour-tooltip[data-pos="bottom"]::before { top: -7px; left: 24px; }
+.tour-tooltip[data-pos="top"]::before { bottom: -7px; left: 24px; }
+.tour-tooltip[data-pos="right"]::before { left: -7px; top: 24px; }
+.tour-tooltip[data-pos="left"]::before { right: -7px; top: 24px; }
+
+.tour-step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--tour-primary);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.tour-tooltip h5 {
+    margin: 0 0 6px;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--tour-dark);
+}
+
+.tour-tooltip p {
+    margin: 0 0 14px;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    color: #444;
+}
+
+.tour-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.tour-progress {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 600;
+}
+
+.tour-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.tour-btn {
+    border: none;
+    border-radius: 7px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.tour-btn:active {
+    transform: scale(0.96);
+}
+
+.tour-btn-next {
+    background: var(--tour-primary);
+    color: #fff;
+}
+
+.tour-btn-next:hover {
+    background: #0c8fb8;
+}
+
+.tour-btn-prev {
+    background: #eef1f4;
+    color: #333;
+}
+
+.tour-btn-prev:hover {
+    background: #e2e6ea;
+}
+
+.tour-btn-prev:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.tour-skip {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 0.95rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.tour-skip:hover {
+    color: #666;
+}
+
+/* Botón flotante para volver a lanzar la guía */
+.tour-help-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9990;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--tour-primary);
+    color: #fff;
+    border: none;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.tour-help-btn:hover {
+    transform: scale(1.08);
+    background: #0c8fb8;
+}
+
+@media (max-width: 576px) {
+    .tour-tooltip {
+        max-width: calc(100vw - 32px);
+    }
+}

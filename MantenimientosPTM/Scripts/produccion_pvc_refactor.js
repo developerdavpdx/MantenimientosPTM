@@ -66,6 +66,8 @@ class UIManager {
 
         UIManager.ajustarAlturaCard();
 
+        $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
+        $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
         console.log('✅ UI PVC inicializada');
     }
 

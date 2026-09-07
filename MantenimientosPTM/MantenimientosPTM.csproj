@@ -216,6 +216,7 @@
     <Content Include="Content\Images\ok.gif" />
     <Content Include="Content\Images\PAC.png" />
     <Content Include="Content\Images\user.png" />
+    <Content Include="Content\onboarding-tour.css" />
     <Content Include="Content\ParosProduccion.css" />
     <Content Include="Content\Images\LogoPTMWhite.png" />
     <Content Include="Content\Modales.css" />
@@ -2373,12 +2374,17 @@
     <Content Include="Scripts\jquery.validate.min.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.min.js" />
+    <Content Include="Scripts\onboarding-tour.js" />
     <Content Include="Scripts\paros_produccion_refactor.js" />
     <Content Include="Scripts\PlaneacionOld.js" />
     <Content Include="Scripts\planeacion_refactor.js" />
     <Content Include="Scripts\datatables.js" />
     <Content Include="Scripts\datatables.min.js" />
     <Content Include="Scripts\FileUpload.js" />
+    <Content Include="Scripts\produccion_iny_tour.config.js" />
+    <Content Include="Scripts\produccion_corrugado_tour.config.js" />
+    <Content Include="Scripts\produccion_peadliso_tour.config.js" />
+    <Content Include="Scripts\produccion_pvc_tour.config.js" />
     <Content Include="Scripts\produccion_corrugado_refactor.js" />
     <Content Include="Scripts\produccion_iny_refactor.js" />
     <Content Include="Scripts\produccion_pvc_refactor.js" />

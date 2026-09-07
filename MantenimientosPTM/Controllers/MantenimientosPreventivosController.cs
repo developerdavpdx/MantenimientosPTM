@@ -126,6 +126,9 @@ namespace MantenimientosPTM.Controllers
                     FiltroExcluirSincronizadosINY == "S";
 
 
+                if (esDesdeBitacora)
+                    AditionalFilter = false;
+
                 //=================================OBTENER DATOS===========================//
                 // ✅ TODOS LOS FILTROS SE ENVÍAN A HANA
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
