@@ -1671,8 +1671,9 @@ class SolicitudManager {
 
             const urgenciaText = art.NIVEL_URGENCIA || 'N/A';
 
-            // ✅ Indicador visual de pendiente (NO mostrar si está cancelada)
-            const indicadorPendiente = (cantidadPendiente > 0 && !esCancelada)
+            // ✅ CAMBIO AQUÍ: Indicador visual de pendiente
+            // Solo mostrar si hay pendiente SIN CONTAR DEVOLUCIONES
+            const indicadorPendiente = (cantidadPendiente > 0 && !esCancelada && !completamenteSurtido && !tieneDevolucionParcial && !tienDevolucionTotal)
                 ? `<span class="badge bg-danger ms-2 fw-semibold">${cantidadPendiente} pendiente</span>`
                 : '';
 
@@ -1787,7 +1788,7 @@ class SolicitudManager {
                            ${noEditable ? 'disabled' : ''}>
                 </td>
                 <td class="text-center align-middle">
-                    ${cantidadPendiente > 0 && !esCancelada ? `<span class="punto-pulso-absolute"></span>` : ''}
+                    ${(cantidadPendiente > 0 && !esCancelada && !completamenteSurtido && !tieneDevolucionParcial && !tienDevolucionTotal) ? `<span class="punto-pulso-absolute"></span>` : ''}
                     <span class="badge bg-dark"><i class="bi bi-upc-scan me-1"></i>${refaccionSolicitada || 'N/A'}</span>
                 </td>
                 <td class="align-middle">

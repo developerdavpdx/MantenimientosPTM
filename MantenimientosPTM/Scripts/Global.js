@@ -2914,7 +2914,7 @@ class SessionManager {
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
             /*$("#MetricasURL").addClass("d-none"); //METRICAS*/
-            $("#MCProgramarURL").addClass("d-none");
+            $("#MCProgramarURL").addClass("d-none"); //SOLICITUD MTTO CORRECTIVO
         }
         //SUPERVISOR MANTENIMIENTO
         if (tipoUsuario === "SupervisorMantenimiento") {
@@ -2922,6 +2922,7 @@ class SessionManager {
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
+            $("#MCProgramarURL").addClass("d-none"); //SOLICITUD MTTO CORRECTIVO
         }
 
         //ALMACEN
