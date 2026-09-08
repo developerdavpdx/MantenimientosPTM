@@ -728,10 +728,19 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                             browserDatePicker: true
                         },
                         valueFormatter: params => {
-                            if (params.data?.id === 'TOTALES') return '';
                             if (!params.value) return '';
-                            return new Date(params.value)
-                                .toLocaleDateString('es-MX');
+
+                            // Manejar tanto Date como strings
+                            let dateString = params.value;
+
+                            // Si es un objeto Date, convertir a ISO string
+                            if (params.value instanceof Date) {
+                                dateString = params.value.toISOString();
+                            }
+
+                            // Extraer solo la parte de fecha (YYYY-MM-DD)
+                            const soloFecha = dateString.split('T')[0];
+                            return soloFecha;
                         }
                     },
                     {
@@ -1091,15 +1100,14 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     return {
                         fontWeight: 'bold',
                         backgroundColor: '#e9ecef',
-                        borderTop: '2px solid #0058a1',
-                        pointerEvents: 'none'
+                        borderTop: '2px solid #0058a1'
                     };
 
                 }
 
             },
             getRowClass: params => {
-                if (params.data?.id === 'TOTALES') return '';
+                if (params.data?.id === 'TOTALES') return 'fila-totales';
                 if (params.data?._rowClass) return params.data._rowClass;
                 return '';
             }
@@ -2405,17 +2413,21 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
                 if (!this.filaSeleccionada) return;
 
-                if (this.filaSeleccionada?.data?.id === 'TOTALES') {
-                    menu.style.display = "none";
-                    return;
-                }
-
                 const eliminar = menu.querySelector('[data-action="eliminar"]');
+                const copiar = menu.querySelector('[data-action="copiar"]');
 
-                if (this.filaSeleccionada?.data?.ID_REGISTRO) {
+                // 🔥 En la fila de TOTALES solo permitir "Agregar", desactivar "Copiar" y "Eliminar"
+                if (this.filaSeleccionada?.data?.id === 'TOTALES') {
                     eliminar.style.display = "none";
+                    copiar.style.display = "none";
                 } else {
-                    eliminar.style.display = "block";
+                    // Para filas normales
+                    if (this.filaSeleccionada?.data?.ID_REGISTRO) {
+                        eliminar.style.display = "none";
+                    } else {
+                        eliminar.style.display = "block";
+                    }
+                    copiar.style.display = "block";
                 }
 
                 menu.style.display = "block";
@@ -2579,11 +2591,17 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         };
 
+        // 🔥 Si es la fila de TOTALES, insertar ANTES de ella (en su índice)
+        // Si no, insertar DESPUÉS de la fila seleccionada
+        const addIndex = params.data?.id === 'TOTALES' 
+            ? params.rowIndex 
+            : params.rowIndex + 1;
+
         this.gridApi.applyTransaction({
 
             add: [nuevaFila],
 
-            addIndex: params.rowIndex + 1
+            addIndex: addIndex
 
         });
 
@@ -2653,12 +2671,17 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         this.recalcularFila(nuevaFila);
 
+        // 🔥 Si es la fila de TOTALES, insertar ANTES de ella (en su índice)
+        // Si no, insertar DESPUÉS de la fila seleccionada
+        const addIndex = node?.data?.id === 'TOTALES' 
+            ? node.rowIndex 
+            : node.rowIndex + 1;
+
         this.gridApi.applyTransaction({
 
             add: [nuevaFila],
 
-            addIndex:
-                node.rowIndex + 1
+            addIndex: addIndex
 
         });
 

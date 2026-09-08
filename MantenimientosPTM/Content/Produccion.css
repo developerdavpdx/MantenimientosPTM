@@ -108,14 +108,14 @@
 }
 
     /* Estilo para las celdas de la fila de totales */
-    .ag-theme-alpine .ag-row:last-child {
+    .ag-theme-alpine .ag-row.fila-totales {
         background-color: #e9ecef !important;
         font-weight: bold !important;
         border-top: 3px solid #0058a1 !important;
         box-shadow: 0 -2px 8px rgba(0, 88, 161, 0.1);
     }
 
-        .ag-theme-alpine .ag-row:last-child .ag-cell {
+        .ag-theme-alpine .ag-row.fila-totales .ag-cell {
             font-weight: bold !important;
             color: #0058a1 !important;
         }

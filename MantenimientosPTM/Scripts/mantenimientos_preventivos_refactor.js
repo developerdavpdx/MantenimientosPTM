@@ -972,6 +972,11 @@ class MantenimientosPreventivoApp {
             document.getElementById('btnConfirmarActualizacion')
                 .addEventListener('click', function () {
                     modalActualizacion.hide();
+                    // Cerrar todos los modales abiertos antes de mostrar el de actualización
+                    document.querySelectorAll('.modal.show').forEach(function (modalAbierto) {
+                        var instancia = bootstrap.Modal.getInstance(modalAbierto);
+                        if (instancia) instancia.hide();
+                    });
                     self._recargarTablaMantenimientos();
                 });
         }

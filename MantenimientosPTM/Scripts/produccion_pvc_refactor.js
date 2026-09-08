@@ -1138,9 +1138,17 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         valueFormatter: params => {
                             if (!params.value) return '';
 
-                            // 🔥 Tomar solo la parte de fecha, sin importar el formato que venga
-                            const soloFecha = params.value.split('T')[0]; // "2026-07-01"
-                            return new Date(soloFecha + 'T00:00:00').toLocaleDateString('es-MX');
+                            // Manejar tanto Date como strings
+                            let dateString = params.value;
+
+                            // Si es un objeto Date, convertir a ISO string
+                            if (params.value instanceof Date) {
+                                dateString = params.value.toISOString();
+                            }
+
+                            // Extraer solo la parte de fecha (YYYY-MM-DD)
+                            const soloFecha = dateString.split('T')[0];
+                            return soloFecha;
                         }
                     },
 
@@ -1611,8 +1619,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     return {
                         fontWeight: 'bold',
                         backgroundColor: '#e9ecef',
-                        borderTop: '2px solid #0058a1',
-                        pointerEvents: 'none'
+                        borderTop: '2px solid #0058a1'
                     };
                 }
 
@@ -1622,7 +1629,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             getRowClass: params => {
 
                 if (params.data?.id === 'TOTALES') {
-                    return '';
+                    return 'fila-totales';
                 }
 
                 if (params.data?._rowClass) {
@@ -2217,9 +2224,15 @@ class GestionProduccionPVC extends GestionProduccionBase {
             EficienciaOperativa: 0
         };
 
+        // 🔥 Si es la fila de TOTALES, insertar ANTES de ella (en su índice)
+        // Si no, insertar DESPUÉS de la fila seleccionada
+        const addIndex = params.node.data?.id === 'TOTALES' 
+            ? params.node.rowIndex 
+            : params.node.rowIndex + 1;
+
         this.gridApi.applyTransaction({
             add: [nuevaFila],
-            addIndex: params.node.rowIndex + 1
+            addIndex: addIndex
         });
 
         this.recalcularTotales();
@@ -2303,9 +2316,15 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         this.recalcularFila(nuevaFila);
 
+        // 🔥 Si es la fila de TOTALES, insertar ANTES de ella (en su índice)
+        // Si no, insertar DESPUÉS de la fila seleccionada
+        const addIndex = params.node.data?.id === 'TOTALES' 
+            ? params.node.rowIndex 
+            : params.node.rowIndex + 1;
+
         this.gridApi.applyTransaction({
             add: [nuevaFila],
-            addIndex: params.node.rowIndex + 1
+            addIndex: addIndex
         });
 
         this.recalcularTotales();
@@ -2357,12 +2376,16 @@ class GestionProduccionPVC extends GestionProduccionBase {
             this.filaSeleccionada =
                 this.gridApi.getDisplayedRowAtIndex(rowIndex);
 
+            const eliminar = menu.querySelector('[data-action="eliminar"]');
+            const copiar = menu.querySelector('[data-action="copiar"]');
+
+            // 🔥 En la fila de TOTALES solo permitir "Agregar", desactivar "Copiar" y "Eliminar"
             if (this.filaSeleccionada?.data?.id === 'TOTALES') {
-                menu.style.display = "none";
+                eliminar.style.display = "none";
+                copiar.style.display = "none";
+                menu.style.display = "block";
                 return;
             }
-
-            const eliminar = menu.querySelector('[data-action="eliminar"]');
 
             // 🔥 Ocultar eliminar si tiene ID
             if (this.filaSeleccionada?.data?.ID_REGISTRO) {
@@ -2370,6 +2393,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
             } else {
                 eliminar.style.display = "block";
             }
+
+            copiar.style.display = "block";
 
         });
 
