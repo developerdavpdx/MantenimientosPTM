@@ -84,9 +84,11 @@ namespace MantenimientosPTM
                 // ✅ 3 — Armar body
                 var purchaseRequest = new
                 {
-                    RequriedDate = DateTime.Now.AddDays(7).ToString("yyyy-MM-dd"),
+                    RequriedDate = DateTime.Now.AddDays(7).ToString("yyyy-MM-dd"),  // ✅ typo intencional de SAP
+                    ReqName = Header[0].NombreSolicita,
                     U_URGENCIA = "NO",
                     U_REQ_CALIDAD = "NO APLICA",
+                    U_U_PDX_SOLICITANTE = Header[0].NombreSolicita,
                     Comments = $"Documento creado por interfaz PTM Mantenimientos — {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
                     DocumentLines = documentLines
                 };

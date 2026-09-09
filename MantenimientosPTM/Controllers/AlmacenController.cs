@@ -1244,11 +1244,21 @@ namespace MantenimientosPTM.Controllers
                    ? estadoActual["PLANTA"].ToString()
                    : string.Empty;
 
+                string docentry = estadoActual != null && estadoActual.ContainsKey("DOCENTRY")
+                   ? estadoActual["DOCENTRY"].ToString()
+                   : string.Empty;
+
+                string docnum = estadoActual != null && estadoActual.ContainsKey("DOCNUM")
+                   ? estadoActual["DOCNUM"].ToString()
+                   : string.Empty;
+
                 // Si ya fue procesada, mostrar vista con estado actual
                 if (currentStatus == "Aprobado" || currentStatus == "No Aprobado")
                 {
                     ViewBag.Estado = currentStatus;
                     ViewBag.Folio = folio;
+                    ViewBag.DocEntry = docentry;
+                    ViewBag.DocNum = docnum;
                     ViewBag.Mensaje = currentStatus == "Aprobado"
                         ? "Esta solicitud ya fue autorizada anteriormente."
                         : "Esta solicitud ya fue rechazada anteriormente.";
@@ -1323,6 +1333,7 @@ namespace MantenimientosPTM.Controllers
                 return View("AprobacionSolicitud");
             }
         }
+
         //SE UTILIZA UTILIZA PARE RECHAZAR LA SOLICITUD
         [HttpPost]
         [ValidateAntiForgeryToken]

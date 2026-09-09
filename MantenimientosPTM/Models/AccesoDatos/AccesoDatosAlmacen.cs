@@ -742,6 +742,12 @@ namespace MantenimientosPTM
             [JsonProperty("USUARIO_SOLICITA")]
             public string UsuarioSolicita { get; set; }
 
+            [JsonProperty("NOMBRE_SOLICITA")]
+            public string NombreSolicita { get; set; }
+
+            [JsonProperty("EMP_ID")]
+            public int EmpID { get; set; }
+
             [JsonProperty("DEPARTAMENTO")]
             public string Departamento { get; set; }
 

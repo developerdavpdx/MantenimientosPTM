@@ -300,6 +300,12 @@
                             <span class="folio-chip"><strong>Folio portal web:</strong> @ViewBag.Folio</span>
                         </p>
                     }
+                    @if (!string.IsNullOrEmpty(ViewBag.DocNum))
+                    {
+                        <p class="mb-3">
+                            <span class="folio-chip"><strong>Folio SAP:</strong> @ViewBag.DocNum</span>
+                        </p>
+                    }
 
                     @if (ViewBag.RequiereComentario == true)
                     {
