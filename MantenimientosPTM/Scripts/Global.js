@@ -1880,29 +1880,23 @@ class GlobalUtil {
     }
 
     static calcularDiferenciaHoras(horaInicio, horaFin) {
-        // const parseFecha = (fechaStr) => {
-        //     const [fecha, hora] = fechaStr.split(' ');
-        //     const [dia, mes, anio] = fecha.split('/');
-        //     return new Date(`${anio}-${mes}-${dia}T${hora}`);
-        // };
-
-        // const inicio = parseFecha(horaInicio);
-        // const fin = parseFecha(horaFin);
-
-        // if (isNaN(inicio) || isNaN(fin)) return null;
-
-        // const diffMs = fin - inicio;
-
-        // const horas = diffMs / (1000 * 60 * 60);
-
-        // return horas.toFixed(2);
 
         if (!horaInicio || !horaFin)
             return null;
 
-        // Si viene fecha y hora, nos quedamos solo con la hora
-        horaInicio = horaInicio.includes(' ') ? horaInicio.split(' ')[1] : horaInicio;
-        horaFin = horaFin.includes(' ') ? horaFin.split(' ')[1] : horaFin;
+        // Extrae solo la parte de hora, sin importar si el separador es espacio o 'T'
+        const extraerHora = (valor) => {
+            if (valor.includes('T')) {
+                return valor.split('T')[1];
+            }
+            if (valor.includes(' ')) {
+                return valor.split(' ')[1];
+            }
+            return valor;
+        };
+
+        horaInicio = extraerHora(horaInicio);
+        horaFin = extraerHora(horaFin);
 
         const [h1, m1] = horaInicio.split(':').map(Number);
         const [h2, m2] = horaFin.split(':').map(Number);
@@ -1921,7 +1915,6 @@ class GlobalUtil {
         const minutos = diferencia % 60;
 
         return `${horas}.${String(minutos).padStart(2, '0')}`;
-
     }
 
 }
