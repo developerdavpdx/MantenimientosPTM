@@ -291,7 +291,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     OTMC: item.OTMC,
                     OTMP: item.OTMP,
                     ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
-                    ID_PARO: item.ID_PARO,
                     Fecha: item.FECHA,
                     Linea: item.LINEA,
                     Producto: item.PRODUCTO,
@@ -359,11 +358,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     fila._origen = 'PRODUCTO_TERMINADO';
                     fila._marcador = '📦';
                     fila._rowClass = 'row-producto-terminado';
-                } else if (item.ID_PARO && item.ID_PARO.toString().trim() !== '') {
-                    // 🟦 Es un paro guardado en DB
-                    fila._origen = 'PARO';
-                    fila._marcador = '⏸️';
-                    fila._rowClass = 'row-paro';
                 }
 
                 return fila;
@@ -2252,10 +2246,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
                 datos.push({
                     ID_REGISTRO: node.data.ID_REGISTRO || null,
-                    OTMC: node.data.OTMC || null,  // 🔥 NUEVO: Correctivos
+                    OTMC: node.data.OTMC || null,
                     OTMP: node.data.OTMP || null, // 🔥 NUEVO: Preventivos
                     ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null, // ✅ NUEVO: Identificador del producto
-                    ID_PARO: node.data.ID_PARO || null, // 🟦 NUEVO: Identificador del paro manual
                     FECHA: node.data.Fecha,
                     LINEA: node.data.Linea,
                     PRODUCTO: node.data.Producto,

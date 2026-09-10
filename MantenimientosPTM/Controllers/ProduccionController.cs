@@ -202,6 +202,8 @@ namespace MantenimientosPTM.Controllers
                 string FiltroFechaFin = Request.Form["FiltroFechaFin"];
                 string FiltroLinea = Request.Form["FiltroLinea"];
                 string FiltroEstatus = Request.Form["FiltroEstatus"];
+                string FiltroArea = Request.Form["FiltroArea"];
+                string FiltroIncluirCorrectivo = Request.Form["FiltroIncluirCorrectivo"];
 
                 // ── Fechas: si no vienen, default al mes actual ───────────────────────
                 DateTime dtFechaInicio;
@@ -227,6 +229,8 @@ namespace MantenimientosPTM.Controllers
                     { "p_FECHA_FIN",         (dtFechaFin,                                                                         ParameterDirection.Input, HanaDbType.Date)    },
                     { "p_LINEA_PRODUCCION",  (string.IsNullOrEmpty(FiltroLinea)   ? (object)null : Convert.ToInt32(FiltroLinea),  ParameterDirection.Input, HanaDbType.Integer) },
                     { "p_ESTATUS",           (string.IsNullOrEmpty(FiltroEstatus) ? (object)null : FiltroEstatus,                 ParameterDirection.Input, HanaDbType.VarChar) },
+                    { "p_ID_AREA",           (string.IsNullOrEmpty(FiltroArea) ? (object)null : FiltroArea,                       ParameterDirection.Input, HanaDbType.Integer) },
+                    { "p_INCLUIR_CORRECTIVO",(string.IsNullOrEmpty(FiltroIncluirCorrectivo) ? (object)null : FiltroIncluirCorrectivo,                 ParameterDirection.Input, HanaDbType.VarChar) }
                 };
 
                 // ── Ejecutar SP ───────────────────────────────────────────────────────
@@ -364,6 +368,7 @@ namespace MantenimientosPTM.Controllers
                     if (string.IsNullOrEmpty(jsonData))
                         throw new Exception("No se recibió información.");
 
+                    // 🟦 Se deserializa el JSON incluyendo ID_AREA_PROCESO
                     RequestData = JsonConvert.DeserializeObject<List<AccesoDatosProduccion.ParoProduccion>>(jsonData);
                 }
 
@@ -382,6 +387,10 @@ namespace MantenimientosPTM.Controllers
                     var parameters = allparameters
                         .Where(p => !excludedParams.Contains(p.Key))
                         .ToDictionary(p => p.Key, p => p.Value);
+
+                    // 🟦 NUEVO: P_ID_AREA se envía al SP si existe
+                    // Cuando agregues el parámetro en el SP GCInsertarParoProduccion, 
+                    // asegúrate que acepte P_ID_AREA
 
                     var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                         Logic.AD.GCInsertarParoProduccion,
@@ -418,7 +427,7 @@ namespace MantenimientosPTM.Controllers
         public JsonResult GuardarTiemposMuertosPVC()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            List<AccesoDatosProduccion.TiemposMuertosProduccionPVC> RequestData;
+            List<TiemposMuertosProduccionPVC> RequestData;
 
             try
             {

@@ -174,7 +174,7 @@ class GestionEventosApp {
 
         $('#FiltroPlantaParo').on('change', () => {
             const Planta = $("#FiltroPlantaParo").val();
-            EquiposUtil.llenarProcesos(Planta,1, null, "FiltroProcesoParo");
+            EquiposUtil.llenarProcesos(Planta, 1, null, "FiltroProcesoParo");
             if (Planta) {
                 $('#FiltroPlantaParo option[value=""]').hide();
             }
@@ -184,10 +184,10 @@ class GestionEventosApp {
             $("#LineasProduccionContainer").addClass("d-none");
             const Planta = $("#FiltroPlantaParo").val();
             const Proceso = $("#FiltroProcesoParo").val() || null;
-            if(Planta && Proceso)
+            if (Planta && Proceso)
                 EquiposUtil.llenarLineasCheckbox(Planta, Proceso, 1, "contenedorLineasParo");
             else
-                AlertManager.mostrar('Selecciona una planta y un proceso', 'warning','alertParoContainer');
+                AlertManager.mostrar('Selecciona una planta y un proceso', 'warning', 'alertParoContainer');
         });
 
         $('#btnAplicarFiltros').on('click', () => {
@@ -226,7 +226,11 @@ class GestionEventosApp {
                     Proceso,
                     1,
                     "FiltroLinea",
-                    null
+                    null,
+                    () => {
+                        // 🔥 Dispara el filtrado automático una vez que se llenaron las líneas
+                        this.ProduccionManager.llenarTablaParos();
+                    }
                 );
             });
 
@@ -296,7 +300,7 @@ class ProduccionManager {
     // ✅ Función para inicializar el calendario
     inicializar() {
         this.llenarTablaParos();
-        EquiposUtil.llenarProcesos(this.PLANTA,1, null, "FiltroProceso");
+        EquiposUtil.llenarProcesos(this.PLANTA, 1, null, "FiltroProceso");
         EquiposUtil.llenarCategoriasParo("ParoCategoria");
         this.initHubParos(); //Inicializar HUB mantenimientos correctivos
         console.log('✅ Calendar Manager inicializado correctamente');
@@ -414,6 +418,8 @@ class ProduccionManager {
                             "FiltroLinea": $("#FiltroLinea").val() || null,
                             "FiltroEstatus": $("#FiltroEstatus").val() || null,
                             "FiltroPlanta": Planta || null,
+                            "FiltroArea": $("#FiltroProceso").val() || null,
+                            "FiltroIncluirCorrectivo": "S"
                         });
                     },
                     dataSrc: function (json) {
@@ -431,7 +437,7 @@ class ProduccionManager {
                         defaultContent: '',
                         width: '30px'
                     },
-                    {                        
+                    {
                         data: null,
                         orderable: false,
                         className: "text-center",
@@ -853,7 +859,11 @@ class ProduccionManager {
 
                 USUARIO: self.datos_usuario[0].EMAIL,
 
-                PLANTA: Planta
+                PLANTA: Planta,
+
+                // 🟦 NUEVO: ID_AREA se lee del atributo data-area-id de la fila
+                // Esto evita que cambios en el filtro afecten los paros ya agregados
+                ID_AREA: $(this).attr('data-area-id') || 0
 
             });
 
@@ -1064,6 +1074,9 @@ class ProduccionManager {
 
         $('#tablaParos tbody tr').empty();
 
+        // 🟦 NUEVO: Guardar el ID_AREA en cada fila cuando se agrega
+        const areaIdActual = $('#FiltroProcesoParo').val() || 0;
+
         lineasSeleccionadas.forEach(linea => {
 
             // Evitar duplicados
@@ -1081,7 +1094,7 @@ class ProduccionManager {
 
             // if (existe) return;
             const fila = `
-                <tr>
+                <tr data-area-id="${areaIdActual}">
                     <td data-value="${linea.id}">
                         ${linea.texto}
                     </td>
@@ -1445,7 +1458,7 @@ class ProduccionManager {
         }
     }
 
-    
+
 }
 
 class AutocompleteParoArticulo {
@@ -1562,7 +1575,7 @@ class AutocompleteParoArticulo {
                             // Mantener atributo original por compatibilidad
                             try {
                                 input.attr('data-bs-original-title', tituloTooltip);
-                            } catch (_) {}
+                            } catch (_) { }
                             if (typeof tt.update === 'function') tt.update();
                         } else {
                             // Fallback: recrear sin usar dispose() para evitar estados intermedios inconsistentes

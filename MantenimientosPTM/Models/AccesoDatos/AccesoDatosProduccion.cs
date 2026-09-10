@@ -167,6 +167,11 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string PLANTA { get; set; }
+
+            // 🟦 NUEVO: ID_AREA (para filtrar paros por proceso/área - PVC, inyección, etc.)
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public int ID_AREA { get; set; }
         }
 
         public class ParoProduccionSS
@@ -231,6 +236,11 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string ID_PRODUCTO_TERMINADO { get; set; }
+
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string ID_PARO { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public DateTime? FECHA { get; set; }
