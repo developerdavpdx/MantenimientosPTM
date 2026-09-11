@@ -480,6 +480,177 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        [HttpPost]
+        public JsonResult GuardarTiemposMuertosPeadLiso()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            List<TiemposMuertosProduccionPeadLiso> RequestData;
+
+            try
+            {
+                Request.InputStream.Position = 0;
+
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    RequestData = JsonConvert.DeserializeObject<List<TiemposMuertosProduccionPeadLiso>>(jsonData);
+                }
+
+                foreach (var registro in RequestData)
+                {
+                    var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(registro, true, null);
+
+                    var parameters = allparameters.ToDictionary(p => p.Key, p => p.Value);
+
+                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCGuardarTiemposMuertosPeadLiso,
+                        parameters
+                    );
+
+                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                    {
+                        jsonResponse.Status = "NO";
+                        jsonResponse.Message = $"Error al guardar registros: {resultHana.JsonResult}";
+                        jsonResponse.Data = string.Empty;
+
+                        return Json(jsonResponse);
+                    }
+                }
+
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = "Registros guardados correctamente.";
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al guardar: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult GuardarTiemposMuertosINY()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            List<AccesoDatosProduccion.TiemposMuertosProduccionINY> RequestData;
+
+            try
+            {
+                Request.InputStream.Position = 0;
+
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    RequestData = JsonConvert.DeserializeObject<List<AccesoDatosProduccion.TiemposMuertosProduccionINY>>(jsonData);
+                }
+
+                foreach (var registro in RequestData)
+                {
+                    var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(registro, true, null);
+
+                    var parameters = allparameters.ToDictionary(p => p.Key, p => p.Value);
+
+                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCGuardarTiemposMuertosINY,
+                        parameters
+                    );
+
+                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                    {
+                        jsonResponse.Status = "NO";
+                        jsonResponse.Message = $"Error al guardar registros INY: {resultHana.JsonResult}";
+                        jsonResponse.Data = string.Empty;
+
+                        return Json(jsonResponse);
+                    }
+                }
+
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = "Registros INY guardados correctamente.";
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al guardar: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+        }
+
+        [HttpPost]
+        public JsonResult GuardarTiemposMuertosCorrugado()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            List<TiemposMuertosProduccionCorrugado> RequestData;
+
+            try
+            {
+                Request.InputStream.Position = 0;
+
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+
+                    RequestData = JsonConvert.DeserializeObject<List<TiemposMuertosProduccionCorrugado>>(jsonData);
+                }
+
+                foreach (var registro in RequestData)
+                {
+                    var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(registro, true, null);
+
+                    var parameters = allparameters.ToDictionary(p => p.Key, p => p.Value);
+
+                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCGuardarTiemposMuertosCorrugado,
+                        parameters
+                    );
+
+                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                    {
+                        jsonResponse.Status = "NO";
+                        jsonResponse.Message = $"Error al guardar registros: {resultHana.JsonResult}";
+                        jsonResponse.Data = string.Empty;
+
+                        return Json(jsonResponse);
+                    }
+                }
+
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = "Registros guardados correctamente.";
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "Error al guardar: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+
+                return Json(jsonResponse);
+            }
+        }
+
         [HttpGet]
         public JsonResult GetTiemposMuertosPVC(
             string FiltroFechaInicio,
@@ -738,63 +909,6 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
-        [HttpPost]
-        public JsonResult GuardarTiemposMuertosCorrugado()
-        {
-            var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            List<TiemposMuertosProduccionCorrugado> RequestData;
-
-            try
-            {
-                Request.InputStream.Position = 0;
-
-                using (var reader = new StreamReader(Request.InputStream))
-                {
-                    string jsonData = reader.ReadToEnd();
-
-                    if (string.IsNullOrEmpty(jsonData))
-                        throw new Exception("No se recibió información.");
-
-                    RequestData = JsonConvert.DeserializeObject<List<TiemposMuertosProduccionCorrugado>>(jsonData);
-                }
-
-                foreach (var registro in RequestData)
-                {
-                    var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(registro, true, null);
-
-                    var parameters = allparameters.ToDictionary(p => p.Key, p => p.Value);
-
-                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCGuardarTiemposMuertosCorrugado,
-                        parameters
-                    );
-
-                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
-                    {
-                        jsonResponse.Status = "NO";
-                        jsonResponse.Message = $"Error al guardar registros: {resultHana.JsonResult}";
-                        jsonResponse.Data = string.Empty;
-
-                        return Json(jsonResponse);
-                    }
-                }
-
-                jsonResponse.Status = "SI";
-                jsonResponse.Message = "Registros guardados correctamente.";
-                jsonResponse.Data = string.Empty;
-
-                return Json(jsonResponse);
-            }
-            catch (Exception ex)
-            {
-                jsonResponse.Status = "ERROR";
-                jsonResponse.Message = "Error al guardar: " + ex.Message;
-                jsonResponse.Data = string.Empty;
-
-                return Json(jsonResponse);
-            }
-        }
-
         [HttpGet]
         public JsonResult GetTiemposMuertosPeadLiso(
         string FiltroFechaInicio,
@@ -882,119 +996,6 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
-        [HttpPost]
-        public JsonResult GuardarTiemposMuertosPeadLiso()
-        {
-            var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            List<TiemposMuertosProduccionPeadLiso> RequestData;
-
-            try
-            {
-                Request.InputStream.Position = 0;
-
-                using (var reader = new StreamReader(Request.InputStream))
-                {
-                    string jsonData = reader.ReadToEnd();
-
-                    if (string.IsNullOrEmpty(jsonData))
-                        throw new Exception("No se recibió información.");
-
-                    RequestData = JsonConvert.DeserializeObject<List<TiemposMuertosProduccionPeadLiso>>(jsonData);
-                }
-
-                foreach (var registro in RequestData)
-                {
-                    var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(registro, true, null);
-
-                    var parameters = allparameters.ToDictionary(p => p.Key, p => p.Value);
-
-                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCGuardarTiemposMuertosPeadLiso,
-                        parameters
-                    );
-
-                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
-                    {
-                        jsonResponse.Status = "NO";
-                        jsonResponse.Message = $"Error al guardar registros: {resultHana.JsonResult}";
-                        jsonResponse.Data = string.Empty;
-
-                        return Json(jsonResponse);
-                    }
-                }
-
-                jsonResponse.Status = "SI";
-                jsonResponse.Message = "Registros guardados correctamente.";
-                jsonResponse.Data = string.Empty;
-
-                return Json(jsonResponse);
-            }
-            catch (Exception ex)
-            {
-                jsonResponse.Status = "ERROR";
-                jsonResponse.Message = "Error al guardar: " + ex.Message;
-                jsonResponse.Data = string.Empty;
-
-                return Json(jsonResponse);
-            }
-        }
-
-        [HttpPost]
-        public JsonResult GuardarTiemposMuertosINY()
-        {
-            var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            List<AccesoDatosProduccion.TiemposMuertosProduccionINY> RequestData;
-
-            try
-            {
-                Request.InputStream.Position = 0;
-
-                using (var reader = new StreamReader(Request.InputStream))
-                {
-                    string jsonData = reader.ReadToEnd();
-
-                    if (string.IsNullOrEmpty(jsonData))
-                        throw new Exception("No se recibió información.");
-
-                    RequestData = JsonConvert.DeserializeObject<List<AccesoDatosProduccion.TiemposMuertosProduccionINY>>(jsonData);
-                }
-
-                foreach (var registro in RequestData)
-                {
-                    var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(registro, true, null);
-
-                    var parameters = allparameters.ToDictionary(p => p.Key, p => p.Value);
-
-                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCGuardarTiemposMuertosINY,
-                        parameters
-                    );
-
-                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
-                    {
-                        jsonResponse.Status = "NO";
-                        jsonResponse.Message = $"Error al guardar registros INY: {resultHana.JsonResult}";
-                        jsonResponse.Data = string.Empty;
-
-                        return Json(jsonResponse);
-                    }
-                }
-
-                jsonResponse.Status = "SI";
-                jsonResponse.Message = "Registros INY guardados correctamente.";
-                jsonResponse.Data = string.Empty;
-
-                return Json(jsonResponse);
-            }
-            catch (Exception ex)
-            {
-                jsonResponse.Status = "ERROR";
-                jsonResponse.Message = "Error al guardar: " + ex.Message;
-                jsonResponse.Data = string.Empty;
-
-                return Json(jsonResponse);
-            }
-        }
 
         [HttpPost]
         public JsonResult AgregarTipoParoProduccion()

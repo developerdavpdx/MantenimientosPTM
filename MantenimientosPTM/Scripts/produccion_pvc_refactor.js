@@ -297,6 +297,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     Producto: item.PRODUCTO,
                     Turno: item.TURNO,
                     TRIP: item.TRIP,
+                    Comentarios: item.COMENTARIOS,
                     HorasProgramadas: item.HORAS_PROGRAMADAS,
                     MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
                     ControlInventarios: item.CONTROL_INVENTARIOS,
@@ -407,7 +408,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 const datos = JSON.parse(response.Data);
                 hayDatosOriginales = this.cargarDatosGrid(datos);
             } else {
-                AlertManager.mostrar(response.Message, "info");
+                //AlertManager.mostrar(response.Message, "info");
                 hayDatosOriginales = this.cargarDatosGrid(null);
             }
 
@@ -1167,31 +1168,47 @@ class GestionProduccionPVC extends GestionProduccionBase {
             .replace(/[\u0300-\u036f]/g, "")
             .trim();
 
-        // 🟦 Mapeo de categorías a campos del grid
         const mapeo = {
+            // MTTO CORRECTIVOS
             'MTTO CORRECTIVOS': 'MttoCorrectivos',
             'MTTO. CORRECTIVOS': 'MttoCorrectivos',
-            'CORRECTIVO': 'MttoCorrectivos',
-            'CORRECTIVOS': 'MttoCorrectivos',
+
+            // FALLA ELÉCTRICA
             'FALLA ELECTRICA': 'FallaElectrica',
-            'FALLA ELECTRICA': 'FallaElectrica',
-            'FALLA ELECTRICA': 'FallaElectrica',
+            'FALLA ELÉCTRICA': 'FallaElectrica',
+
+            // SERVICIOS
             'SERVICIOS': 'Servicios',
+
+            // CAMBIO MOLDE SETUP EXCESOS
+            'CAMBIO DE MOLDE (SETUP) EXCESOS': 'CambioMoldeSetupExcesos',
             'CAMBIO MOLDE SETUP EXCESOS': 'CambioMoldeSetupExcesos',
-            'CAMBIO MOLDE': 'CambioMoldeSetupExcesos',
+
+            // HERRAMENTAL
             'HERRAMENTAL': 'Herramental',
+
+            // FALLA OPERACIÓN
+            'FALLA DE OPERACION': 'FallaOperacion',
+            'FALLA DE OPERACIÓN': 'FallaOperacion',
             'FALLA OPERACION': 'FallaOperacion',
-            'FALLA OPERACIONAL': 'FallaOperacion',
-            'OPERACION': 'FallaOperacion',
-            'LIMPIEZA TANQUE': 'LimpiezaTanque',
+
+            // LIMPIEZA TANQUE
             'LIMPIEZA DE TANQUE': 'LimpiezaTanque',
-            'LIMPIEZA': 'LimpiezaTanque',
+            'LIMPIEZA TANQUE': 'LimpiezaTanque',
+
+            // FALTA MATERIAL (BD dice FALLA, grid dice FALTA)
+            'FALLA DE MATERIAL': 'FaltaMaterial',
+            'FALLA MATERIAL': 'FaltaMaterial',
+            'FALTA DE MATERIAL': 'FaltaMaterial',
             'FALTA MATERIAL': 'FaltaMaterial',
-            'MATERIAL': 'FaltaMaterial',
+
+            // FALTA PERSONAL
+            'FALTA DE PERSONAL': 'FaltaPersonal',
             'FALTA PERSONAL': 'FaltaPersonal',
-            'PERSONAL': 'FaltaPersonal',
+
+            // FALTA REFACCIONES
+            'FALTA DE REFACCIONES': 'FaltaRefacciones',
             'FALTA REFACCIONES': 'FaltaRefacciones',
-            'REFACCIONES': 'FaltaRefacciones',
         };
 
         return mapeo[categoriaNormalizada] || null;
@@ -1420,6 +1437,20 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         cellEditor: 'agSelectCellEditor',
                         cellEditorParams: {
                             values: ['A', 'B', 'C', 'D']
+                        }
+                    },
+
+                    // ✅ COMENTARIOS
+                    {
+                        field: 'Comentarios',
+                        headerName: 'Comentarios',
+                        editable: true,
+                        width: 200,
+                        cellClass: 'celda-azul',
+                        pinned: 'left',
+                        cellEditor: 'agLargeTextCellEditor',
+                        cellEditorParams: {
+                            maxLength: 500
                         }
                     }
                 ]
@@ -2261,6 +2292,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     PRODUCTO: node.data.Producto,
                     TURNO: node.data.Turno,
                     TRIP: node.data.TRIP,
+                    COMENTARIOS: node.data.Comentarios || '',  // ✅ COMENTARIOS
 
                     HORAS_PROGRAMADAS: redondear(node.data.HorasProgramadas || 0, 2),
 

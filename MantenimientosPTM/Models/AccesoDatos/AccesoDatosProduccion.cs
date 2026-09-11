@@ -436,6 +436,11 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
             public int PLANTA { get; set; }
+
+            // ✅ COMENTARIOS
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string COMENTARIOS { get; set; }
         }
 
 
@@ -457,6 +462,11 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string ID_PRODUCTO_TERMINADO { get; set; }
+
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string ID_PARO { get; set; }
 
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
@@ -661,6 +671,11 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(0)]
             public int PLANTA { get; set; }  // ← cambio a int
+
+            // ✅ COMENTARIOS
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string COMENTARIOS { get; set; }
         }
 
         public class TiemposMuertosProduccionPeadLiso
@@ -681,6 +696,11 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string ID_PRODUCTO_TERMINADO { get; set; }
+
+            // 🔥 NUEVO
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string ID_PARO { get; set; }
 
             // ============================================
             // GENERALES
@@ -877,6 +897,11 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string PLANTA { get; set; }
+
+            // ✅ COMENTARIOS
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string COMENTARIOS { get; set; }
         }
 
         public class ReportesProdTerm
@@ -898,6 +923,11 @@ namespace MantenimientosPTM
             public string Item { get; set; }
             public string HorasTrabajo { get; set; } //
             public string Proceso { get; set; }
+
+            // ✅ COMENTARIOS
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string COMENTARIOS { get; set; }
         }
 
         public class TiemposMuertosProduccionINY
@@ -906,6 +936,7 @@ namespace MantenimientosPTM
             public string OTMC { get; set; }
             public string OTMP { get; set; }
             public string ID_PRODUCTO_TERMINADO { get; set; }
+            public string ID_PARO { get; set; }
             public DateTime? FECHA { get; set; }
             public string MES { get; set; }
             public string LINEA { get; set; }
@@ -948,6 +979,9 @@ namespace MantenimientosPTM
             public decimal EFICIENCIA_OPERATIVA { get; set; }
             public string USUARIO { get; set; }
             public string PLANTA { get; set; }
+
+            // ✅ COMENTARIOS
+            public string COMENTARIOS { get; set; }
         }
 
         #endregion

@@ -269,12 +269,14 @@ class GestionProduccionINY extends GestionProduccionBase {
                     OTMC: item.OTMC,
                     OTMP: item.OTMP,
                     ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
+                    ID_PARO: item.ID_PARO,
                     // GENERALES
                     Mes: item.MES || this.obtenerNombreMes(item.FECHA),
                     Fecha: item.FECHA,
                     Linea: item.LINEA,
                     Inyectora: item.INYECTORA,
                     Producto: item.PRODUCTO,
+                    Comentarios: item.COMENTARIOS,
                     Descripcion: item.DESCRIPCION,
                     OP: item.OP,
                     Turno: item.TURNO,
@@ -333,6 +335,11 @@ class GestionProduccionINY extends GestionProduccionBase {
                     fila._origen = 'PRODUCTO_TERMINADO';
                     fila._marcador = '📦';
                     fila._rowClass = 'row-producto-terminado';
+                } else if (item.ID_PARO && item.ID_PARO.toString().trim() !== '') {
+                    // 🟦 Es un paro guardado en DB
+                    fila._origen = 'PARO';
+                    fila._marcador = '⏸️';
+                    fila._rowClass = 'row-paro';
                 }
 
                 return fila;
@@ -375,7 +382,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                 const datos = JSON.parse(response.Data);
                 hayDatosOriginales = this.cargarDatosGrid(datos);
             } else {
-                AlertManager.mostrar(response.Message, "info");
+                // AlertManager.mostrar(response.Message, "info");
                 hayDatosOriginales = this.cargarDatosGrid(null);
             }
 
@@ -390,8 +397,11 @@ class GestionProduccionINY extends GestionProduccionBase {
             const productosTerminados = await this.ObtenerProductoTerminado(null, null, PLANTA, FiltroTurno, 'INY'); //Antes PINY
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, false);
 
+            // 🟦 NUEVO: Paros de producción se agregan también
+            const seAgregaronParos = await this.traerParosProduccionCerrados(fechaInicio, fechaFin, linea);
+
             // Si no hay nada, mostrar placeholder
-            if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados) {
+            if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {
                 this.gridApi.setRowData(this.datosOriginales);
             }
 
@@ -695,6 +705,233 @@ class GestionProduccionINY extends GestionProduccionBase {
             return `${ano}-${mes}-${dia}`;
         } catch (error) {
             console.error("Error al parsear fecha:", error);
+            return null;
+        }
+    }
+
+    // ========================================
+    // 🟦 NUEVO: Traer Paros de Producción y agregarlos al Grid
+    // ========================================
+    async traerParosProduccionCerrados(fechaInicio, fechaFin, linea) {
+
+        try {
+
+            GlobalUtil.mostrarLoader(true);
+
+            // 🎯 Params para obtener paros del rango de fechas
+            const response = await $.ajax({
+                url: `/${this.URLBase}/obtenerParosProduccionSS`,
+                type: "POST",
+                data: {
+                    draw: 1,
+                    length: 999999,
+                    start: 0,
+                    FiltroFechaInicio: fechaInicio,
+                    FiltroFechaFin: fechaFin,
+                    FiltroLinea: linea || "",
+                    FiltroEstatus: "", // 🟦 Sin filtro de estatus, traer todos
+                    FiltroPlanta: this.datos_usuario[0].PLANTA,
+                    "FiltroArea": (this.datos_usuario[0].PLANTA == 1 ? 15 : 15) || null, // 🟦 Area 3=Inyección en planta 1, 16 en planta 2
+                    "FiltroIncluirCorrectivo": null
+                }
+            });
+
+            const paros = response.data || [];
+
+            if (paros.length === 0) {
+                return false; // 🟦 nada que agregar
+            }
+
+            return this.agregarParosAlGrid(paros); // 🟦 ahora retorna bool
+
+        } catch (error) {
+
+            console.error(error);
+            AlertManager.mostrar("Error al consultar paros de producción", "danger");
+            return false;
+
+        } finally {
+            GlobalUtil.mostrarLoader(false);
+        }
+    }
+
+    // ========================================
+    // 🟦 NUEVO: Agregar Paros al Grid
+    // ========================================
+    agregarParosAlGrid(paros) {
+
+        const idParoYaEnGrid = new Set();
+
+        this.gridApi.forEachNode(node => {
+            if (node.data?.ID_PARO) {
+                idParoYaEnGrid.add(String(node.data.ID_PARO).trim());
+            }
+        });
+
+        const parosNuevos = paros.filter(
+            item => !idParoYaEnGrid.has(String(item.ID_PARO).trim())
+        );
+
+        if (parosNuevos.length === 0) {
+            return false;
+        }
+
+        const filasNuevas = [];
+        const lineasNoEncontradas = [];
+
+        parosNuevos.forEach(item => {
+
+            const nuevaFila = this.crearFilaVacia();
+
+            nuevaFila.id = this.generarIdTemporal();
+            nuevaFila.ID_PARO = item.ID_PARO;
+            nuevaFila.Fecha = this.parsearFechaParo(item.FECHA_PARO_STRING);
+
+            // 🟦 Mapear categoría del paro a columna de duración
+            const columnaCategoria = this.mapearCategoriaParoAColumna(item.CATEGORIA);
+            if (columnaCategoria) {
+                nuevaFila[columnaCategoria] = parseFloat(item.DURACION_HRS) || 0;
+            }
+
+            // 🟦 Marcar como paro
+            nuevaFila._origen = 'PARO_MANUAL';
+            nuevaFila._marcador = '⏸️';
+            nuevaFila._rowClass = 'row-paro';
+
+            const lineaEncontrada = this.listaLineas.find(
+                l => String(l.value) === String(item.LINEA_PRODUCCION)
+            );
+
+            if (lineaEncontrada) {
+                nuevaFila.Linea = lineaEncontrada.label;
+            } else {
+                nuevaFila.Linea = null;
+                lineasNoEncontradas.push(item.ID_PARO);
+            }
+
+            if (nuevaFila.Fecha) {
+                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+                nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+            }
+            if(item.ARTICULO){
+                nuevaFila.Producto = item.ARTICULO;
+            }
+
+            if (item.ARTICULO_DESC) {
+                nuevaFila.Descripcion = item.ARTICULO_DESC;
+            }
+
+            // 🟦 Recalcular fila
+            this.recalcularFila(nuevaFila);
+
+            filasNuevas.push(nuevaFila);
+        });
+
+        if (filasNuevas.length > 0) {
+            this.gridApi.applyTransaction({ add: filasNuevas });
+            this.inicializarTooltipsGrid();
+        }
+
+        if (lineasNoEncontradas.length > 0) {
+            AlertManager.mostrar(
+                `Los siguientes paros no tienen línea reconocida y quedaron sin línea asignada: ${lineasNoEncontradas.join(', ')}`,
+                "warning"
+            );
+        }
+
+        return true;
+    }
+
+    // ========================================
+    // 🟦 NUEVO: Mapear Categoría del Paro a Columna del Grid (Inyección)
+    // ========================================
+    // ========================================
+    // 🟦 NUEVO: Mapear Categoría del Paro a Columna del Grid (Inyección)
+    // ========================================
+    mapearCategoriaParoAColumna(categoria) {
+
+        if (!categoria) return null;
+
+        // 🟦 Normalizar: convertir a mayúsculas y remover acentos
+        const categoriaNormalizada = categoria
+            .toUpperCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim();
+
+        // 🟦 Mapeo 1:1 directo con columnas de TIEMPO NO PRODUCTIVO (Inyección)
+        // 7 columnas: TiempoMuertoCorrectivos, TiempoMuertoHerramentales, TiempoMuertoArranques, 
+        //             FallaMaterial, FaltaPersonal, FallaElectrica, TiempoMuertoProceso
+        const mapeo = {
+            // MTTO CORRECTIVOS (Row 8)
+            'MTTO CORRECTIVOS': 'TiempoMuertoCorrectivos',
+            'MTTO. CORRECTIVOS': 'TiempoMuertoCorrectivos',
+
+            // HERRAMENTAL (Row 12)
+            'HERRAMENTAL': 'TiempoMuertoHerramentales',
+
+            // ARRANQUE (rows 6, 7, 20, 23)
+            'PARO Y ARRANQUE NO PROGRAMADO': 'TiempoMuertoArranques',
+            'ARRANQUE Y ESTABILIZACION (HR)': 'TiempoMuertoArranques',
+            'ARRANQUE Y ESTABILIZACION DE LINEA': 'TiempoMuertoArranques',
+            'TIEMPO MUERTO POR ARRANQUES': 'TiempoMuertoArranques',
+
+            // FALLA DE MATERIAL (Row 15)
+            'FALLA DE MATERIAL': 'FallaMaterial',
+            'FALLA MATERIAL': 'FallaMaterial',
+            'FALTA DE MATERIAL': 'FallaMaterial',
+            'FALTA MATERIAL': 'FallaMaterial',
+
+            // FALTA DE PERSONAL (Row 16)
+            'FALTA DE PERSONAL': 'FaltaPersonal',
+            'FALTA PERSONAL': 'FaltaPersonal',
+
+            // FALLA ELECTRICA (Row 9)
+            'FALLA ELECTRICA': 'FallaElectrica',
+            'FALLA ELÉCTRICA': 'FallaElectrica',
+
+            // FALLA DE OPERACIÓN (Row 13)
+            'FALLA DE OPERACION': 'TiempoMuertoProceso',
+            'FALLA DE OPERACIÓN': 'TiempoMuertoProceso',
+            'FALLA OPERACION': 'TiempoMuertoProceso',
+        };
+
+        return mapeo[categoriaNormalizada] || null;
+    }
+
+    // ========================================
+    // 🟦 NUEVO: Parsear fecha del paro
+    // ========================================
+    parsearFechaParo(fechaTexto) {
+
+        if (!fechaTexto) return null;
+
+        try {
+            // 🟦 Si es ISO date (YYYY-MM-DD o con T)
+            if (fechaTexto.includes('-') && !fechaTexto.includes('/')) {
+                const fecha = new Date(fechaTexto);
+                if (isNaN(fecha.getTime())) return null;
+
+                const ano = fecha.getFullYear();
+                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                const dia = String(fecha.getDate()).padStart(2, '0');
+                return `${ano}-${mes}-${dia}`;
+            }
+
+            // 🟦 Si es formato DD/MM/YYYY o DD/MM/YYYY HH:MM:SS
+            if (fechaTexto.includes('/')) {
+                // 🟦 Extraer solo la parte de la fecha (antes del espacio si hay hora)
+                const partesFecha = fechaTexto.split(' ')[0]; // "09/09/2026" o "09/09/2026"
+                const [dia, mes, anio] = partesFecha.split('/');
+
+                if (!dia || !mes || !anio) return null;
+
+                return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`; // YYYY-MM-DD
+            }
+
+            return null;
+        } catch (error) {
+            console.error("Error al parsear fecha paro:", error);
             return null;
         }
     }
@@ -1323,6 +1560,20 @@ class GestionProduccionINY extends GestionProduccionBase {
                         cellEditor: 'agSelectCellEditor',
                         cellEditorParams: {
                             values: ['A', 'B', 'C', 'D']
+                        }
+                    },
+
+                    // ✅ COMENTARIOS
+                    {
+                        field: 'Comentarios',
+                        headerName: 'Comentarios',
+                        editable: true,
+                        width: 200,
+                        cellClass: 'celda-azul',
+                        pinned: 'left',
+                        cellEditor: 'agLargeTextCellEditor',
+                        cellEditorParams: {
+                            maxLength: 500
                         }
                     }
                 ]
@@ -2003,6 +2254,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     OTMC: node.data.OTMC || null,
                     OTMP: node.data.OTMP || null,
                     ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null,
+                    ID_PARO: node.data.ID_PARO || null, // 🟦 NUEVO: Identificador del paro manual
                     MES: node.data.Mes,
                     FECHA: node.data.Fecha,
                     LINEA: node.data.Linea,
@@ -2012,6 +2264,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     OP: node.data.OP,
                     TURNO: node.data.Turno,
                     GRUPO: node.data.Grupo,
+                    COMENTARIOS: node.data.Comentarios || '',  // ✅ COMENTARIOS
                     // PRODUCCIÓN
                     TR_LIBERADOS: redondear(node.data.TRLiberados || 0),
                     PRODUCCION_NETA: redondear(node.data.ProduccionNeta || 0),
