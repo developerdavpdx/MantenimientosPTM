@@ -1546,7 +1546,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         field: 'HorasProgramadas',
                         headerName: 'HORAS PROGRAMADAS',
                         width: 120,
-                        ...this.getColumnaNumerica('celda-blanca'),
+                        ...this.getColumnaNumerica('celda-gris'),
                         editable: true
                     }
                 ]
@@ -1721,7 +1721,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         headerName: 'TIEMPO DISPONIBLE',
                         editable: false,
                         width: 130,
-                        cellClass: 'celda-verde-fuerte',
+                        cellClass: 'celda-verde-formula',
                         valueFormatter: params => this.formatearNumero(params.value)
                     },
 

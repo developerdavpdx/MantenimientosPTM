@@ -821,6 +821,15 @@ class GestionProduccionINY extends GestionProduccionBase {
                 nuevaFila.Descripcion = item.ARTICULO_DESC;
             }
 
+            if (item.PESO_MINIMO) {
+                nuevaFila.PesoMinimo = item.PESO_MINIMO;
+            }
+
+            if (item.KGS_DIA) {
+                nuevaFila.KgHrProducto = parseFloat(item.KGS_DIA) / 24 || 0;
+                nuevaFila.KgHrLinea = parseFloat(item.KGS_DIA) / 24 || 0;
+            }
+
             // 🟦 Recalcular fila
             this.recalcularFila(nuevaFila);
 
@@ -1474,7 +1483,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     {
                         field: 'Fecha',
                         headerName: 'Fecha',
-                        editable: true,
+                        editable: false,
                         width: 120,
                         cellClass: 'celda-azul',
                         pinned: 'left',
@@ -1503,7 +1512,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     {
                         field: 'Linea',
                         headerName: 'Línea',
-                        editable: true,
+                        editable: false,
                         width: 100,
                         cellClass: 'celda-azul',
                         pinned: 'left',
@@ -1598,25 +1607,29 @@ class GestionProduccionINY extends GestionProduccionBase {
                         field: 'TRLiberados',
                         headerName: 'TR LIBERADOS',
                         width: 120,
-                        ...this.getColumnaNumerica('celda-blanca')
+                        ...this.getColumnaNumerica('celda-blanca'),
+                        editable: true
                     },
                     {
                         field: 'ProduccionNeta',
                         headerName: 'PRODUCCIÓN NETA',
                         width: 150,
-                        ...this.getColumnaNumerica('celda-blanca')
+                        ...this.getColumnaNumerica('celda-blanca'),
+                        editable: true
                     },
                     {
                         field: 'ScrapSinColada',
                         headerName: 'SCRAP SIN COLADA',
                         width: 130,
-                        ...this.getColumnaNumerica('celda-blanca')
+                        ...this.getColumnaNumerica('celda-blanca'),
+                        editable: true
                     },
                     {
                         field: 'ScrapColada',
                         headerName: 'SCRAP COLADA',
                         width: 130,
-                        ...this.getColumnaNumerica('celda-blanca')
+                        ...this.getColumnaNumerica('celda-blanca'),
+                        editable: true
                     },
                     {
                         field: 'TotalScrap',
@@ -1640,7 +1653,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                         field: 'HorasProgramadas',
                         headerName: 'HORAS PROGRAMADAS',
                         width: 140,
-                        ...this.getColumnaNumerica('celda-gris')
+                        ...this.getColumnaNumerica('celda-blanca')
                     }
                 ]
             },
@@ -1656,7 +1669,8 @@ class GestionProduccionINY extends GestionProduccionBase {
                         field: 'Preventivo',
                         headerName: 'PREVENTIVO',
                         width: 110,
-                        ...this.getColumnaNumerica('celda-rosa')
+                        ...this.getColumnaNumerica('celda-rosa'),
+                        editable: false
                     },
                     {
                         field: 'ControlInventarios',
@@ -1690,7 +1704,8 @@ class GestionProduccionINY extends GestionProduccionBase {
                         field: 'TiempoMuertoCorrectivos',
                         headerName: 'TIEMPO MUERTO CORRECTIVOS',
                         width: 130,
-                        ...this.getColumnaNumerica('celda-verde-claro')
+                        ...this.getColumnaNumerica('celda-verde-claro'),
+                        editable: false
                     },
                     {
                         field: 'TiempoMuertoHerramentales',
@@ -1744,7 +1759,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                         headerName: 'TIEMPO DISPONIBLE',
                         editable: false,
                         width: 130,
-                        cellClass: 'celda-azul-claro',
+                        cellClass: 'celda-verde-fuerte',
                         valueFormatter: params => this.formatearNumero(params.value)
                     },
 

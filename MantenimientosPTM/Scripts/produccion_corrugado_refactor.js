@@ -810,6 +810,15 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 nuevaFila.Producto = item.ARTICULO;
             }
 
+            if (item.PESO_MINIMO) {
+                nuevaFila.PesoMinimo = item.PESO_MINIMO;
+            }
+
+            if (item.KGS_DIA) {
+                nuevaFila.KgHrProducto = parseFloat(item.KGS_DIA) / 24 || 0;
+                nuevaFila.KgHrLinea = parseFloat(item.KGS_DIA) / 24 || 0;
+            }
+
             // 🟦 Recalcular fila
             this.recalcularFila(nuevaFila);
 
@@ -1191,7 +1200,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                         field: 'Mes',
                         headerName: 'Mes',
                         editable: false,
-                        width: 150,
+                        width: 170,
                         pinned: 'left',
                         cellClass: 'celda-gris',
                         cellRenderer: params => {
@@ -1201,18 +1210,25 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                             const emoji = params.data?._marcador || '';
                             const origen = params.data?._origen;
                             const idRegistro = params.data?.ID_REGISTRO;
+
+                            // 🔥 Mapa de tooltips según origen
                             const tooltipTexts = {
                                 'CORRECTIVO': 'Mantenimiento Correctivo',
                                 'PREVENTIVO': 'Mantenimiento Preventivo',
-                                'PRODUCTO_TERMINADO': 'Producto Terminado'
+                                'PRODUCTO_TERMINADO': 'Producto Terminado',
+                                'PARO_MANUAL': 'Paros Manuales'
                             };
+
                             const tooltipText = tooltipTexts[origen] || '';
                             const tooltipAttr = tooltipText
                                 ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
                                 : '';
-                            const puntoPulsante = !idRegistro && (origen === 'CORRECTIVO' || origen === 'PREVENTIVO' || origen === 'PRODUCTO_TERMINADO')
+
+                            // 🔥 NUEVO: Mostrar punto pulsante si es un registro nuevo (sin ID_REGISTRO)
+                            const puntoPulsante = !idRegistro && (origen === 'CORRECTIVO' || origen === 'PREVENTIVO' || origen === 'PRODUCTO_TERMINADO' || origen === 'PARO_MANUAL')
                                 ? `<span class="punto-pulso punto-pulso-margin-left"></span>`
                                 : '';
+
                             return emoji
                                 ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px; cursor: help;" ${tooltipAttr}>${emoji}</span><span>${params.value}</span>${puntoPulsante}</div>`
                                 : params.value;
@@ -1221,7 +1237,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     {
                         field: 'Fecha',
                         headerName: 'Fecha',
-                        editable: true,
+                        editable: false,
                         width: 120,
                         cellClass: 'celda-azul',
                         pinned: 'left',
@@ -1246,8 +1262,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     {
                         field: 'Linea',
                         headerName: 'Línea',
-                        editable: true,
-                        width: 130,
+                        editable: false,
+                        width: 160,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'agSelectCellEditor',
@@ -1316,31 +1332,31 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 headerClass: 'header-grupo-amarillo',
                 children: [
                     { field: 'PesoMinimo', headerName: 'PESO MÍNIMO', editable: false, width: 120, cellClass: 'celda-gris', valueFormatter: params => this.formatearNumero(params.value) },
-                    { field: 'TRLiberados', headerName: 'TR LIBERADOS', width: 120, ...this.getColumnaNumerica('celda-azul') },
-                    { field: 'ProduccionNeta', headerName: 'PRODUCCIÓN NETA', width: 140, ...this.getColumnaNumerica('celda-azul') },
+                    { field: 'TRLiberados', headerName: 'TR LIBERADOS', width: 120, ...this.getColumnaNumerica('celda-blanca'), editable: true },
+                    { field: 'ProduccionNeta', headerName: 'PRODUCCIÓN NETA', width: 140, ...this.getColumnaNumerica('celda-blanca'), editable: true },
                     { field: 'PesoEstandar', headerName: 'PESO ESTÁNDAR', editable: false, width: 140, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
                     { field: 'PorcentajeSobrepeso', headerName: '% SOBREPESO', editable: false, width: 120, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearPorcentaje(params.value) },
-                    { field: 'ScrapSinCorteSierra', headerName: 'SCRAP S/CORTES SIERRA', width: 150, ...this.getColumnaNumerica('celda-azul') },
-                    { field: 'ScrapCorteSierra', headerName: 'SCRAP CORTES SIERRA', width: 150, ...this.getColumnaNumerica('celda-azul') },
+                    { field: 'ScrapSinCorteSierra', headerName: 'SCRAP S/CORTES SIERRA', width: 150, ...this.getColumnaNumerica('celda-blanca'), editable: true },
+                    { field: 'ScrapCorteSierra', headerName: 'SCRAP CORTES SIERRA', width: 150, ...this.getColumnaNumerica('celda-blanca'), editable: true },
                     { field: 'ScrapTotal', headerName: 'SCRAP TOTAL', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
                     { field: 'PorcentajeScrapSinCorte', headerName: '% SCRAP S/CORTE', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearPorcentaje(params.value) },
                     { field: 'PorcentajeScrapCorte', headerName: '% SCRAP CORTE', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearPorcentaje(params.value) },
-                    { field: 'KgReproceso', headerName: 'KG REPROCESO', width: 130, ...this.getColumnaNumerica('celda-azul') },
-                    { field: 'Carbonato', headerName: 'CARBONATO', width: 120, ...this.getColumnaNumerica('celda-azul') }
+                    { field: 'KgReproceso', headerName: 'KG REPROCESO', width: 130, ...this.getColumnaNumerica('celda-blanca') },
+                    { field: 'Carbonato', headerName: 'CARBONATO', width: 120, ...this.getColumnaNumerica('celda-blanca') }
                 ]
             },
             {
                 headerName: 'DISPONIBILIDAD',
                 headerClass: 'header-grupo-azul',
                 children: [
-                    { field: 'HorasProgramadas', headerName: 'HORAS PROGRAMADAS', width: 140, ...this.getColumnaNumerica('celda-azul') }
+                    { field: 'HorasProgramadas', headerName: 'HORAS PROGRAMADAS', width: 140, ...this.getColumnaNumerica('celda-gris') }
                 ]
             },
             {
                 headerName: 'TIEMPO NO DISPONIBLE',
                 headerClass: 'header-grupo-rosa',
                 children: [
-                    { field: 'MantenimientoPreventivo', headerName: 'MANTENIMIENTO PREVENTIVO', width: 140, ...this.getColumnaNumerica('celda-rosa') },
+                    { field: 'MantenimientoPreventivo', headerName: 'MANTENIMIENTO PREVENTIVO', width: 140, ...this.getColumnaNumerica('celda-rosa'), editable: false },
                     { field: 'ControlInventarios', headerName: 'CONTROL INVENTARIOS', width: 140, ...this.getColumnaNumerica('celda-rosa') },
                     { field: 'FaltaEnergia', headerName: 'FALTA ENERGÍA ELÉCTRICA', width: 140, ...this.getColumnaNumerica('celda-rosa') },
                     { field: 'FaltaMateriaPrima', headerName: 'FALTA MATERIA PRIMA E INSUMOS', width: 170, ...this.getColumnaNumerica('celda-rosa') },
@@ -1353,7 +1369,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 headerName: 'TIEMPO NO PRODUCTIVO',
                 headerClass: 'header-grupo-verde-claro',
                 children: [
-                    { field: 'TiempoMuertoCorrectivos', headerName: 'TIEMPO MUERTO POR CORRECTIVOS', width: 110, ...this.getColumnaNumerica('celda-verde-claro') },
+                    { field: 'TiempoMuertoCorrectivos', headerName: 'TIEMPO MUERTO POR CORRECTIVOS', width: 110, ...this.getColumnaNumerica('celda-verde-claro'), editable: false },
                     { field: 'CambioMoldeSetupExcesos', headerName: 'CAMBIO DE MOLDE (SETUP) EXCESOS', width: 170, ...this.getColumnaNumerica('celda-verde-claro') },
                     { field: 'TiempoMuertoArrancar', headerName: 'TIEMPO MUERTO POR ARRANCAR', width: 110, ...this.getColumnaNumerica('celda-verde-claro') },
                     { field: 'TiempoMuertoProceso', headerName: 'TIEMPO MUERTO PROCESO', width: 110, ...this.getColumnaNumerica('celda-verde-claro') }
@@ -1363,7 +1379,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 headerName: 'KPIs',
                 headerClass: 'header-grupo-verde',
                 children: [
-                    { field: 'TiempoDisponible', headerName: 'TIEMPO DISPONIBLE', editable: false, width: 110, cellClass: 'celda-azul-claro', valueFormatter: params => this.formatearNumero(params.value) },
+                    { field: 'TiempoDisponible', headerName: 'TIEMPO DISPONIBLE', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearNumero(params.value) },
                     { field: 'TiempoProductivo', headerName: 'TIEMPO PRODUCTIVO', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearNumero(params.value) }
                 ]
             },

@@ -910,14 +910,13 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             // COLUMNAS BÁSICAS
             // ========================================
             {
-                headerName: 'DATOS GENERALES',
-                headerClass: 'header-grupo-morado',
+                headerName: '',
                 children: [
                     {
                         field: 'Mes',
                         headerName: 'Mes',
                         editable: false,
-                        width: 170,
+                        width: 150,
                         cellClass: 'celda-gris',
                         pinned: 'left',
                         // ✅ NUEVO: Renderer para mostrar emoji + mes + tooltip + punto pulsante
@@ -931,12 +930,10 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                             const origen = params.data?._origen;
                             const idRegistro = params.data?.ID_REGISTRO;
 
-                            // 🔥 Mapa de tooltips según origen
                             const tooltipTexts = {
                                 'CORRECTIVO': 'Mantenimiento Correctivo',
                                 'PREVENTIVO': 'Mantenimiento Preventivo',
-                                'PRODUCTO_TERMINADO': 'Producto Terminado',
-                                'PARO_MANUAL': 'Paros Manuales'
+                                'PRODUCTO_TERMINADO': 'Producto Terminado'
                             };
 
                             const tooltipText = tooltipTexts[origen] || '';
@@ -944,11 +941,11 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                                 ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
                                 : '';
 
-                            // 🔥 NUEVO: Mostrar punto pulsante si es un registro nuevo (sin ID_REGISTRO)
-                            const puntoPulsante = !idRegistro && (origen === 'CORRECTIVO' || origen === 'PREVENTIVO' || origen === 'PRODUCTO_TERMINADO' || origen === 'PARO_MANUAL')
+                            const puntoPulsante = !idRegistro && (origen === 'CORRECTIVO' || origen === 'PREVENTIVO' || origen === 'PRODUCTO_TERMINADO')
                                 ? `<span class="punto-pulso punto-pulso-margin-left"></span>`
                                 : '';
 
+                            // 🔥 IGUAL QUE PVC: sin emoji, devuelve solo el valor plano
                             return emoji
                                 ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px; cursor: help;" ${tooltipAttr}>${emoji}</span><span>${params.value}</span>${puntoPulsante}</div>`
                                 : params.value;
@@ -958,7 +955,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'Fecha',
                         headerName: 'Fecha',
                         editable: false,
-                        width: 120,
+                        width: 110,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'agDateCellEditor',
@@ -985,7 +982,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'Linea',
                         headerName: 'Línea',
                         editable: false,
-                        width: 150,
+                        width: 110,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'agSelectCellEditor',
@@ -1003,7 +1000,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'Producto',
                         headerName: 'Producto',
                         editable: true,
-                        width: 180,
+                        width: 140,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'articuloAutocompleteEditor',
@@ -1061,8 +1058,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             // PRODUCCIÓN
             // ========================================
             {
-                headerName: 'PRODUCCIÓN',
-                headerClass: 'header-grupo-amarillo',
+                headerName: '',
                 children: [
 
                     {
@@ -1079,7 +1075,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'TRLiberados',
                         headerName: 'TR LIBERADOS',
                         width: 135,
-                        ...this.getColumnaNumerica('celda-blanca'),
+                        ...this.getColumnaNumerica('celda-verde'),
                         editable: true
                     },
 
@@ -1087,7 +1083,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'ProduccionNeta',
                         headerName: 'PRODUCCIÓN NETA',
                         width: 135,
-                        ...this.getColumnaNumerica('celda-blanca'),
+                        ...this.getColumnaNumerica('celda-verde'),
                         editable: true
                     },
 
@@ -1096,7 +1092,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         headerName: 'PESO ESTÁNDAR',
                         editable: false,
                         width: 130,
-                        cellClass: 'celda-verde-formula',
+                        cellClass: 'celda-azul-claro',
                         valueFormatter: params =>
                             this.formatearNumero(params.value)
                     },
@@ -1106,7 +1102,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         headerName: '% SOBREPESO',
                         editable: false,
                         width: 130,
-                        cellClass: 'celda-verde-formula',
+                        cellClass: 'celda-azul-claro',
                         valueFormatter: params =>
                             this.formatearPorcentaje(params.value)
                     },
@@ -1115,7 +1111,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'TotalScrap',
                         headerName: 'TOTAL SCRAP',
                         width: 130,
-                        ...this.getColumnaNumerica('celda-blanca'),
+                        ...this.getColumnaNumerica('celda-verde'),
                         editable: true
                     },
 
@@ -1124,17 +1120,18 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         headerName: '% TOTAL SCRAP',
                         editable: false,
                         width: 130,
-                        cellClass: 'celda-verde-formula',
+                        cellClass: 'celda-azul-claro',
                         valueFormatter: params =>
                             this.formatearPorcentaje(params.value)
                     },
-                ]
-            },
-            {
-                headerName: 'DISPONIBILIDAD',
-                headerClass: 'header-grupo-azul',
-                children: [
-                    { field: 'HorasProgramadas', headerName: 'HORAS PROGRAMADAS', width: 140, ...this.getColumnaNumerica('celda-blanca') }
+
+                    {
+                        field: 'HorasProgramadas',
+                        headerName: 'HORAS PROGRAMADAS',
+                        width: 135,
+                        ...this.getColumnaNumerica('celda-gris')
+                    }
+
                 ]
             },
             {
@@ -1236,8 +1233,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 ]
             },
             {
-                headerName: 'KPIs',
-                headerClass: 'header-grupo-verde',
+                headerName: '',
                 children: [
 
                     {
@@ -1245,7 +1241,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         headerName: 'TIEMPO DISPONIBLE',
                         editable: false,
                         width: 130,
-                        cellClass: 'celda-verde-fuerte',
+                        cellClass: 'celda-azul-claro',
                         valueFormatter: params =>
                             this.formatearNumero(params.value)
                     },
@@ -1274,7 +1270,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     { field: 'PorcentajeRendimiento', headerName: '% RENDIMIENTO', editable: false, width: 120, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
                     { field: 'PorcentajeCalidad', headerName: '% CALIDAD', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
                     { field: 'PorcentajeOEE', headerName: '% OEE', editable: false, width: 110, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) },
-                    { field: 'ObjetivoEficiencia', headerName: 'OBJETIVO DE EFICIENCIA %', width: 140, ...this.getColumnaPorcentaje('celda-amarilla'), editable: false },
+                    { field: 'ObjetivoEficiencia', headerName: 'OBJETIVO DE EFICIENCIA %', width: 140, ...this.getColumnaPorcentaje('celda-amarilla') },
                     { field: 'EficienciaOperativa', headerName: 'EFICIENCIA OPERATIVA', editable: false, width: 130, cellClass: 'celda-verde-fuerte', valueFormatter: params => this.formatearPorcentaje(params.value) }
                 ]
             }

@@ -194,6 +194,14 @@ namespace MantenimientosPTM
             public string ARTICULO { get; set; }
             public string ARTICULO_DESC { get; set; }
 
+            // 🆕 Peso minimo y maximo del articulo
+            public decimal? PESO_MINIMO { get; set; }
+            public decimal? PESO_MAXIMO { get; set; }
+
+            // 🆕 Piezas x dia y Kgs x dia (solo aplica para paros MANUAL; en CORRECTIVO viene NULL)
+            public decimal? PZS_DIA { get; set; }
+            public decimal? KGS_DIA { get; set; }
+
             // 🆕 Nuevos campos
             public string TIPO_PARO { get; set; }
             public string CATEGORIA { get; set; }
