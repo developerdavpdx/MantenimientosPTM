@@ -128,7 +128,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         );
 
         // 🔥 CONSULTAR DATOS
-        this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null);
+        this.consultarDatos();
 
         console.log('✅ Sistema Corrugado inicializado');
     }
@@ -318,8 +318,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     fila._rowClass = 'row-producto-terminado';
                 } else if (item.ID_PARO && item.ID_PARO.toString().trim() !== '') {
                     // 🟦 Es un paro guardado en DB
-                    fila._origen = 'PARO';
-                    fila._marcador = '⏸️';
+                    fila._origen = 'PARO_MANUAL';
+                    fila._marcador = '⛔';
                     fila._rowClass = 'row-paro';
                 }
 
@@ -337,22 +337,31 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         return false;
     }
 
-    async consultarDatos(fechaInicio, fechaFin, planta, linea, FiltroTurno) {
+    async consultarDatos() {
 
         try {
 
             $("#tablaProduccion").addClass("d-none");
             GlobalUtil.mostrarLoader(true);
 
+            let Planta = this.datos_usuario[0].PLANTA;
+            let FiltroFechaInicio = $("#FiltroFechaInicio").val() || null;
+            let FiltroFechaFin = $("#FiltroFechaFin").val() || null;
+            let FiltroPlanta = Planta;
+            let FiltroLinea = $("#FiltroLinea").val() || null;
+            let FiltroTurno = $("#FiltroTurno").val() || null;
+            let FiltroProducto = $("#FiltroProducto").val() || '';
+
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetTiemposMuertosCorrugado`,
                 type: "GET",
                 data: {
-                    FiltroFechaInicio: fechaInicio,
-                    FiltroFechaFin: fechaFin,
-                    FiltroLinea: linea,
-                    FiltroPlanta: planta,
-                    FiltroTurno: FiltroTurno || ''
+                    FiltroFechaInicio: FiltroFechaInicio,
+                    FiltroFechaFin: FiltroFechaFin,
+                    FiltroPlanta: Planta,
+                    FiltroLinea: FiltroLinea,
+                    FiltroTurno: FiltroTurno,
+                    FiltroProducto: FiltroProducto
                 }
             });
 
@@ -367,17 +376,17 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             }
 
             // Correctivos ANTES de totales
-            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, linea);
+            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // Preventivos también
-            const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
+            const seAgregaronPreventivos = await this.traerPreventivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // ✅ FIX: Pasar fechas a ObtenerProductoTerminado
-            const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, FiltroTurno, 'PCORR');
+            const productosTerminados = await this.ObtenerProductoTerminado(FiltroFechaInicio, FiltroFechaFin, FiltroTurno, 'PCORR');
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
 
             // 🟦 NUEVO: Paros de producción se agregan también
-            const seAgregaronParos = await this.traerParosProduccionCerrados(fechaInicio, fechaFin, linea);
+            const seAgregaronParos = await this.traerParosProduccionCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // Sin datos: mostrar placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {
@@ -725,7 +734,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     FiltroEstatus: "", // 🟦 Sin filtro de estatus, traer todos
                     FiltroPlanta: this.datos_usuario[0].PLANTA,
                     "FiltroArea": (this.datos_usuario[0].PLANTA == 1 ? 7 : 7) || null, // 🟦 Area 2=Corrugado en planta 1, 15 en planta 2
-                    "FiltroIncluirCorrectivo": null
+                    "FiltroIncluirCorrectivo": null,
+                    "FiltroTipoLinea": 'CORR'
                 }
             });
 
@@ -788,7 +798,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
             // 🟦 Marcar como paro
             nuevaFila._origen = 'PARO_MANUAL';
-            nuevaFila._marcador = '⏸️';
+            nuevaFila._marcador = '⛔';
             nuevaFila._rowClass = 'row-paro';
 
             const lineaEncontrada = this.listaLineas.find(
@@ -1772,7 +1782,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             if (response.Status === "SI") {
                 AlertManager.mostrar("Datos guardados correctamente", "success");
                 this.cambiosPendientes = [];
-                await this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null);
+                await this.consultarDatos();
             } else {
                 AlertManager.mostrar(response.Message, "warning");
             }
@@ -1881,11 +1891,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             const $btn = $('#btnAplicarFiltros');
             $btn.prop('disabled', true);
             try {
-                const fechaInicio = $('#FiltroFechaInicio').val();
-                const fechaFin = $('#FiltroFechaFin').val();
-                const filtroTurno = $('#FiltroTurno').val();
-                const filtroLinea = $('#FiltroLinea').val();
-                await this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, filtroLinea, filtroTurno);
+                await this.consultarDatos();
             } finally {
                 $btn.prop('disabled', false);
             }
@@ -1932,7 +1938,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             $('#FiltroFechaFin').val('');
             $('#FiltroTurno').val('');
             $('#FiltroLinea').val('');
-            this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null);
+            this.consultarDatos();
         });
 
         $('#FiltroFechaInicio, #FiltroFechaFin')
@@ -1941,7 +1947,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 const fechaInicio = $('#FiltroFechaInicio').val();
                 const fechaFin = $('#FiltroFechaFin').val();
                 $("#mesActual").text(this.formatearRangoFechas(fechaInicio, fechaFin));
-                this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, null, null);
+                this.consultarDatos();
             });
     }
 

@@ -87,7 +87,7 @@ class UIManager_INY {
         // Calcular al cargar
         calcularAltura();
 
-    // Recalcular al cambiar tamaño de ventana
+        // Recalcular al cambiar tamaño de ventana
         $(window).off("resize.card").on("resize.card", calcularAltura);
     }
 }
@@ -136,7 +136,7 @@ class GestionProduccionINY extends GestionProduccionBase {
             false
         );
 
-        this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
+        this.consultarDatos();
         console.log('✅ Sistema INY inicializado');
     }
 
@@ -337,8 +337,8 @@ class GestionProduccionINY extends GestionProduccionBase {
                     fila._rowClass = 'row-producto-terminado';
                 } else if (item.ID_PARO && item.ID_PARO.toString().trim() !== '') {
                     // 🟦 Es un paro guardado en DB
-                    fila._origen = 'PARO';
-                    fila._marcador = '⏸️';
+                    fila._origen = 'PARO_MANUAL';
+                    fila._marcador = '⛔';
                     fila._rowClass = 'row-paro';
                 }
 
@@ -359,20 +359,28 @@ class GestionProduccionINY extends GestionProduccionBase {
     // ========================================
     // CONSULTAR DATOS PRINCIPALES
     // ========================================
-    async consultarDatos(fechaInicio, fechaFin, planta, FiltroTurno, linea, filtroProducto) {
+    async consultarDatos() {
         try {
             GlobalUtil.mostrarLoader(true);
             $("#tablaProduccion").addClass("d-none");
+            let Planta = this.datos_usuario[0].PLANTA;
+            let FiltroFechaInicio = $("#FiltroFechaInicio").val() || null;
+            let FiltroFechaFin = $("#FiltroFechaFin").val() || null;
+            let FiltroPlanta = Planta;
+            let FiltroLinea = $("#FiltroLinea").val() || null;
+            let FiltroTurno = $("#FiltroTurno").val() || null;
+            let FiltroProducto = $("#FiltroProducto").val() || '';
 
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetTiemposMuertosINY`,
                 type: "GET",
                 data: {
-                    FiltroFechaInicio: fechaInicio,
-                    FiltroFechaFin: fechaFin,
-                    FiltroPlanta: planta,
-                    FiltroLinea: linea,
-                    FiltroProducto: filtroProducto || ''
+                    FiltroFechaInicio: FiltroFechaInicio,
+                    FiltroFechaFin: FiltroFechaFin,
+                    FiltroPlanta: Planta,
+                    FiltroLinea: FiltroLinea,
+                    FiltroTurno: FiltroTurno,
+                    FiltroProducto: FiltroProducto
                 }
             });
 
@@ -387,18 +395,18 @@ class GestionProduccionINY extends GestionProduccionBase {
             }
 
             // Correctivos cerrados
-            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, linea);
+            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // Preventivos cerrados
-            const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, linea);
+            const seAgregaronPreventivos = await this.traerPreventivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // Productos terminados
             let PLANTA = this.datos_usuario[0].PLANTA;
-            const productosTerminados = await this.ObtenerProductoTerminado(null, null, PLANTA, FiltroTurno, 'INY'); //Antes PINY
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, false);
+            const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, 'INY'); //Antes PINY
+            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
 
             // 🟦 NUEVO: Paros de producción se agregan también
-            const seAgregaronParos = await this.traerParosProduccionCerrados(fechaInicio, fechaFin, linea);
+            const seAgregaronParos = await this.traerParosProduccionCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // Si no hay nada, mostrar placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {
@@ -514,7 +522,7 @@ class GestionProduccionINY extends GestionProduccionBase {
             nuevaFila.OTMC = item.NumeroOrden;
             nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
             nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
-           
+
             const tiempoCalculado = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
 
             if (item.AreaTecnica === 'MANTENIMIENTO HERRAMENTALES') {
@@ -732,7 +740,8 @@ class GestionProduccionINY extends GestionProduccionBase {
                     FiltroEstatus: "", // 🟦 Sin filtro de estatus, traer todos
                     FiltroPlanta: this.datos_usuario[0].PLANTA,
                     "FiltroArea": (this.datos_usuario[0].PLANTA == 1 ? 15 : 15) || null, // 🟦 Area 3=Inyección en planta 1, 16 en planta 2
-                    "FiltroIncluirCorrectivo": null
+                    "FiltroIncluirCorrectivo": null,
+                    "FiltroTipoLinea": 'INY'
                 }
             });
 
@@ -795,7 +804,7 @@ class GestionProduccionINY extends GestionProduccionBase {
 
             // 🟦 Marcar como paro
             nuevaFila._origen = 'PARO_MANUAL';
-            nuevaFila._marcador = '⏸️';
+            nuevaFila._marcador = '⛔';
             nuevaFila._rowClass = 'row-paro';
 
             const lineaEncontrada = this.listaLineas.find(
@@ -813,7 +822,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                 const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
                 nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
             }
-            if(item.ARTICULO){
+            if (item.ARTICULO) {
                 nuevaFila.Producto = item.ARTICULO;
             }
 
@@ -1153,7 +1162,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     // DATOS GENERALES
                     // ----------------------------------------
                     dataActualizada.Fecha = fecha;
-                    dataActualizada.Mes = meses[new Date( fecha + 'T00:00:00' ).getMonth()];
+                    dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
                     dataActualizada.Linea = lineaLabel;
                     dataActualizada.Producto = item.Codigo || '';
                     dataActualizada.Turno = String(item.Turno || '');
@@ -1183,7 +1192,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     // ORIGEN
                     // ----------------------------------------
                     dataActualizada._origen = 'PRODUCTO_TERMINADO';
-                    dataActualizada._marcador ='📦';
+                    dataActualizada._marcador = '📦';
                     dataActualizada._rowClass = 'row-producto-terminado';
 
 
@@ -1191,7 +1200,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     // RECALCULAR KPIs
                     // ----------------------------------------
                     this.recalcularFila(dataActualizada);
-                    filasActualizadas.push({ rowNode: nodoExistente, data: dataActualizada});
+                    filasActualizadas.push({ rowNode: nodoExistente, data: dataActualizada });
 
                 }
                 // ==================================================
@@ -1211,7 +1220,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     // GENERALES
                     // ----------------------------------------
                     nuevaFila.Fecha = fecha;
-                    nuevaFila.Mes = meses[new Date( fecha + 'T00:00:00' ).getMonth()];
+                    nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
                     nuevaFila.Producto = item.Codigo || '';
                     nuevaFila.Turno = String(item.Turno || '');
                     // ----------------------------------------
@@ -1237,9 +1246,9 @@ class GestionProduccionINY extends GestionProduccionBase {
                     // ----------------------------------------
                     // ORIGEN
                     // ----------------------------------------
-                    nuevaFila._origen ='PRODUCTO_TERMINADO';
-                    nuevaFila._marcador ='📦';
-                    nuevaFila._rowClass ='row-producto-terminado';
+                    nuevaFila._origen = 'PRODUCTO_TERMINADO';
+                    nuevaFila._marcador = '📦';
+                    nuevaFila._rowClass = 'row-producto-terminado';
 
                     // ----------------------------------------
                     // RECALCULAR KPIs
@@ -1278,7 +1287,7 @@ class GestionProduccionINY extends GestionProduccionBase {
             // ========================================
             if (filasNuevas.length > 0) {
 
-                this.gridApi.applyTransaction({add: filasNuevas});
+                this.gridApi.applyTransaction({ add: filasNuevas });
 
                 console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados al grid INY`);
 
@@ -1449,7 +1458,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                         field: 'Mes',
                         headerName: 'Mes',
                         editable: false,
-                        width: 150,
+                        width: 170,
                         cellClass: 'celda-gris',
                         pinned: 'left',
                         // 🔥 Renderer con emoji + tooltip + punto pulsante
@@ -1460,10 +1469,12 @@ class GestionProduccionINY extends GestionProduccionBase {
                             const origen = params.data?._origen;
                             const idRegistro = params.data?.ID_REGISTRO;
 
+                            // 🔥 Mapa de tooltips según origen
                             const tooltipTexts = {
                                 'CORRECTIVO': 'Mantenimiento Correctivo',
                                 'PREVENTIVO': 'Mantenimiento Preventivo',
-                                'PRODUCTO_TERMINADO': 'Producto Terminado'
+                                'PRODUCTO_TERMINADO': 'Producto Terminado',
+                                'PARO_MANUAL': 'Paros Manuales'
                             };
 
                             const tooltipText = tooltipTexts[origen] || '';
@@ -1471,12 +1482,13 @@ class GestionProduccionINY extends GestionProduccionBase {
                                 ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
                                 : '';
 
-                            const puntoPulsante = !idRegistro && (origen === 'CORRECTIVO' || origen === 'PREVENTIVO' || origen === 'PRODUCTO_TERMINADO')
+                            // 🔥 NUEVO: Mostrar punto pulsante si es un registro nuevo (sin ID_REGISTRO)
+                            const puntoPulsante = !idRegistro && (origen === 'CORRECTIVO' || origen === 'PREVENTIVO' || origen === 'PRODUCTO_TERMINADO' || origen === 'PARO_MANUAL')
                                 ? `<span class="punto-pulso punto-pulso-margin-left"></span>`
                                 : '';
 
                             return emoji
-                                ? `<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:16px;cursor:help;" ${tooltipAttr}>${emoji}</span><span>${params.value}</span>${puntoPulsante}</div>`
+                                ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px; cursor: help;" ${tooltipAttr}>${emoji}</span><span>${params.value}</span>${puntoPulsante}</div>`
                                 : params.value;
                         }
                     },
@@ -2392,7 +2404,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                         $("#btnGuardarCambios").prop("disabled", false);
                     }, 3000);
                     this.cambiosPendientes = [];
-                    await this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
+                    await this.consultarDatos();
                 } else {
                     AlertManager.mostrar(response.Message, "warning");
                     $("#btnGuardarCambios").html('<i class="bi bi-save me-1"></i>Guardar');
@@ -2423,15 +2435,8 @@ class GestionProduccionINY extends GestionProduccionBase {
         $('#btnAplicarFiltros').on('click', async () => {
             const $btn = $('#btnAplicarFiltros');
             $btn.prop('disabled', true);
-
             try {
-                const fechaInicio = $('#FiltroFechaInicio').val();
-                const fechaFin = $('#FiltroFechaFin').val();
-                const filtroTurno = $('#FiltroTurno').val();
-                const filtroProducto = $('#FiltroProducto').val(); // 🔥 NUEVO
-                const FiltroLinea = $('#FiltroLinea').val(); // 🔥 NUEVO
-
-                await this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, filtroTurno, FiltroLinea, filtroProducto);
+                await this.consultarDatos();
             } finally {
                 $btn.prop('disabled', false);
             }
@@ -2474,23 +2479,22 @@ class GestionProduccionINY extends GestionProduccionBase {
         $('#btnLimpiarFiltros').on('click', () => {
             $('#FiltroFechaInicio').val('');
             $('#FiltroFechaFin').val('');
-            this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
+            $('#FiltroLinea').val('');
+            $('#FiltroTurno').val('');
+            $('#FiltroProducto').val('');
+            this.consultarDatos();
         });
 
         $('#FiltroFechaInicio, #FiltroFechaFin')
             .off('change')
-            
             .on('change', () => {
-
                 const fechaInicio = $('#FiltroFechaInicio').val();
                 const fechaFin = $('#FiltroFechaFin').val();
                 const FechaTexto = this.formatearRangoFechas(fechaInicio, fechaFin);
                 $("#mesActual").text(
                     FechaTexto
                 );
-
-                this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, null, null, null);
-
+                this.consultarDatos();
             });
     }
 
@@ -2515,8 +2519,8 @@ class GestionProduccionINY extends GestionProduccionBase {
 
         // 🔥 Si es la fila de TOTALES, insertar ANTES de ella (en su índice)
         // Si no, insertar DESPUÉS de la fila seleccionada
-        const addIndex = params.node.data?.id === 'TOTALES' 
-            ? params.node.rowIndex 
+        const addIndex = params.node.data?.id === 'TOTALES'
+            ? params.node.rowIndex
             : params.node.rowIndex + 1;
 
         this.gridApi.applyTransaction({ add: [nuevaFila], addIndex: addIndex });
@@ -2549,8 +2553,8 @@ class GestionProduccionINY extends GestionProduccionBase {
 
         // 🔥 Si es la fila de TOTALES, insertar ANTES de ella (en su índice)
         // Si no, insertar DESPUÉS de la fila seleccionada
-        const addIndex = params.node.data?.id === 'TOTALES' 
-            ? params.node.rowIndex 
+        const addIndex = params.node.data?.id === 'TOTALES'
+            ? params.node.rowIndex
             : params.node.rowIndex + 1;
 
         this.gridApi.applyTransaction({ add: [nuevaFila], addIndex: addIndex });

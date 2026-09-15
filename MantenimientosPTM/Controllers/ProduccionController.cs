@@ -204,6 +204,7 @@ namespace MantenimientosPTM.Controllers
                 string FiltroEstatus = Request.Form["FiltroEstatus"];
                 string FiltroArea = Request.Form["FiltroArea"];
                 string FiltroIncluirCorrectivo = Request.Form["FiltroIncluirCorrectivo"];
+                string FiltroTipoLinea = Request.Form["FiltroTipoLinea"];
 
                 // ── Fechas: si no vienen, default al mes actual ───────────────────────
                 DateTime dtFechaInicio;
@@ -230,7 +231,8 @@ namespace MantenimientosPTM.Controllers
                     { "p_LINEA_PRODUCCION",  (string.IsNullOrEmpty(FiltroLinea)   ? (object)null : Convert.ToInt32(FiltroLinea),  ParameterDirection.Input, HanaDbType.Integer) },
                     { "p_ESTATUS",           (string.IsNullOrEmpty(FiltroEstatus) ? (object)null : FiltroEstatus,                 ParameterDirection.Input, HanaDbType.VarChar) },
                     { "p_ID_AREA",           (string.IsNullOrEmpty(FiltroArea) ? (object)null : FiltroArea,                       ParameterDirection.Input, HanaDbType.Integer) },
-                    { "p_INCLUIR_CORRECTIVO",(string.IsNullOrEmpty(FiltroIncluirCorrectivo) ? (object)null : FiltroIncluirCorrectivo,                 ParameterDirection.Input, HanaDbType.VarChar) }
+                    { "p_INCLUIR_CORRECTIVO",(string.IsNullOrEmpty(FiltroIncluirCorrectivo) ? (object)null : FiltroIncluirCorrectivo,                 ParameterDirection.Input, HanaDbType.VarChar) },
+                    { "p_TIPO_LINEA",(string.IsNullOrEmpty(FiltroTipoLinea) ? (object)null : FiltroTipoLinea,                 ParameterDirection.Input, HanaDbType.VarChar) }
                 };
 
                 // ── Ejecutar SP ───────────────────────────────────────────────────────
@@ -859,6 +861,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_FECHA_FIN", (dtFechaFin.ToString("yyyy-MM-dd"), ParameterDirection.Input, HanaDbType.Date) },
                     { "P_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA", (string.IsNullOrEmpty(FiltroPlanta)   ? (object)null : FiltroPlanta,   ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TURNO", (string.IsNullOrEmpty(FiltroTurno)   ? (object)null : FiltroTurno,   ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PRODUCTO", (string.IsNullOrEmpty(FiltroProducto)   ? (object)null : FiltroProducto,   ParameterDirection.Input, HanaDbType.NVarChar) },
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -1403,7 +1407,6 @@ namespace MantenimientosPTM.Controllers
                 string proceso = Request.Headers["Proceso"];
                 string FiltroTurno = Request.Headers["Turno"];
 
-                // 🔥 NUEVO: leer fechas del filtro
                 string filtroFechaInicio = Request.Headers["FechaInicio"];
                 string filtroFechaFin = Request.Headers["FechaFin"];
 
@@ -1419,7 +1422,11 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 int numplanta = int.Parse(plantaHeader);
-                int turno = 0;
+
+                // 🔥 CAMBIO: turno y corte ahora nullable, según lo que espera Sppdx_FiltradoProductosTerminados
+                int? turno = null;
+                int? corte = null;
+
                 DateTime TurnoStar = DateTime.Now;
                 DateTime TurnoEnd = DateTime.Now;
                 DateTime TurnoScrapStar = DateTime.Now;
@@ -1432,22 +1439,31 @@ namespace MantenimientosPTM.Controllers
                 string JSONstringSp = string.Empty;
                 List<ReportesProdTerm> reportesProdTerm = new List<ReportesProdTerm>();
 
-                // 🔥 NUEVO: ¿el usuario mandó un rango de fechas explícito desde el filtro?
                 DateTime fechaInicioParsed = DateTime.MinValue;
                 DateTime fechaFinParsed = DateTime.MinValue;
 
-                bool hayFiltroFechas =
-                    DateTime.TryParse(filtroFechaInicio, out fechaInicioParsed) &&
-                    DateTime.TryParse(filtroFechaFin, out fechaFinParsed);
+                bool hayFechaInicio = DateTime.TryParse(filtroFechaInicio, out fechaInicioParsed);
+                bool hayFiltroFechas = hayFechaInicio && DateTime.TryParse(filtroFechaFin, out fechaFinParsed);
 
-                if (hayFiltroFechas)
+                // 🔥 fechaBase ahora usa fechaInicio si viene, sin importar si fechaFin vino o no
+                DateTime fechaBase = hayFechaInicio ? fechaInicioParsed.Date : DateTime.Today;
+
+                // 🔥 Reporte del día completo (ambos turnos) => turno = NULL, corte = NULL
+                if (FiltroTurno == "0")
                 {
-                    DateTime fechaIni = fechaInicioParsed.Date;
-                    DateTime fechaFinDia = fechaFinParsed.Date;
+                    turno = null;
+                    corte = null;
 
-                    // 🔥 Si no viene turno explícito, lo deducimos igual que la lógica original (por hora actual)
+                    TurnoStar = fechaBase.AddHours(4.5).AddSeconds(1);                   // 04:30:01
+                    TurnoEnd = fechaBase.AddDays(1).AddHours(4.5);                       // 04:30:00 día siguiente
+
+                    TurnoScrapStar = fechaBase.AddHours(5).AddMinutes(45).AddSeconds(1); // 05:45:01
+                    TurnoScrapEnd = fechaBase.AddDays(1).AddHours(5).AddMinutes(45);     // 05:45:00 día siguiente
+                }
+                else
+                {
+                    // Si no viene turno explícito y no es "0", deducimos por hora actual (igual que la lógica original)
                     string turnoEfectivo = FiltroTurno;
-
                     if (string.IsNullOrEmpty(turnoEfectivo) || turnoEfectivo == "null")
                     {
                         bool esTurno1PorHora = horaActual >= horaInicioTurno && horaActual <= horaFinTurno;
@@ -1457,79 +1473,29 @@ namespace MantenimientosPTM.Controllers
                     if (turnoEfectivo == "1")
                     {
                         turno = 1;
+                        corte = 3; // todo el turno 1, según el patrón de Sppdx_FiltradoProductosTerminados
 
-                        // Turno 1: 4:30:01am a 4:30pm del mismo día
-                        TurnoStar = fechaIni.AddHours(4.5).AddSeconds(1);
-                        TurnoEnd = fechaFinDia.AddHours(16.5);
+                        TurnoStar = fechaBase.AddHours(4.5).AddSeconds(1);
+                        TurnoEnd = fechaBase.AddHours(16.5);
 
-                        TurnoScrapStar = fechaIni.AddHours(5).AddMinutes(45).AddSeconds(1);
-                        TurnoScrapEnd = fechaFinDia.AddHours(17).AddMinutes(45);
+                        TurnoScrapStar = fechaBase.AddHours(5).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = fechaBase.AddHours(17).AddMinutes(45);
                     }
                     else // turnoEfectivo == "2"
                     {
                         turno = 2;
+                        corte = 3; // todo el turno 2
 
-                        // Turno 2: 4:30:01pm del día a 4:30am del día siguiente
-                        TurnoStar = fechaIni.AddHours(16.5).AddSeconds(1);
-                        TurnoEnd = fechaFinDia.AddDays(1).AddHours(4.5);
+                        TurnoStar = fechaBase.AddHours(16.5).AddSeconds(1);
+                        TurnoEnd = fechaBase.AddDays(1).AddHours(4.5);
 
-                        TurnoScrapStar = fechaIni.AddHours(17).AddMinutes(45).AddSeconds(1);
-                        TurnoScrapEnd = fechaFinDia.AddDays(1).AddHours(5).AddMinutes(45);
-                    }
-                }
-                else if (FiltroTurno == null || FiltroTurno == "null")
-                {
-                    // Asignar turno y rangos de fechas (lógica original: turno actual por hora del sistema)
-                    if (horaActual >= horaInicioTurno && horaActual <= horaFinTurno)
-                    {
-                        turno = 1;
+                        TurnoScrapStar = fechaBase.AddHours(17).AddMinutes(45).AddSeconds(1);
+                        TurnoScrapEnd = fechaBase.AddDays(1).AddHours(5).AddMinutes(45);
 
-                        TurnoStar = DateTime.Today.AddHours(4.5).AddSeconds(1);
-                        TurnoEnd = DateTime.Today.AddHours(16.5);
-                        TurnoScrapStar = DateTime.Today.AddHours(5).AddMinutes(45).AddSeconds(1);
-                        TurnoScrapEnd = DateTime.Today.AddHours(17).AddMinutes(45);
-                    }
-                    else
-                    {
-                        turno = 2;
-
-                        TurnoStar = DateTime.Today.AddHours(16.5).AddSeconds(1);
-                        TurnoEnd = DateTime.Today.AddDays(1).AddHours(4.5);
-                        TurnoScrapStar = DateTime.Today.AddHours(17).AddMinutes(45).AddSeconds(1);
-                        TurnoScrapEnd = DateTime.Today.AddDays(1).AddHours(5).AddMinutes(45);
-
-                        if (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
-                           (horaActual.Hour == 4 && horaActual.Minute <= 30))
-                        {
-                            TurnoStar = TurnoStar.AddDays(-1);
-                            TurnoEnd = TurnoEnd.AddDays(-1);
-                            TurnoScrapStar = TurnoScrapStar.AddDays(-1);
-                            TurnoScrapEnd = TurnoScrapEnd.AddDays(-1);
-                        }
-                    }
-                }
-                else
-                {
-                    if (FiltroTurno == "1")
-                    {
-                        turno = 1;
-
-                        TurnoStar = DateTime.Today.AddHours(4.5).AddSeconds(1);
-                        TurnoEnd = DateTime.Today.AddHours(16.5);
-                        TurnoScrapStar = DateTime.Today.AddHours(5).AddMinutes(45).AddSeconds(1);
-                        TurnoScrapEnd = DateTime.Today.AddHours(17).AddMinutes(45);
-                    }
-                    else
-                    {
-                        turno = 2;
-
-                        TurnoStar = DateTime.Today.AddHours(16.5).AddSeconds(1);
-                        TurnoEnd = DateTime.Today.AddDays(1).AddHours(4.5);
-                        TurnoScrapStar = DateTime.Today.AddHours(17).AddMinutes(45).AddSeconds(1);
-                        TurnoScrapEnd = DateTime.Today.AddDays(1).AddHours(5).AddMinutes(45);
-
-                        if (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
-                           (horaActual.Hour == 4 && horaActual.Minute <= 30))
+                        // Si no vino filtro de fechas explícito y ya estamos en la madrugada del turno 2, retrocedemos un día (igual que la lógica original)
+                        if (!hayFiltroFechas &&
+                            (horaActual.Hour >= 0 && horaActual.Hour < 4 ||
+                            (horaActual.Hour == 4 && horaActual.Minute <= 30)))
                         {
                             TurnoStar = TurnoStar.AddDays(-1);
                             TurnoEnd = TurnoEnd.AddDays(-1);
@@ -1539,8 +1505,6 @@ namespace MantenimientosPTM.Controllers
                     }
                 }
 
-                double horas = (horaActual - horaInicioTurno).TotalHours;
-                int horasT = Convert.ToInt32(horas);
                 string ConectionStringSQL = ConfigurationManager.ConnectionStrings["SQLConnection"].ConnectionString;
 
                 using (SqlConnection cnn = new SqlConnection(ConectionStringSQL))
@@ -1551,21 +1515,24 @@ namespace MantenimientosPTM.Controllers
                     using (SqlCommand command = new SqlCommand())
                     {
                         command.Connection = cnn;
-                        command.CommandText = "Sppdx_ObtenerProductosTerminados";
+                        command.CommandText = "Sppdx_FiltradoProductosTerminados"; // 🔥 CAMBIO: SP reutilizado
                         command.CommandType = CommandType.StoredProcedure;
 
-                        command.Parameters.AddWithValue("@turno", turno);
+                        command.Parameters.AddWithValue("@turno", (object)turno ?? DBNull.Value);
                         command.Parameters.AddWithValue("@proceso", proceso);
                         command.Parameters.AddWithValue("@FechaTurnoInicio", TurnoStar);
                         command.Parameters.AddWithValue("@FechaTurnoFin", TurnoEnd);
-                        command.Parameters.AddWithValue("@Horas", horasT == 0 ? 1 : horasT);
+                        command.Parameters.AddWithValue("@Codigo", DBNull.Value);   // 🔥 no filtras por código
+                        command.Parameters.AddWithValue("@Linea", DBNull.Value);   // 🔥 no filtras por línea
                         command.Parameters.AddWithValue("@Planta", numplanta);
+                        command.Parameters.AddWithValue("@Corte", (object)corte ?? DBNull.Value);
                         command.Parameters.AddWithValue("@FechaTurnoInicioScrap", TurnoScrapStar);
                         command.Parameters.AddWithValue("@FechaTurnoFinScrap", TurnoScrapEnd);
 
-                        // 🔥 Agrega esto para ver exactamente qué parámetros van
-                        System.Diagnostics.Debug.WriteLine($"turno={turno} proceso={proceso} planta={numplanta}");
-                        System.Diagnostics.Debug.WriteLine($"inicio={TurnoStar} fin={TurnoEnd}, hora= {horasT}, FechaTurnoInicioScrap={TurnoScrapStar}, FechaTurnoFinScrap={TurnoScrapEnd}");
+                        // 🔥 Nota: @Horas ya NO se manda, el SP la calcula internamente con @turno + @Corte
+
+                        System.Diagnostics.Debug.WriteLine($"turno={(turno.HasValue ? turno.Value.ToString() : "NULL (día)")} corte={(corte.HasValue ? corte.Value.ToString() : "NULL")} proceso={proceso} planta={numplanta}");
+                        System.Diagnostics.Debug.WriteLine($"inicio={TurnoStar} fin={TurnoEnd}, FechaTurnoInicioScrap={TurnoScrapStar}, FechaTurnoFinScrap={TurnoScrapEnd}");
 
                         using (SqlDataAdapter da = new SqlDataAdapter(command))
                         using (DataSet ds = new DataSet())
@@ -1573,7 +1540,7 @@ namespace MantenimientosPTM.Controllers
                             da.Fill(ds);
                             DataTable tabla1 = ds.Tables[0];
 
-                            System.Diagnostics.Debug.WriteLine($"Filas: {tabla1.Rows.Count}"); // 🔥
+                            System.Diagnostics.Debug.WriteLine($"Filas: {tabla1.Rows.Count}");
 
                             using (tabla1)
                             {
@@ -1586,15 +1553,15 @@ namespace MantenimientosPTM.Controllers
                                     foreach (DataRow row in tabla1.Rows)
                                     {
                                         var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                                        {
-                                            { "P_QUERY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                            { "P_USUARIO", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                            { "P_PLANTA", (plantaHeader, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                            { "P_LINEA", (row["Id_Linea"], ParameterDirection.Input, HanaDbType.NVarChar) },
-                                            { "P_GRUPO_ART", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
-                                            { "P_VALIDAR_CAP", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
-                                            { "P_ITEMCODE", (row["Codigo"], ParameterDirection.Input, HanaDbType.NVarChar) }
-                                        };
+                                {
+                                    { "P_QUERY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                    { "P_USUARIO", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                    { "P_PLANTA", (plantaHeader, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                    { "P_LINEA", (row["Id_Linea"], ParameterDirection.Input, HanaDbType.NVarChar) },
+                                    { "P_GRUPO_ART", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
+                                    { "P_VALIDAR_CAP", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
+                                    { "P_ITEMCODE", (row["Codigo"], ParameterDirection.Input, HanaDbType.NVarChar) }
+                                };
 
                                         var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                                             logicaPlaneacion.AD.GCBuscarArticulos,
@@ -1603,29 +1570,27 @@ namespace MantenimientosPTM.Controllers
 
                                         JArray Articulo = JArray.Parse(resultHana.JsonResult);
 
-                                        // ✅ Si viene vacío, skip
                                         if (!Articulo.Any())
                                         {
-                                            row["Turno"] = turno;
+                                            row["Turno"] = turno.HasValue ? turno.Value : 0;
                                             row["PesoMinimo"] = 0;
                                             row["KgsDia"] = 0;
                                             continue;
                                         }
 
-
                                         decimal KgsDia = Convert.ToDecimal(Articulo[0]["KgsDia"] != null ? (decimal.Parse(Articulo[0]["KgsDia"].ToString()) / 24).ToString() : "0");
                                         decimal PesoMinimo = Convert.ToDecimal(Articulo[0]["PesoMinimo"] != null ? Articulo[0]["PesoMinimo"].ToString() : "0");
 
-                                        row["Turno"] = turno;
+                                        row["Turno"] = turno.HasValue ? turno.Value : 0;
                                         row["PesoMinimo"] = PesoMinimo;
                                         row["KgsDia"] = KgsDia;
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    System.Diagnostics.Debug.WriteLine($"ERROR foreach: {ex.Message}"); // 🔥
-                                    System.Diagnostics.Debug.WriteLine($"Inner: {ex.InnerException?.Message}"); // 🔥
-                                    throw; // para que también lo veas en el catch del método
+                                    System.Diagnostics.Debug.WriteLine($"ERROR foreach: {ex.Message}");
+                                    System.Diagnostics.Debug.WriteLine($"Inner: {ex.InnerException?.Message}");
+                                    throw;
                                 }
 
                                 JSONstringSp = JsonConvert.SerializeObject(tabla1);
@@ -1635,7 +1600,6 @@ namespace MantenimientosPTM.Controllers
                     }
                 }
 
-                // Armar respuesta homologada
                 if (reportesProdTerm == null || reportesProdTerm.Count == 0)
                 {
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
@@ -1668,6 +1632,5 @@ namespace MantenimientosPTM.Controllers
                 return Json(jsonResponse, JsonRequestBehavior.AllowGet);
             }
         }
-
     }
 }

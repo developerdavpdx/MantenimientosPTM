@@ -363,7 +363,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 } else if (item.ID_PARO && item.ID_PARO.toString().trim() !== '') {
                     // 🟦 Es un paro guardado en DB
                     fila._origen = 'PARO_MANUAL';
-                    fila._marcador = '⛔';
+                    fila._marcador = '⏸️';
                     fila._rowClass = 'row-paro';
                 }
 
@@ -997,7 +997,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados al grid`);
 
                 AlertManager.mostrar(
-                    `✅ Se agregaron ${filasNuevas.length} productos terminados al grid del turno: ${filtroTurno == '0' ? 'Reporte del dia' : filtroTurno || 'de acuerdo a la hora actual'}`,
+                    `✅ Se agregaron ${filasNuevas.length} productos terminados al grid del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
                     "info"
                 );
 
@@ -1046,8 +1046,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     FiltroEstatus: "", // 🟦 Sin filtro de estatus, traer todos
                     FiltroPlanta: this.datos_usuario[0].PLANTA,
                     "FiltroArea": (this.datos_usuario[0].PLANTA == 1 ? 1 : 14) || null,
-                    "FiltroIncluirCorrectivo": null,
-                    "FiltroTipoLinea": 'PVC'
+                    "FiltroIncluirCorrectivo": null
+                    // 🟦 Cuando se agregue el parámetro de área en el SP, agregar aquí:
+                    // FiltroArea: "PVC" o el ID correspondiente
                 }
             });
 
@@ -1110,7 +1111,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             // 🟦 Marcar como paro
             nuevaFila._origen = 'PARO_MANUAL';
-            nuevaFila._marcador = '⛔';
+            nuevaFila._marcador = '⏸️';
             nuevaFila._rowClass = 'row-paro';
 
             const lineaEncontrada = this.listaLineas.find(

@@ -127,7 +127,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             false
         );
         // 🔥 CONSULTAR DATOS (firma actualizada con 5 params, igual que PVC)
-        this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
+        this.consultarDatos();
         console.log('✅ Sistema PEAD LISO inicializado');
     }
 
@@ -289,22 +289,29 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
     }
 
-    async consultarDatos(fechaInicio, fechaFin, FitroPlanta, FiltroTurno, FiltroLinea, filtroProducto) {
+    async consultarDatos() {
 
         try {
             GlobalUtil.mostrarLoader(true);
             $("#tablaProduccion").addClass("d-none");
+            let Planta = this.datos_usuario[0].PLANTA;
+            let FiltroFechaInicio = $("#FiltroFechaInicio").val() || null;
+            let FiltroFechaFin = $("#FiltroFechaFin").val() || null;
+            let FiltroPlanta = Planta;
+            let FiltroLinea = $("#FiltroLinea").val() || null;
+            let FiltroTurno = $("#FiltroTurno").val() || null;
+            let FiltroProducto = $("#FiltroProducto").val() || '';
 
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetTiemposMuertosPeadLiso`,
                 type: "GET",
                 data: {
-                    FiltroFechaInicio: fechaInicio,
-                    FiltroFechaFin: fechaFin,
+                    FiltroFechaInicio: FiltroFechaInicio,
+                    FiltroFechaFin: FiltroFechaFin,
+                    FiltroPlanta: Planta,
                     FiltroLinea: FiltroLinea,
-                    FiltroPlanta: FitroPlanta,
-                    FiltroTurno: FiltroTurno || '',        // 🔥 NUEVO
-                    FiltroProducto: filtroProducto || ''   // 🔥 NUEVO
+                    FiltroTurno: FiltroTurno,
+                    FiltroProducto: FiltroProducto
                 }
             });
 
@@ -319,17 +326,17 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             }
 
             // 🔥 Correctivos se agregan ANTES de pintar totales
-            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, FiltroLinea);
+            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // 🔥 Preventivos se agregan también
-            const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, FiltroLinea);
+            const seAgregaronPreventivos = await this.traerPreventivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // ✅ Productos terminados se agregan también (turno actual si no hay fecha, mismo patrón que PVC)
             const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, 'PPEADLISO');
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
 
             // 🟦 NUEVO: Paros de producción se agregan también
-            const seAgregaronParos = await this.traerParosProduccionCerrados(fechaInicio, fechaFin, FiltroLinea);
+            const seAgregaronParos = await this.traerParosProduccionCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // 🔥 Si no hay datos originales, correctivos, preventivos, paros NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {
@@ -447,8 +454,8 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     _marcador: '📦',
                     _rowClass: 'row-producto-terminado'
                 } : item.ID_PARO && item.ID_PARO.toString().trim() !== '' ? {
-                    _origen: 'PARO',
-                    _marcador: '⏸️',
+                    _origen: 'PARO_MANUAL',
+                    _marcador: '⛔',
                     _rowClass: 'row-paro'
                 } : {})
 
@@ -696,7 +703,8 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     FiltroEstatus: "", // 🟦 Sin filtro de estatus, traer todos
                     FiltroPlanta: this.datos_usuario[0].PLANTA,
                     "FiltroArea": (this.datos_usuario[0].PLANTA == 1 ? 9 : 9) || null, // 🟦 Área PEAD LISO
-                    "FiltroIncluirCorrectivo": null
+                    "FiltroIncluirCorrectivo": null,
+                    "FiltroTipoLinea": 'PEAD'
                 }
             });
 
@@ -759,7 +767,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             // 🟦 Marcar como paro
             nuevaFila._origen = 'PARO_MANUAL';
-            nuevaFila._marcador = '⏸️';
+            nuevaFila._marcador = '⛔';
             nuevaFila._rowClass = 'row-paro';
 
             const lineaEncontrada = this.listaLineas.find(
@@ -2365,13 +2373,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             $btn.prop('disabled', true);
 
             try {
-                const fechaInicio = $('#FiltroFechaInicio').val();
-                const fechaFin = $('#FiltroFechaFin').val();
-                const filtroTurno = $('#FiltroTurno').val();
-                const filtroProducto = $('#FiltroProducto').val();
-                const FiltroLinea = $('#FiltroLinea').val();
-
-                await this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, filtroTurno, FiltroLinea, filtroProducto);
+                await this.consultarDatos();
             } finally {
                 $btn.prop('disabled', false);
             }
@@ -2419,8 +2421,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             $("#FiltroProducto").val("");
             $("#FiltroLinea").val("");
 
-            this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
-
+            this.consultarDatos();
         });
 
         $('#FiltroFechaInicio, #FiltroFechaFin')
@@ -2432,7 +2433,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 const FechaTexto = this.formatearRangoFechas(fechaInicio, fechaFin);
                 $("#mesActual").text(FechaTexto);
 
-                this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, null, null, null);
+                this.consultarDatos();
 
             });
 
@@ -2599,7 +2600,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 this.cambiosPendientes = [];
 
                 // 🔥 refrescar grid
-                this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
+                this.consultarDatos();
 
             } else {
 
