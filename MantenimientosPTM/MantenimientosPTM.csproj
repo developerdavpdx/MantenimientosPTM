@@ -2398,6 +2398,7 @@
     <Content Include="Scripts\Login.js" />
     <Content Include="Scripts\main.js" />
     <Content Include="Scripts\mantenimientos_correctivos_refactor.js" />
+    <Content Include="Scripts\ProductosTerminadosHelper.js" />
     <Content Include="Scripts\reporte_stock_refactor.js" />
     <Content Include="Scripts\select2.min.js" />
     <Content Include="Scripts\solicitud_mantenimiento_correctivo_refactor.js" />

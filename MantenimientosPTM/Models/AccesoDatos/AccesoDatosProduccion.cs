@@ -29,7 +29,6 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGetCategoriasParo\"";
             }
         }
-
         public string GCIntertarCategoriaParo
         {
             get
@@ -37,7 +36,6 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOInsertCategoriaParo\"";
             }
         }
-
         public string GCReanudarParoProduccion
         {
             get
@@ -94,7 +92,6 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminaParoProduccion\"";
             }
         }
-                
         public string GCConsultarTiemposMuertosINY
         {
             get
@@ -102,14 +99,19 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOConsultarTiemposMuertosINY\"";
             }
         }
-
         public string GCGuardarTiemposMuertosINY {
             get
             {
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGuardarTiemposMuertosINY\"";
             }
         }
-
+        public string GCValidarProductosTerminadosExistentes
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOValidarProductosTerminadosExistentes\"";
+            }
+        }
         #endregion
 
         #region AditionalClassModel

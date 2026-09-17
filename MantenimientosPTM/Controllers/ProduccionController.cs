@@ -1000,6 +1000,92 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        [HttpGet]
+        public JsonResult ValidarProductosTerminadosExistentes(
+        string IdsJson,
+        string TipoProceso)
+        {
+            GlobalCommands.JsonResponseMtto jsonResponse;
+
+            try
+            {
+                if (string.IsNullOrEmpty(IdsJson))
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "ERROR",
+                        Message = "Debe enviar el listado de IDs a validar.",
+                        Data = string.Empty
+                    };
+
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+
+                if (string.IsNullOrEmpty(TipoProceso))
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "ERROR",
+                        Message = "Debe enviar el tipo de proceso (PVC, PEAD, INY o CORR).",
+                        Data = string.Empty
+                    };
+
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_IDS_JSON",      (IdsJson,     ParameterDirection.Input, HanaDbType.NClob) },
+                    { "P_TIPO_PROCESO",  (TipoProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCValidarProductosTerminadosExistentes,
+                    parameters
+                );
+
+                if (resultHana.JsonResult == "[]")
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "NO",
+                        Message = "No se encontraron registros.",
+                        Data = string.Empty
+                    };
+                }
+                else if (resultHana.JsonResult.Contains("Error"))
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "ERROR",
+                        Message = "Error al consultar: " + resultHana.JsonResult,
+                        Data = string.Empty
+                    };
+                }
+                else
+                {
+                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    {
+                        Status = "OK",
+                        Message = "Datos obtenidos correctamente.",
+                        Data = resultHana.JsonResult
+                    };
+                }
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse = new GlobalCommands.JsonResponseMtto()
+                {
+                    Status = "ERROR",
+                    Message = "Error al consultar: " + ex.ToString(),
+                    Data = string.Empty
+                };
+
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+        }
 
         [HttpPost]
         public JsonResult AgregarTipoParoProduccion()
@@ -1552,16 +1638,35 @@ namespace MantenimientosPTM.Controllers
                                 {
                                     foreach (DataRow row in tabla1.Rows)
                                     {
+                                        // 🔥 Si turno es null, deducirlo mediante FechaPesaje de la fila actual
+                                        int? turnoFila = turno;
+                                        if (!turnoFila.HasValue && turnoFila == null)
+                                        {
+                                            // Obtener la hora de la FechaPesaje de la fila
+                                            if (row["FechaPesaje"] != null && row["FechaPesaje"] != DBNull.Value)
+                                            {
+                                                DateTime fechaPesaje = Convert.ToDateTime(row["FechaPesaje"]);
+                                                bool esTurno1PorFecha = fechaPesaje >= horaInicioTurno && fechaPesaje <= horaFinTurno;
+                                                turnoFila = esTurno1PorFecha ? 1 : 2;
+                                            }
+                                            else
+                                            {
+                                                // Si no hay FechaPesaje, usar la lógica original con horaActual
+                                                bool esTurno1PorHora = horaActual >= horaInicioTurno && horaActual <= horaFinTurno;
+                                                turnoFila = esTurno1PorHora ? 1 : 2;
+                                            }
+                                        }
+
                                         var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                                {
-                                    { "P_QUERY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                    { "P_USUARIO", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                    { "P_PLANTA", (plantaHeader, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                    { "P_LINEA", (row["Id_Linea"], ParameterDirection.Input, HanaDbType.NVarChar) },
-                                    { "P_GRUPO_ART", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
-                                    { "P_VALIDAR_CAP", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
-                                    { "P_ITEMCODE", (row["Codigo"], ParameterDirection.Input, HanaDbType.NVarChar) }
-                                };
+                                        {
+                                            { "P_QUERY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                            { "P_USUARIO", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                            { "P_PLANTA", (plantaHeader, ParameterDirection.Input, HanaDbType.NVarChar) },
+                                            { "P_LINEA", (row["Id_Linea"], ParameterDirection.Input, HanaDbType.NVarChar) },
+                                            { "P_GRUPO_ART", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
+                                            { "P_VALIDAR_CAP", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
+                                            { "P_ITEMCODE", (row["Codigo"], ParameterDirection.Input, HanaDbType.NVarChar) }
+                                        };
 
                                         var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                                             logicaPlaneacion.AD.GCBuscarArticulos,
@@ -1572,7 +1677,7 @@ namespace MantenimientosPTM.Controllers
 
                                         if (!Articulo.Any())
                                         {
-                                            row["Turno"] = turno.HasValue ? turno.Value : 0;
+                                            row["Turno"] = turnoFila.HasValue ? turnoFila.Value : 0;
                                             row["PesoMinimo"] = 0;
                                             row["KgsDia"] = 0;
                                             continue;
@@ -1581,7 +1686,7 @@ namespace MantenimientosPTM.Controllers
                                         decimal KgsDia = Convert.ToDecimal(Articulo[0]["KgsDia"] != null ? (decimal.Parse(Articulo[0]["KgsDia"].ToString()) / 24).ToString() : "0");
                                         decimal PesoMinimo = Convert.ToDecimal(Articulo[0]["PesoMinimo"] != null ? Articulo[0]["PesoMinimo"].ToString() : "0");
 
-                                        row["Turno"] = turno.HasValue ? turno.Value : 0;
+                                        row["Turno"] = turnoFila.HasValue ? turnoFila.Value : 0;
                                         row["PesoMinimo"] = PesoMinimo;
                                         row["KgsDia"] = KgsDia;
                                     }

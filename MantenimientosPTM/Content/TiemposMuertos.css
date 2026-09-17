@@ -207,6 +207,49 @@
     /*border-left: 2px solid #2196f3 !important;*/
 }
 
+/* 🔥 NUEVO: Estilo para filas nuevas - Color de fondo suave azul claro */
+/* Estos selectores tienen MAYOR especificidad para asegurar que prevalezcan */
+.ag-theme-alpine .ag-row.row-correctivo.fila-nueva {
+    background-color: #e3f2fd !important;
+}
+
+.ag-theme-alpine .ag-row.row-correctivo.fila-nueva:hover {
+    background-color: #bbdefb !important;
+}
+
+.ag-theme-alpine .ag-row.row-preventivo.fila-nueva {
+    background-color: #e3f2fd !important;
+}
+
+.ag-theme-alpine .ag-row.row-preventivo.fila-nueva:hover {
+    background-color: #bbdefb !important;
+}
+
+.ag-theme-alpine .ag-row.row-producto-terminado.fila-nueva {
+    background-color: #e3f2fd !important;
+}
+
+.ag-theme-alpine .ag-row.row-producto-terminado.fila-nueva:hover {
+    background-color: #bbdefb !important;
+}
+
+.ag-theme-alpine .ag-row.row-paro.fila-nueva {
+    background-color: #e3f2fd !important;
+}
+
+.ag-theme-alpine .ag-row.row-paro.fila-nueva:hover {
+    background-color: #bbdefb !important;
+}
+
+/* Fallback para cualquier otra combinación */
+.ag-theme-alpine .ag-row.fila-nueva {
+    background-color: #e3f2fd !important;
+}
+
+.ag-theme-alpine .ag-row.fila-nueva:hover {
+    background-color: #bbdefb !important;
+}
+
 /* Badge para indicar origen en la primera celda */
 .origen-badge {
     display: inline-block;

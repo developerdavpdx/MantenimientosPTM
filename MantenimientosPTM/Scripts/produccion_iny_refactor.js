@@ -60,7 +60,7 @@ class UIManager_INY {
             $("#colapse-title").css("visibility", "hidden");
         });
 
-        UIManager_INY.ajustarAlturaCard();
+        UIManager_INY.ajustarAlturaCard();  // 🔥 agregar esta línea
 
         $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
         $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
@@ -87,7 +87,7 @@ class UIManager_INY {
         // Calcular al cargar
         calcularAltura();
 
-        // Recalcular al cambiar tamaño de ventana
+    // Recalcular al cambiar tamaño de ventana
         $(window).off("resize.card").on("resize.card", calcularAltura);
     }
 }
@@ -103,6 +103,7 @@ class GestionProduccionINY extends GestionProduccionBase {
         // 🔥 TODO: reemplazar con el ID_AREA real de INY PL2
         this.ID_AREA_CORRECTIVOS = (datos_usuario[0].PLANTA == "1" ? 15 : 15); // 🔥 INY Se dejo el mismo por que no existe INYECCION para planta 1
         this.ID_AREA_PREVENTIVOS = (datos_usuario[0].PLANTA == "1" ? 15 : 15); // 🔥 INY Se dejo el mismo por que no existe INYECCION para planta 1
+        this.tipoProcesoActual = 'INYECCION';
 
         // ✅ Mapa de líneas INY P2: Match ya que en NW vienen diferentes
         this.MAPA_LINEAS_INY = {
@@ -392,6 +393,14 @@ class GestionProduccionINY extends GestionProduccionBase {
             } else {
                 // AlertManager.mostrar(response.Message, "info");
                 hayDatosOriginales = this.cargarDatosGrid(null);
+            }
+
+            // 🔥 NUEVO: Si se encontraron datos, colapsar automáticamente el panel de filtros
+            if (hayDatosOriginales) {
+                const elColapso = document.getElementById('colapseFiltros');
+                if (elColapso && elColapso.classList.contains('show')) {
+                    new bootstrap.Collapse(elColapso, { toggle: false }).hide();
+                }
             }
 
             // Correctivos cerrados
@@ -1014,335 +1023,171 @@ class GestionProduccionINY extends GestionProduccionBase {
     }
 
     // ========================================
-    // AGREGAR PRODUCTOS TERMINADOS AL GRID
+    // 🔥 NUEVO: Agregar Productos Terminados al Grid
     // ========================================
     async agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, showwarning = false) {
         try {
-
-            // ========================================
-            // SIN PRODUCTOS
-            // ========================================
             if (!productosTerminados || productosTerminados.length === 0) {
-
-                if (showwarning) {
+                if (showwarning)
                     AlertManager.mostrar(
                         `No se encontraron productos terminados para los filtros seleccionados del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
                         "warning"
                     );
-                }
-
                 return false;
             }
 
+            // 🔥 NUEVO: validar en batch todos los IDs antes de procesar
+            const idsAValidar = productosTerminados.map(item => item.Id);
+            const { idsExistentes: idsYaExistentesEnBD, detalle: productosYaRegistrados } =
+                await ProductosTerminadosHelper.validarProductosTerminadosExistentes(idsAValidar, this.tipoProcesoActual, this.URLBase);
 
-            // ========================================
-            // PRODUCTOS YA EXISTENTES EN EL GRID
-            // ========================================
+
             const nodosExistentes = new Map();
-
             this.gridApi.forEachNode(node => {
-
                 if (node.data?.ID_PRODUCTO_TERMINADO) {
-
-                    nodosExistentes.set(
-                        String(node.data.ID_PRODUCTO_TERMINADO),
-                        node
-                    );
+                    nodosExistentes.set(String(node.data.ID_PRODUCTO_TERMINADO), node);
                 }
             });
 
-
-            // ========================================
-            // COLECCIONES
-            // ========================================
             const filasNuevas = [];
             const filasActualizadas = [];
             const lineasNoEncontradas = [];
             let filasAgregadas = 0;
 
-            // ========================================
-            // PROCESAR PRODUCTOS
-            // ========================================
             productosTerminados.forEach(item => {
 
-                // ----------------------------------------
-                // FECHA OPERATIVA
-                // ----------------------------------------
-                const fecha = this.calcularFechaOperativaTurno(
-                    item.FechaPesaje,
-                    item.Turno
-                );
+                if (idsYaExistentesEnBD.has(String(item.Id))) {
+                    return; // ✅ ya viene con detalle completo desde validarProductosTerminadosExistentes
+                }
+
+                const fecha = this.calcularFechaOperativaTurno(item.FechaPesaje, item.Turno);
 
                 if (!fecha) {
-                    console.warn(
-                        `⚠️ Producto ${item.Codigo} tiene fecha inválida, será omitido`
-                    );
+                    console.warn(`⚠️ Producto ${item.Codigo} tiene fecha inválida, será omitido`);
                     return;
                 }
 
-
-                // ----------------------------------------
-                // VALIDAR PRODUCCIÓN
-                // ----------------------------------------
-                if (
-                    parseFloat(item.NumTubos || 0) === 0 ||
-                    parseFloat(item.PesoTotal || 0) === 0
-                ) {
-                    console.warn(
-                        `⚠️ Producto ${item.Codigo} sin datos de producción, será omitido`
-                    );
+                if (parseFloat(item.NumTubos || 0) === 0 || parseFloat(item.PesoTotal || 0) === 0) {
+                    console.warn(`⚠️ Producto ${item.Codigo} sin datos de producción, será omitido`);
                     return;
                 }
 
-                // ----------------------------------------
-                // MESES
-                // ----------------------------------------
-                const meses = [
-                    'ENERO',
-                    'FEBRERO',
-                    'MARZO',
-                    'ABRIL',
-                    'MAYO',
-                    'JUNIO',
-                    'JULIO',
-                    'AGOSTO',
-                    'SEPTIEMBRE',
-                    'OCTUBRE',
-                    'NOVIEMBRE',
-                    'DICIEMBRE'
-                ];
+                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
-                // ========================================
-                // OBTENER LÍNEA
-                // ========================================
                 let lineaLabel = null;
 
-
                 if (this.datos_usuario[0].PLANTA == 1) {
-
                     const lineaEncontrada = this.listaLineas.find(
                         l => String(l.value) === String(item.Id_Linea)
                     );
-
                     lineaLabel = lineaEncontrada ? lineaEncontrada.label : null;
                 } else {
-
-                    lineaLabel = this.MAPA_LINEAS_INY[item.Id_Linea] || null;
+                    lineaLabel = this.MAPA_LINEAS_INY ? this.MAPA_LINEAS_INY[item.Id_Linea] : null || null;
                 }
 
-                // ----------------------------------------
-                // SI NO EXISTE LÍNEA
-                // ----------------------------------------
                 if (!lineaLabel) {
-
-                    lineasNoEncontradas.push(
-                        `${item.Codigo} (Línea ${item.Id_Linea})`
-                    );
-
+                    lineasNoEncontradas.push(`${item.Codigo} (Línea ${item.Id_Linea})`);
                     return;
                 }
 
-                // ========================================
-                // BUSCAR PRODUCTO EXISTENTE
-                // ========================================
-                const nodoExistente =
-                    nodosExistentes.get(String(item.Id));
+                const nodoExistente = nodosExistentes.get(String(item.Id));
 
-
-                // ==================================================
-                // CASO 1: YA EXISTE → ACTUALIZAR
-                // ==================================================
                 if (nodoExistente) {
+                    const dataActualizada = { ...nodoExistente.data };
 
-                    const dataActualizada = {
-                        ...nodoExistente.data
-                    };
-
-                    // ----------------------------------------
-                    // DATOS GENERALES
-                    // ----------------------------------------
                     dataActualizada.Fecha = fecha;
-                    dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
-                    dataActualizada.Linea = lineaLabel;
                     dataActualizada.Producto = item.Codigo || '';
                     dataActualizada.Turno = String(item.Turno || '');
-
-
-                    // ----------------------------------------
-                    // PRODUCCIÓN INY
-                    // ----------------------------------------
-                    dataActualizada.TRLiberados = parseFloat(item.NumTubos) || 0;
-                    dataActualizada.ProduccionNeta = parseFloat(item.PesoTotal) || 0;
-                    dataActualizada.ScrapColada = parseFloat(item.ScrapPt) || 0;
-                    dataActualizada.TotalScrap = parseFloat(item.ScrapTotal) || 0;
-
-                    // ----------------------------------------
-                    // PESO / RENDIMIENTO
-                    // ----------------------------------------
+                    dataActualizada.TRFabricados = parseFloat(item.NumTubos) || 0;
+                    dataActualizada.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
+                    dataActualizada.PorcentajeScrap = 0;
+                    dataActualizada.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
+                    dataActualizada.Linea = lineaLabel;
+                    dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
                     dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     dataActualizada.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     dataActualizada.KgHrProducto = parseFloat(item.KgsDia) || 0;
-
-                    // ----------------------------------------
-                    // IDENTIFICACIÓN
-                    // ----------------------------------------
-                    dataActualizada.ID_PRODUCTO_TERMINADO = item.Id;
-
-                    // ----------------------------------------
-                    // ORIGEN
-                    // ----------------------------------------
                     dataActualizada._origen = 'PRODUCTO_TERMINADO';
                     dataActualizada._marcador = '📦';
                     dataActualizada._rowClass = 'row-producto-terminado';
 
-
-                    // ----------------------------------------
-                    // RECALCULAR KPIs
-                    // ----------------------------------------
                     this.recalcularFila(dataActualizada);
+
                     filasActualizadas.push({ rowNode: nodoExistente, data: dataActualizada });
 
-                }
-                // ==================================================
-                // CASO 2: NO EXISTE → CREAR
-                // ==================================================
-                else {
+                } else {
 
                     const nuevaFila = this.crearFilaVacia();
-                    // ----------------------------------------
-                    // IDENTIFICACIÓN
-                    // ----------------------------------------
+
                     nuevaFila.ID_PRODUCTO_TERMINADO = item.Id;
                     nuevaFila.id = this.generarIdTemporal();
-
-
-                    // ----------------------------------------
-                    // GENERALES
-                    // ----------------------------------------
                     nuevaFila.Fecha = fecha;
-                    nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
                     nuevaFila.Producto = item.Codigo || '';
                     nuevaFila.Turno = String(item.Turno || '');
-                    // ----------------------------------------
-                    // PRODUCCIÓN INY
-                    // ----------------------------------------
-                    nuevaFila.TRLiberados = parseFloat(item.NumTubos) || 0;
-                    nuevaFila.ProduccionNeta = parseFloat(item.PesoTotal) || 0;
-                    nuevaFila.ScrapColada = parseFloat(item.ScrapPt) || 0;
-                    nuevaFila.TotalScrap = parseFloat(item.ScrapTotal) || 0;
-
-                    // ----------------------------------------
-                    // PESO / RENDIMIENTO
-                    // ----------------------------------------
+                    nuevaFila.TRFabricados = parseFloat(item.NumTubos) || 0;
+                    nuevaFila.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
+                    nuevaFila.PorcentajeScrap = 0;
+                    nuevaFila.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
+                    nuevaFila.Linea = lineaLabel;
+                    nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
                     nuevaFila.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     nuevaFila.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     nuevaFila.KgHrProducto = parseFloat(item.KgsDia) || 0;
-
-                    // ----------------------------------------
-                    // LÍNEA
-                    // ----------------------------------------
-                    nuevaFila.Linea = lineaLabel;
-
-                    // ----------------------------------------
-                    // ORIGEN
-                    // ----------------------------------------
                     nuevaFila._origen = 'PRODUCTO_TERMINADO';
                     nuevaFila._marcador = '📦';
                     nuevaFila._rowClass = 'row-producto-terminado';
+                    nuevaFila._esNuevo = true;
 
-                    // ----------------------------------------
-                    // RECALCULAR KPIs
-                    // ----------------------------------------
                     this.recalcularFila(nuevaFila);
+
                     filasNuevas.push(nuevaFila);
                     filasAgregadas++;
                 }
-
             });
 
-            // ========================================
-            // ACTUALIZAR FILAS EXISTENTES
-            // ========================================
             if (filasActualizadas.length > 0) {
+                this.gridApi.applyTransaction({ update: filasActualizadas.map(f => f.data) });
 
-                this.gridApi.applyTransaction({
-                    update: filasActualizadas.map(
-                        f => f.data
-                    )
-                });
-
-                console.log(`🔄 Se actualizaron ${filasActualizadas.length} productos terminados en INY`);
-
-                if (showwarning) {
-                    AlertManager.mostrar(
-                        `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno || 'de acuerdo a la hora actual'} con información reciente`,
-                        "info"
-                    );
-                }
+                AlertManager.mostrar(
+                    `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno == "0" ? "Reporte del dia" : filtroTurno || 'de acuerdo a la hora actual'} con información reciente en el grid`,
+                    "info"
+                );
             }
 
-
-            // ========================================
-            // AGREGAR FILAS NUEVAS
-            // ========================================
             if (filasNuevas.length > 0) {
-
                 this.gridApi.applyTransaction({ add: filasNuevas });
 
-                console.log(`✅ Se agregaron ${filasNuevas.length} productos terminados al grid INY`);
-
-
-                if (showwarning) {
-
-                    AlertManager.mostrar(
-                        `✅ Se agregaron ${filasNuevas.length} productos terminados al grid del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
-                        "info"
-                    );
-                }
-
+                AlertManager.mostrar(
+                    `✅ Se agregaron ${filasNuevas.length} productos terminados al grid del turno: ${filtroTurno == '0' ? 'Reporte del dia' : filtroTurno || 'de acuerdo a la hora actual'}`,
+                    "info"
+                );
 
                 this.inicializarTooltipsGrid();
             }
 
+            // 🔥 NUEVO: avisar cuáles se omitieron por ya existir en BD
+            if (productosYaRegistrados.length > 0) {
+                this.mostrarModalProductosOmitidos(productosYaRegistrados);
+            }
 
-            // ========================================
-            // LÍNEAS NO ENCONTRADAS
-            // ========================================
             if (lineasNoEncontradas.length > 0) {
-
                 AlertManager.mostrar(
                     `⚠️ Estos productos no tienen línea reconocida: ${lineasNoEncontradas.join(', ')}`,
                     "warning"
                 );
             }
 
-
-            // ✅ NUEVO: Reordenar todo el grid por línea antes de pintar totales
             this.reordenarGridPorLinea();
-
-            // ========================================
-            // TOTALES
-            // ========================================
             this.agregarFilaTotales();
 
-
-            return (
-                filasAgregadas > 0 ||
-                filasActualizadas.length > 0
-            );
-
+            return filasAgregadas > 0 || filasActualizadas.length > 0;
 
         } catch (error) {
-
-            console.error(
-                "Error al agregar productos terminados INY:",
-                error
-            );
-
+            console.error("Error al agregar productos terminados:", error);
             return false;
         }
     }
-
 
     parsearFechaProductoTerminado(fechaISO) {
         if (!fechaISO) return null;
@@ -1884,7 +1729,7 @@ class GestionProduccionINY extends GestionProduccionBase {
         this.columnDefs = columnDefs;
 
         const gridOptions = {
-            domLayout: 'autoHeight',
+            domLayout: 'normal',
             columnDefs: columnDefs,
             context: {
                 datos_usuario: this.datos_usuario,
@@ -2471,6 +2316,14 @@ class GestionProduccionINY extends GestionProduccionBase {
                     this.gridApi.applyTransaction({ remove: filasVacias });
                 }
 
+                // 🔥 NUEVO: Si se agregaron productos terminados, colapsar automáticamente el panel de filtros
+                if (seAgregaronProductosTerminados) {
+                    const elColapso = document.getElementById('colapseFiltros');
+                    if (elColapso && elColapso.classList.contains('show')) {
+                        new bootstrap.Collapse(elColapso, { toggle: false }).hide();
+                    }
+                }
+
             } finally {
                 $btn.prop('disabled', false);
             }
@@ -2490,6 +2343,16 @@ class GestionProduccionINY extends GestionProduccionBase {
             .on('change', () => {
                 const fechaInicio = $('#FiltroFechaInicio').val();
                 const fechaFin = $('#FiltroFechaFin').val();
+
+                // Validar que la fecha inicio no sea mayor a la fecha fin
+                if (fechaInicio && fechaFin && new Date(fechaInicio) > new Date(fechaFin)) {
+                    AlertManager.mostrar(
+                        "La fecha inicio no puede ser mayor a fecha fin",
+                        "warning"
+                    );
+                    return;
+                }
+
                 const FechaTexto = this.formatearRangoFechas(fechaInicio, fechaFin);
                 $("#mesActual").text(
                     FechaTexto
@@ -2671,7 +2534,6 @@ class GestionProduccionINY extends GestionProduccionBase {
             valueFormatter: params => this.formatearPorcentaje(params.value)
         };
     }
-
 
     formatearNumero(valor) {
         if (valor === null || valor === undefined || valor === '') return '';
@@ -3205,5 +3067,23 @@ class CorreosManagerINY {
     resetearBoton(btn) {
         btn.html('<i class="bi bi-send-fill me-1"></i> Enviar');
         btn.prop("disabled", false);
+    }
+
+    // ========================================
+    // 🔥 Métodos wrapper para validación de Productos Terminados
+    // ========================================
+    async validarProductosTerminadosExistentes(ids, tipoProceso) {
+        // 🔥 Delegado al helper compartido
+        return await ProductosTerminadosHelper.validarProductosTerminadosExistentes(ids, tipoProceso, this.URLBase);
+    }
+
+    mostrarModalProductosOmitidos(productosOmitidos) {
+        // 🔥 Delegado al helper compartido
+        ProductosTerminadosHelper.mostrarModalProductosOmitidos(productosOmitidos);
+    }
+
+    formatearFechaCreacion(fechaCreacion) {
+        // 🔥 Delegado al helper compartido
+        return ProductosTerminadosHelper.formatearFechaCreacion(fechaCreacion);
     }
 }
