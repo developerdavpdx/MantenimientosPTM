@@ -1,4 +1,55 @@
 ﻿// ========================================
+// INICIALIZACIÓN
+// ========================================
+$(document).ready(function () {
+    const app = new MantenimientosPreventivoApp();
+    app.inicializar();
+
+    // 🔥 INICIALIZAR HEADER FIJO CON EL GESTOR GLOBAL
+    window.HeaderFijoGlobalManager.crear(
+        '.card-header.header-fijo-custom',      // ✅ Header
+        '.position-relative.header-custom',     // ✅ Contenedor
+        'headerMantenimientos',                 // ID único
+        {
+            topOffset: 45,
+            backgroundColor: 'white',
+            boxShadow: '0 4px 12px rgba(0, 88, 161, 0.3)',
+            animacion: true
+        }
+    );
+
+    console.log('✅ Header fijo inicializado correctamente');
+});
+
+// ========================================
+// GESTOR DE UI
+// ========================================
+class UIManager {
+    static inicializarUI(datos_usuario) {
+        // Seleccionar el padre "MantenimientosContainer" y expandir
+        $("#MantenimientosContainer").addClass("selected");
+        $("#MantenimientosContainer a").addClass("whiteText");
+        $("#mantenimientos-collapse").addClass("show");
+
+        // Configuración de navegación
+        $("#MantenimientosCorrectivosContainer").addClass("selected");
+        $("#MantenimientosCorrectivosContainer a").addClass("whiteText");
+        $("#manntocorrectivo-collapse").addClass("show");
+        $("#MCProgramadoURL").addClass("selected-item");
+
+        if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
+            $("#btnGenerarOrdenes").addClass("d-none");
+        }
+
+        $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
+        $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
+        //const TopScrool = new TopScrollTable("tablaMantenimientosRango", "tablaMantenimientosRangoContainer", "TblMCScrool");
+        //TopScrool.createScroll();
+        //TopScrool.initScroll();
+    }
+}
+
+// ========================================
 // APLICACIÓN PRINCIPAL CORRECTIVOS
 // ========================================
 class MantenimientosPreventivoApp {
@@ -1300,58 +1351,6 @@ class MantenimientosPreventivoApp {
         }
     }
 }
-
-// ========================================
-// INICIALIZACIÓN
-// ========================================
-$(document).ready(function () {
-    const app = new MantenimientosPreventivoApp();
-    app.inicializar();
-
-    // 🔥 INICIALIZAR HEADER FIJO CON EL GESTOR GLOBAL
-    window.HeaderFijoGlobalManager.crear(
-        '.card-header.header-fijo-custom',      // ✅ Header
-        '.position-relative.header-custom',     // ✅ Contenedor
-        'headerMantenimientos',                 // ID único
-        {
-            topOffset: 45,
-            backgroundColor: 'white',
-            boxShadow: '0 4px 12px rgba(0, 88, 161, 0.3)',
-            animacion: true
-        }
-    );
-
-    console.log('✅ Header fijo inicializado correctamente');
-});
-
-// ========================================
-// GESTOR DE UI
-// ========================================
-class UIManager {
-    static inicializarUI(datos_usuario) {
-        // Seleccionar el padre "MantenimientosContainer" y expandir
-        $("#MantenimientosContainer").addClass("selected");
-        $("#MantenimientosContainer a").addClass("whiteText");
-        $("#mantenimientos-collapse").addClass("show");
-
-        // Configuración de navegación
-        $("#MantenimientosCorrectivosContainer").addClass("selected");
-        $("#MantenimientosCorrectivosContainer a").addClass("whiteText");
-        $("#manntocorrectivo-collapse").addClass("show");
-        $("#MCProgramadoURL").addClass("selected-item");
-
-        if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
-            $("#btnGenerarOrdenes").addClass("d-none");
-        }
-
-        $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
-        $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
-        //const TopScrool = new TopScrollTable("tablaMantenimientosRango", "tablaMantenimientosRangoContainer", "TblMCScrool");
-        //TopScrool.createScroll();
-        //TopScrool.initScroll();
-    }
-}
-
 
 // ========================================
 // GESTOR DE MANTENIMIENTOS CORRECTIVOS
@@ -2721,6 +2720,20 @@ class MantenimientoManager {
 
         try {
             const datos = GlobalUtil.obtenerDatosAnyFormulario("formOrdenMantenimiento");
+
+            // Validar que las fechas de inicio y fin no estén vacías
+            if (!datos.HoraInicioTrabajo || datos.HoraInicioTrabajo.trim() === '') {
+                AlertManager.mostrar('La hora de inicio se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
+                $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
+                return false;
+            }
+
+            if (!datos.HoraFin || datos.HoraFin.trim() === '') {
+                AlertManager.mostrar('La hora de fin se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
+                $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
+                return false;
+            }
+
             datos.Usuario = this.datos_usuario[0].EMAIL;
             datos.TipoOperacion = "B"; // B = Borrador (Draft)
             datos.EstatusOrden = 2; // Status 2 = Draft
@@ -3362,7 +3375,7 @@ class MantenimientoManager {
         $('#TiempoReparacion').val(TR + ' HRS');
         // Tiempo muerto
         if (MaquinaDetenida) {
-            let TM = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraCierreOT);
+            let TM = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraFinTrabajo);
             $('#TiempoMuerto').val(TM + ' HRS');
         }
         else {
@@ -3373,10 +3386,6 @@ class MantenimientoManager {
         $("#TiempoReparacionContainer").removeClass("d-none");
         $("#TiempoMuertoContainer").removeClass("d-none");
     }
-
-    
-
-   
 }
 
 // GestionFirmas se ha movido a Scripts/Global.js para evitar duplicación.

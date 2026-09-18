@@ -48,7 +48,6 @@ namespace MantenimientosPTM.Controllers
         {
             try
             {
-                bool AditionalFilter = false;
                 // ✅ Parámetros de DataTables
                 string draw = Request.Form["draw"];
                 string drawValue = !string.IsNullOrEmpty(draw) ? draw : "0";
@@ -92,8 +91,8 @@ namespace MantenimientosPTM.Controllers
                 if (FiltroTipoUsuario == "TecnicoMtto")
                     FiltroUsuario = string.Empty;
 
-                if (FiltroArea != string.Empty || FiltroLinea != string.Empty || FiltroOrdenTrabajo != string.Empty)
-                    AditionalFilter = true;
+                //if (FiltroArea != string.Empty || FiltroLinea != string.Empty || FiltroOrdenTrabajo != string.Empty)
+                //    AditionalFilter = true;
 
                 //OMITIR PARA DEMO
                 if (FiltroTipoUsuario == "Produccion" || FiltroTipoUsuario == "SupervisorProduccion" || FiltroTipoUsuario == "SupervisorMantenimiento")
@@ -126,8 +125,8 @@ namespace MantenimientosPTM.Controllers
                     FiltroExcluirSincronizadosINY == "S";
 
 
-                if (esDesdeBitacora)
-                    AditionalFilter = false;
+                //if (esDesdeBitacora)
+                //    AditionalFilter = false;
 
                 //=================================OBTENER DATOS===========================//
                 // ✅ TODOS LOS FILTROS SE ENVÍAN A HANA
@@ -402,6 +401,10 @@ namespace MantenimientosPTM.Controllers
                     return Json(jsonResponse, JsonRequestBehavior.AllowGet);
                 }
 
+                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
+                string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
+
                 // 🔥 ACTUALIZAR ESTATUS SOLO SI NO ES BORRADOR
                 if (!esBorrador)
                 {
@@ -415,6 +418,8 @@ namespace MantenimientosPTM.Controllers
 
                     allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, false, null);
                     var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparameters);
+
+                    context.Clients.All.actualizarTablaBitacoras(rolQueCambio, "PREVENTIVOS");
                 }
                 else
                 {
@@ -422,9 +427,6 @@ namespace MantenimientosPTM.Controllers
                     System.Diagnostics.Debug.WriteLine($"📝 Borrador guardado sin cambiar estatus para OT {datos.NumeroOrden}");
                 }
 
-                //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
-                string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
-                var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
                 context.Clients.All.actualizarTablaMantenimientosPreventivos(rolQueCambio);
                 context.Clients.All.actualizarCalendarioMantenimientos();
 
@@ -1058,7 +1060,7 @@ namespace MantenimientosPTM.Controllers
                         p_ID_EQUIPO = datos.IdEquipo,
                         p_NUMERO_ORDEN = string.IsNullOrEmpty(datos.NumeroOrden) ? (object)DBNull.Value : datos.NumeroOrden,
                         p_FECHA_REP_INICIO = datos.EnviarSiguienteMes ? (object)DBNull.Value : fechaRepInicio,
-                        p_FECHA_REP_FIN = datos.EnviarSiguienteMes ? (object)DBNull.Value : fechaRepFin,                        
+                        p_FECHA_REP_FIN = datos.EnviarSiguienteMes ? (object)DBNull.Value : fechaRepFin,
                         P_ENVIAR_SIGUIENTE_MES = datos.EnviarSiguienteMes,
                         p_MOTIVO = datos.Motivo,
                         p_USUARIO_SOLICITA = datos.UsuarioSolicita,
@@ -1181,7 +1183,7 @@ namespace MantenimientosPTM.Controllers
                         p_NUMERO_ORDEN = (string)null,
                         p_FECHA_REP_INICIO = (DateTime?)null,
                         p_FECHA_REP_FIN = (DateTime?)null,
-                        p_ENVIAR_SIGUIENTE_MES = true, 
+                        p_ENVIAR_SIGUIENTE_MES = true,
                         p_MOTIVO = (string)null,
                         p_USUARIO_SOLICITA = (string)null,
                         p_ID_PERIODICIDAD = (int?)null,

@@ -35,5 +35,12 @@ namespace MantenimientosPTM.Hubs
         {
             Clients.All.actualizarTablaParos();
         }
+
+        // ✅ NUEVO: Notificación de actualización de bitácoras (Tabla de Producción)
+        // tipoActualizacion: "CORRECTIVOS", "PREVENTIVOS", "PAROS_MANUALES"
+        public void NotificarActualizacionBitacoras(string rolQueCambio, string tipoActualizacion = "CORRECTIVOS")
+        {
+            Clients.All.actualizarTablaBitacoras(rolQueCambio, tipoActualizacion);
+        }
     }
 }

@@ -147,7 +147,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
             false
         );
         // 📧 CONSULTAR DATOS
-        this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
+        this.consultarDatos();
+
+        // 🔥 NUEVO: Inicializar HUB para bitácoras
+        this.initHubBitacoras();
+
         console.log('✅ Sistema PVC inicializado');
     }
 
@@ -384,23 +388,30 @@ class GestionProduccionPVC extends GestionProduccionBase {
         return false;
     }
 
-    async consultarDatos(fechaInicio, fechaFin, planta, FiltroTurno, FiltroLinea, filtroProducto) {
+    async consultarDatos() {
 
         try {
 
             GlobalUtil.mostrarLoader(true);
             $("#tablaProduccion").addClass("d-none");
+            let Planta = this.datos_usuario[0].PLANTA;
+            let FiltroFechaInicio = $("#FiltroFechaInicio").val() || null;
+            let FiltroFechaFin = $("#FiltroFechaFin").val() || null;
+            let FiltroPlanta = Planta;
+            let FiltroLinea = $("#FiltroLinea").val() || null;
+            let FiltroTurno = $("#FiltroTurno").val() || null;
+            let FiltroProducto = $("#FiltroProducto").val() || '';
 
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetTiemposMuertosPVC`,
                 type: "GET",
                 data: {
-                    FiltroFechaInicio: fechaInicio,
-                    FiltroFechaFin: fechaFin,
+                    FiltroFechaInicio: FiltroFechaInicio,
+                    FiltroFechaFin: FiltroFechaFin,
+                    FiltroPlanta: Planta,
                     FiltroLinea: FiltroLinea,
-                    FiltroPlanta: planta,
-                    FiltroTurno: FiltroTurno || '',        // 🔥 NUEVO
-                    FiltroProducto: filtroProducto || ''   // 🔥 NUEVO
+                    FiltroTurno: FiltroTurno,
+                    FiltroProducto: FiltroProducto
                 }
             });
 
@@ -423,17 +434,17 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }
 
             // 🔥 Correctivos se agregan ANTES de pintar totales
-            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(fechaInicio, fechaFin, FiltroLinea);
+            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // 🔥 NUEVO: Preventivos se agregan también
-            const seAgregaronPreventivos = await this.traerPreventivosCerrados(fechaInicio, fechaFin, FiltroLinea);
+            const seAgregaronPreventivos = await this.traerPreventivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // ✅ NUEVO: Productos terminados se agregan también
             const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, false);
+            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados,FiltroTurno, false);
 
             // 🟦 NUEVO: Paros de producción se agregan también
-            const seAgregaronParos = await this.traerParosProduccionCerrados(fechaInicio, fechaFin, FiltroLinea);
+            const seAgregaronParos = await this.traerParosProduccionCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
 
             // If no hay datos originales, correctivos, preventivos, paros NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {
@@ -461,6 +472,117 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }, 1000);
         }
 
+    }
+
+    // ========================================
+    // SIGNALR HUB - BITÁCORAS (TABLA PRODUCCIÓN)
+    // ========================================
+    initHubBitacoras() {
+        const self = this;
+        const hub = $.connection.mantenimientoHub;
+        let reconnectDelay = 5000;
+        let modalActualizacion = null;
+
+        const miRol = self.datos_usuario[0].TIPOUSUARIO;
+
+        // ── Mapeo de mensajes dinámicos por tipo de actualización ──
+        const mensajesPorTipo = {
+            'CORRECTIVOS': {
+                titulo: 'Se completaron nuevas órdenes de mantenimientos correctivos',
+                descripcion: 'Se han completado nuevas órdenes de mantenimientos correctivos que generaron tiempo muerto desde tu última carga.'
+            },
+            'PREVENTIVOS': {
+                titulo: 'Se completaron nuevas órdenes de mantenimientos preventivos',
+                descripcion: 'Se han completado nuevas órdenes de mantenimientos preventivos desde tu última carga.'
+            },
+            'PAROS_MANUALES': {
+                titulo: 'Se han registrado nuevos paros manuales de producción',
+                descripcion: 'Se han registrado nuevos paros manuales de producción desde tu última carga.'
+            }
+        };
+
+        // ── Inicializar modal una sola vez ──
+        const $modalEl = document.getElementById('actualizacionDatosModalBitacoras');
+        if ($modalEl) {
+            modalActualizacion = new bootstrap.Modal($modalEl, { backdrop: 'static', keyboard: false });
+
+            document.getElementById('btnConfirmarActualizacionBitacoras')
+                .addEventListener('click', function () {
+                    modalActualizacion.hide();
+                    // Cerrar todos los modales abiertos antes de recargar
+                    document.querySelectorAll('.modal.show').forEach(function (modalAbierto) {
+                        var instancia = bootstrap.Modal.getInstance(modalAbierto);
+                        if (instancia) instancia.hide();
+                    });
+                    self.consultarDatos();
+                });
+        }
+
+        // ========================================
+        // 📡 EVENTO PARA BITÁCORAS
+        // ========================================
+        hub.client.actualizarTablaBitacoras = function (rolQueCambio, tipoActualizacion = 'CORRECTIVOS') {
+            console.warn("📡 Actualización de Bitácoras desde SignalR | Origen:", rolQueCambio || "desconocido", "| Tipo:", tipoActualizacion);
+
+            if ($modalEl && $modalEl.classList.contains('show')) return;
+
+            // Actualizar mensaje dinámico en el modal
+            if ($modalEl && mensajesPorTipo[tipoActualizacion]) {
+                const mensaje = mensajesPorTipo[tipoActualizacion];
+
+                // Actualizar título del modal
+                const $subtituloEl = $modalEl.querySelector('.modal-subtitle-custom');
+                if ($subtituloEl) {
+                    $subtituloEl.textContent = mensaje.titulo;
+                }
+
+                // Actualizar descripción
+                const $alertEl = $modalEl.querySelector('.alert');
+                if ($alertEl) {
+                    $alertEl.innerHTML = `
+                        <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
+                        <div>
+                            <strong>Se detectaron cambios</strong> en la bitácora de producción.<br>
+                            ${mensaje.descripcion}<br>
+                            ¿Deseas recargar la tabla ahora para ver la información actualizada?
+                        </div>
+                    `;
+                }
+            }
+
+            // Mostrar modal si existe, sino recargar directo
+            modalActualizacion
+                ? modalActualizacion.show()
+                : self.consultarDatos();
+        };
+
+        // ========================================
+        // 🚀 START HUB (con fallback controlado)
+        // ========================================
+        $.connection.hub.start({
+            transport: ['webSockets', 'longPolling']
+        }).done(function () {
+            console.log("✅ SignalR conectado para Bitácoras | Rol:", miRol);
+            console.log("🚚 Transporte:", $.connection.hub.transport.name);
+        }).fail(function (error) {
+            console.error("❌ Error al conectar SignalR:", error);
+        });
+
+        // ========================================
+        // 🔄 RECONNECTING
+        // ========================================
+        $.connection.hub.reconnecting(function () {
+            console.warn("🔄 SignalR reconectando...");
+        });
+
+        // ========================================
+        // 🔁 RECONNECTED — recarga silenciosa
+        // ========================================
+        $.connection.hub.reconnected(function () {
+            console.info("✅ SignalR reconectado | Rol:", miRol);
+            self.consultarDatos();
+            reconnectDelay = 5000;
+        });
     }
 
     reordenarGridPorLinea() {
@@ -2150,7 +2272,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 const filtroProducto = $('#FiltroProducto').val(); // 🔥 NUEVO
                 const FiltroLinea = $('#FiltroLinea').val(); // 🔥 NUEVO
 
-                await this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, filtroTurno, FiltroLinea, filtroProducto);
+                await this.consultarDatos();
             } finally {
                 $btn.prop('disabled', false);
             }
@@ -2208,7 +2330,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             $('#FiltroProducto').val('');
             $('#FiltroLinea').val('');
 
-            this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
+            this.consultarDatos();
         });
 
 
@@ -2233,7 +2355,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     FechaTexto
                 );
 
-                this.consultarDatos(fechaInicio, fechaFin, this.datos_usuario[0].PLANTA, null, null, null);
+                this.consultarDatos();
 
             });
     }
@@ -2320,7 +2442,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     this.cambiosPendientes = [];
 
                     // 🔥 REFRESCAR GRID
-                    await this.consultarDatos(null, null, this.datos_usuario[0].PLANTA, null, null, null);
+                    await this.consultarDatos();
 
                 } else {
 

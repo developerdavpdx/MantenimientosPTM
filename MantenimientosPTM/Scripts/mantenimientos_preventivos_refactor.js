@@ -3580,17 +3580,6 @@ class MantenimientoManager {
     async guardarOT(e) {
         e.preventDefault();
 
-        // ========================================
-        // VALIDAR HORAS
-        // ========================================
-        // if (!this.appReferencia.validarHoraCompletaPM('#HoraInicio', 'Hora Inicio')) {
-        //     return false;
-        // }
-
-        // if (!this.appReferencia.validarHoraCompletaPM('#HoraFin', 'Hora Fin')) {
-        //     return false;
-        // }
-
         // Validar formulario
         if (!ValidationManager.validarFormulario('#formOrdenMantenimiento')) {
             AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', "alertOrdenContainer");
@@ -3608,7 +3597,6 @@ class MantenimientoManager {
             $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
             return false;
         }
-
 
 
         let FirmaRequerida = "";
@@ -3639,6 +3627,24 @@ class MantenimientoManager {
         try {
             // 🔥 OBTENER DATOS DEL FORMULARIO
             const datos = GlobalUtil.obtenerDatosAnyFormulario("formOrdenMantenimiento");
+
+
+            // ========================================
+            // VALIDAR HORAS
+            // ========================================
+            // Validar que las fechas de inicio y fin no estén vacías
+            if (!datos.HoraInicio || datos.HoraInicio.trim() === '') {
+                AlertManager.mostrar('La hora de inicio se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
+                $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                return false;
+            }
+
+            if (!datos.HoraFin || datos.HoraFin.trim() === '') {
+                AlertManager.mostrar('La hora de fin se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
+                $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                return false;
+            }
+
             // 🔥 GUARDAR PRIMERO LA RUTINA Y ESPERAR RESPUESTA
             const rutinaGuardada = await this.guardarRutina(datos.NumeroOrden, datos.EstatusOrden);
 
@@ -3707,15 +3713,6 @@ class MantenimientoManager {
     async guardarBorrador(e) {
         if (e) e.preventDefault();
 
-        //
-        // if (!this.appReferencia.validarHoraCompletaPM('#HoraInicio', 'Hora Inicio')) {
-        //     return false;
-        // }
-
-        // if (!this.appReferencia.validarHoraCompletaPM('#HoraFin', 'Hora Fin')) {
-        //     return false;
-        // }
-
         // ✅ Validar solo campo crítico: Número de Orden
         const numeroOrden = $('#NumeroOrden').val();
         if (!numeroOrden || numeroOrden.trim() === '') {
@@ -3729,6 +3726,22 @@ class MantenimientoManager {
         try {
             // 🔥 OBTENER SOLO LOS DATOS DISPONIBLES (sin validaciones)
             const datosBorrador = this._obtenerDatosBorrador();
+
+            // ========================================
+            // VALIDAR HORAS
+            // ========================================
+            // Validar que las fechas de inicio y fin no estén vacías
+            if (!datosBorrador.HoraInicio || datosBorrador.HoraInicio.trim() === '') {
+                AlertManager.mostrar('La hora de inicio se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
+                $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
+                return false;
+            }
+
+            if (!datosBorrador.HoraFin || datosBorrador.HoraFin.trim() === '') {
+                AlertManager.mostrar('La hora de fin se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
+                $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
+                return false;
+            }
 
             console.log('📝 Datos del borrador:', datosBorrador);
 

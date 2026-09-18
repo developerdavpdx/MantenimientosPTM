@@ -477,6 +477,9 @@ namespace MantenimientosPTM.Controllers
                     var context = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
                     context.Clients.All.actualizarTablaMantenimientosCorrectivos(rolQueCambio);
                     context.Clients.All.actualizarCalendarioMantenimientos();
+                    // ✅ NUEVO: Notificar actualización de bitácoras con tipo de actualización
+                    if(datos.MaquinaDetenida == 1)
+                        context.Clients.All.actualizarTablaBitacoras(rolQueCambio, "CORRECTIVOS");
                 }
                 //ACTUALIZAR STATUS A FINALIZADO DE TODAS FORMAS Y LA LOGICA ADICIONAL SE MANEJA EN EL FRONT
                 var parametrosFinOT = new
