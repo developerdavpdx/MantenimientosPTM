@@ -415,14 +415,21 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 }
             });
 
+            let datosFormateados = [];
             let hayDatosOriginales = false;
 
             if (response.Status === "OK") {
                 const datos = JSON.parse(response.Data);
-                hayDatosOriginales = this.cargarDatosGrid(datos);
+                // ✅ NUEVO: Guardar datos formateados ANTES de cargar en grid
+                datosFormateados = this.formatearDatos(datos);
+                hayDatosOriginales = datosFormateados.length > 0;
+                if (hayDatosOriginales) {
+                    this.gridApi.setRowData(datosFormateados);
+                    this.inicializarTooltipsGrid();
+                }
             } else {
                 //AlertManager.mostrar(response.Message, "info");
-                hayDatosOriginales = this.cargarDatosGrid(null);
+                this.gridApi.setRowData([]);
             }
 
             // 🔥 NUEVO: Si se encontraron datos, colapsar automáticamente el panel de filtros
@@ -434,7 +441,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }
 
             // 🔥 Correctivos se agregan ANTES de pintar totales
-            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
+            // ✅ NUEVO: Pasar datosFormateados para acumular ANTES de agregar al grid
+            const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
 
             // 🔥 NUEVO: Preventivos se agregan también
             const seAgregaronPreventivos = await this.traerPreventivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
@@ -448,8 +456,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             // If no hay datos originales, correctivos, preventivos, paros NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {
-                this.gridApi.setRowData(this.datosOriginales);
-
+                this.gridApi.setRowData([]);
             }
 
             // ✅ NUEVO: Reordenar todo el grid por línea antes de pintar totales
@@ -472,6 +479,92 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }, 1000);
         }
 
+    }
+
+    // ✅ NUEVO: Método auxiliar para formatear datos
+    formatearDatos(datos) {
+        if (!datos || datos.length === 0) return [];
+
+        return datos.map(item => {
+            const fila = {
+                id: item.ID_REGISTRO || Date.now(),
+                ID_REGISTRO: item.ID_REGISTRO,
+                OTMC: item.OTMC,
+                OTMP: item.OTMP,
+                ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
+                ID_PARO: item.ID_PARO,
+                Fecha: item.FECHA,
+                Linea: item.LINEA,
+                Producto: item.PRODUCTO,
+                Turno: item.TURNO,
+                TRIP: item.TRIP,
+                Comentarios: item.COMENTARIOS,
+                HorasProgramadas: item.HORAS_PROGRAMADAS,
+                MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
+                ControlInventarios: item.CONTROL_INVENTARIOS,
+                FaltaMateriaInsumos: item.FALTA_MATERIA_INSUMOS,
+                CambioMolde: item.CAMBIO_MOLDE_HR,
+                Calentamiento: item.CALENTAMIENTO_HR,
+                ParoArranqueNoProgramado: item.PARO_ARRANQUE_NO_PROGRAMADO,
+                ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION_HR,
+                Mes: item.MES || (
+                    item.FECHA
+                        ? ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'][new Date(item.FECHA).getMonth()]
+                        : null
+                ),
+                PesoMinimo: item.PESO_MINIMO || 0,
+                TRFabricados: item.TR_FABRICADOS,
+                ProduccionNetaReal: item.PRODUCCION_NETA_REAL,
+                PesoEstandar: item.PESO_ESTANDAR,
+                PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
+                TotalScrapKg: item.TOTAL_SCRAP_KG,
+                PorcentajeScrap: item.PORCENTAJE_SCRAP,
+                MttoCorrectivos: item.MTTO_CORRECTIVOS,
+                FallaElectrica: item.FALLA_ELECTRICA,
+                Servicios: item.SERVICIOS,
+                CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
+                Herramental: item.HERRAMENTAL,
+                FallaOperacion: item.FALLA_OPERACION,
+                LimpiezaTanque: item.LIMPIEZA_TANQUE,
+                FaltaMaterial: item.FALTA_MATERIAL,
+                FaltaPersonal: item.FALTA_PERSONAL,
+                FaltaRefacciones: item.FALTA_REFACCIONES,
+                TiempoDisponible: item.TIEMPO_DISPONIBLE,
+                TiempoProductivo: item.TIEMPO_PRODUCTIVO,
+                KgHrLinea: item.KG_HR_LINEA,
+                KgHrProducto: item.KG_HR_PRODUCTO,
+                ObjetivoEficiencia: item.OBJETIVO_EFICIENCIA ?? 91,
+                DisponibilidadPorcentaje: item.DISPONIBILIDAD_PORCENTAJE,
+                KgPorTiempoDisponible: item.KG_POR_TIEMPO_DISPONIBLE,
+                KgNetosHrReales: item.KG_NETOS_HR_REALES,
+                PorcentajeRendimiento: item.PORCENTAJE_RENDIMIENTO,
+                PorcentajeCalidad: item.PORCENTAJE_CALIDAD,
+                PorcentajeOEE: item.PORCENTAJE_OEE,
+                PorcentajeEficienciaProducto: item.PORCENTAJE_EFICIENCIA_PRODUCTO,
+                EficienciaOperativa: item.EFICIENCIA_OPERATIVA,
+            };
+
+            // 🔥 NUEVO: Identificar origen y asignar emoji
+            if (item.OTMC && item.OTMC.toString().trim() !== '') {
+                fila._origen = 'CORRECTIVO';
+                fila._marcador = '🔧';
+                fila._rowClass = 'row-correctivo';
+            } else if (item.OTMP && item.OTMP.toString().trim() !== '') {
+                fila._origen = 'PREVENTIVO';
+                fila._marcador = '🛠️';
+                fila._rowClass = 'row-preventivo';
+            } else if (item.ID_PRODUCTO_TERMINADO && item.ID_PRODUCTO_TERMINADO.toString().trim() !== '') {
+                fila._origen = 'PRODUCTO_TERMINADO';
+                fila._marcador = '📦';
+                fila._rowClass = 'row-producto-terminado';
+            } else if (item.ID_PARO && item.ID_PARO.toString().trim() !== '') {
+                fila._origen = 'PARO_MANUAL';
+                fila._marcador = '⛔';
+                fila._rowClass = 'row-paro';
+            }
+
+            return fila;
+        });
     }
 
     // ========================================
@@ -612,7 +705,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
     // 🔥 NUEVO: Traer correctivos cerrados y agregarlos al grid
     // ========================================
 
-    async traerCorrectivosCerrados(fechaInicio, fechaFin, linea) {
+    async traerCorrectivosCerrados(fechaInicio, fechaFin, linea, datosFormateados = []) {
 
         try {
 
@@ -644,7 +737,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 return false; // 🔥 nada que agregar
             }
 
-            return this.agregarCorrectivosAlGrid(correctivos); // 🔥 ahora retorna bool
+            // ✅ NUEVO: Acumular correctivos en los datos formateados IN-MEMORY
+            return this.agregarCorrectivosAlGridEnMemoria(correctivos, datosFormateados);
 
         } catch (error) {
 
@@ -679,52 +773,95 @@ class GestionProduccionPVC extends GestionProduccionBase {
         }
 
         const filasNuevas = [];
+        const filasActualizar = [];
         const lineasNoEncontradas = [];
 
         correctivosNuevos.forEach(item => {
-            const nuevaFila = this.crearFilaVacia();
+            const tiempoCalculado = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraFin) || 0;
+            const fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
+            const tipoTiempo = item.AreaTecnica === 'MANTENIMIENTO HERRAMENTALES' ? 'Herramental' : 'MttoCorrectivos';
 
-            nuevaFila.id = this.generarIdTemporal();
-            nuevaFila.OTMC = item.NumeroOrden;
-            nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
-            const tiempoCalculado = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
-
-            if (item.AreaTecnica === 'MANTENIMIENTO HERRAMENTALES') {
-                nuevaFila.Herramental = tiempoCalculado;
-            } else {
-                nuevaFila.MttoCorrectivos = tiempoCalculado;
-            }
-
-            // ✅ Marcar como correctivo
-            nuevaFila._origen = 'CORRECTIVO';
-            nuevaFila._marcador = '🔧';
-            nuevaFila._rowClass = 'row-correctivo';
-            nuevaFila._esNuevo = true;
-
+            // ── Buscar línea ──
             const lineaEncontrada = this.listaLineas.find(
                 l => String(l.value) === String(item.IdLineaProduccion)
             );
 
-            if (lineaEncontrada) {
-                nuevaFila.Linea = lineaEncontrada.label;
-            } else {
-                nuevaFila.Linea = null;
+            const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
+
+            if (!nombreLinea) {
                 lineasNoEncontradas.push(item.NumeroOrden);
             }
 
-            if (nuevaFila.Fecha) {
-                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+            // ── Buscar fila existente con la misma FECHA y LÍNEA ──
+            let filaExistente = null;
+
+            // 🔍 DEBUG
+            console.log(`🔍 Buscando fila: Fecha="${fecha}" | Línea="${nombreLinea}" | Origen="CORRECTIVO"`);
+
+            let filasEnGrid = 0;
+            this.gridApi.forEachNode(node => {
+                filasEnGrid++;
+                console.log(`   Comparando con: Fecha="${node.data?.Fecha}" | Línea="${node.data?.Linea}" | Origen="${node.data?._origen}"`);
+
+                if (node.data?.Fecha === fecha && node.data?.Linea === nombreLinea && node.data?._origen === 'CORRECTIVO') {
+                    filaExistente = node;
+                    console.log(`   ✅ ¡ENCONTRADA!`);
+                }
+            });
+
+            if (filasEnGrid === 0) {
+                console.warn(`⚠️ Grid vacío o inaccesible. Filas en grid: ${filasEnGrid}`);
             }
 
-            // ✅ MOVER ESTO ANTES DEL PUSH (igual que en preventivos)
-            this.recalcularFila(nuevaFila);
+            if (filaExistente) {
+                // ✅ Acumular tiempo en fila existente
+                filaExistente.data[tipoTiempo] = (filaExistente.data[tipoTiempo] || 0) + tiempoCalculado;
+                filaExistente.data.OTMC = (filaExistente.data.OTMC || '') + `|${item.NumeroOrden}`;
 
-            filasNuevas.push(nuevaFila);
+                // Recalcular totales de la fila
+                this.recalcularFila(filaExistente.data);
+                filasActualizar.push(filaExistente.data);
+
+                console.log(`✅ Acumulado a fila existente (${fecha} - ${nombreLinea}): +${tiempoCalculado}h en ${tipoTiempo}`);
+            } else {
+                // ✅ Crear nueva fila
+                const nuevaFila = this.crearFilaVacia();
+
+                nuevaFila.id = this.generarIdTemporal();
+                nuevaFila.OTMC = item.NumeroOrden;
+                nuevaFila.Fecha = fecha;
+                nuevaFila[tipoTiempo] = tiempoCalculado;
+
+                // ✅ Marcar como correctivo
+                nuevaFila._origen = 'CORRECTIVO';
+                nuevaFila._marcador = '🔧';
+                nuevaFila._rowClass = 'row-correctivo';
+                nuevaFila._esNuevo = true;
+                nuevaFila.Linea = nombreLinea;
+
+                if (nuevaFila.Fecha) {
+                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+                }
+
+                // ✅ Recalcular antes de agregar
+                this.recalcularFila(nuevaFila);
+
+                filasNuevas.push(nuevaFila);
+                console.log(`✅ Nueva fila creada (${fecha} - ${nombreLinea}): ${tiempoCalculado}h en ${tipoTiempo}`);
+            }
         });
 
+        // ── Aplicar cambios al grid ──
         if (filasNuevas.length > 0) {
             this.gridApi.applyTransaction({ add: filasNuevas });
+        }
+
+        if (filasActualizar.length > 0) {
+            this.gridApi.applyTransaction({ update: filasActualizar });
+        }
+
+        if (filasNuevas.length > 0 || filasActualizar.length > 0) {
             this.inicializarTooltipsGrid();
         }
 
@@ -735,7 +872,168 @@ class GestionProduccionPVC extends GestionProduccionBase {
             );
         }
 
-        return true;
+        return filasNuevas.length > 0 || filasActualizar.length > 0;
+    }
+
+    // ✅ NUEVO: Agrupar correctivos ANTES de procesarlos (por Fecha + Línea + AreaTécnica)
+    agruparCorrectivos(correctivos) {
+        const grupos = {};
+
+        correctivos.forEach(item => {
+            const fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
+            const tipoTiempo = item.AreaTecnica === 'MANTENIMIENTO HERRAMENTALES' ? 'Herramental' : 'MttoCorrectivos';
+
+            // 🔍 Buscar línea
+            const lineaEncontrada = this.listaLineas.find(
+                l => String(l.value) === String(item.IdLineaProduccion)
+            );
+            const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
+
+            // ✅ Crear clave única para el grupo: Fecha|Línea|TipoTiempo
+            const clave = `${fecha}|${nombreLinea}|${tipoTiempo}`;
+
+            if (!grupos[clave]) {
+                grupos[clave] = {
+                    fecha,
+                    nombreLinea,
+                    tipoTiempo,
+                    tiempoTotal: 0,
+                    otmcList: [],
+                    items: [],
+                    sinLinea: false
+                };
+            }
+
+            // ✅ IMPORTANTE: Convertir a número para evitar concatenación de strings
+            const tiempoCalculado = Number(GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraFin)) || 0;
+            grupos[clave].tiempoTotal += tiempoCalculado;
+            grupos[clave].otmcList.push(item.NumeroOrden);
+            grupos[clave].items.push(item);
+
+            if (!nombreLinea) {
+                grupos[clave].sinLinea = true;
+            }
+        });
+
+        return Object.values(grupos);
+    }
+
+    // ✅ NUEVO: Agregar correctivos a los datos EN MEMORIA (antes de setRowData)
+    agregarCorrectivosAlGridEnMemoria(correctivos, datosFormateados) {
+        // ✅ SI datosFormateados está vacío, lo inicializamos como array vacío
+        if (!datosFormateados) {
+            datosFormateados = [];
+        }
+
+        const otmcYaEnDatos = new Set();
+
+        // 🔍 Recopilar OTMCs ya presentes en datosFormateados
+        datosFormateados.forEach(fila => {
+            if (fila.OTMC) {
+                const otmcs = String(fila.OTMC).split('|').filter(o => o.trim());
+                otmcs.forEach(o => otmcYaEnDatos.add(String(o).trim()));
+            }
+        });
+
+        console.log('💾 OTMCs ya en datos:', [...otmcYaEnDatos]);
+
+        // 🔍 Filtrar correctivos que NO estén ya en datos
+        const correctivosNuevos = correctivos.filter(
+            item => !otmcYaEnDatos.has(String(item.NumeroOrden).trim())
+        );
+
+        if (correctivosNuevos.length === 0) {
+            console.log('ℹ️ Todos los correctivos ya estaban en datos, nada que agregar');
+            return false;
+        }
+
+        console.log(`📥 Agregando ${correctivosNuevos.length} correctivos a datos en memoria`);
+
+        // ✅ NUEVO: Agrupar los correctivos nuevos ANTES de procesarlos
+        const gruposCorrectivos = this.agruparCorrectivos(correctivosNuevos);
+        console.log(`📊 Agrupados en ${gruposCorrectivos.length} grupos únicos (Fecha + Línea + AreaTécnica)`);
+
+        const filasNuevas = [];
+        const lineasNoEncontradas = [];
+
+        // ✅ Procesar GRUPOS en lugar de items individuales
+        gruposCorrectivos.forEach(grupo => {
+            const { fecha, nombreLinea, tipoTiempo, tiempoTotal, otmcList, sinLinea } = grupo;
+
+            if (sinLinea) {
+                lineasNoEncontradas.push(...otmcList);
+            }
+
+            // 🔍 Buscar fila existente en datosFormateados
+            // ✅ IMPORTANTE: Buscar por Fecha + Línea, y que sea CORRECTIVO (sea por _origen o porque tiene OTMC)
+            let filaExistente = datosFormateados.find(fila =>
+                fila.Fecha === fecha &&
+                fila.Linea === nombreLinea &&
+                (fila._origen === 'CORRECTIVO' || fila.OTMC)
+            );
+
+            console.log(`🔍 Buscando (EN MEMORIA): Fecha="${fecha}" | Línea="${nombreLinea}" | Origen="CORRECTIVO" | Órdenes a agregar: ${otmcList.join(', ')}`);
+
+            if (filaExistente) {
+                // ✅ Acumular tiempo en fila existente
+                filaExistente[tipoTiempo] = (filaExistente[tipoTiempo] || 0) + tiempoTotal;
+
+                // ✅ Agregar todas las órdenes de este grupo (separadas por |)
+                const ordenesGrupo = otmcList.join('|');
+                filaExistente.OTMC = (filaExistente.OTMC || '') + `|${ordenesGrupo}`;
+
+                // Recalcular totales de la fila
+                this.recalcularFila(filaExistente);
+
+                console.log(`✅ Acumulado a fila existente (${fecha} - ${nombreLinea}): +${tiempoTotal}h en ${tipoTiempo} | Órdenes: ${ordenesGrupo}`);
+            } else {
+                // ✅ Crear nueva fila
+                const nuevaFila = this.crearFilaVacia();
+
+                nuevaFila.id = this.generarIdTemporal();
+                // ✅ IMPORTANTE: Guardar todas las órdenes del grupo separadas por |
+                nuevaFila.OTMC = otmcList.join('|');
+                nuevaFila.Fecha = fecha;
+                nuevaFila[tipoTiempo] = tiempoTotal;
+
+                // ✅ Marcar como correctivo
+                nuevaFila._origen = 'CORRECTIVO';
+                nuevaFila._marcador = '🔧';
+                nuevaFila._rowClass = 'row-correctivo';
+                nuevaFila._esNuevo = true;
+                nuevaFila.Linea = nombreLinea;
+
+                if (nuevaFila.Fecha) {
+                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+                }
+
+                // ✅ Recalcular antes de agregar
+                this.recalcularFila(nuevaFila);
+
+                filasNuevas.push(nuevaFila);
+                console.log(`✅ Nueva fila creada (${fecha} - ${nombreLinea}): ${tiempoTotal}h en ${tipoTiempo} | Órdenes: ${otmcList.join(', ')}`);
+            }
+        });
+
+        // ✅ Agregar nuevas filas a datosFormateados
+        if (filasNuevas.length > 0) {
+            datosFormateados.push(...filasNuevas);
+            console.log(`📌 Agregadas ${filasNuevas.length} nuevas filas a datosFormateados`);
+        }
+
+        if (lineasNoEncontradas.length > 0) {
+            AlertManager.mostrar(
+                `Las siguientes órdenes no tienen línea reconocida y quedaron sin línea asignada: ${lineasNoEncontradas.join(', ')}`,
+                "warning"
+            );
+        }
+
+        // ✅ IMPORTANTE: Actualizar gridApi con los datos modificados
+        this.gridApi.setRowData(datosFormateados);
+        this.inicializarTooltipsGrid();
+
+        return filasNuevas.length > 0;
     }
 
     // ========================================
@@ -776,6 +1074,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 return false; // 🔥 nada que agregar
             }
 
+            // ✅ NUEVO: Agregar preventivos al grid actual  
             return this.agregarPreventivoAlGrid(preventivos); // 🔥 ahora retorna bool
 
         } catch (error) {
@@ -2487,10 +2786,36 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             if (node.data.id !== 'TOTALES') {
 
+                // ✅ NUEVO: Procesar OTMC para convertir en JSON array si hay múltiples
+                let otmcFinal = null;
+                if (node.data.OTMC) {
+                    // Si contiene | (múltiples OTMCs), convertir a array JSON
+                    if (String(node.data.OTMC).includes('|')) {
+                        const otmcs = String(node.data.OTMC).split('|').map(x => x.trim()).filter(x => x);
+                        otmcFinal = JSON.stringify(otmcs);
+                    } else {
+                        // Si es solo una OTMC, convertir a array con un elemento
+                        otmcFinal = JSON.stringify([String(node.data.OTMC).trim()]);
+                    }
+                }
+
+                // ✅ NUEVO: Procesar OTMP para convertir en JSON array si hay múltiples
+                let otmpFinal = null;
+                if (node.data.OTMP) {
+                    // Si contiene | (múltiples OTMPs), convertir a array JSON
+                    if (String(node.data.OTMP).includes('|')) {
+                        const otmps = String(node.data.OTMP).split('|').map(x => x.trim()).filter(x => x);
+                        otmpFinal = JSON.stringify(otmps);
+                    } else {
+                        // Si es solo una OTMP, convertir a array con un elemento
+                        otmpFinal = JSON.stringify([String(node.data.OTMP).trim()]);
+                    }
+                }
+
                 datos.push({
                     ID_REGISTRO: node.data.ID_REGISTRO || null,
-                    OTMC: node.data.OTMC || null,  // 🔥 NUEVO: Correctivos
-                    OTMP: node.data.OTMP || null, // 🔥 NUEVO: Preventivos
+                    OTMC: otmcFinal,  // ✅ REUTILIZADO: Correctivos en formato JSON array
+                    OTMP: otmpFinal, // ✅ REUTILIZADO: Preventivos en formato JSON array
                     ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null, // ✅ NUEVO: Identificador del producto
                     ID_PARO: node.data.ID_PARO || null, // 🟦 NUEVO: Identificador del paro manual
                     FECHA: node.data.Fecha,
@@ -2499,9 +2824,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     TURNO: node.data.Turno,
                     TRIP: node.data.TRIP,
                     COMENTARIOS: node.data.Comentarios || '',  // ✅ COMENTARIOS
-
                     HORAS_PROGRAMADAS: redondear(node.data.HorasProgramadas || 0, 2),
-
                     MANTENIMIENTO_PREVENTIVO: redondear(node.data.MantenimientoPreventivo || 0, 2),
                     CONTROL_INVENTARIOS: redondear(node.data.ControlInventarios || 0, 2),
                     FALTA_MATERIA_INSUMOS: redondear(node.data.FaltaMateriaInsumos || 0, 2),
@@ -2547,7 +2870,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     USUARIO: this.datos_usuario[0].EMAIL,
                     PLANTA: this.datos_usuario[0].PLANTA
                 });
-
             }
         });
 
