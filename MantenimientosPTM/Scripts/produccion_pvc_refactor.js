@@ -445,7 +445,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
             const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
 
             // 🔥 NUEVO: Preventivos se agregan también
-            const seAgregaronPreventivos = await this.traerPreventivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
+            // ✅ IMPORTANTE: También pasar datosFormateados para acumular preventivos
+            const seAgregaronPreventivos = await this.traerPreventivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
 
             // ✅ NUEVO: Productos terminados se agregan también
             const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
@@ -965,9 +966,14 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }
 
             // 🔍 Buscar fila existente en datosFormateados
-            // ✅ IMPORTANTE: Buscar por Fecha + Línea, y que sea CORRECTIVO (sea por _origen o porque tiene OTMC)
+            // ✅ IMPORTANTE: Normalizar fecha de fila a formato YYYY-MM-DD (puede venir como ISO: 2026-09-18T00:00:00.000)
+            const normalizarFecha = (fechaStr) => {
+                if (!fechaStr) return null;
+                return typeof fechaStr === 'string' ? fechaStr.split('T')[0] : fechaStr;
+            };
+
             let filaExistente = datosFormateados.find(fila =>
-                fila.Fecha === fecha &&
+                normalizarFecha(fila.Fecha) === fecha &&
                 fila.Linea === nombreLinea &&
                 (fila._origen === 'CORRECTIVO' || fila.OTMC)
             );
@@ -978,9 +984,21 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 // ✅ Acumular tiempo en fila existente
                 filaExistente[tipoTiempo] = (filaExistente[tipoTiempo] || 0) + tiempoTotal;
 
+                // ✅ Normalizar OTMC existente: puede venir en JSON ["OTMC-004","OTMC-007"] o pipes OTMC-004|OTMC-007
+                let otmcActual = filaExistente.OTMC || '';
+                if (typeof otmcActual === 'string' && otmcActual.startsWith('[')) {
+                    // Si es JSON, parsear y convertir a pipes
+                    try {
+                        const parsed = JSON.parse(otmcActual);
+                        otmcActual = Array.isArray(parsed) ? parsed.join('|') : otmcActual;
+                    } catch (e) {
+                        // Si no se puede parsear, mantener como está
+                    }
+                }
+
                 // ✅ Agregar todas las órdenes de este grupo (separadas por |)
                 const ordenesGrupo = otmcList.join('|');
-                filaExistente.OTMC = (filaExistente.OTMC || '') + `|${ordenesGrupo}`;
+                filaExistente.OTMC = otmcActual ? `${otmcActual}|${ordenesGrupo}` : ordenesGrupo;
 
                 // Recalcular totales de la fila
                 this.recalcularFila(filaExistente);
@@ -1040,7 +1058,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
     // 🔥 NUEVO: Traer preventivos cerrados y agregarlos al grid
     // ========================================
 
-    async traerPreventivosCerrados(fechaInicio, fechaFin, linea) {
+    async traerPreventivosCerrados(fechaInicio, fechaFin, linea, datosFormateados = []) {
 
         try {
 
@@ -1074,8 +1092,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 return false; // 🔥 nada que agregar
             }
 
-            // ✅ NUEVO: Agregar preventivos al grid actual  
-            return this.agregarPreventivoAlGrid(preventivos); // 🔥 ahora retorna bool
+            // ✅ NUEVO: Acumular preventivos en los datos formateados IN-MEMORY
+            return this.agregarPreventivosAlGridEnMemoria(preventivos, datosFormateados);
 
         } catch (error) {
 
@@ -1088,66 +1106,167 @@ class GestionProduccionPVC extends GestionProduccionBase {
         }
     }
 
-    agregarPreventivoAlGrid(preventivos) {
+    // ✅ NUEVO: Agrupar preventivos ANTES de procesarlos (por Fecha + Línea)
+    agruparPreventivos(preventivos) {
+        const grupos = {};
 
-        const otmpYaEnGrid = new Set();
+        preventivos.forEach(item => {
+            const fecha = this.parsearFechaPreventivo(item.HoraApertura);
 
-        this.gridApi.forEachNode(node => {
-            if (node.data?.OTMP) {
-                otmpYaEnGrid.add(node.data.OTMP);
+            // 🔍 Buscar línea
+            const lineaEncontrada = this.listaLineas.find(
+                l => String(l.value) === String(item.IdLineaProduccion)
+            );
+            const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
+
+            // ✅ Crear clave única para el grupo: Fecha|Línea
+            const clave = `${fecha}|${nombreLinea}`;
+
+            if (!grupos[clave]) {
+                grupos[clave] = {
+                    fecha,
+                    nombreLinea,
+                    tiempoTotal: 0,
+                    otmpList: [],
+                    items: [],
+                    sinLinea: false
+                };
+            }
+
+            // ✅ IMPORTANTE: Convertir a número para evitar concatenación de strings
+            const duracionHrs = Number(item.DuracionHrs) || 0;
+            grupos[clave].tiempoTotal += duracionHrs;
+            grupos[clave].otmpList.push(item.NumeroOrden);
+            grupos[clave].items.push(item);
+
+            if (!nombreLinea) {
+                grupos[clave].sinLinea = true;
             }
         });
 
+        return Object.values(grupos);
+    }
+
+    // ✅ NUEVO: Agregar preventivos a los datos EN MEMORIA (antes de setRowData)
+    agregarPreventivosAlGridEnMemoria(preventivos, datosFormateados) {
+        // ✅ SI datosFormateados está vacío, lo inicializamos como array vacío
+        if (!datosFormateados) {
+            datosFormateados = [];
+        }
+
+        const otmpYaEnDatos = new Set();
+
+        // 🔍 Recopilar OTMPs ya presentes en datosFormateados
+        datosFormateados.forEach(fila => {
+            if (fila.OTMP) {
+                const otmps = String(fila.OTMP).split('|').filter(o => o.trim());
+                otmps.forEach(o => otmpYaEnDatos.add(String(o).trim()));
+            }
+        });
+
+        console.log('💾 OTMPs ya en datos:', [...otmpYaEnDatos]);
+
+        // 🔍 Filtrar preventivos que NO estén ya en datos
         const preventivosNuevos = preventivos.filter(
-            item => !otmpYaEnGrid.has(item.NumeroOrden)
+            item => !otmpYaEnDatos.has(String(item.NumeroOrden).trim())
         );
 
         if (preventivosNuevos.length === 0) {
+            console.log('ℹ️ Todos los preventivos ya estaban en datos, nada que agregar');
             return false;
         }
+
+        console.log(`📥 Agregando ${preventivosNuevos.length} preventivos a datos en memoria`);
+
+        // ✅ NUEVO: Agrupar los preventivos nuevos ANTES de procesarlos
+        const gruposPreventivos = this.agruparPreventivos(preventivosNuevos);
+        console.log(`📊 Agrupados en ${gruposPreventivos.length} grupos únicos (Fecha + Línea)`);
 
         const filasNuevas = [];
         const lineasNoEncontradas = [];
 
-        preventivosNuevos.forEach(item => {
+        // ✅ Procesar GRUPOS en lugar de items individuales
+        gruposPreventivos.forEach(grupo => {
+            const { fecha, nombreLinea, tiempoTotal, otmpList, sinLinea } = grupo;
 
-            const nuevaFila = this.crearFilaVacia();
+            if (sinLinea) {
+                lineasNoEncontradas.push(...otmpList);
+            }
 
-            nuevaFila.id = this.generarIdTemporal();
-            nuevaFila.OTMP = item.NumeroOrden;
-            nuevaFila.Fecha = this.parsearFechaPreventivo(item.FechaInicioMantenimiento);
-            nuevaFila.MantenimientoPreventivo = parseFloat(item.DuracionHrs) || 0;
+            // 🔍 Buscar fila existente en datosFormateados
+            // ✅ IMPORTANTE: Normalizar fecha de fila a formato YYYY-MM-DD (puede venir como ISO: 2026-09-18T00:00:00.000)
+            const normalizarFecha = (fechaStr) => {
+                if (!fechaStr) return null;
+                return typeof fechaStr === 'string' ? fechaStr.split('T')[0] : fechaStr;
+            };
 
-            // ✅ NUEVO: Marcar como preventivo
-            nuevaFila._origen = 'PREVENTIVO';
-            nuevaFila._marcador = '🛠️';
-            nuevaFila._rowClass = 'row-preventivo';
-            nuevaFila._esNuevo = true;
-
-            const lineaEncontrada = this.listaLineas.find(
-                l => String(l.value) === String(item.IdLineaProduccion)
+            let filaExistente = datosFormateados.find(fila =>
+                normalizarFecha(fila.Fecha) === fecha &&
+                fila.Linea === nombreLinea &&
+                (fila._origen === 'PREVENTIVO' || fila.OTMP)
             );
 
-            if (lineaEncontrada) {
-                nuevaFila.Linea = lineaEncontrada.label;
+            console.log(`🔍 Buscando (EN MEMORIA): Fecha="${fecha}" | Línea="${nombreLinea}" | Origen="PREVENTIVO" | Órdenes a agregar: ${otmpList.join(', ')}`);
+
+            if (filaExistente) {
+                // ✅ Acumular tiempo en fila existente
+                filaExistente.MantenimientoPreventivo = (filaExistente.MantenimientoPreventivo || 0) + tiempoTotal;
+
+                // ✅ Normalizar OTMP existente: puede venir en JSON ["OTMP-004","OTMP-007"] o pipes OTMP-004|OTMP-007
+                let otmpActual = filaExistente.OTMP || '';
+                if (typeof otmpActual === 'string' && otmpActual.startsWith('[')) {
+                    // Si es JSON, parsear y convertir a pipes
+                    try {
+                        const parsed = JSON.parse(otmpActual);
+                        otmpActual = Array.isArray(parsed) ? parsed.join('|') : otmpActual;
+                    } catch (e) {
+                        // Si no se puede parsear, mantener como está
+                    }
+                }
+
+                // ✅ Agregar todas las órdenes de este grupo (separadas por |)
+                const ordenesGrupo = otmpList.join('|');
+                filaExistente.OTMP = otmpActual ? `${otmpActual}|${ordenesGrupo}` : ordenesGrupo;
+
+                // Recalcular totales de la fila
+                this.recalcularFila(filaExistente);
+
+                console.log(`✅ Acumulado a fila existente (${fecha} - ${nombreLinea}): +${tiempoTotal}h en MantenimientoPreventivo | Órdenes: ${ordenesGrupo}`);
             } else {
-                nuevaFila.Linea = null;
-                lineasNoEncontradas.push(item.NumeroOrden);
+                // ✅ Crear nueva fila
+                const nuevaFila = this.crearFilaVacia();
+
+                nuevaFila.id = this.generarIdTemporal();
+                // ✅ IMPORTANTE: Guardar todas las órdenes del grupo separadas por |
+                nuevaFila.OTMP = otmpList.join('|');
+                nuevaFila.Fecha = fecha;
+                nuevaFila.MantenimientoPreventivo = tiempoTotal;
+
+                // ✅ Marcar como preventivo
+                nuevaFila._origen = 'PREVENTIVO';
+                nuevaFila._marcador = '🛠️';
+                nuevaFila._rowClass = 'row-preventivo';
+                nuevaFila._esNuevo = true;
+                nuevaFila.Linea = nombreLinea;
+
+                if (nuevaFila.Fecha) {
+                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+                }
+
+                // ✅ Recalcular antes de agregar
+                this.recalcularFila(nuevaFila);
+
+                filasNuevas.push(nuevaFila);
+                console.log(`✅ Nueva fila creada (${fecha} - ${nombreLinea}): ${tiempoTotal}h en MantenimientoPreventivo | Órdenes: ${otmpList.join(', ')}`);
             }
-
-            if (nuevaFila.Fecha) {
-                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
-            }
-
-            this.recalcularFila(nuevaFila);
-
-            filasNuevas.push(nuevaFila);
         });
 
-        this.gridApi.applyTransaction({ add: filasNuevas });
-        this.inicializarTooltipsGrid(); // 🔥 NUEVO
-
+        // ✅ Agregar nuevas filas a datosFormateados
+        if (filasNuevas.length > 0) {
+            datosFormateados.push(...filasNuevas);
+            console.log(`📌 Agregadas ${filasNuevas.length} nuevas filas a datosFormateados`);
+        }
 
         if (lineasNoEncontradas.length > 0) {
             AlertManager.mostrar(
@@ -1156,11 +1275,15 @@ class GestionProduccionPVC extends GestionProduccionBase {
             );
         }
 
-        return true;
+        // ✅ IMPORTANTE: Actualizar gridApi con los datos modificados
+        this.gridApi.setRowData(datosFormateados);
+        this.inicializarTooltipsGrid();
+
+        return filasNuevas.length > 0;
     }
 
     // 🔥 Convierte fecha del preventivo
-    // FechaInicioMantenimiento viene en formato "DD/MM/YYYY" desde el SP
+    // FechaInicioMantenimiento viene en formato "DD/MM/YYYY" o "DD/MM/YYYY HH:MM:SS" desde el SP
     parsearFechaPreventivo(fechaTexto) {
 
         if (!fechaTexto) return null;
@@ -1177,8 +1300,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 return `${ano}-${mes}-${dia}`;
             }
 
+            // ✅ NUEVO: Separar fecha de hora si viene en formato "DD/MM/YYYY HH:MM:SS"
+            const fechaParte = fechaTexto.split(' ')[0]; // Obtener solo "DD/MM/YYYY"
+
             // Si es formato DD/MM/YYYY
-            const [dia, mes, anio] = fechaTexto.split('/');
+            const [dia, mes, anio] = fechaParte.split('/');
             if (!dia || !mes || !anio) return null;
 
             return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`; // YYYY-MM-DD
@@ -1807,10 +1933,26 @@ class GestionProduccionPVC extends GestionProduccionBase {
                             const origen = params.data?._origen;
                             const idRegistro = params.data?.ID_REGISTRO;
 
+                            // ✅ IMPORTANTE: Normalizar OTMC/OTMP para tooltip (puede venir en JSON o pipes)
+                            const normalizarOrdenes = (ordenesStr) => {
+                                if (!ordenesStr) return '';
+                                if (typeof ordenesStr === 'string' && ordenesStr.startsWith('[')) {
+                                    // Si es JSON, parsear
+                                    try {
+                                        const parsed = JSON.parse(ordenesStr);
+                                        return Array.isArray(parsed) ? parsed.join(', ') : ordenesStr;
+                                    } catch (e) {
+                                        return ordenesStr;
+                                    }
+                                }
+                                // Si ya es pipes, convertir a comas para legibilidad
+                                return ordenesStr.split('|').join(', ');
+                            };
+
                             // 🔥 Mapa de tooltips según origen
                             const tooltipTexts = {
-                                'CORRECTIVO': 'Mantenimiento Correctivo',
-                                'PREVENTIVO': 'Mantenimiento Preventivo',
+                                'CORRECTIVO': 'Mantenimiento Correctivo: ' + normalizarOrdenes(params.data?.OTMC),
+                                'PREVENTIVO': 'Mantenimiento Preventivo: ' + normalizarOrdenes(params.data?.OTMP),
                                 'PRODUCTO_TERMINADO': 'Producto Terminado',
                                 'PARO_MANUAL': 'Paros Manuales'
                             };

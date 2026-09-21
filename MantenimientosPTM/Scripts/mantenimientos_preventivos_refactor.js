@@ -324,19 +324,19 @@ class MantenimientosPreventivoApp {
             // ========================================
             // VALIDAR QUE SEA PM
             // ========================================
-            const hora = parseInt(partes[0], 10);
+            // const hora = parseInt(partes[0], 10);
 
-            if (hora < 12) {
+            // if (hora < 12) {
 
-                AlertManager.mostrar(
-                    `La ${nombreCampo} debe indicar PM.`,
-                    'warning'
-                );
+            //     AlertManager.mostrar(
+            //         `La ${nombreCampo} debe indicar PM.`,
+            //         'warning'
+            //     );
 
-                $(selector).val('').focus();
+            //     $(selector).val('').focus();
 
-                return false;
-            }
+            //     return false;
+            // }
 
             return true;
         }
