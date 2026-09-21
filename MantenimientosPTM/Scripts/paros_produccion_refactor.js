@@ -452,6 +452,21 @@ class ProduccionManager {
                             return "";
                         }
                     },
+                    // ✅ Columna: ID PARO Enmascarado (PAR-16 o COR-16)
+                    {
+                        data: "ID_PARO",
+                        className: "text-center",
+                        width: '80px',
+                        render: (data, type, row) => {
+                            // Determinar prefijo y color según tipo de paro
+                            const prefijo = row.TIPO_PARO === "CORRECTIVO" ? "COR" : "PAR";
+                            const badgeClass = row.TIPO_PARO === "CORRECTIVO" ? "bg-warning text-dark" : "bg-secondary text-black";
+
+                            return `<span class="badge ${badgeClass} badge-custom">
+                                <i class="bi bi-hash me-1"></i>${prefijo}-${data || 'N/A'}
+                            </span>`;
+                        }
+                    },
                     // Columna: Planta
                     {
                         data: "PLANTA",

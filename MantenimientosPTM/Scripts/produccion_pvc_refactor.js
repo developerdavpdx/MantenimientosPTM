@@ -453,7 +453,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados,FiltroTurno, false);
 
             // 🟦 NUEVO: Paros de producción se agregan también
-            const seAgregaronParos = await this.traerParosProduccionCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea);
+            // ✅ IMPORTANTE: También pasar datosFormateados para acumular paros
+            const seAgregaronParos = await this.traerParosProduccionCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
 
             // If no hay datos originales, correctivos, preventivos, paros NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {
@@ -703,9 +704,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
     }
 
     // ========================================
-    // 🔥 NUEVO: Traer correctivos cerrados y agregarlos al grid
+    // 🔥 NUEVO: Traer CORRECTIVOS CERRADOS y agregarlos al grid
     // ========================================
-
     async traerCorrectivosCerrados(fechaInicio, fechaFin, linea, datosFormateados = []) {
 
         try {
@@ -751,7 +751,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
             GlobalUtil.mostrarLoader(false);
         }
     }
-
 
     agregarCorrectivosAlGrid(correctivos) {
         const otmcYaEnGrid = new Set();
@@ -1054,10 +1053,23 @@ class GestionProduccionPVC extends GestionProduccionBase {
         return filasNuevas.length > 0;
     }
 
-    // ========================================
-    // 🔥 NUEVO: Traer preventivos cerrados y agregarlos al grid
-    // ========================================
+    // 🔥 Convierte "DD/MM/YYYY HH24:MI:SS" (formato que regresa el SP de correctivos)
+    // a un valor que el date editor/valueFormatter del grid entienda (ISO)
+    parsearFechaCorrectivo(fechaTexto) {
 
+        if (!fechaTexto) return null;
+
+        const [fechaParte] = fechaTexto.split(' '); // nos quedamos con DD/MM/YYYY
+        const [dia, mes, anio] = fechaParte.split('/');
+
+        if (!dia || !mes || !anio) return null;
+
+        return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`; // YYYY-MM-DD
+    }
+
+    // ========================================
+    // 🔥 NUEVO: Traer PREVENTIVOS CERRADOS y agregarlos al grid
+    // ========================================
     async traerPreventivosCerrados(fechaInicio, fechaFin, linea, datosFormateados = []) {
 
         try {
@@ -1314,53 +1326,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
         }
     }
 
-    // 🔥 Convierte "DD/MM/YYYY HH24:MI:SS" (formato que regresa el SP de correctivos)
-    // a un valor que el date editor/valueFormatter del grid entienda (ISO)
-    parsearFechaCorrectivo(fechaTexto) {
-
-        if (!fechaTexto) return null;
-
-        const [fechaParte] = fechaTexto.split(' '); // nos quedamos con DD/MM/YYYY
-        const [dia, mes, anio] = fechaParte.split('/');
-
-        if (!dia || !mes || !anio) return null;
-
-        return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`; // YYYY-MM-DD
-    }
-
-    // 🔥 Helper para no repetir el template de fila vacía
-    // (extraje el objeto de agregarFila() para reutilizarlo aquí también)
-    crearFilaVacia() {
-        return {
-            id: null,
-            Mes: null, Fecha: null, Linea: null, Producto: null, Turno: null, TRIP: null,
-            PesoMinimo: 0, TRFabricados: null, ProduccionNetaReal: null,
-            PesoEstandar: 0, PorcentajeSobrepeso: 0, TotalScrapKg: null, PorcentajeScrap: 0,
-            HorasProgramadas: null,
-            MantenimientoPreventivo: null, ControlInventarios: null, FaltaMateriaInsumos: null,
-            CambioMolde: null, Calentamiento: null, ParoArranqueNoProgramado: null,
-            ArranqueEstabilizacion: null,
-            MttoCorrectivos: null, FallaElectrica: null, Servicios: null,
-            CambioMoldeSetupExcesos: null, Herramental: null, FallaOperacion: null,
-            LimpiezaTanque: null, FaltaMaterial: null, FaltaPersonal: null, FaltaRefacciones: null,
-            TiempoDisponible: 0, TiempoProductivo: 0,
-            // 🔥 AGREGAR:
-            DisponibilidadPorcentaje: 0,
-            KgPorTiempoDisponible: 0,
-            KgHrLinea: null,
-            KgHrProducto: null,
-            KgNetosHrReales: 0,
-            PorcentajeRendimiento: 0,
-            PorcentajeCalidad: 0,
-            PorcentajeOEE: 0,
-            PorcentajeEficienciaProducto: 0,
-            ObjetivoEficiencia: 91,
-            EficienciaOperativa: 0
-        };
-    }
-
     // ========================================
-    // 🔥 NUEVO: Obtener Producto Terminado
+    // 🔥 NUEVO: Obtener PRODUCTO TERMINADO
     // ========================================
     async ObtenerProductoTerminado(FechaInicio, FechaFin, FiltroTurno, proceso) {
 
@@ -1588,9 +1555,49 @@ class GestionProduccionPVC extends GestionProduccionBase {
     }
 
     // ========================================
-    // 🟦 NUEVO: Traer Paros de Producción y agregarlos al Grid
+    // 🔥 NUEVO: Validar Productos Terminados Existentes (batch)
     // ========================================
-    async traerParosProduccionCerrados(fechaInicio, fechaFin, linea) {
+    async validarProductosTerminadosExistentes(ids, tipoProceso) {
+        // 🔥 Delegado al helper compartido
+        return await ProductosTerminadosHelper.validarProductosTerminadosExistentes(ids, tipoProceso, this.URLBase);
+    }
+
+    parsearFechaProductoTerminado(fechaISO) {
+        if (!fechaISO) return null;
+
+        try {
+            const partesFecha = fechaISO.split('T')[0]; // "2026-07-28"
+
+            if (!partesFecha) return null;
+
+            const [ano, mes, dia] = partesFecha.split('-');
+            if (!ano || !mes || !dia) return null;
+
+            if (parseInt(ano) < 2000) {
+                console.warn(`⚠️ Fecha inválida detectada: ${fechaISO}`);
+                return null;
+            }
+
+            return `${ano}-${mes}-${dia}`; // YYYY-MM-DD directo, sin new Date()
+
+        } catch (error) {
+            console.error("Error al parsear fecha:", error);
+            return null;
+        }
+    }
+
+    // ========================================
+    // 🔥 Mostrar resultados de validación (datos reales de BD)
+    // ========================================
+    mostrarModalProductosOmitidos(productosOmitidos) {
+        // 🔥 Delegado al helper compartido
+        ProductosTerminadosHelper.mostrarModalProductosOmitidos(productosOmitidos);
+    }
+
+    // ========================================
+    // 🟦 NUEVO: Traer PAROS DE PRODUCCION y agregarlos al Grid
+    // ========================================
+    async traerParosProduccionCerrados(fechaInicio, fechaFin, linea, datosFormateados = []) {
 
         try {
 
@@ -1621,7 +1628,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 return false; // 🟦 nada que agregar
             }
 
-            return this.agregarParosAlGrid(paros); // 🟦 ahora retorna bool
+            // ✅ NUEVO: Acumular paros en los datos formateados IN-MEMORY
+            return this.agregarParosAlGridEnMemoria(paros, datosFormateados);
 
         } catch (error) {
 
@@ -1632,6 +1640,190 @@ class GestionProduccionPVC extends GestionProduccionBase {
         } finally {
             GlobalUtil.mostrarLoader(false);
         }
+    }
+
+    // ✅ NUEVO: Agrupar paros ANTES de procesarlos (por Fecha + Línea + Categoría)
+    agruparParos(paros) {
+        const grupos = {};
+
+        paros.forEach(item => {
+            const fecha = this.parsearFechaParo(item.FECHA_PARO_STRING);
+            const columnaCategoria = this.mapearCategoriaParoAColumna(item.CATEGORIA);
+
+            // 🔍 Buscar línea
+            const lineaEncontrada = this.listaLineas.find(
+                l => String(l.value) === String(item.LINEA_PRODUCCION)
+            );
+            const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
+
+            // ✅ Crear clave única para el grupo: Fecha|Línea|Categoría
+            const clave = `${fecha}|${nombreLinea}|${columnaCategoria}`;
+
+            if (!grupos[clave]) {
+                grupos[clave] = {
+                    fecha,
+                    nombreLinea,
+                    columnaCategoria,
+                    tiempoTotal: 0,
+                    idParoList: [],
+                    items: [],
+                    sinLinea: false
+                };
+            }
+
+            // ✅ IMPORTANTE: Convertir a número para evitar concatenación de strings
+            const duracionHrs = Number(item.DURACION_HRS) || 0;
+            grupos[clave].tiempoTotal += duracionHrs;
+            grupos[clave].idParoList.push(String(item.ID_PARO));
+            grupos[clave].items.push(item);
+
+            if (!nombreLinea) {
+                grupos[clave].sinLinea = true;
+            }
+        });
+
+        return Object.values(grupos);
+    }
+
+    // ✅ NUEVO: Agregar paros a los datos EN MEMORIA (antes de setRowData)
+    agregarParosAlGridEnMemoria(paros, datosFormateados) {
+        // ✅ SI datosFormateados está vacío, lo inicializamos como array vacío
+        if (!datosFormateados) {
+            datosFormateados = [];
+        }
+
+        const idParoYaEnDatos = new Set();
+
+        // 🔍 Recopilar ID_PARO ya presentes en datosFormateados
+        datosFormateados.forEach(fila => {
+            if (fila.ID_PARO) {
+                // ID_PARO puede venir como string individual o concatenado (pipes)
+                const ids = String(fila.ID_PARO).split('|').filter(o => o.trim());
+                ids.forEach(o => idParoYaEnDatos.add(String(o).trim()));
+            }
+        });
+
+        console.log('💾 IDs de PARO ya en datos:', [...idParoYaEnDatos]);
+
+        // 🔍 Filtrar paros que NO estén ya en datos
+        const parosNuevos = paros.filter(
+            item => !idParoYaEnDatos.has(String(item.ID_PARO).trim())
+        );
+
+        if (parosNuevos.length === 0) {
+            console.log('ℹ️ Todos los paros ya estaban en datos, nada que agregar');
+            return false;
+        }
+
+        console.log(`📥 Agregando ${parosNuevos.length} paros a datos en memoria`);
+
+        // ✅ NUEVO: Agrupar los paros nuevos ANTES de procesarlos
+        const gruposParos = this.agruparParos(parosNuevos);
+        console.log(`📊 Agrupados en ${gruposParos.length} grupos únicos (Fecha + Línea + Categoría)`);
+
+        const filasNuevas = [];
+        const lineasNoEncontradas = [];
+
+        // ✅ Procesar GRUPOS en lugar de items individuales
+        gruposParos.forEach(grupo => {
+            const { fecha, nombreLinea, columnaCategoria, tiempoTotal, idParoList, sinLinea } = grupo;
+
+            if (sinLinea) {
+                lineasNoEncontradas.push(...idParoList);
+            }
+
+            // 🔍 Buscar fila existente en datosFormateados
+            // ✅ IMPORTANTE: Normalizar fecha de fila a formato YYYY-MM-DD (puede venir como ISO: 2026-09-18T00:00:00.000)
+            const normalizarFecha = (fechaStr) => {
+                if (!fechaStr) return null;
+                return typeof fechaStr === 'string' ? fechaStr.split('T')[0] : fechaStr;
+            };
+
+            let filaExistente = datosFormateados.find(fila =>
+                normalizarFecha(fila.Fecha) === fecha &&
+                fila.Linea === nombreLinea &&
+                (fila._origen === 'PARO_MANUAL' || fila.ID_PARO)
+            );
+
+            console.log(`🔍 Buscando (EN MEMORIA): Fecha="${fecha}" | Línea="${nombreLinea}" | Categoría="${columnaCategoria}" | IDs a agregar: ${idParoList.join(', ')}`);
+
+            if (filaExistente && columnaCategoria) {
+                // ✅ Acumular tiempo en fila existente
+                filaExistente[columnaCategoria] = (filaExistente[columnaCategoria] || 0) + tiempoTotal;
+
+                // ✅ Normalizar ID_PARO existente: puede venir individual o pipes
+                let idParoActual = filaExistente.ID_PARO || '';
+                if (typeof idParoActual === 'string' && idParoActual.trim()) {
+                    // Si ya está establecido, agregar con pipe
+                    const idsGrupo = idParoList.join('|');
+                    filaExistente.ID_PARO = idParoActual ? `${idParoActual}|${idsGrupo}` : idsGrupo;
+                }
+
+                // Recalcular totales de la fila
+                this.recalcularFila(filaExistente);
+
+                console.log(`✅ Acumulado a fila existente (${fecha} - ${nombreLinea}): +${tiempoTotal}h en ${columnaCategoria} | IDs: ${idParoList.join(', ')}`);
+            } else if (columnaCategoria) {
+                // ✅ Crear nueva fila
+                const nuevaFila = this.crearFilaVacia();
+
+                nuevaFila.id = this.generarIdTemporal();
+                // ✅ IMPORTANTE: Guardar todos los IDs del grupo separados por |
+                nuevaFila.ID_PARO = idParoList.join('|');
+                nuevaFila.Fecha = fecha;
+                nuevaFila[columnaCategoria] = tiempoTotal;
+
+                // ✅ Marcar como paro
+                nuevaFila._origen = 'PARO_MANUAL';
+                nuevaFila._marcador = '⛔';
+                nuevaFila._rowClass = 'row-paro';
+                nuevaFila._esNuevo = true;
+                nuevaFila.Linea = nombreLinea;
+
+                // Asignar datos adicionales del primer item del grupo
+                const primerItem = grupo.items[0];
+                if (primerItem.ARTICULO) {
+                    nuevaFila.Producto = primerItem.ARTICULO;
+                }
+                if (primerItem.PESO_MINIMO) {
+                    nuevaFila.PesoMinimo = primerItem.PESO_MINIMO;
+                }
+                if (primerItem.KGS_DIA) {
+                    nuevaFila.KgHrProducto = parseFloat(primerItem.KGS_DIA) / 24 || 0;
+                    nuevaFila.KgHrLinea = parseFloat(primerItem.KGS_DIA) / 24 || 0;
+                }
+
+                if (nuevaFila.Fecha) {
+                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+                }
+
+                // ✅ Recalcular antes de agregar
+                this.recalcularFila(nuevaFila);
+
+                filasNuevas.push(nuevaFila);
+                console.log(`✅ Nueva fila creada (${fecha} - ${nombreLinea}): ${tiempoTotal}h en ${columnaCategoria} | IDs: ${idParoList.join(', ')}`);
+            }
+        });
+
+        // ✅ Agregar nuevas filas a datosFormateados
+        if (filasNuevas.length > 0) {
+            datosFormateados.push(...filasNuevas);
+            console.log(`📌 Agregadas ${filasNuevas.length} nuevas filas a datosFormateados`);
+        }
+
+        if (lineasNoEncontradas.length > 0) {
+            AlertManager.mostrar(
+                `Los siguientes paros no tienen línea reconocida y quedaron sin línea asignada: ${lineasNoEncontradas.join(', ')}`,
+                "warning"
+            );
+        }
+
+        // ✅ IMPORTANTE: Actualizar gridApi con los datos modificados
+        this.gridApi.setRowData(datosFormateados);
+        this.inicializarTooltipsGrid();
+
+        return filasNuevas.length > 0;
     }
 
     // ========================================
@@ -1788,29 +1980,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
     }
 
     // ========================================
-    // 🔥 NUEVO: Validar Productos Terminados Existentes (batch)
-    // ========================================
-    async validarProductosTerminadosExistentes(ids, tipoProceso) {
-        // 🔥 Delegado al helper compartido
-        return await ProductosTerminadosHelper.validarProductosTerminadosExistentes(ids, tipoProceso, this.URLBase);
-    }
-
-    // ========================================
-    // 🔥 Mostrar resultados de validación (datos reales de BD)
-    // ========================================
-    mostrarModalProductosOmitidos(productosOmitidos) {
-        // 🔥 Delegado al helper compartido
-        ProductosTerminadosHelper.mostrarModalProductosOmitidos(productosOmitidos);
-    }
-
-    // ========================================
-    // 🔥 Formatear fecha estilo dd/mm/yyyy hh:mm am/pm
-    // ========================================
-    formatearFechaCreacion(fechaCreacion) {
-        // 🔥 Delegado al helper compartido
-        return ProductosTerminadosHelper.formatearFechaCreacion(fechaCreacion);
-    }
-    // ========================================
     // 🟦 NUEVO: Parsear fecha del paro
     // ========================================
     parsearFechaParo(fechaTexto) {
@@ -1847,29 +2016,45 @@ class GestionProduccionPVC extends GestionProduccionBase {
         }
     }
 
-    parsearFechaProductoTerminado(fechaISO) {
-        if (!fechaISO) return null;
-
-        try {
-            const partesFecha = fechaISO.split('T')[0]; // "2026-07-28"
-
-            if (!partesFecha) return null;
-
-            const [ano, mes, dia] = partesFecha.split('-');
-            if (!ano || !mes || !dia) return null;
-
-            if (parseInt(ano) < 2000) {
-                console.warn(`⚠️ Fecha inválida detectada: ${fechaISO}`);
-                return null;
-            }
-
-            return `${ano}-${mes}-${dia}`; // YYYY-MM-DD directo, sin new Date()
-
-        } catch (error) {
-            console.error("Error al parsear fecha:", error);
-            return null;
-        }
+    // ========================================
+    // 🔥 Formatear fecha estilo dd/mm/yyyy hh:mm am/pm
+    // ========================================
+    formatearFechaCreacion(fechaCreacion) {
+        // 🔥 Delegado al helper compartido
+        return ProductosTerminadosHelper.formatearFechaCreacion(fechaCreacion);
     }
+
+    // 🔥 Helper para no repetir el template de fila vacía
+    // (extraje el objeto de agregarFila() para reutilizarlo aquí también)
+    crearFilaVacia() {
+        return {
+            id: null,
+            Mes: null, Fecha: null, Linea: null, Producto: null, Turno: null, TRIP: null,
+            PesoMinimo: 0, TRFabricados: null, ProduccionNetaReal: null,
+            PesoEstandar: 0, PorcentajeSobrepeso: 0, TotalScrapKg: null, PorcentajeScrap: 0,
+            HorasProgramadas: null,
+            MantenimientoPreventivo: null, ControlInventarios: null, FaltaMateriaInsumos: null,
+            CambioMolde: null, Calentamiento: null, ParoArranqueNoProgramado: null,
+            ArranqueEstabilizacion: null,
+            MttoCorrectivos: null, FallaElectrica: null, Servicios: null,
+            CambioMoldeSetupExcesos: null, Herramental: null, FallaOperacion: null,
+            LimpiezaTanque: null, FaltaMaterial: null, FaltaPersonal: null, FaltaRefacciones: null,
+            TiempoDisponible: 0, TiempoProductivo: 0,
+            // 🔥 AGREGAR:
+            DisponibilidadPorcentaje: 0,
+            KgPorTiempoDisponible: 0,
+            KgHrLinea: null,
+            KgHrProducto: null,
+            KgNetosHrReales: 0,
+            PorcentajeRendimiento: 0,
+            PorcentajeCalidad: 0,
+            PorcentajeOEE: 0,
+            PorcentajeEficienciaProducto: 0,
+            ObjetivoEficiencia: 91,
+            EficienciaOperativa: 0
+        };
+    }
+
 
     calcularFechaOperativaTurno(fechaISOConHora, turno) {
 
@@ -1949,12 +2134,31 @@ class GestionProduccionPVC extends GestionProduccionBase {
                                 return ordenesStr.split('|').join(', ');
                             };
 
+                            // ✅ IMPORTANTE: Normalizar ID_PARO con prefijo PAR- o COR- para tooltip
+                            const normalizarParos = (parosStr, esPARO_CORRECTIVO = false) => {
+                                if (!parosStr) return '';
+                                // Determinar prefijo según si es paro correctivo o manual
+                                const prefijo = esPARO_CORRECTIVO ? 'COR' : 'PAR';
+
+                                if (typeof parosStr === 'string' && parosStr.startsWith('[')) {
+                                    // Si es JSON, parsear
+                                    try {
+                                        const parsed = JSON.parse(parosStr);
+                                        return Array.isArray(parsed) ? parsed.map(p => `${prefijo}-${p}`).join(', ') : parosStr;
+                                    } catch (e) {
+                                        return parosStr;
+                                    }
+                                }
+                                // Si ya es pipes, convertir a comas con prefijo
+                                return parosStr.split('|').map(p => `${prefijo}-${p.trim()}`).join(', ');
+                            };
+
                             // 🔥 Mapa de tooltips según origen
                             const tooltipTexts = {
                                 'CORRECTIVO': 'Mantenimiento Correctivo: ' + normalizarOrdenes(params.data?.OTMC),
                                 'PREVENTIVO': 'Mantenimiento Preventivo: ' + normalizarOrdenes(params.data?.OTMP),
                                 'PRODUCTO_TERMINADO': 'Producto Terminado',
-                                'PARO_MANUAL': 'Paros Manuales'
+                                'PARO_MANUAL': 'Paros Manuales: ' + normalizarParos(params.data?.ID_PARO, false)
                             };
 
                             const tooltipText = tooltipTexts[origen] || '';
