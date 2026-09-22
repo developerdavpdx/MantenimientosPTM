@@ -369,7 +369,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 } else if (item.ID_PARO && item.ID_PARO.toString().trim() !== '') {
                     // 🟦 Es un paro guardado en DB
                     fila._origen = 'PARO_MANUAL';
-                    fila._marcador = '⛔';
+                    fila._marcador = '🚫';
                     fila._rowClass = 'row-paro';
                 }
 
@@ -561,7 +561,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 fila._rowClass = 'row-producto-terminado';
             } else if (item.ID_PARO && item.ID_PARO.toString().trim() !== '') {
                 fila._origen = 'PARO_MANUAL';
-                fila._marcador = '⛔';
+                fila._marcador = '🚫';
                 fila._rowClass = 'row-paro';
             }
 
@@ -1775,7 +1775,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
                 // ✅ Marcar como paro
                 nuevaFila._origen = 'PARO_MANUAL';
-                nuevaFila._marcador = '⛔';
+                nuevaFila._marcador = '🚫';
                 nuevaFila._rowClass = 'row-paro';
                 nuevaFila._esNuevo = true;
                 nuevaFila.Linea = nombreLinea;
@@ -1866,7 +1866,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             // 🟦 Marcar como paro
             nuevaFila._origen = 'PARO_MANUAL';
-            nuevaFila._marcador = '⛔';
+            nuevaFila._marcador = '🚫';
             nuevaFila._rowClass = 'row-paro';
             nuevaFila._esNuevo = true;
 

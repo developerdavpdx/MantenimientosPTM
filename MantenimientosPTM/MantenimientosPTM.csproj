@@ -2468,6 +2468,7 @@
     <Content Include="Views\Almacen\_ModalRequisionCompra.cshtml" />
     <Content Include="Views\Login\Ended.cshtml" />
     <Content Include="Views\Produccion\Produccion_iny.cshtml" />
+    <Content Include="Views\Produccion\_ModalActualizacionDatosBitacora.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
