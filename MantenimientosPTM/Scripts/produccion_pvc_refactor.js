@@ -1642,7 +1642,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
         }
     }
 
-    // ✅ NUEVO: Agrupar paros ANTES de procesarlos (por Fecha + Línea + Categoría)
+    // ✅ NUEVO: Agrupar paros ANTES de procesarlos (por Fecha + Línea SOLO)
+    // Los valores se acumulan en sus columnas correspondientes
     agruparParos(paros) {
         const grupos = {};
 
@@ -1656,15 +1657,20 @@ class GestionProduccionPVC extends GestionProduccionBase {
             );
             const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
 
-            // ✅ Crear clave única para el grupo: Fecha|Línea|Categoría
-            const clave = `${fecha}|${nombreLinea}|${columnaCategoria}`;
+            // ✅ Crear clave única SOLO por Fecha + Línea (SIN categoría)
+            // Así todos los paros de la misma fecha y línea van en UNA sola fila
+            const clave = `${fecha}|${nombreLinea}`;
 
             if (!grupos[clave]) {
                 grupos[clave] = {
                     fecha,
                     nombreLinea,
                     columnaCategoria,
-                    tiempoTotal: 0,
+                    // 🔥 NUEVO: Objeto con las categorías como propiedades
+                    // Cada categoría acumula en su propio key
+                    TiempoMuertoHerramentales: 0,
+                    CambioMoldeSetupExcesos: 0,
+                    FaltaPersonal: 0,
                     idParoList: [],
                     items: [],
                     sinLinea: false
@@ -1673,7 +1679,12 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             // ✅ IMPORTANTE: Convertir a número para evitar concatenación de strings
             const duracionHrs = Number(item.DURACION_HRS) || 0;
-            grupos[clave].tiempoTotal += duracionHrs;
+
+            // 🔥 Acumular en la columna correspondiente (por categoría)
+            if (columnaCategoria && grupos[clave].hasOwnProperty(columnaCategoria)) {
+                grupos[clave][columnaCategoria] += duracionHrs;
+            }
+
             grupos[clave].idParoList.push(String(item.ID_PARO));
             grupos[clave].items.push(item);
 
@@ -1682,7 +1693,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }
         });
 
-        return Object.values(grupos);
+        // ✅ NUEVO: Calcular tiempoTotal para cada grupo ANTES de retornar
+        return Object.values(grupos).map(grupo => ({
+            ...grupo,
+            tiempoTotal: grupo.TiempoMuertoHerramentales + grupo.CambioMoldeSetupExcesos + grupo.FaltaPersonal
+        }));
     }
 
     // ✅ NUEVO: Agregar paros a los datos EN MEMORIA (antes de setRowData)
@@ -1802,6 +1817,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 this.recalcularFila(nuevaFila);
 
                 filasNuevas.push(nuevaFila);
+
                 console.log(`✅ Nueva fila creada (${fecha} - ${nombreLinea}): ${tiempoTotal}h en ${columnaCategoria} | IDs: ${idParoList.join(', ')}`);
             }
         });
@@ -1920,6 +1936,43 @@ class GestionProduccionPVC extends GestionProduccionBase {
     }
 
     // ========================================
+    // 🟦 NUEVO: Parsear fecha del paro
+    // ========================================
+    parsearFechaParo(fechaTexto) {
+
+        if (!fechaTexto) return null;
+
+        try {
+            // 🟦 Si es ISO date (YYYY-MM-DD o con T)
+            if (fechaTexto.includes('-') && !fechaTexto.includes('/')) {
+                const fecha = new Date(fechaTexto);
+                if (isNaN(fecha.getTime())) return null;
+
+                const ano = fecha.getFullYear();
+                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                const dia = String(fecha.getDate()).padStart(2, '0');
+                return `${ano}-${mes}-${dia}`;
+            }
+
+            // 🟦 Si es formato DD/MM/YYYY o DD/MM/YYYY HH:MM:SS
+            if (fechaTexto.includes('/')) {
+                // 🟦 Extraer solo la parte de la fecha (antes del espacio si hay hora)
+                const partesFecha = fechaTexto.split(' ')[0]; // "09/09/2026" o "09/09/2026"
+                const [dia, mes, anio] = partesFecha.split('/');
+
+                if (!dia || !mes || !anio) return null;
+
+                return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`; // YYYY-MM-DD
+            }
+
+            return null;
+        } catch (error) {
+            console.error("Error al parsear fecha paro:", error);
+            return null;
+        }
+    }
+
+    // ========================================
     // 🟦 NUEVO: Mapear Categoría del Paro a Columna del Grid
     // ========================================
     mapearCategoriaParoAColumna(categoria) {
@@ -1979,42 +2032,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
         return mapeo[categoriaNormalizada] || null;
     }
 
-    // ========================================
-    // 🟦 NUEVO: Parsear fecha del paro
-    // ========================================
-    parsearFechaParo(fechaTexto) {
-
-        if (!fechaTexto) return null;
-
-        try {
-            // 🟦 Si es ISO date (YYYY-MM-DD o con T)
-            if (fechaTexto.includes('-') && !fechaTexto.includes('/')) {
-                const fecha = new Date(fechaTexto);
-                if (isNaN(fecha.getTime())) return null;
-
-                const ano = fecha.getFullYear();
-                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-                const dia = String(fecha.getDate()).padStart(2, '0');
-                return `${ano}-${mes}-${dia}`;
-            }
-
-            // 🟦 Si es formato DD/MM/YYYY o DD/MM/YYYY HH:MM:SS
-            if (fechaTexto.includes('/')) {
-                // 🟦 Extraer solo la parte de la fecha (antes del espacio si hay hora)
-                const partesFecha = fechaTexto.split(' ')[0]; // "09/09/2026" o "09/09/2026"
-                const [dia, mes, anio] = partesFecha.split('/');
-
-                if (!dia || !mes || !anio) return null;
-
-                return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`; // YYYY-MM-DD
-            }
-
-            return null;
-        } catch (error) {
-            console.error("Error al parsear fecha paro:", error);
-            return null;
-        }
-    }
 
     // ========================================
     // 🔥 Formatear fecha estilo dd/mm/yyyy hh:mm am/pm
@@ -2765,6 +2782,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
     }
 
     agregarFilaTotales() {
+
+        if (!this.gridApi) return;
 
         // 🔥 Si ya existe una fila de TOTALES, la quitamos primero
         // para que siempre quede una sola, y al final de todo

@@ -1397,7 +1397,8 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         return true;
     }
 
-    // ✅ NUEVO: Agrupar paros ANTES de procesarlos (por Fecha + Línea + Categoría)
+    // ✅ NUEVO: Agrupar paros ANTES de procesarlos (por Fecha + Línea SOLO)
+    // Los valores se acumulan en sus columnas correspondientes
     agruparParos(paros) {
         const grupos = {};
 
@@ -1411,15 +1412,19 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             );
             const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
 
-            // ✅ Crear clave única para el grupo: Fecha|Línea|Categoría
-            const clave = `${fecha}|${nombreLinea}|${columnaCategoria}`;
+            // ✅ Crear clave única SOLO por Fecha + Línea (SIN categoría)
+            // Así todos los paros de la misma fecha y línea van en UNA sola fila
+            const clave = `${fecha}|${nombreLinea}`;
 
             if (!grupos[clave]) {
                 grupos[clave] = {
                     fecha,
                     nombreLinea,
-                    columnaCategoria,
-                    tiempoTotal: 0,
+                    // 🔥 NUEVO: Objeto con las categorías como propiedades
+                    // Cada categoría acumula en su propio key
+                    TiempoMuertoHerramentales: 0,
+                    CambioMoldeSetupExcesos: 0,
+                    FaltaPersonal: 0,
                     idParoList: [],
                     items: [],
                     sinLinea: false
@@ -1428,7 +1433,12 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             // ✅ IMPORTANTE: Convertir a número para evitar concatenación de strings
             const duracionHrs = Number(item.DURACION_HRS) || 0;
-            grupos[clave].tiempoTotal += duracionHrs;
+
+            // 🔥 Acumular en la columna correspondiente (por categoría)
+            if (columnaCategoria && grupos[clave].hasOwnProperty(columnaCategoria)) {
+                grupos[clave][columnaCategoria] += duracionHrs;
+            }
+
             grupos[clave].idParoList.push(String(item.ID_PARO));
             grupos[clave].items.push(item);
 
@@ -1474,14 +1484,14 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         // ✅ NUEVO: Agrupar los paros nuevos ANTES de procesarlos
         const gruposParos = this.agruparParos(parosNuevos);
-        console.log(`📊 Agrupados en ${gruposParos.length} grupos únicos (Fecha + Línea + Categoría)`);
+        console.log(`📊 Agrupados en ${gruposParos.length} grupos únicos (Fecha + Línea)`);
 
         const filasNuevas = [];
         const lineasNoEncontradas = [];
 
         // ✅ Procesar GRUPOS en lugar de items individuales
         gruposParos.forEach(grupo => {
-            const { fecha, nombreLinea, columnaCategoria, tiempoTotal, idParoList, sinLinea } = grupo;
+            const { fecha, nombreLinea, TiempoMuertoHerramentales, CambioMoldeSetupExcesos, FaltaPersonal, idParoList, sinLinea } = grupo;
 
             if (sinLinea) {
                 lineasNoEncontradas.push(...idParoList);
@@ -1496,15 +1506,22 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             let filaExistente = datosFormateados.find(fila =>
                 normalizarFecha(fila.Fecha) === fecha &&
-                fila.Linea === nombreLinea &&
-                (fila._origen === 'PARO_MANUAL' || fila.ID_PARO)
+                fila.Linea === nombreLinea
             );
 
-            console.log(`🔍 Buscando (EN MEMORIA): Fecha="${fecha}" | Línea="${nombreLinea}" | Categoría="${columnaCategoria}" | IDs a agregar: ${idParoList.join(', ')}`);
+            console.log(`🔍 Buscando (EN MEMORIA): Fecha="${fecha}" | Línea="${nombreLinea}" | IDs a agregar: ${idParoList.join(', ')}`);
 
-            if (filaExistente && columnaCategoria) {
-                // ✅ Acumular tiempo en fila existente
-                filaExistente[columnaCategoria] = (filaExistente[columnaCategoria] || 0) + tiempoTotal;
+            if (filaExistente) {
+                // ✅ Acumular tiempos EN LA MISMA FILA en sus columnas correspondientes
+                if (TiempoMuertoHerramentales > 0) {
+                    filaExistente.TiempoMuertoHerramentales = (filaExistente.TiempoMuertoHerramentales || 0) + TiempoMuertoHerramentales;
+                }
+                if (CambioMoldeSetupExcesos > 0) {
+                    filaExistente.CambioMoldeSetupExcesos = (filaExistente.CambioMoldeSetupExcesos || 0) + CambioMoldeSetupExcesos;
+                }
+                if (FaltaPersonal > 0) {
+                    filaExistente.FaltaPersonal = (filaExistente.FaltaPersonal || 0) + FaltaPersonal;
+                }
 
                 // ✅ Normalizar ID_PARO existente: puede venir individual o pipes
                 let idParoActual = filaExistente.ID_PARO || '';
@@ -1512,19 +1529,38 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     // Si ya está establecido, agregar con pipe
                     const idsGrupo = idParoList.join('|');
                     filaExistente.ID_PARO = idParoActual ? `${idParoActual}|${idsGrupo}` : idsGrupo;
+                } else {
+                    filaExistente.ID_PARO = idParoList.join('|');
+                }
+
+                // Marcar como PARO_MANUAL si no estaba marcado
+                if (!filaExistente._origen) {
+                    filaExistente._origen = 'PARO_MANUAL';
+                    filaExistente._marcador = '⛔';
+                    filaExistente._rowClass = 'row-paro';
                 }
 
                 // Recalcular totales de la fila
                 this.recalcularFila(filaExistente);
 
-                console.log(`✅ Acumulado a fila existente (${fecha} - ${nombreLinea}): +${tiempoTotal}h en ${columnaCategoria} | IDs: ${idParoList.join(', ')}`);
-            } else if (columnaCategoria) {
+                console.log(`✅ Acumulado a fila existente (${fecha} - ${nombreLinea}): Herramentales ${TiempoMuertoHerramentales}h | CambioMolde ${CambioMoldeSetupExcesos}h | FaltaPersonal ${FaltaPersonal}h | IDs: ${idParoList.join(', ')}`);
+            } else {
                 // ✅ Crear nueva fila para este grupo
                 const nuevaFila = this.crearFilaVacia();
                 nuevaFila.id = this.generarIdTemporal();
                 nuevaFila.Fecha = fecha;
                 nuevaFila.Linea = nombreLinea;
-                nuevaFila[columnaCategoria] = tiempoTotal;
+
+                // 🔥 Asignar tiempos en sus columnas correspondientes
+                if (TiempoMuertoHerramentales > 0) {
+                    nuevaFila.TiempoMuertoHerramentales = TiempoMuertoHerramentales;
+                }
+                if (CambioMoldeSetupExcesos > 0) {
+                    nuevaFila.CambioMoldeSetupExcesos = CambioMoldeSetupExcesos;
+                }
+                if (FaltaPersonal > 0) {
+                    nuevaFila.FaltaPersonal = FaltaPersonal;
+                }
                 nuevaFila.ID_PARO = idParoList.join('|');
                 nuevaFila._origen = 'PARO_MANUAL';
                 nuevaFila._marcador = '🚫';
@@ -1540,7 +1576,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 this.recalcularFila(nuevaFila);
                 filasNuevas.push(nuevaFila);
 
-                console.log(`✨ Creada nueva fila para (${fecha} - ${nombreLinea}): ${tiempoTotal}h en ${columnaCategoria} | IDs: ${idParoList.join(', ')}`);
+                console.log(`✨ Creada nueva fila para (${fecha} - ${nombreLinea}): Herramentales ${TiempoMuertoHerramentales}h | CambioMolde ${CambioMoldeSetupExcesos}h | FaltaPersonal ${FaltaPersonal}h | IDs: ${idParoList.join(', ')}`);
             }
         });
 
@@ -1606,6 +1642,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             'CAMBIO DE MOLDE (SETUP) EXCESOS': 'CambioMoldeSetupExcesos',
             'SETUP': 'CambioMoldeSetupExcesos',
             'FALTA PERSONAL': 'FaltaPersonal',
+            'FALTA DE PERSONAL': 'FaltaPersonal',
             'PERSONAL': 'FaltaPersonal',
             'TIEMPO MUERTO PROCESO': 'TiempoMuertoProceso',
             'PROCESO': 'TiempoMuertoProceso',
@@ -1684,12 +1721,47 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                             const origen = params.data?._origen;
                             const idRegistro = params.data?.ID_REGISTRO;
 
+                            // ✅ IMPORTANTE: Normalizar OTMC/OTMP para tooltip (puede venir en JSON o pipes)
+                            const normalizarOrdenes = (ordenesStr) => {
+                                if (!ordenesStr) return '';
+                                if (typeof ordenesStr === 'string' && ordenesStr.startsWith('[')) {
+                                    // Si es JSON, parsear
+                                    try {
+                                        const parsed = JSON.parse(ordenesStr);
+                                        return Array.isArray(parsed) ? parsed.join(', ') : ordenesStr;
+                                    } catch (e) {
+                                        return ordenesStr;
+                                    }
+                                }
+                                // Si ya es pipes, convertir a comas para legibilidad
+                                return ordenesStr.split('|').join(', ');
+                            };
+
+                            // ✅ IMPORTANTE: Normalizar ID_PARO con prefijo PAR- o COR- para tooltip
+                            const normalizarParos = (parosStr, esPARO_CORRECTIVO = false) => {
+                                if (!parosStr) return '';
+                                // Determinar prefijo según si es paro correctivo o manual
+                                const prefijo = esPARO_CORRECTIVO ? 'COR' : 'PAR';
+
+                                if (typeof parosStr === 'string' && parosStr.startsWith('[')) {
+                                    // Si es JSON, parsear
+                                    try {
+                                        const parsed = JSON.parse(parosStr);
+                                        return Array.isArray(parsed) ? parsed.map(p => `${prefijo}-${p}`).join(', ') : parosStr;
+                                    } catch (e) {
+                                        return parosStr;
+                                    }
+                                }
+                                // Si ya es pipes, convertir a comas con prefijo
+                                return parosStr.split('|').map(p => `${prefijo}-${p.trim()}`).join(', ');
+                            };
+
                             // 🔥 Mapa de tooltips según origen
                             const tooltipTexts = {
-                                'CORRECTIVO': 'Mantenimiento Correctivo',
-                                'PREVENTIVO': 'Mantenimiento Preventivo',
+                                'CORRECTIVO': 'Mantenimiento Correctivo: ' + normalizarOrdenes(params.data?.OTMC),
+                                'PREVENTIVO': 'Mantenimiento Preventivo: ' + normalizarOrdenes(params.data?.OTMP),
                                 'PRODUCTO_TERMINADO': 'Producto Terminado',
-                                'PARO_MANUAL': 'Paros Manuales'
+                                'PARO_MANUAL': 'Paros Manuales: ' + normalizarParos(params.data?.ID_PARO, false)
                             };
 
                             const tooltipText = tooltipTexts[origen] || '';
