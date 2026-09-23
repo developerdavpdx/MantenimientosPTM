@@ -8,6 +8,10 @@ namespace MantenimientosPTM
     {
         protected void Application_Start()
         {
+            // 🆕 Global.asax.cs — Application_Start
+            System.Net.ServicePointManager.SecurityProtocol =
+                System.Net.SecurityProtocolType.Tls12 |
+                System.Net.SecurityProtocolType.Tls13;
             AreaRegistration.RegisterAllAreas();
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);

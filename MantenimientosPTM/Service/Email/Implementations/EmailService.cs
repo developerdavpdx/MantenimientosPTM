@@ -19,14 +19,25 @@ namespace MantenimientosPTM.Service.Email.Implementations
 
         public EmailService()
         {
+            //_smtp = new SmtpClient
+            //{
+            //    Host = ConfigurationManager.AppSettings["SMTP_HOST"],
+            //    Port = int.Parse(ConfigurationManager.AppSettings["SMTP_PORT"] ?? "587"),
+            //    EnableSsl = true,
+            //    Credentials = new NetworkCredential(
+            //        ConfigurationManager.AppSettings["SMTP_USER"],
+            //        ConfigurationManager.AppSettings["SMTP_PASSWORD"])
+            //};
             _smtp = new SmtpClient
             {
                 Host = ConfigurationManager.AppSettings["SMTP_HOST"],
                 Port = int.Parse(ConfigurationManager.AppSettings["SMTP_PORT"] ?? "587"),
                 EnableSsl = true,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false, // 🆕 importante — debe ir ANTES de Credentials
                 Credentials = new NetworkCredential(
-                    ConfigurationManager.AppSettings["SMTP_USER"],
-                    ConfigurationManager.AppSettings["SMTP_PASSWORD"])
+                ConfigurationManager.AppSettings["SMTP_USER"],
+                ConfigurationManager.AppSettings["SMTP_PASSWORD"])
             };
         }
 
