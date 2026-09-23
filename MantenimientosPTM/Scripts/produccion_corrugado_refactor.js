@@ -108,6 +108,21 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         this.ID_AREA_CORRECTIVOS = (datos_usuario[0].PLANTA == "1" ? 7 : 7); // 🔥 REVISAR PARA PLANTA 2
         this.ID_AREA_PREVENTIVOS = (datos_usuario[0].PLANTA == "1" ? 7 : 7); // 🔥 REVISAR PARA PLANTA 2
         this.tipoProcesoActual = 'CORRUGADO';
+
+        // 🔥 NUEVO: Mapa de líneas PEAD LISO P2 (igual patrón que PVC)
+        // ⚠️ OJO: confirma con el equipo cuáles IDs/nombres de línea corresponden
+        // a PEAD Liso en Planta 2 — los de abajo son placeholder, cópialos de
+        // como los tengan mapeados en NW para este proceso.
+        this.MAPA_LINEAS_INY = {
+            1: 'Linea 1 PEAD CORR',
+            2: 'Linea 2 PEAD CORR',
+            3: 'Linea 3 PEAD CORR',
+            4: 'Linea 4 PEAD CORR',
+            5: 'Linea 5 PEAD CORR',
+            6: 'Linea 6 PEAD CORR',
+            7: 'Linea 7 PEAD CORR',
+            8: 'Linea 8 PEAD CORR',
+        };
     }
 
     async inicializar() {
@@ -316,7 +331,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 fila._rowClass = 'row-correctivo';
             } else if (item.OTMP && item.OTMP.toString().trim() !== '') {
                 fila._origen = 'PREVENTIVO';
-                fila._marcador = '🔨';
+                fila._marcador = '🛠️';
                 fila._rowClass = 'row-preventivo';
             } else if (item.ID_PRODUCTO_TERMINADO && item.ID_PRODUCTO_TERMINADO.toString().trim() !== '') {
                 fila._origen = 'PRODUCTO_TERMINADO';
@@ -330,100 +345,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
             return fila;
         });
-    }
-
-    cargarDatosGrid(datos) {
-
-        if (datos != null) {
-
-            const datosFormateados = datos.map(item => {
-
-                const fila = {
-                    id: item.ID_REGISTRO || Date.now(),
-                    ID_REGISTRO: item.ID_REGISTRO,
-                    OTMC: item.OTMC,
-                    OTMP: item.OTMP,
-                    ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
-                    ID_PARO: item.ID_PARO,
-                    Mes: item.MES,
-                    Fecha: item.FECHA,
-                    Linea: item.LINEA,
-                    Corrugador: item.CORRUGADOR,
-                    Producto: item.PRODUCTO,
-                    Turno: item.TURNO,
-                    Grupo: item.GRUPO,
-                    Comentarios: item.COMENTARIOS,
-                    PesoMinimo: item.PESO_MINIMO ?? 0,
-                    TRLiberados: item.TRLIBERADOS,
-                    ProduccionNeta: item.PRODUCCION_NETA,
-                    PesoEstandar: item.PESO_ESTANDAR,
-                    PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
-                    ScrapSinCorteSierra: item.SCRAP_SIN_CORTE_SIERRA,
-                    ScrapCorteSierra: item.SCRAP_CORTE_SIERRA,
-                    ScrapTotal: item.SCRAP_TOTAL,
-                    PorcentajeScrapSinCorte: item.PORCENTAJE_SCRAP_SIN_CORTE,
-                    PorcentajeScrapCorte: item.PORCENTAJE_SCRAP_CORTE,
-                    KgReproceso: item.KG_REPROCESO,
-                    Carbonato: item.CARBONATO,
-                    HorasProgramadas: item.HORAS_PROGRAMADAS,
-                    MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
-                    ControlInventarios: item.CONTROL_INVENTARIOS,
-                    FaltaEnergia: item.FALTA_ENERGIA,
-                    FaltaMateriaPrima: item.FALTA_MATERIA_PRIMA,
-                    PreparacionCambio: item.PREPARACION_CAMBIO,
-                    ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION,
-                    TiempoMttoCorrectivosArranque: item.TIEMPO_MTTO_CORRECTIVOS_ARRANQUE,
-                    TiempoMuertoCorrectivos: item.TIEMPO_MUERTO_CORRECTIVOS,
-                    CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
-                    TiempoMuertoArrancar: item.TIEMPO_MUERTO_ARRANCAR,
-                    TiempoMuertoProceso: item.TIEMPO_MUERTO_PROCESO,
-                    TiempoDisponible: item.TIEMPO_DISPONIBLE,
-                    TiempoProductivo: item.TIEMPO_PRODUCTIVO,
-                    KgHrLinea: item.KG_HR_LINEA,
-                    KgHrProducto: item.KG_HR_PRODUCTO,
-                    ObjetivoEficiencia: item.OBJETIVO_EFICIENCIA ?? 91,
-                    DisponibilidadPorcentaje: item.DISPONIBILIDAD_PORCENTAJE,
-                    KgPorTiempoDisponible: item.KG_POR_TIEMPO_DISPONIBLE,
-                    KgNetosHrReales: item.KG_NETOS_HR_REALES,
-                    PorcentajeRendimiento: item.PORCENTAJE_RENDIMIENTO,
-                    PorcentajeCalidad: item.PORCENTAJE_CALIDAD,
-                    PorcentajeOEE: item.PORCENTAJE_OEE,
-                    PorcentajeEficienciaProducto: item.PORCENTAJE_EFICIENCIA_PRODUCTO,
-                    EficienciaOperativa: item.EFICIENCIA_OPERATIVA
-                };
-
-                // Identificar origen y asignar emoji
-                if (item.OTMC && item.OTMC.toString().trim() !== '') {
-                    fila._origen = 'CORRECTIVO';
-                    fila._marcador = '🔧';
-                    fila._rowClass = 'row-correctivo';
-                } else if (item.OTMP && item.OTMP.toString().trim() !== '') {
-                    fila._origen = 'PREVENTIVO';
-                    fila._marcador = '🛠️';
-                    fila._rowClass = 'row-preventivo';
-                } else if (item.ID_PRODUCTO_TERMINADO && item.ID_PRODUCTO_TERMINADO.toString().trim() !== '') {
-                    fila._origen = 'PRODUCTO_TERMINADO';
-                    fila._marcador = '📦';
-                    fila._rowClass = 'row-producto-terminado';
-                } else if (item.ID_PARO && item.ID_PARO.toString().trim() !== '') {
-                    // 🟦 Es un paro guardado en DB
-                    fila._origen = 'PARO_MANUAL';
-                    fila._marcador = '⛔';
-                    fila._rowClass = 'row-paro';
-                }
-
-                return fila;
-            });
-
-            if (datosFormateados.length > 0) {
-                this.gridApi.setRowData(datosFormateados);
-                this.inicializarTooltipsGrid();
-                return true;
-            }
-        }
-
-        this.gridApi.setRowData([]);
-        return false;
     }
 
     async consultarDatos() {
@@ -724,74 +645,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         }
     }
 
-    // ✅ FIX: normalizar String().trim() en el Set para evitar duplicados falsos
-    agregarCorrectivosAlGrid(correctivos) {
-
-        const otmcYaEnGrid = new Set();
-
-        this.gridApi.forEachNode(node => {
-            if (node.data?.OTMC) {
-                otmcYaEnGrid.add(String(node.data.OTMC).trim());
-            }
-        });
-
-        const correctivosNuevos = correctivos.filter(
-            item => !otmcYaEnGrid.has(String(item.NumeroOrden).trim())
-        );
-
-        if (correctivosNuevos.length === 0) return false;
-
-        const filasNuevas = [];
-        const lineasNoEncontradas = [];
-
-        correctivosNuevos.forEach(item => {
-
-            const nuevaFila = this.crearFilaVacia();
-
-            nuevaFila.id = this.generarIdTemporal();
-            nuevaFila.OTMC = item.NumeroOrden;
-            nuevaFila.Fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
-            nuevaFila.TiempoMuertoCorrectivos = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan) || 0;
-
-            nuevaFila._origen = 'CORRECTIVO';
-            nuevaFila._marcador = '🔧';
-            nuevaFila._rowClass = 'row-correctivo';
-
-            const lineaEncontrada = this.listaLineas.find(
-                l => String(l.value) === String(item.IdLineaProduccion)
-            );
-
-            if (lineaEncontrada) {
-                nuevaFila.Linea = lineaEncontrada.label;
-            } else {
-                nuevaFila.Linea = null;
-                lineasNoEncontradas.push(item.NumeroOrden);
-            }
-
-            if (nuevaFila.Fecha) {
-                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
-            }
-
-            this.recalcularFila(nuevaFila);
-            filasNuevas.push(nuevaFila);
-        });
-
-        if (filasNuevas.length > 0) {
-            this.gridApi.applyTransaction({ add: filasNuevas });
-            this.inicializarTooltipsGrid();
-        }
-
-        if (lineasNoEncontradas.length > 0) {
-            AlertManager.mostrar(
-                `Las siguientes órdenes no tienen línea reconocida y quedaron sin línea asignada: ${lineasNoEncontradas.join(', ')}`,
-                "warning"
-            );
-        }
-
-        return true;
-    }
-
     parsearFechaCorrectivo(fechaTexto) {
         if (!fechaTexto) return null;
         const [fechaParte] = fechaTexto.split(' ');
@@ -800,21 +653,21 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
     }
 
-    // ✅ NUEVO: Agrupar correctivos ANTES de procesarlos (por Fecha + Línea + AreaTécnica)
+    // 🆕 REEMPLAZAR agruparCorrectivos en GestionProduccionCorrugado
     agruparCorrectivos(correctivos) {
         const grupos = {};
 
         correctivos.forEach(item => {
             const fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
-            const tipoTiempo = item.AreaTecnica === 'MANTENIMIENTO HERRAMENTALES' ? 'Herramental' : 'MttoCorrectivos';
 
-            // 🔍 Buscar línea
+            // 🆕 Corrugado no tiene Herramental separado — todo va a TiempoMuertoCorrectivos
+            const tipoTiempo = 'TiempoMuertoCorrectivos';
+
             const lineaEncontrada = this.listaLineas.find(
                 l => String(l.value) === String(item.IdLineaProduccion)
             );
             const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
 
-            // ✅ Crear clave única para el grupo: Fecha|Línea|TipoTiempo
             const clave = `${fecha}|${nombreLinea}|${tipoTiempo}`;
 
             if (!grupos[clave]) {
@@ -829,15 +682,12 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 };
             }
 
-            // ✅ IMPORTANTE: Convertir a número para evitar concatenación de strings
             const duracionHrs = Number(GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan)) || 0;
             grupos[clave].tiempoTotal += duracionHrs;
             grupos[clave].otmcList.push(item.NumeroOrden);
             grupos[clave].items.push(item);
 
-            if (!nombreLinea) {
-                grupos[clave].sinLinea = true;
-            }
+            if (!nombreLinea) grupos[clave].sinLinea = true;
         });
 
         return Object.values(grupos);
@@ -1016,7 +866,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             }
 
             // ✅ NUEVO: Acumular preventivos en los datos formateados IN-MEMORY
-            return this.agregarPreventivosCerradosEnMemoria(preventivos, datosFormateados);
+            return this.agregarPreventivosAlGridEnMemoria(preventivos, datosFormateados);
 
         } catch (error) {
 
@@ -1027,73 +877,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         } finally {
             GlobalUtil.mostrarLoader(false);
         }
-    }
-
-    agregarPreventivoAlGrid(preventivos) {
-
-        const otmpYaEnGrid = new Set();
-
-        this.gridApi.forEachNode(node => {
-            if (node.data?.OTMP) {
-                otmpYaEnGrid.add(String(node.data.OTMP).trim());
-            }
-        });
-
-        const preventivosNuevos = preventivos.filter(
-            item => !otmpYaEnGrid.has(String(item.NumeroOrden).trim())
-        );
-
-        if (preventivosNuevos.length === 0) return false;
-
-        const filasNuevas = [];
-        const lineasNoEncontradas = [];
-
-        preventivosNuevos.forEach(item => {
-
-            const nuevaFila = this.crearFilaVacia();
-
-            nuevaFila.id = this.generarIdTemporal();
-            nuevaFila.OTMP = item.NumeroOrden;
-            nuevaFila.Fecha = this.parsearFechaPreventivo(item.FechaInicioMantenimiento);
-            nuevaFila.MantenimientoPreventivo = parseFloat(item.DuracionHrs) || 0;
-
-            nuevaFila._origen = 'PREVENTIVO';
-            nuevaFila._marcador = '🛠️';
-            nuevaFila._rowClass = 'row-preventivo';
-
-            const lineaEncontrada = this.listaLineas.find(
-                l => String(l.value) === String(item.IdLineaProduccion)
-            );
-
-            if (lineaEncontrada) {
-                nuevaFila.Linea = lineaEncontrada.label;
-            } else {
-                nuevaFila.Linea = null;
-                lineasNoEncontradas.push(item.NumeroOrden);
-            }
-
-            if (nuevaFila.Fecha) {
-                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
-            }
-
-            this.recalcularFila(nuevaFila);
-            filasNuevas.push(nuevaFila);
-        });
-
-        if (filasNuevas.length > 0) {
-            this.gridApi.applyTransaction({ add: filasNuevas });
-            this.inicializarTooltipsGrid();
-        }
-
-        if (lineasNoEncontradas.length > 0) {
-            AlertManager.mostrar(
-                `Las siguientes órdenes no tienen línea reconocida y quedaron sin línea asignada: ${lineasNoEncontradas.join(', ')}`,
-                "warning"
-            );
-        }
-
-        return true;
     }
 
     parsearFechaPreventivo(fechaTexto) {
@@ -1163,7 +946,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
     }
 
     // ✅ NUEVO: Agregar preventivos a los datos EN MEMORIA (antes de setRowData)
-    agregarPreventivosCerradosEnMemoria(preventivos, datosFormateados) {
+    agregarPreventivosAlGridEnMemoria(preventivos, datosFormateados) {
         // ✅ SI datosFormateados está vacío, lo inicializamos como array vacío
         if (!datosFormateados) {
             datosFormateados = [];
@@ -1259,7 +1042,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
                 // ✅ Marcar como preventivo
                 nuevaFila._origen = 'PREVENTIVO';
-                nuevaFila._marcador = '🔧';
+                nuevaFila._marcador = '🛠️';
                 nuevaFila._rowClass = 'row-preventivo';
                 nuevaFila._esNuevo = true;
                 nuevaFila.Linea = nombreLinea;
@@ -1346,43 +1129,45 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
     }
 
     // ========================================
-    // 🟦 NUEVO: Agregar Paros al Grid
-    // ========================================
-    // ========================================
     // 🟦 NUEVO: Mapear Categoría del Paro a Columna del Grid (Corrugado)
     // ========================================
     mapearCategoriaParoAColumna(categoria) {
 
         if (!categoria) return null;
 
-        // 🟦 Normalizar: convertir a mayúsculas y remover acentos
         const categoriaNormalizada = categoria
             .toUpperCase()
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
             .trim();
 
-        // 🟦 Mapeo 1:1 con columnas de TIEMPO NO PRODUCTIVO en Corrugado
-        // Solo 4 columnas: TiempoMuertoCorrectivos, CambioMoldeSetupExcesos, TiempoMuertoArrancar, TiempoMuertoProceso
+        // 🟦 Mapeo 1:1 con las 4 columnas de TIEMPO NO PRODUCTIVO en Corrugado:
+        // TiempoMuertoCorrectivos, CambioMoldeSetupExcesos, TiempoMuertoArrancar, TiempoMuertoProceso
         const mapeo = {
-            // MTTO CORRECTIVOS (Row 8)
+            // MTTO CORRECTIVOS
             'MTTO CORRECTIVOS': 'TiempoMuertoCorrectivos',
             'MTTO. CORRECTIVOS': 'TiempoMuertoCorrectivos',
+            'TIEMPO MUERTO POR CORRECTIVOS': 'TiempoMuertoCorrectivos', // 🔥 AGREGADO (id 22)
 
-            // CAMBIO DE MOLDE (SETUP) EXCESOS (Row 11)
+            // CAMBIO DE MOLDE (SETUP) EXCESOS
             'CAMBIO DE MOLDE (SETUP) EXCESOS': 'CambioMoldeSetupExcesos',
             'CAMBIO MOLDE SETUP EXCESOS': 'CambioMoldeSetupExcesos',
 
-            // FALLA DE OPERACIÓN (Row 13)
+            // TIEMPO MUERTO POR ARRANQUES  🔥 AGREGADO — el hueco confirmado (id 23)
+            'TIEMPO MUERTO POR ARRANQUES': 'TiempoMuertoArrancar',
+
+            // FALLA DE OPERACIÓN / TIEMPO MUERTO PROCESO
             'FALLA DE OPERACION': 'TiempoMuertoProceso',
             'FALLA DE OPERACIÓN': 'TiempoMuertoProceso',
             'FALLA OPERACION': 'TiempoMuertoProceso',
+            'TIEMPO MUERTO PROCESO': 'TiempoMuertoProceso', // 🔥 AGREGADO (id 24)
         };
 
         return mapeo[categoriaNormalizada] || null;
     }
 
-    // ✅ NUEVO: Agrupar paros por Fecha + Línea + acumular duraciones por categor ía
+    // ✅ Agrupar paros por Fecha + Línea — 100% dinámico, acumula en CUALQUIER
+    // columna que mapearCategoriaParoAColumna devuelva, sin lista fija
     agruparParos(paros) {
         const grupos = {};
 
@@ -1390,39 +1175,31 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             const fecha = this.parsearFechaParo(item.FECHA_PARO_STRING);
             const columnaCategoria = this.mapearCategoriaParoAColumna(item.CATEGORIA);
 
-            // 🔍 Buscar línea
             const lineaEncontrada = this.listaLineas.find(
                 l => String(l.value) === String(item.LINEA_PRODUCCION)
             );
             const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
 
-            // ✅ Crear clave única SOLO por Fecha + Línea (SIN categoría)
-            // Así todos los paros de la misma fecha y línea van en UNA sola fila
             const clave = `${fecha}|${nombreLinea}`;
 
             if (!grupos[clave]) {
                 grupos[clave] = {
                     fecha,
                     nombreLinea,
-                    columnaCategoria,
-                    // 🔥 NUEVO: Objeto con las categorías como propiedades
-                    // Cada categoría acumula en su propio key
-                    TiempoMuertoCorrectivos: 0,
-                    CambioMoldeSetupExcesos: 0,
-                    TiempoMuertoArrancar: 0,
-                    TiempoMuertoProceso: 0,
+                    categorias: {}, // 🔥 acumulador dinámico: { NombreColumna: horasAcumuladas }
                     idParoList: [],
                     items: [],
                     sinLinea: false
                 };
             }
 
-            // ✅ IMPORTANTE: Convertir a número para evitar concatenación de strings
             const duracionHrs = Number(item.DURACION_HRS) || 0;
 
-            // 🔥 Acumular en la columna correspondiente (por categoría)
-            if (columnaCategoria && grupos[clave].hasOwnProperty(columnaCategoria)) {
-                grupos[clave][columnaCategoria] += duracionHrs;
+            if (columnaCategoria) {
+                grupos[clave].categorias[columnaCategoria] =
+                    (grupos[clave].categorias[columnaCategoria] || 0) + duracionHrs;
+            } else {
+                console.warn(`⚠️ Paro ID ${item.ID_PARO} con categoría "${item.CATEGORIA}" no mapeada a ninguna columna — se registra el ID pero sin sumar horas`);
             }
 
             grupos[clave].idParoList.push(String(item.ID_PARO));
@@ -1433,34 +1210,25 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             }
         });
 
-        // ✅ NUEVO: Calcular tiempoTotal para cada grupo ANTES de retornar
-        return Object.values(grupos).map(grupo => ({
-            ...grupo,
-            tiempoTotal: grupo.TiempoMuertoCorrectivos + grupo.CambioMoldeSetupExcesos + grupo.TiempoMuertoArrancar + grupo.TiempoMuertoProceso
-        }));
+        return Object.values(grupos);
     }
 
-    // ✅ NUEVO: Agregar paros a los datos EN MEMORIA (antes de setRowData)
+    // ✅ Agregar paros a los datos EN MEMORIA — itera dinámicamente todas las
+    // categorías acumuladas del grupo, sin depender de una lista fija de campos
     agregarParosAlGridEnMemoria(paros, datosFormateados) {
-        // ✅ SI datosFormateados está vacío, lo inicializamos como array vacío
         if (!datosFormateados) {
             datosFormateados = [];
         }
 
         const idParoYaEnDatos = new Set();
 
-        // 🔍 Recopilar ID_PARO ya presentes en datosFormateados
         datosFormateados.forEach(fila => {
             if (fila.ID_PARO) {
-                // ID_PARO puede venir como string individual o concatenado (pipes)
                 const ids = String(fila.ID_PARO).split('|').filter(o => o.trim());
                 ids.forEach(o => idParoYaEnDatos.add(String(o).trim()));
             }
         });
 
-        console.log('💾 IDs de PARO ya en datos:', [...idParoYaEnDatos]);
-
-        // 🔍 Filtrar paros que NO estén ya en datos
         const parosNuevos = paros.filter(
             item => !idParoYaEnDatos.has(String(item.ID_PARO).trim())
         );
@@ -1472,27 +1240,23 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
         console.log(`📥 Agregando ${parosNuevos.length} paros a datos en memoria`);
 
-        // ✅ NUEVO: Agrupar los paros nuevos ANTES de procesarlos
         const gruposParos = this.agruparParos(parosNuevos);
-        console.log(`📊 Agrupados en ${gruposParos.length} grupos únicos (Fecha + Línea + Categoría)`);
+        console.log(`📊 Agrupados en ${gruposParos.length} grupos únicos (Fecha + Línea)`);
 
         const filasNuevas = [];
         const lineasNoEncontradas = [];
 
-        // ✅ Procesar GRUPOS en lugar de items individuales
+        const normalizarFecha = (fechaStr) => {
+            if (!fechaStr) return null;
+            return typeof fechaStr === 'string' ? fechaStr.split('T')[0] : fechaStr;
+        };
+
         gruposParos.forEach(grupo => {
-            const { fecha, nombreLinea, columnaCategoria, tiempoTotal, idParoList, sinLinea } = grupo;
+            const { fecha, nombreLinea, categorias, idParoList, sinLinea } = grupo;
 
             if (sinLinea) {
                 lineasNoEncontradas.push(...idParoList);
             }
-
-            // 🔍 Buscar fila existente en datosFormateados
-            // ✅ IMPORTANTE: Normalizar fecha de fila a formato YYYY-MM-DD (puede venir como ISO: 2026-09-18T00:00:00.000)
-            const normalizarFecha = (fechaStr) => {
-                if (!fechaStr) return null;
-                return typeof fechaStr === 'string' ? fechaStr.split('T')[0] : fechaStr;
-            };
 
             let filaExistente = datosFormateados.find(fila =>
                 normalizarFecha(fila.Fecha) === fecha &&
@@ -1500,42 +1264,39 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 (fila._origen === 'PARO_MANUAL' || fila.ID_PARO)
             );
 
-            console.log(`🔍 Buscando (EN MEMORIA): Fecha="${fecha}" | Línea="${nombreLinea}" | Categoría="${columnaCategoria}" | IDs a agregar: ${idParoList.join(', ')}`);
+            const categoriasKeys = Object.keys(categorias);
 
-            if (filaExistente && columnaCategoria) {
-                // ✅ Acumular tiempo en fila existente
-                filaExistente[columnaCategoria] = (filaExistente[columnaCategoria] || 0) + tiempoTotal;
+            console.log(`🔍 Buscando (EN MEMORIA): Fecha="${fecha}" | Línea="${nombreLinea}" | Categorías: ${categoriasKeys.join(', ')} | IDs: ${idParoList.join(', ')}`);
 
-                // ✅ Normalizar ID_PARO existente: puede venir individual o pipes
+            if (filaExistente) {
+                categoriasKeys.forEach(col => {
+                    filaExistente[col] = (filaExistente[col] || 0) + categorias[col];
+                });
+
                 let idParoActual = filaExistente.ID_PARO || '';
-                if (typeof idParoActual === 'string' && idParoActual.trim()) {
-                    // Si ya está establecido, agregar con pipe
-                    const idsGrupo = idParoList.join('|');
-                    filaExistente.ID_PARO = idParoActual ? `${idParoActual}|${idsGrupo}` : idsGrupo;
-                }
+                const idsGrupo = idParoList.join('|');
+                filaExistente.ID_PARO = idParoActual ? `${idParoActual}|${idsGrupo}` : idsGrupo;
 
-                // Recalcular totales de la fila
                 this.recalcularFila(filaExistente);
 
-                console.log(`✅ Acumulado a fila existente (${fecha} - ${nombreLinea}): +${tiempoTotal}h en ${columnaCategoria} | IDs: ${idParoList.join(', ')}`);
-            } else if (columnaCategoria) {
-                // ✅ Crear nueva fila
+                console.log(`✅ Acumulado a fila existente (${fecha} - ${nombreLinea}): ${categoriasKeys.map(c => `${c} +${categorias[c]}h`).join(', ')} | IDs: ${idParoList.join(', ')}`);
+            } else if (categoriasKeys.length > 0) {
+                // ✅ Solo crear fila si hubo AL MENOS una categoría mapeada con horas
                 const nuevaFila = this.crearFilaVacia();
 
                 nuevaFila.id = this.generarIdTemporal();
-                // ✅ IMPORTANTE: Guardar todos los IDs del grupo separados por |
                 nuevaFila.ID_PARO = idParoList.join('|');
                 nuevaFila.Fecha = fecha;
-                nuevaFila[columnaCategoria] = tiempoTotal;
-
-                // ✅ Marcar como paro
                 nuevaFila._origen = 'PARO_MANUAL';
                 nuevaFila._marcador = '🚫';
                 nuevaFila._rowClass = 'row-paro';
                 nuevaFila._esNuevo = true;
                 nuevaFila.Linea = nombreLinea;
 
-                // Asignar datos adicionales del primer item del grupo
+                categoriasKeys.forEach(col => {
+                    nuevaFila[col] = categorias[col];
+                });
+
                 const primerItem = grupo.items[0];
                 if (primerItem.ARTICULO) {
                     nuevaFila.Producto = primerItem.ARTICULO;
@@ -1553,16 +1314,17 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
                 }
 
-                // ✅ Recalcular antes de agregar
                 this.recalcularFila(nuevaFila);
-
                 filasNuevas.push(nuevaFila);
 
-                console.log(`✅ Nueva fila creada (${fecha} - ${nombreLinea}): ${tiempoTotal}h en ${columnaCategoria} | IDs: ${idParoList.join(', ')}`);
+                console.log(`✅ Nueva fila creada (${fecha} - ${nombreLinea}): ${categoriasKeys.map(c => `${c} ${categorias[c]}h`).join(', ')} | IDs: ${idParoList.join(', ')}`);
+            } else {
+                // 🔥 Ningún paro del grupo mapeó a columna válida — se pierde el registro
+                // de horas, pero avisamos con detalle en vez de silencio total
+                console.warn(`⚠️ Grupo (${fecha} - ${nombreLinea}) sin categorías mapeadas — IDs afectados: ${idParoList.join(', ')}. No se creó fila.`);
             }
         });
 
-        // ✅ Agregar nuevas filas a datosFormateados
         if (filasNuevas.length > 0) {
             datosFormateados.push(...filasNuevas);
             console.log(`📌 Agregadas ${filasNuevas.length} nuevas filas a datosFormateados`);
@@ -1575,7 +1337,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             );
         }
 
-        // ✅ IMPORTANTE: Actualizar gridApi con los datos modificados
         this.gridApi.setRowData(datosFormateados);
         this.inicializarTooltipsGrid();
 
@@ -1781,10 +1542,10 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     dataActualizada.Fecha = fecha;
                     dataActualizada.Producto = item.Codigo || '';
                     dataActualizada.Turno = String(item.Turno || '');
-                    dataActualizada.TRFabricados = parseFloat(item.NumTubos) || 0;
-                    dataActualizada.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
-                    dataActualizada.PorcentajeScrap = 0;
-                    dataActualizada.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
+                    dataActualizada.TRLiberados = parseFloat(item.NumTubos) || 0;
+                    dataActualizada.ProduccionNeta = parseFloat(item.PesoTotal) || 0;
+                    dataActualizada.ScrapSinCorteSierra = parseFloat(item.ScrapTotal) || 0;
+                    dataActualizada.ScrapCorteSierra = 0;
                     dataActualizada.Linea = lineaLabel;
                     dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
                     dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
@@ -1807,10 +1568,10 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     nuevaFila.Fecha = fecha;
                     nuevaFila.Producto = item.Codigo || '';
                     nuevaFila.Turno = String(item.Turno || '');
-                    nuevaFila.TRFabricados = parseFloat(item.NumTubos) || 0;
-                    nuevaFila.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
-                    nuevaFila.PorcentajeScrap = 0;
-                    nuevaFila.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
+                    nuevaFila.TRLiberados = parseFloat(item.NumTubos) || 0;
+                    nuevaFila.ProduccionNeta = parseFloat(item.PesoTotal) || 0;
+                    nuevaFila.ScrapSinCorteSierra = parseFloat(item.ScrapTotal) || 0;
+                    nuevaFila.ScrapCorteSierra = 0;
                     nuevaFila.Linea = lineaLabel;
                     nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
                     nuevaFila.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
@@ -1940,12 +1701,47 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                             const origen = params.data?._origen;
                             const idRegistro = params.data?.ID_REGISTRO;
 
+                            // ✅ IMPORTANTE: Normalizar OTMC/OTMP para tooltip (puede venir en JSON o pipes)
+                            const normalizarOrdenes = (ordenesStr) => {
+                                if (!ordenesStr) return '';
+                                if (typeof ordenesStr === 'string' && ordenesStr.startsWith('[')) {
+                                    // Si es JSON, parsear
+                                    try {
+                                        const parsed = JSON.parse(ordenesStr);
+                                        return Array.isArray(parsed) ? parsed.join(', ') : ordenesStr;
+                                    } catch (e) {
+                                        return ordenesStr;
+                                    }
+                                }
+                                // Si ya es pipes, convertir a comas para legibilidad
+                                return ordenesStr.split('|').join(', ');
+                            };
+
+                            // ✅ IMPORTANTE: Normalizar ID_PARO con prefijo PAR- o COR- para tooltip
+                            const normalizarParos = (parosStr, esPARO_CORRECTIVO = false) => {
+                                if (!parosStr) return '';
+                                // Determinar prefijo según si es paro correctivo o manual
+                                const prefijo = esPARO_CORRECTIVO ? 'COR' : 'PAR';
+
+                                if (typeof parosStr === 'string' && parosStr.startsWith('[')) {
+                                    // Si es JSON, parsear
+                                    try {
+                                        const parsed = JSON.parse(parosStr);
+                                        return Array.isArray(parsed) ? parsed.map(p => `${prefijo}-${p}`).join(', ') : parosStr;
+                                    } catch (e) {
+                                        return parosStr;
+                                    }
+                                }
+                                // Si ya es pipes, convertir a comas con prefijo
+                                return parosStr.split('|').map(p => `${prefijo}-${p.trim()}`).join(', ');
+                            };
+
                             // 🔥 Mapa de tooltips según origen
                             const tooltipTexts = {
-                                'CORRECTIVO': 'Mantenimiento Correctivo',
-                                'PREVENTIVO': 'Mantenimiento Preventivo',
+                                'CORRECTIVO': 'Mantenimiento Correctivo: ' + normalizarOrdenes(params.data?.OTMC),
+                                'PREVENTIVO': 'Mantenimiento Preventivo: ' + normalizarOrdenes(params.data?.OTMP),
                                 'PRODUCTO_TERMINADO': 'Producto Terminado',
-                                'PARO_MANUAL': 'Paros Manuales'
+                                'PARO_MANUAL': 'Paros Manuales: ' + normalizarParos(params.data?.ID_PARO, false)
                             };
 
                             const tooltipText = tooltipTexts[origen] || '';
@@ -2184,19 +1980,18 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 }
                 return null;
             },
-            getRowClass: params => {
-                if (params.data?.id === 'TOTALES') return 'fila-totales';
-                if (params.data?._rowClass) return params.data._rowClass;
-                return '';
+            // ✅ PONER esto igual que PVC
+            rowClassRules: {
+                'fila-totales': params => params.data?.id === 'TOTALES',
+                'row-correctivo': params => params.data?._rowClass === 'row-correctivo',
+                'row-preventivo': params => params.data?._rowClass === 'row-preventivo',
+                'row-producto-terminado': params => params.data?._rowClass === 'row-producto-terminado',
+                'row-paro': params => params.data?._rowClass === 'row-paro',
+                'fila-nueva': params => params.data?._esNuevo === true
             }
         };
 
         new agGrid.Grid(gridDiv, gridOptions);
-    }
-
-    inicializarTooltips() {
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
     }
 
     inicializarTooltipsGrid() {
@@ -2205,7 +2000,10 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             tooltipElements.forEach(el => {
                 const existingTooltip = bootstrap.Tooltip.getInstance(el);
                 if (existingTooltip) existingTooltip.dispose();
-                new bootstrap.Tooltip(el);
+                // Después
+                new bootstrap.Tooltip(el, {
+                    container: 'body'   // 🔥 Sale del scope del AG-Grid
+                });
             });
         }, 100);
     }
@@ -2265,6 +2063,23 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 node.setData(filaTotales);
             }
         });
+    }
+    // ========================================
+    // 🔥 Métodos wrapper para validación de Productos Terminados
+    // ========================================
+    async validarProductosTerminadosExistentes(ids, tipoProceso) {
+        // 🔥 Delegado al helper compartido
+        return await ProductosTerminadosHelper.validarProductosTerminadosExistentes(ids, tipoProceso, this.URLBase);
+    }
+
+    mostrarModalProductosOmitidos(productosOmitidos) {
+        // 🔥 Delegado al helper compartido
+        ProductosTerminadosHelper.mostrarModalProductosOmitidos(productosOmitidos);
+    }
+
+    formatearFechaCreacion(fechaCreacion) {
+    // 🔥 Delegado al helper compartido
+        return ProductosTerminadosHelper.formatearFechaCreacion(fechaCreacion);
     }
 
     // ========================================
@@ -2528,12 +2343,35 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
         this.gridApi.forEachNode(node => {
             if (node.data.id !== 'TOTALES') {
+
+                // ✅ Procesar OTMC para convertir en JSON array si hay múltiples
+                let otmcFinal = null;
+                if (node.data.OTMC) {
+                    if (String(node.data.OTMC).includes('|')) {
+                        const otmcs = String(node.data.OTMC).split('|').map(x => x.trim()).filter(x => x);
+                        otmcFinal = JSON.stringify(otmcs);
+                    } else {
+                        otmcFinal = JSON.stringify([String(node.data.OTMC).trim()]);
+                    }
+                }
+
+                // ✅ Procesar OTMP para convertir en JSON array si hay múltiples
+                let otmpFinal = null;
+                if (node.data.OTMP) {
+                    if (String(node.data.OTMP).includes('|')) {
+                        const otmps = String(node.data.OTMP).split('|').map(x => x.trim()).filter(x => x);
+                        otmpFinal = JSON.stringify(otmps);
+                    } else {
+                        otmpFinal = JSON.stringify([String(node.data.OTMP).trim()]);
+                    }
+                }
+
                 datos.push({
                     ID_REGISTRO: node.data.ID_REGISTRO || null,
-                    OTMC: node.data.OTMC || null,
-                    OTMP: node.data.OTMP || null,
+                    OTMC: otmcFinal,
+                    OTMP: otmpFinal,
                     ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null,
-                    ID_PARO: node.data.ID_PARO || null, // 🟦 NUEVO: Identificador del paro manual
+                    ID_PARO: node.data.ID_PARO || null,
                     MES: node.data.Mes,
                     FECHA: node.data.Fecha,
                     LINEA: node.data.Linea,
@@ -2541,7 +2379,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     PRODUCTO: node.data.Producto,
                     TURNO: node.data.Turno,
                     GRUPO: node.data.Grupo,
-                    COMENTARIOS: node.data.Comentarios || '',  // ✅ COMENTARIOS
+                    COMENTARIOS: node.data.Comentarios || '',
                     PESO_MINIMO: redondear(node.data.PesoMinimo, 2),
                     TRLIBERADOS: redondear(node.data.TRLiberados, 2),
                     PRODUCCION_NETA: redondear(node.data.ProduccionNeta, 2),
@@ -2660,9 +2498,10 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         });
 
         $('#btnLimpiarFiltros').on('click', () => {
-            $('#FiltroFechaInicio').val('');
-            $('#FiltroFechaFin').val('');
+            $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
+            $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
             $('#FiltroTurno').val('');
+            $('#FiltroProducto').val('');
             $('#FiltroLinea').val('');
             this.consultarDatos();
         });
@@ -2753,19 +2592,27 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         nuevaFila.id = this.generarIdTemporal();
         nuevaFila.ID_REGISTRO = null;
 
+        nuevaFila.OTMC = null;
+        nuevaFila.OTMP = null;
+        nuevaFila.ID_PRODUCTO_TERMINADO = null;
+        nuevaFila.ID_PARO = null;
+        nuevaFila._origen = null;
+        nuevaFila._marcador = null;
+        nuevaFila._rowClass = null;
+        nuevaFila._esNuevo = null;
+
+        if (nuevaFila.Fecha) {
+            const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+            nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+        }
+
         this.recalcularFila(nuevaFila);
 
-        // 🔥 Si es la fila de TOTALES, insertar ANTES de ella (en su índice)
-        // Si no, insertar DESPUÉS de la fila seleccionada
-        const addIndex = params.node.data?.id === 'TOTALES' 
-            ? params.node.rowIndex 
+        const addIndex = params.node.data?.id === 'TOTALES'
+            ? params.node.rowIndex
             : params.node.rowIndex + 1;
 
-        this.gridApi.applyTransaction({
-            add: [nuevaFila],
-            addIndex: addIndex
-        });
-
+        this.gridApi.applyTransaction({ add: [nuevaFila], addIndex });
         this.recalcularTotales();
     }
 
@@ -2840,23 +2687,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             valueParser: params => {
                 if (params.newValue === null || params.newValue === undefined || params.newValue === '')
                     return null;
-
-                let valor = params.newValue.toString().trim();
-
-                if (valor.includes(',') && valor.includes('.')) {
-                    const lastComma = valor.lastIndexOf(',');
-                    const lastDot = valor.lastIndexOf('.');
-                    if (lastComma > lastDot) {
-                        valor = valor.replace(/\./g, '').replace(',', '.');
-                    } else {
-                        valor = valor.replace(/,/g, '');
-                    }
-                } else if (valor.includes(',')) {
-                    valor = valor.replace(/,/g, '.');
-                }
-
-                const numValue = parseFloat(valor);
-                return isNaN(numValue) ? null : numValue;
+                const valor = GlobalUtil.darFormatoNum(params.newValue);
+                return valor === '' ? null : Number(valor);
             },
             valueFormatter: params => this.formatearNumero(params.value)
         };
@@ -2870,23 +2702,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             valueParser: params => {
                 if (params.newValue === null || params.newValue === undefined || params.newValue === '')
                     return null;
-
-                let valor = params.newValue.toString().trim();
-
-                if (valor.includes(',') && valor.includes('.')) {
-                    const lastComma = valor.lastIndexOf(',');
-                    const lastDot = valor.lastIndexOf('.');
-                    if (lastComma > lastDot) {
-                        valor = valor.replace(/\./g, '').replace(',', '.');
-                    } else {
-                        valor = valor.replace(/,/g, '');
-                    }
-                } else if (valor.includes(',')) {
-                    valor = valor.replace(/,/g, '.');
-                }
-
-                const numValue = parseFloat(valor);
-                return isNaN(numValue) ? null : numValue;
+                const valor = GlobalUtil.darFormatoNum(params.newValue);
+                return valor === '' ? null : Number(valor);
             },
             valueFormatter: params => this.formatearPorcentaje(params.value)
         };
@@ -3526,23 +3343,5 @@ class CorreosManagerCorrugado {
         this.renderCorreos();
         $("#inputCorreoCorrugado").val('').removeClass("is-invalid");
         $("#errorCorreoCorrugado").hide();
-    }
-
-    // ========================================
-    // 🔥 Métodos wrapper para validación de Productos Terminados
-    // ========================================
-    async validarProductosTerminadosExistentes(ids, tipoProceso) {
-        // 🔥 Delegado al helper compartido
-        return await ProductosTerminadosHelper.validarProductosTerminadosExistentes(ids, tipoProceso, this.URLBase);
-    }
-
-    mostrarModalProductosOmitidos(productosOmitidos) {
-        // 🔥 Delegado al helper compartido
-        ProductosTerminadosHelper.mostrarModalProductosOmitidos(productosOmitidos);
-    }
-
-    formatearFechaCreacion(fechaCreacion) {
-        // 🔥 Delegado al helper compartido
-        return ProductosTerminadosHelper.formatearFechaCreacion(fechaCreacion);
     }
 }

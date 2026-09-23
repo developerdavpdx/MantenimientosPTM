@@ -283,111 +283,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
     }
 
-    cargarDatosGrid(datos) {
-
-        // 🔥 Ya NO agrega la fila de totales aquí — eso se decide al final en consultarDatos
-
-        if (datos != null) {
-
-            const datosFormateados = datos.map(item => {
-
-                const fila = {
-                    id: item.ID_REGISTRO || Date.now(),
-                    ID_REGISTRO: item.ID_REGISTRO,
-                    OTMC: item.OTMC,
-                    OTMP: item.OTMP,
-                    ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
-                    ID_PARO: item.ID_PARO,
-                    Fecha: item.FECHA,
-                    Linea: item.LINEA,
-                    Producto: item.PRODUCTO,
-                    Turno: item.TURNO,
-                    TRIP: item.TRIP,
-                    Comentarios: item.COMENTARIOS,
-                    HorasProgramadas: item.HORAS_PROGRAMADAS,
-                    MantenimientoPreventivo: item.MANTENIMIENTO_PREVENTIVO,
-                    ControlInventarios: item.CONTROL_INVENTARIOS,
-                    FaltaMateriaInsumos: item.FALTA_MATERIA_INSUMOS,
-                    CambioMolde: item.CAMBIO_MOLDE_HR,
-                    Calentamiento: item.CALENTAMIENTO_HR,
-                    ParoArranqueNoProgramado: item.PARO_ARRANQUE_NO_PROGRAMADO,
-                    ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION_HR,
-                    Mes: item.MES || (
-                        item.FECHA
-                            ? ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'][new Date(item.FECHA).getMonth()]
-                            : null
-                    ),
-                    PesoMinimo: item.PESO_MINIMO || 0,
-                    TRFabricados: item.TR_FABRICADOS,
-                    ProduccionNetaReal: item.PRODUCCION_NETA_REAL,
-                    PesoEstandar: item.PESO_ESTANDAR,
-                    PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
-                    TotalScrapKg: item.TOTAL_SCRAP_KG,
-                    PorcentajeScrap: item.PORCENTAJE_SCRAP,
-                    MttoCorrectivos: item.MTTO_CORRECTIVOS,
-                    FallaElectrica: item.FALLA_ELECTRICA,
-                    Servicios: item.SERVICIOS,
-                    CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
-                    Herramental: item.HERRAMENTAL,
-                    FallaOperacion: item.FALLA_OPERACION,
-                    LimpiezaTanque: item.LIMPIEZA_TANQUE,
-                    FaltaMaterial: item.FALTA_MATERIAL,
-                    FaltaPersonal: item.FALTA_PERSONAL,
-                    FaltaRefacciones: item.FALTA_REFACCIONES,
-                    TiempoDisponible: item.TIEMPO_DISPONIBLE,
-                    TiempoProductivo: item.TIEMPO_PRODUCTIVO,
-                    // 🔥 AGREGAR (si tu SP ya los regresa):
-                    KgHrLinea: item.KG_HR_LINEA,
-                    KgHrProducto: item.KG_HR_PRODUCTO,
-                    ObjetivoEficiencia: item.OBJETIVO_EFICIENCIA ?? 91,
-                    DisponibilidadPorcentaje: item.DISPONIBILIDAD_PORCENTAJE,
-                    KgPorTiempoDisponible: item.KG_POR_TIEMPO_DISPONIBLE,
-                    KgNetosHrReales: item.KG_NETOS_HR_REALES,
-                    PorcentajeRendimiento: item.PORCENTAJE_RENDIMIENTO,
-                    PorcentajeCalidad: item.PORCENTAJE_CALIDAD,
-                    PorcentajeOEE: item.PORCENTAJE_OEE,
-                    PorcentajeEficienciaProducto: item.PORCENTAJE_EFICIENCIA_PRODUCTO,
-                    EficienciaOperativa: item.EFICIENCIA_OPERATIVA,
-                };
-
-                // 🔥 NUEVO: Identificar origen y asignar emoji
-                if (item.OTMC && item.OTMC.toString().trim() !== '') {
-                    // Es un correctivo guardado en DB
-                    fila._origen = 'CORRECTIVO';
-                    fila._marcador = '🔧';
-                    fila._rowClass = 'row-correctivo';
-                } else if (item.OTMP && item.OTMP.toString().trim() !== '') {
-                    // Es un preventivo guardado en DB
-                    fila._origen = 'PREVENTIVO';
-                    fila._marcador = '🛠️';
-                    fila._rowClass = 'row-preventivo';
-                } else if (item.ID_PRODUCTO_TERMINADO && item.ID_PRODUCTO_TERMINADO.toString().trim() !== '') {
-                    // Es un producto terminado guardado en DB
-                    fila._origen = 'PRODUCTO_TERMINADO';
-                    fila._marcador = '📦';
-                    fila._rowClass = 'row-producto-terminado';
-                } else if (item.ID_PARO && item.ID_PARO.toString().trim() !== '') {
-                    // 🟦 Es un paro guardado en DB
-                    fila._origen = 'PARO_MANUAL';
-                    fila._marcador = '🚫';
-                    fila._rowClass = 'row-paro';
-                }
-
-                return fila;
-            });
-
-            if (datosFormateados.length > 0) {
-                this.gridApi.setRowData(datosFormateados);
-                this.inicializarTooltipsGrid(); // 🔥
-                return true; // 🔥 sí había datos
-            }
-        }
-
-        // 🔥 Sin datos: limpiamos el grid, SIN placeholder todavía
-        this.gridApi.setRowData([]);
-        return false;
-    }
-
     async consultarDatos() {
 
         try {
@@ -750,129 +645,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
         } finally {
             GlobalUtil.mostrarLoader(false);
         }
-    }
-
-    agregarCorrectivosAlGrid(correctivos) {
-        const otmcYaEnGrid = new Set();
-
-        console.log('OTMCs en grid:', [...otmcYaEnGrid]);
-        console.log('NumeroOrden del primer correctivo:', correctivos[0]?.NumeroOrden, typeof correctivos[0]?.NumeroOrden);
-
-        this.gridApi.forEachNode(node => {
-            if (node.data?.OTMC) {
-                otmcYaEnGrid.add(String(node.data.OTMC).trim()); // 🔥 normalizar
-            }
-        });
-
-        const correctivosNuevos = correctivos.filter(
-            item => !otmcYaEnGrid.has(String(item.NumeroOrden).trim()) // 🔥 normalizar
-        );
-
-        if (correctivosNuevos.length === 0) {
-            return false;
-        }
-
-        const filasNuevas = [];
-        const filasActualizar = [];
-        const lineasNoEncontradas = [];
-
-        correctivosNuevos.forEach(item => {
-            const tiempoCalculado = GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraFin) || 0;
-            const fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
-            const tipoTiempo = item.AreaTecnica === 'MANTENIMIENTO HERRAMENTALES' ? 'Herramental' : 'MttoCorrectivos';
-
-            // ── Buscar línea ──
-            const lineaEncontrada = this.listaLineas.find(
-                l => String(l.value) === String(item.IdLineaProduccion)
-            );
-
-            const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
-
-            if (!nombreLinea) {
-                lineasNoEncontradas.push(item.NumeroOrden);
-            }
-
-            // ── Buscar fila existente con la misma FECHA y LÍNEA ──
-            let filaExistente = null;
-
-            // 🔍 DEBUG
-            console.log(`🔍 Buscando fila: Fecha="${fecha}" | Línea="${nombreLinea}" | Origen="CORRECTIVO"`);
-
-            let filasEnGrid = 0;
-            this.gridApi.forEachNode(node => {
-                filasEnGrid++;
-                console.log(`   Comparando con: Fecha="${node.data?.Fecha}" | Línea="${node.data?.Linea}" | Origen="${node.data?._origen}"`);
-
-                if (node.data?.Fecha === fecha && node.data?.Linea === nombreLinea && node.data?._origen === 'CORRECTIVO') {
-                    filaExistente = node;
-                    console.log(`   ✅ ¡ENCONTRADA!`);
-                }
-            });
-
-            if (filasEnGrid === 0) {
-                console.warn(`⚠️ Grid vacío o inaccesible. Filas en grid: ${filasEnGrid}`);
-            }
-
-            if (filaExistente) {
-                // ✅ Acumular tiempo en fila existente
-                filaExistente.data[tipoTiempo] = (filaExistente.data[tipoTiempo] || 0) + tiempoCalculado;
-                filaExistente.data.OTMC = (filaExistente.data.OTMC || '') + `|${item.NumeroOrden}`;
-
-                // Recalcular totales de la fila
-                this.recalcularFila(filaExistente.data);
-                filasActualizar.push(filaExistente.data);
-
-                console.log(`✅ Acumulado a fila existente (${fecha} - ${nombreLinea}): +${tiempoCalculado}h en ${tipoTiempo}`);
-            } else {
-                // ✅ Crear nueva fila
-                const nuevaFila = this.crearFilaVacia();
-
-                nuevaFila.id = this.generarIdTemporal();
-                nuevaFila.OTMC = item.NumeroOrden;
-                nuevaFila.Fecha = fecha;
-                nuevaFila[tipoTiempo] = tiempoCalculado;
-
-                // ✅ Marcar como correctivo
-                nuevaFila._origen = 'CORRECTIVO';
-                nuevaFila._marcador = '🔧';
-                nuevaFila._rowClass = 'row-correctivo';
-                nuevaFila._esNuevo = true;
-                nuevaFila.Linea = nombreLinea;
-
-                if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
-                }
-
-                // ✅ Recalcular antes de agregar
-                this.recalcularFila(nuevaFila);
-
-                filasNuevas.push(nuevaFila);
-                console.log(`✅ Nueva fila creada (${fecha} - ${nombreLinea}): ${tiempoCalculado}h en ${tipoTiempo}`);
-            }
-        });
-
-        // ── Aplicar cambios al grid ──
-        if (filasNuevas.length > 0) {
-            this.gridApi.applyTransaction({ add: filasNuevas });
-        }
-
-        if (filasActualizar.length > 0) {
-            this.gridApi.applyTransaction({ update: filasActualizar });
-        }
-
-        if (filasNuevas.length > 0 || filasActualizar.length > 0) {
-            this.inicializarTooltipsGrid();
-        }
-
-        if (lineasNoEncontradas.length > 0) {
-            AlertManager.mostrar(
-                `Las siguientes órdenes no tienen línea reconocida y quedaron sin línea asignada: ${lineasNoEncontradas.join(', ')}`,
-                "warning"
-            );
-        }
-
-        return filasNuevas.length > 0 || filasActualizar.length > 0;
     }
 
     // ✅ NUEVO: Agrupar correctivos ANTES de procesarlos (por Fecha + Línea + AreaTécnica)
@@ -1562,30 +1334,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
         return await ProductosTerminadosHelper.validarProductosTerminadosExistentes(ids, tipoProceso, this.URLBase);
     }
 
-    parsearFechaProductoTerminado(fechaISO) {
-        if (!fechaISO) return null;
-
-        try {
-            const partesFecha = fechaISO.split('T')[0]; // "2026-07-28"
-
-            if (!partesFecha) return null;
-
-            const [ano, mes, dia] = partesFecha.split('-');
-            if (!ano || !mes || !dia) return null;
-
-            if (parseInt(ano) < 2000) {
-                console.warn(`⚠️ Fecha inválida detectada: ${fechaISO}`);
-                return null;
-            }
-
-            return `${ano}-${mes}-${dia}`; // YYYY-MM-DD directo, sin new Date()
-
-        } catch (error) {
-            console.error("Error al parsear fecha:", error);
-            return null;
-        }
-    }
-
     // ========================================
     // 🔥 Mostrar resultados de validación (datos reales de BD)
     // ========================================
@@ -1642,8 +1390,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
         }
     }
 
-    // ✅ NUEVO: Agrupar paros ANTES de procesarlos (por Fecha + Línea SOLO)
-    // Los valores se acumulan en sus columnas correspondientes
+    // ✅ Agrupar paros ANTES de procesarlos (por Fecha + Línea) — 100% dinámico,
+    // acumula en CUALQUIER columna que mapearCategoriaParoAColumna devuelva
     agruparParos(paros) {
         const grupos = {};
 
@@ -1651,38 +1399,31 @@ class GestionProduccionPVC extends GestionProduccionBase {
             const fecha = this.parsearFechaParo(item.FECHA_PARO_STRING);
             const columnaCategoria = this.mapearCategoriaParoAColumna(item.CATEGORIA);
 
-            // 🔍 Buscar línea
             const lineaEncontrada = this.listaLineas.find(
                 l => String(l.value) === String(item.LINEA_PRODUCCION)
             );
             const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
 
-            // ✅ Crear clave única SOLO por Fecha + Línea (SIN categoría)
-            // Así todos los paros de la misma fecha y línea van en UNA sola fila
             const clave = `${fecha}|${nombreLinea}`;
 
             if (!grupos[clave]) {
                 grupos[clave] = {
                     fecha,
                     nombreLinea,
-                    columnaCategoria,
-                    // 🔥 NUEVO: Objeto con las categorías como propiedades
-                    // Cada categoría acumula en su propio key
-                    TiempoMuertoHerramentales: 0,
-                    CambioMoldeSetupExcesos: 0,
-                    FaltaPersonal: 0,
+                    categorias: {}, // 🔥 acumulador dinámico: { NombreColumna: horasAcumuladas }
                     idParoList: [],
                     items: [],
                     sinLinea: false
                 };
             }
 
-            // ✅ IMPORTANTE: Convertir a número para evitar concatenación de strings
             const duracionHrs = Number(item.DURACION_HRS) || 0;
 
-            // 🔥 Acumular en la columna correspondiente (por categoría)
-            if (columnaCategoria && grupos[clave].hasOwnProperty(columnaCategoria)) {
-                grupos[clave][columnaCategoria] += duracionHrs;
+            if (columnaCategoria) {
+                grupos[clave].categorias[columnaCategoria] =
+                    (grupos[clave].categorias[columnaCategoria] || 0) + duracionHrs;
+            } else {
+                console.warn(`⚠️ Paro ID ${item.ID_PARO} con categoría "${item.CATEGORIA}" no mapeada a ninguna columna — se registra el ID pero sin sumar horas`);
             }
 
             grupos[clave].idParoList.push(String(item.ID_PARO));
@@ -1693,34 +1434,25 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }
         });
 
-        // ✅ NUEVO: Calcular tiempoTotal para cada grupo ANTES de retornar
-        return Object.values(grupos).map(grupo => ({
-            ...grupo,
-            tiempoTotal: grupo.TiempoMuertoHerramentales + grupo.CambioMoldeSetupExcesos + grupo.FaltaPersonal
-        }));
+        return Object.values(grupos);
     }
 
-    // ✅ NUEVO: Agregar paros a los datos EN MEMORIA (antes de setRowData)
+    // ✅ Agregar paros a los datos EN MEMORIA — itera dinámicamente todas las
+    // categorías acumuladas del grupo, sin depender de una lista fija de campos
     agregarParosAlGridEnMemoria(paros, datosFormateados) {
-        // ✅ SI datosFormateados está vacío, lo inicializamos como array vacío
         if (!datosFormateados) {
             datosFormateados = [];
         }
 
         const idParoYaEnDatos = new Set();
 
-        // 🔍 Recopilar ID_PARO ya presentes en datosFormateados
         datosFormateados.forEach(fila => {
             if (fila.ID_PARO) {
-                // ID_PARO puede venir como string individual o concatenado (pipes)
                 const ids = String(fila.ID_PARO).split('|').filter(o => o.trim());
                 ids.forEach(o => idParoYaEnDatos.add(String(o).trim()));
             }
         });
 
-        console.log('💾 IDs de PARO ya en datos:', [...idParoYaEnDatos]);
-
-        // 🔍 Filtrar paros que NO estén ya en datos
         const parosNuevos = paros.filter(
             item => !idParoYaEnDatos.has(String(item.ID_PARO).trim())
         );
@@ -1732,27 +1464,23 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         console.log(`📥 Agregando ${parosNuevos.length} paros a datos en memoria`);
 
-        // ✅ NUEVO: Agrupar los paros nuevos ANTES de procesarlos
         const gruposParos = this.agruparParos(parosNuevos);
-        console.log(`📊 Agrupados en ${gruposParos.length} grupos únicos (Fecha + Línea + Categoría)`);
+        console.log(`📊 Agrupados en ${gruposParos.length} grupos únicos (Fecha + Línea)`);
 
         const filasNuevas = [];
         const lineasNoEncontradas = [];
 
-        // ✅ Procesar GRUPOS en lugar de items individuales
+        const normalizarFecha = (fechaStr) => {
+            if (!fechaStr) return null;
+            return typeof fechaStr === 'string' ? fechaStr.split('T')[0] : fechaStr;
+        };
+
         gruposParos.forEach(grupo => {
-            const { fecha, nombreLinea, columnaCategoria, tiempoTotal, idParoList, sinLinea } = grupo;
+            const { fecha, nombreLinea, categorias, idParoList, sinLinea } = grupo;
 
             if (sinLinea) {
                 lineasNoEncontradas.push(...idParoList);
             }
-
-            // 🔍 Buscar fila existente en datosFormateados
-            // ✅ IMPORTANTE: Normalizar fecha de fila a formato YYYY-MM-DD (puede venir como ISO: 2026-09-18T00:00:00.000)
-            const normalizarFecha = (fechaStr) => {
-                if (!fechaStr) return null;
-                return typeof fechaStr === 'string' ? fechaStr.split('T')[0] : fechaStr;
-            };
 
             let filaExistente = datosFormateados.find(fila =>
                 normalizarFecha(fila.Fecha) === fecha &&
@@ -1760,42 +1488,41 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 (fila._origen === 'PARO_MANUAL' || fila.ID_PARO)
             );
 
-            console.log(`🔍 Buscando (EN MEMORIA): Fecha="${fecha}" | Línea="${nombreLinea}" | Categoría="${columnaCategoria}" | IDs a agregar: ${idParoList.join(', ')}`);
+            const categoriasKeys = Object.keys(categorias);
 
-            if (filaExistente && columnaCategoria) {
-                // ✅ Acumular tiempo en fila existente
-                filaExistente[columnaCategoria] = (filaExistente[columnaCategoria] || 0) + tiempoTotal;
+            console.log(`🔍 Buscando (EN MEMORIA): Fecha="${fecha}" | Línea="${nombreLinea}" | Categorías: ${categoriasKeys.join(', ')} | IDs: ${idParoList.join(', ')}`);
 
-                // ✅ Normalizar ID_PARO existente: puede venir individual o pipes
+            if (filaExistente) {
+                // ✅ Acumula dinámicamente CADA categoría presente en el grupo
+                categoriasKeys.forEach(col => {
+                    filaExistente[col] = (filaExistente[col] || 0) + categorias[col];
+                });
+
                 let idParoActual = filaExistente.ID_PARO || '';
-                if (typeof idParoActual === 'string' && idParoActual.trim()) {
-                    // Si ya está establecido, agregar con pipe
-                    const idsGrupo = idParoList.join('|');
-                    filaExistente.ID_PARO = idParoActual ? `${idParoActual}|${idsGrupo}` : idsGrupo;
-                }
+                const idsGrupo = idParoList.join('|');
+                filaExistente.ID_PARO = idParoActual ? `${idParoActual}|${idsGrupo}` : idsGrupo;
 
-                // Recalcular totales de la fila
                 this.recalcularFila(filaExistente);
 
-                console.log(`✅ Acumulado a fila existente (${fecha} - ${nombreLinea}): +${tiempoTotal}h en ${columnaCategoria} | IDs: ${idParoList.join(', ')}`);
-            } else if (columnaCategoria) {
-                // ✅ Crear nueva fila
+                console.log(`✅ Acumulado a fila existente (${fecha} - ${nombreLinea}): ${categoriasKeys.map(c => `${c} +${categorias[c]}h`).join(', ')} | IDs: ${idParoList.join(', ')}`);
+            } else {
                 const nuevaFila = this.crearFilaVacia();
 
                 nuevaFila.id = this.generarIdTemporal();
-                // ✅ IMPORTANTE: Guardar todos los IDs del grupo separados por |
                 nuevaFila.ID_PARO = idParoList.join('|');
                 nuevaFila.Fecha = fecha;
-                nuevaFila[columnaCategoria] = tiempoTotal;
-
-                // ✅ Marcar como paro
                 nuevaFila._origen = 'PARO_MANUAL';
                 nuevaFila._marcador = '🚫';
                 nuevaFila._rowClass = 'row-paro';
                 nuevaFila._esNuevo = true;
                 nuevaFila.Linea = nombreLinea;
 
-                // Asignar datos adicionales del primer item del grupo
+                // 🔥 Asigna dinámicamente CADA categoría presente
+                categoriasKeys.forEach(col => {
+                    nuevaFila[col] = categorias[col];
+                });
+
+                // Datos adicionales del primer item del grupo (igual que antes)
                 const primerItem = grupo.items[0];
                 if (primerItem.ARTICULO) {
                     nuevaFila.Producto = primerItem.ARTICULO;
@@ -1813,16 +1540,14 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
                 }
 
-                // ✅ Recalcular antes de agregar
                 this.recalcularFila(nuevaFila);
 
                 filasNuevas.push(nuevaFila);
 
-                console.log(`✅ Nueva fila creada (${fecha} - ${nombreLinea}): ${tiempoTotal}h en ${columnaCategoria} | IDs: ${idParoList.join(', ')}`);
+                console.log(`✅ Nueva fila creada (${fecha} - ${nombreLinea}): ${categoriasKeys.map(c => `${c} ${categorias[c]}h`).join(', ')} | IDs: ${idParoList.join(', ')}`);
             }
         });
 
-        // ✅ Agregar nuevas filas a datosFormateados
         if (filasNuevas.length > 0) {
             datosFormateados.push(...filasNuevas);
             console.log(`📌 Agregadas ${filasNuevas.length} nuevas filas a datosFormateados`);
@@ -1835,104 +1560,10 @@ class GestionProduccionPVC extends GestionProduccionBase {
             );
         }
 
-        // ✅ IMPORTANTE: Actualizar gridApi con los datos modificados
         this.gridApi.setRowData(datosFormateados);
         this.inicializarTooltipsGrid();
 
         return filasNuevas.length > 0;
-    }
-
-    // ========================================
-    // 🟦 NUEVO: Agregar Paros al Grid
-    // ========================================
-    agregarParosAlGrid(paros) {
-
-        const idParoYaEnGrid = new Set();
-
-        this.gridApi.forEachNode(node => {
-            if (node.data?.ID_PARO) {
-                idParoYaEnGrid.add(String(node.data.ID_PARO).trim());
-            }
-        });
-
-        const parosNuevos = paros.filter(
-            item => !idParoYaEnGrid.has(String(item.ID_PARO).trim())
-        );
-
-        if (parosNuevos.length === 0) {
-            return false;
-        }
-
-        const filasNuevas = [];
-        const lineasNoEncontradas = [];
-
-        parosNuevos.forEach(item => {
-
-            const nuevaFila = this.crearFilaVacia();
-
-            nuevaFila.id = this.generarIdTemporal();
-            nuevaFila.ID_PARO = item.ID_PARO;
-            nuevaFila.Fecha = this.parsearFechaParo(item.FECHA_PARO_STRING);
-
-            // 🟦 Mapear categoría del paro a columna de duración
-            const columnaCategoria = this.mapearCategoriaParoAColumna(item.CATEGORIA);
-            if (columnaCategoria) {
-                nuevaFila[columnaCategoria] = parseFloat(item.DURACION_HRS) || 0;
-            }
-
-            // 🟦 Marcar como paro
-            nuevaFila._origen = 'PARO_MANUAL';
-            nuevaFila._marcador = '🚫';
-            nuevaFila._rowClass = 'row-paro';
-            nuevaFila._esNuevo = true;
-
-            const lineaEncontrada = this.listaLineas.find(
-                l => String(l.value) === String(item.LINEA_PRODUCCION)
-            );
-
-            if (lineaEncontrada) {
-                nuevaFila.Linea = lineaEncontrada.label;
-            } else {
-                nuevaFila.Linea = null;
-                lineasNoEncontradas.push(item.ID_PARO);
-            }
-
-            if (nuevaFila.Fecha) {
-                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
-            }
-            if(item.ARTICULO){
-                nuevaFila.Producto = item.ARTICULO;
-            }
-
-            if (item.PESO_MINIMO) {
-                nuevaFila.PesoMinimo = item.PESO_MINIMO;
-            }
-
-            if (item.KGS_DIA) {
-                nuevaFila.KgHrProducto = parseFloat(item.KGS_DIA) / 24 || 0;
-                nuevaFila.KgHrLinea = parseFloat(item.KGS_DIA) / 24 || 0;
-            }
-
-            // 🟦 Recalcular fila
-            this.recalcularFila(nuevaFila);
-
-            filasNuevas.push(nuevaFila);
-        });
-
-        if (filasNuevas.length > 0) {
-            this.gridApi.applyTransaction({ add: filasNuevas });
-            this.inicializarTooltipsGrid();
-        }
-
-        if (lineasNoEncontradas.length > 0) {
-            AlertManager.mostrar(
-                `Los siguientes paros no tienen línea reconocida y quedaron sin línea asignada: ${lineasNoEncontradas.join(', ')}`,
-                "warning"
-            );
-        }
-
-        return true;
     }
 
     // ========================================
@@ -2775,8 +2406,10 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 const existingTooltip = bootstrap.Tooltip.getInstance(el);
                 if (existingTooltip) existingTooltip.dispose();
 
-                // Crear nuevo tooltip
-                new bootstrap.Tooltip(el);
+                // Después
+                new bootstrap.Tooltip(el, {
+                    container: 'body'   // 🔥 Sale del scope del AG-Grid
+                });
             });
         }, 100);
     }
@@ -3246,11 +2879,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
         exporter.exportarConFormato();
     }
 
-    inicializarTooltips() {
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
-    }
-
     calcularTiempoDisponible(row) {
 
         const horas = parseFloat(row.HorasProgramadas) || 0;
@@ -3264,7 +2892,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             (parseFloat(row.ParoArranqueNoProgramado) || 0) +
             (parseFloat(row.ArranqueEstabilizacion) || 0);
 
-        return horas - tiempoNoDisponible;
+        return Math.max(horas - tiempoNoDisponible, 0);
     }
 
     calcularTiempoProductivo(row) {
@@ -3283,7 +2911,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             (parseFloat(row.FaltaPersonal) || 0) +
             (parseFloat(row.FaltaRefacciones) || 0);
 
-        return disponible - tiempoNoProductivo;
+        return Math.max(disponible - tiempoNoProductivo, 0);
     }
 
     generarIdTemporal() {
@@ -3391,92 +3019,33 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         const filaActual = params.node.data;
 
-        const nuevaFila = {
+        const nuevaFila = JSON.parse(JSON.stringify(filaActual));
 
-            id: this.generarIdTemporal(),
-            ID_REGISTRO: null,
+        nuevaFila.id = this.generarIdTemporal();
+        nuevaFila.ID_REGISTRO = null;
+        nuevaFila.OTMC = null;
+        nuevaFila.OTMP = null;
+        nuevaFila.ID_PRODUCTO_TERMINADO = null;
+        nuevaFila.ID_PARO = null;
+        nuevaFila._origen = null;
+        nuevaFila._marcador = null;
+        nuevaFila._rowClass = null;
+        nuevaFila._esNuevo = null;
 
-            // ========================================
-            // GENERALES
-            // ========================================
-
-            Mes: filaActual.Mes,
-            Fecha: filaActual.Fecha,
-            Linea: filaActual.Linea,
-            Producto: filaActual.Producto,
-            Turno: filaActual.Turno,
-            TRIP: filaActual.TRIP,
-
-            // ========================================
-            // PRODUCCIÓN
-            // ========================================
-
-            PesoMinimo: filaActual.PesoMinimo || 0,
-            KgHrLinea: filaActual.KgHrLinea || 0, // 🔥 AGREGAR
-            KgHrProducto: filaActual.KgHrProducto || 0, // 🔥 AGREGAR
-            DescripcionArticulo: filaActual.DescripcionArticulo, // opcional, solo para el tooltip
-            TRFabricados: filaActual.TRFabricados,
-            ProduccionNetaReal: filaActual.ProduccionNetaReal,
-            TotalScrapKg: filaActual.TotalScrapKg,
-
-            // ========================================
-            // DISPONIBILIDAD
-            // ========================================
-
-            HorasProgramadas: filaActual.HorasProgramadas,
-
-            // ========================================
-            // TIEMPO NO DISPONIBLE
-            // ========================================
-
-            MantenimientoPreventivo: filaActual.MantenimientoPreventivo,
-            ControlInventarios: filaActual.ControlInventarios,
-            FaltaMateriaInsumos: filaActual.FaltaMateriaInsumos,
-            CambioMolde: filaActual.CambioMolde,
-            Calentamiento: filaActual.Calentamiento,
-            ParoArranqueNoProgramado: filaActual.ParoArranqueNoProgramado,
-            ArranqueEstabilizacion: filaActual.ArranqueEstabilizacion,
-
-
-            // 🔥 AGREGAR (campos manuales que no tienen fórmula):
-            KgHrLinea: filaActual.KgHrLinea,
-            ObjetivoEficiencia: filaActual.ObjetivoEficiencia,
-
-            // ========================================
-            // TIEMPO NO PRODUCTIVO
-            // ========================================
-
-            MttoCorrectivos: filaActual.MttoCorrectivos,
-            FallaElectrica: filaActual.FallaElectrica,
-            Servicios: filaActual.Servicios,
-            CambioMoldeSetupExcesos: filaActual.CambioMoldeSetupExcesos,
-            Herramental: filaActual.Herramental,
-            FallaOperacion: filaActual.FallaOperacion,
-            LimpiezaTanque: filaActual.LimpiezaTanque,
-            FaltaMaterial: filaActual.FaltaMaterial,
-            FaltaPersonal: filaActual.FaltaPersonal,
-            FaltaRefacciones: filaActual.FaltaRefacciones
-        };
-
-        // ========================================
-        // RECALCULAR FORMULAS
-        // ========================================
+        if (nuevaFila.Fecha) {
+            const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+            nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+        }
 
         this.recalcularFila(nuevaFila);
 
-        // 🔥 Si es la fila de TOTALES, insertar ANTES de ella (en su índice)
-        // Si no, insertar DESPUÉS de la fila seleccionada
-        const addIndex = params.node.data?.id === 'TOTALES' 
-            ? params.node.rowIndex 
+        const addIndex = params.node.data?.id === 'TOTALES'
+            ? params.node.rowIndex
             : params.node.rowIndex + 1;
 
-        this.gridApi.applyTransaction({
-            add: [nuevaFila],
-            addIndex: addIndex
-        });
+        this.gridApi.applyTransaction({ add: [nuevaFila], addIndex });
 
         this.recalcularTotales();
-
     }
 
     eliminarFila(params) {
