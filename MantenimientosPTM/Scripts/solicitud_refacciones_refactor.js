@@ -3224,7 +3224,7 @@ class SolicitudManager {
 
         const map = {
             'Pendiente': { icon: 'hourglass-split', color: 'bg-warning text-dark' },  // 🆕
-            'Atendida': { icon: 'check-circle-fill', color: 'btn-ptm-success' },  // 🆕
+            'Atendida': { icon: 'check-circle-fill', color: 'btn-ptm-mid' },  // 🆕
             'Cancelado': { icon: 'x-circle-fill', color: 'btn-ptm-danger' },  // 🆕
             'En Compra': { icon: 'cart-check-fill', color: 'btn-ptm-mid' },  // 🆕
         };

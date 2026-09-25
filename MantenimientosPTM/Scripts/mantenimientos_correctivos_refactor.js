@@ -1591,7 +1591,7 @@ class MantenimientoManager {
                             if (estatusOrden && estatusOrden !== '') {
 
                                 // ================= REFACCION =================
-                                if (estatusOrden == 3 || estatusOrden == 4 || ordenFinalizada === "SI" || esSupProduccion) {
+                                if (estatusOrden == 4 || ordenFinalizada === "SI" || esSupProduccion) {
                                     refaccionbutton = `
                             <button class="btn btn-sm btn-ptm-secondary" disabled
                                 data-bs-toggle="tooltip" title="Solicitar Refacción">
