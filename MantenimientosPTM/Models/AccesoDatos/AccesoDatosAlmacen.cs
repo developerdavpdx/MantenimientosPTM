@@ -575,6 +575,12 @@ namespace MantenimientosPTM
             [JsonProperty("IdSolicitud")]
             public int IdSolicitud { get; set; }
 
+            [JsonProperty("CodigoArticulo")]
+            public long CodigoArticulo { get; set; }
+
+            [JsonProperty("Articulo")]
+            public string Articulo { get; set; }
+
             [JsonProperty("CantidadEncargar")]
             public int CantidadEncargar { get; set; }
         }
@@ -590,6 +596,10 @@ namespace MantenimientosPTM
 
             [JsonProperty("UsuarioSolicita")]
             public string UsuarioSolicita { get; set; }
+
+            [JsonProperty("CodigoEmpleadoSolicita")]
+            public int? CodigoEmpleadoSolicita { get; set; }
+
             [JsonProperty("Planta")]
             public int? Planta { get; set; }
         }

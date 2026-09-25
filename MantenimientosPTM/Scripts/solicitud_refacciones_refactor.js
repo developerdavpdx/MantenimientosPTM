@@ -2931,7 +2931,9 @@ class SolicitudManager {
             const $input = $row.find('.cant-encargar');
             lineas.push({
                 IdSolicitud: $input.data('idsolicitud'),
-                CantidadEncargar: $input.val()
+                CantidadEncargar: $input.val(),
+                CodigoArticulo: $input.data('codigorefaccion'),
+                Articulo: $input.data('refaccion')
             });
         });
 
@@ -2939,6 +2941,7 @@ class SolicitudManager {
             Solicitudes: lineas,
             Comentarios: comentario,
             UsuarioSolicita: this.datos_usuario[0].EMAIL,
+            CodigoEmpleadoSolicita: this.datos_usuario[0].CODIGOEMPLEADO,
             Planta: this.datos_usuario[0].PLANTA
         };
 

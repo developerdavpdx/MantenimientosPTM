@@ -20,6 +20,7 @@ using System.Web;
 using System.Web.Mvc;
 using System.Web.UI.WebControls;
 using static MantenimientosPTM.AccesoDatosAlmacen;
+using static MantenimientosPTM.AccesoDatosPlaneacion;
 
 namespace MantenimientosPTM.Controllers
 {
@@ -634,7 +635,7 @@ namespace MantenimientosPTM.Controllers
             }
         }
         [HttpPost]
-        public JsonResult InsertarSolicitudOrdenCompraMP()
+        public async Task<JsonResult> InsertarSolicitudOrdenCompraMP()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
             PurchaseRequest RequestData;
@@ -658,7 +659,7 @@ namespace MantenimientosPTM.Controllers
                     { "P_COMENTARIOS",     (RequestData.Comentarios,     ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_USUARIOSOLICITA", (RequestData.UsuarioSolicita, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA",          (RequestData.Planta,          ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_ESTATUS",         ((object)null,    ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_ESTATUS",         ("Pendiente",    ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_1",  ((object)null,    ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_2",  ((object)null,    ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_3",  ((object)null,    ParameterDirection.Input, HanaDbType.NVarChar) },
@@ -676,8 +677,13 @@ namespace MantenimientosPTM.Controllers
                 // Extraer el ID del encabezado del JSON retornado
                 var encabezadoData = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultadoEnc);
                 int idSolicitudCompra = Convert.ToInt32(encabezadoData[0]["ID_SOLICITUD_COMPRA"]);
+                var Planta = RequestData.Planta;
+                var codigoEmpleado = RequestData.CodigoEmpleadoSolicita;
+                string FolioCompra = encabezadoData[0]["FOLIO_COMPRA"].ToString();
+                //List<ArticuloRequisicionModel> articulos = new List<ArticuloRequisicionModel>();
+                
 
-                // 2️⃣ Insertar cada línea de detalle
+                // 2️⃣ Insertar cada línea de detalles
                 var errores = new List<string>();
                 var insertados = 0;
 
@@ -696,12 +702,31 @@ namespace MantenimientosPTM.Controllers
                         Logic.AD.GCInsertarSolicitudCompraDetalleMP, paramsDetalle
                     );
 
+                    //articulos.Add(new ArticuloRequisicionModel
+                    //{
+                    //    CodigoArticulo = linea.CodigoArticulo,
+                    //    NombreArticulo = linea.Articulo,
+                    //    CantidadTotal = linea.CantidadEncargar,
+                    //    CodigoProveedor = string.Empty,
+                    //    NombreProveedor = string.Empty
+                    //});
+
+
                     string resultadoDet = resultDetalle.JsonResult.ToString();
                     if (resultadoDet.Contains("ERROR"))
                         errores.Add($"Solicitud {linea.IdSolicitud}: {resultadoDet}");
                     else
                         insertados++;
                 }
+
+
+
+                //Enviar notificacion de autorizacion
+                //var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString(), codigoEmpleado);
+                //if (notificacionEmail == null || notificacionEmail.Status != "OK")
+                //{
+                //    log.Warn($"Notificación de autorización no enviada o con error: {notificacionEmail?.Message ?? "Sin respuesta"}");
+                //}
 
                 // 3️ Respuesta
                 if (errores.Any() && insertados == 0)
@@ -723,6 +748,108 @@ namespace MantenimientosPTM.Controllers
                     jsonResponse.Data = idSolicitudCompra.ToString();
                 }
 
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible procesar la solicitud: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+        public async Task<JsonResult> InsertarSolicitudOrdenCompraMPUndependent()
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            UpdatePurchaseRequest RequestData;
+            try
+            {
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                {
+                    string jsonData = reader.ReadToEnd();
+                    if (string.IsNullOrEmpty(jsonData))
+                        throw new Exception("No se recibió información.");
+                    RequestData = JsonConvert.DeserializeObject<UpdatePurchaseRequest>(jsonData);
+                }
+
+                if (RequestData?.Requisicion == null)
+                    throw new Exception("No se recibió la información de la requisición.");
+
+                var paramsEncabezado = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_COMENTARIOS",     (RequestData.Comentarios,     ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_USUARIOSOLICITA", (RequestData.UsuarioSolicita, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",          (RequestData.Planta,          ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_ESTATUS",         ("Espera Autorizacion",       ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CENTRO_COSTO_1",  (RequestData.Requisicion.Contabilizacion.Departamento,ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CENTRO_COSTO_2",  (RequestData.Requisicion.Contabilizacion.Proceso,ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CENTRO_COSTO_3",  (RequestData.Requisicion.Contabilizacion.Gastos,ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CENTRO_COSTO_4",  (RequestData.Requisicion.Contabilizacion.Cedis,ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                var resultEncabezado = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                    Logic.AD.GCInsertarSolicitudCompraMP, paramsEncabezado
+                );
+
+                if (resultEncabezado.JsonResult.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "Error al generar requisición de compra: " + resultEncabezado.JsonResult;
+                    return Json(jsonResponse);
+                }
+                //Obtener el ID de solicitud independiente
+                JArray EncabezadoSolicitud = JArray.Parse(resultEncabezado.JsonResult);
+                var idSolicitudCompra = int.Parse(EncabezadoSolicitud[0]["ID_SOLICITUD_COMPRA"].ToString());
+                var Planta = RequestData.Planta;
+                var codigoEmpleado = RequestData.CodigoEmpleado;
+                var contabilizacion = RequestData.Requisicion.Contabilizacion;
+                var articulos = RequestData.Requisicion.Articulos ?? new List<ArticuloRequisicionModel>();
+                string FolioCompra = EncabezadoSolicitud[0]["FOLIO_COMPRA"].ToString();
+
+
+                // 2️ Insertar cada línea de detalle
+                var errores = new List<string>();
+                var insertados = 0;
+
+                foreach (var linea in RequestData.Requisicion.Articulos)
+                {
+                    var paramsDetalle = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_ID_SOLICITUD_COMPRA",    (idSolicitudCompra,        ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_ID_SOLICITUD_REFACCION", ((object)null,ParameterDirection.Input, HanaDbType.Integer) }, //no aplica la solicitud de refaccion
+                    { "P_CANTIDAD_ENCARGAR",      (linea.CantidadTotal,   ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_CARD_CODE",      (linea.CodigoProveedor,   ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CODIGO_ARTICULO",      (linea.CodigoArticulo,   ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                    var resultDetalle = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCInsertarSolicitudCompraDetalleMP, paramsDetalle
+                    );
+
+                    string resultadoDet = resultDetalle.JsonResult.ToString();
+                    if (resultadoDet.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0)
+                        errores.Add($"Error en detalle: {resultadoDet}");
+                    else
+                        insertados++;
+                }
+                if (errores.Count > 0)
+                {
+                    jsonResponse.Status = "ERROR";
+                    jsonResponse.Message = "Error al generar requisición de compra: " + errores.ToString();
+                    return Json(jsonResponse);
+                }
+
+                //Enviar notificacion de autorizacion
+                var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString(), codigoEmpleado);
+                if (notificacionEmail == null || notificacionEmail.Status != "OK")
+                {
+                    log.Warn($"Notificación de autorización no enviada o con error: {notificacionEmail?.Message ?? "Sin respuesta"}");
+                }
+
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = $"Solicitud de autorización para requisición de compra #{idSolicitudCompra} generada correctamente. En espera de autorización.";
+                jsonResponse.Data = idSolicitudCompra.ToString();
                 return Json(jsonResponse);
             }
             catch (Exception ex)
@@ -836,108 +963,6 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
-        public async Task<JsonResult> InsertarSolicitudOrdenCompraMPUndependent()
-        {
-            var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            UpdatePurchaseRequest RequestData;
-            try
-            {
-                Request.InputStream.Position = 0;
-                using (var reader = new StreamReader(Request.InputStream))
-                {
-                    string jsonData = reader.ReadToEnd();
-                    if (string.IsNullOrEmpty(jsonData))
-                        throw new Exception("No se recibió información.");
-                    RequestData = JsonConvert.DeserializeObject<UpdatePurchaseRequest>(jsonData);
-                }
-
-                if (RequestData?.Requisicion == null)
-                    throw new Exception("No se recibió la información de la requisición.");
-
-                var paramsEncabezado = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                {
-                    { "P_COMENTARIOS",     (RequestData.Comentarios,     ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_USUARIOSOLICITA", (RequestData.UsuarioSolicita, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA",          (RequestData.Planta,          ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_ESTATUS",         ("Espera Autorizacion",       ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_1",  (RequestData.Requisicion.Contabilizacion.Departamento,ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_2",  (RequestData.Requisicion.Contabilizacion.Proceso,ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_3",  (RequestData.Requisicion.Contabilizacion.Gastos,ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_4",  (RequestData.Requisicion.Contabilizacion.Cedis,ParameterDirection.Input, HanaDbType.NVarChar) }
-                };
-
-                var resultEncabezado = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCInsertarSolicitudCompraMP, paramsEncabezado
-                );
-
-                if (resultEncabezado.JsonResult.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    jsonResponse.Status = "ERROR";
-                    jsonResponse.Message = "Error al generar requisición de compra: " + resultEncabezado.JsonResult;
-                    return Json(jsonResponse);
-                }
-                //Obtener el ID de solicitud independiente
-                JArray EncabezadoSolicitud = JArray.Parse(resultEncabezado.JsonResult);
-                var idSolicitudCompra = int.Parse(EncabezadoSolicitud[0]["ID_SOLICITUD_COMPRA"].ToString());
-                var Planta = RequestData.Planta;
-                var codigoEmpleado = RequestData.CodigoEmpleado;
-                var contabilizacion = RequestData.Requisicion.Contabilizacion;
-                var articulos = RequestData.Requisicion.Articulos ?? new List<ArticuloRequisicionModel>();
-                string FolioCompra = EncabezadoSolicitud[0]["FOLIO_COMPRA"].ToString();
-
-
-                // 2️ Insertar cada línea de detalle
-                var errores = new List<string>();
-                var insertados = 0;
-
-                foreach (var linea in RequestData.Requisicion.Articulos)
-                {
-                    var paramsDetalle = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                {
-                    { "P_ID_SOLICITUD_COMPRA",    (idSolicitudCompra,        ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_ID_SOLICITUD_REFACCION", ((object)null,ParameterDirection.Input, HanaDbType.Integer) }, //no aplica la solicitud de refaccion
-                    { "P_CANTIDAD_ENCARGAR",      (linea.CantidadTotal,   ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_CARD_CODE",      (linea.CodigoProveedor,   ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CODIGO_ARTICULO",      (linea.CodigoArticulo,   ParameterDirection.Input, HanaDbType.NVarChar) }
-                };
-
-                    var resultDetalle = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                        Logic.AD.GCInsertarSolicitudCompraDetalleMP, paramsDetalle
-                    );
-
-                    string resultadoDet = resultDetalle.JsonResult.ToString();
-                    if (resultadoDet.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0)
-                        errores.Add($"Error en detalle: {resultadoDet}");
-                    else
-                        insertados++;
-                }
-                if (errores.Count > 0)
-                {
-                    jsonResponse.Status = "ERROR";
-                    jsonResponse.Message = "Error al generar requisición de compra: " + errores.ToString();
-                    return Json(jsonResponse);
-                }
-
-                //Enviar notificacion de autorizacion
-                var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString(), codigoEmpleado);
-                if (notificacionEmail == null || notificacionEmail.Status != "OK")
-                {
-                    log.Warn($"Notificación de autorización no enviada o con error: {notificacionEmail?.Message ?? "Sin respuesta"}");
-                }
-
-                jsonResponse.Status = "SI";
-                jsonResponse.Message = $"Solicitud de autorización para requisición de compra #{idSolicitudCompra} generada correctamente. En espera de autorización.";
-                jsonResponse.Data = idSolicitudCompra.ToString();
-                return Json(jsonResponse);
-            }
-            catch (Exception ex)
-            {
-                jsonResponse.Status = "ERROR";
-                jsonResponse.Message = "No fue posible procesar la solicitud: " + ex.Message;
-                jsonResponse.Data = string.Empty;
-                return Json(jsonResponse);
-            }
-        }
 
         [HttpPost]
         public JsonResult ActualizarRefaccionOT()
@@ -1040,7 +1065,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpPost]
-        public async Task<GlobalCommands.JsonResponseMtto> EnviarSolicitudCompraAutorizacion(int idSolicitudCompra, string folio, List<ArticuloRequisicionModel> articulos, string Planta, int codigoEmpleado)
+        public async Task<GlobalCommands.JsonResponseMtto> EnviarSolicitudCompraAutorizacion(int idSolicitudCompra, string folio, List<ArticuloRequisicionModel> articulos, string Planta, int? codigoEmpleado)
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
             try
