@@ -2,7 +2,7 @@
 // INICIALIZACIÓN
 // ========================================
 $(document).ready(function () {
-    const app = new MantenimientosPreventivoApp();
+    const app = new MantenimientosCorrectivosApp();
     app.inicializar();
 
     // 🔥 INICIALIZAR HEADER FIJO CON EL GESTOR GLOBAL
@@ -52,13 +52,18 @@ class UIManager {
 // ========================================
 // APLICACIÓN PRINCIPAL CORRECTIVOS
 // ========================================
-class MantenimientosPreventivoApp {
+class MantenimientosCorrectivosApp {
     constructor() {
         this.URLBase = "MantenimientosCorrectivos";
         this.URLBaseRutinas = "Rutinas";
-        this.gestionTecnicos = new GestionTecnicos(this.URLBase);
         this.datos_usuario = GlobalUtil.getDatosUsuario();
         this.gestionFirmas = new GestionFirmas(); // 🔥 NUEVO
+        this.gestionTecnicos = new GestionTecnicos(this.URLBase);
+        this.autocompleteTecnicos = new AutocompleteTecnicos(
+            this.gestionTecnicos,
+            this.datos_usuario[0],
+            (areaTecnica) => areaTecnica === "MANTENIMIENTO HERRAMENTALES" ? "95,101" : "3,100,82"
+        );
 
         // ✅ Inicializar gestión de artículos custom para MC
         this.gestionArticulosMC = new GestionArticulosCustom(
@@ -114,6 +119,7 @@ class MantenimientosPreventivoApp {
         this.mantenimientoManager.inicializar();
         this.pdfManager.inicializar();
         this.gestionTecnicos.inicializar();
+        this.autocompleteTecnicos.configurarEventos(() => this.areaTecnica);
         this.gestionFirmas.inicializar(); // 🔥 NUEVO
 
         this.configurarEventosMantenimientos(); //MANTENIMIENTOS
@@ -1158,46 +1164,6 @@ class MantenimientosPreventivoApp {
     }
 
     configurarEventosTecnicos() {
-        // ❌ QUITA el const self = this; ya no lo necesitas
-
-        // ✅ Cambiar TODAS las function() por arrow functions
-        $('#BuscarTecnico').on('input', (e) => {  // ⬅️ Agrega parámetro 'e'
-            const query = $(e.target).val().trim();  // ⬅️ Usa e.target, no this
-            let planta = this.datos_usuario[0].PLANTA;
-            let usuarioWeb = this.datos_usuario[0].USUARIOWEB;
-            let tipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
-            let posicionId = null;
-
-            //Buscar tecnico por tipo de solicitud                       
-            if (this.areaTecnica === "MANTENIMIENTO HERRAMENTALES") {
-                posicionId = "95,101";
-                this.parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario)
-                             
-            } else {
-                posicionId = "3,100,82";
-                this.parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario)
-            }
-
-        });
-
-        $('#btnAgregarTecnico').on('click', () => {  // ⬅️ Arrow function
-            this.gestionTecnicos.agregarTecnicoDesdeInput();
-        });
-
-        $('#BuscarTecnico').on('keypress', (e) => {  // ⬅️ Arrow function
-            if (e.which === 13) {
-                e.preventDefault();
-                this.gestionTecnicos.agregarTecnicoDesdeInput();
-            }
-        });
-
-        // ✅ Este ya está bien con arrow function
-        $(document).on('click', (e) => {
-            if (!$(e.target).closest('#BuscarTecnico, #sugerenciasTecnicos').length) {
-                this.gestionTecnicos.ocultarSugerencias();
-            }
-        });
-
         // ✅ Versión con suffix visual
         $('#Duracion').on('input', function (e) {
             let valor = $(this).val().replace(' Hrs', '').trim();
@@ -1218,7 +1184,6 @@ class MantenimientosPreventivoApp {
 
             $(this).val(valor);
         });
-
     }
 
     parametersBuscarTecnico(query, planta, posicionId, usuarioWeb, tipoUsuario) {

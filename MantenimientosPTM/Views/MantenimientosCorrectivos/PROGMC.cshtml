@@ -325,15 +325,18 @@
                                         <i class="bi bi-person-check me-1 text-muted"></i>Solicitante
                                         <span class="text-danger">*</span>
                                     </label>
-                                    <div class="input-group has-validation">
-                                        <span class="input-group-text bg-light">
-                                            <i class="bi bi-person-fill"></i>
-                                        </span>
-                                        <input type="text" class="form-control" id="Solicitante" name="Solicitante" placeholder="Nombre del operador" required>
-                                        <div class="invalid-feedback">
-                                            ⚠️
-                                            Por favor ingrese el nombre del solicitante.
+                                    <div class="sol-buscar-solicitante-wrap">
+                                        <div class="input-group has-validation">
+                                            <span class="input-group-text bg-light">
+                                                <i class="bi bi-person-fill"></i>
+                                            </span>
+                                            <input type="text" class="form-control" id="Solicitante" name="Solicitante" placeholder="Nombre del operador" required autocomplete="off">
+                                            <div class="invalid-feedback">
+                                                ⚠️ Por favor ingrese el nombre del solicitante.
+                                            </div>
                                         </div>
+                                        <!-- 🆕 Contenedor para sugerencias -->
+                                        <div id="sugerenciasSolicitante" class="autocomplete-sugerencias"></div>
                                     </div>
                                 </div>
                                 <div class="col-12 col-md-4">
@@ -345,7 +348,7 @@
                                         <span class="input-group-text bg-light">
                                             <i class="bi bi-123"></i>
                                         </span>
-                                        <input type="text" class="form-control" id="NominaSolicitante" name="NominaSolicitante" placeholder="# de nómina" required>
+                                        <input type="text" class="form-control" id="NominaSolicitante" name="NominaSolicitante" placeholder="# de nómina" required readonly>
                                         <div class="invalid-feedback">
                                             ⚠️
                                             Por favor ingrese el número de nómina.

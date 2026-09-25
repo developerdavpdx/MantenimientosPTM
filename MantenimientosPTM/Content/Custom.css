@@ -688,6 +688,20 @@ footer {
     position: relative;
 }
 
+/* ===== AUTOCOMPLETE SOLICITANTE (ancho ajustado al input) ===== */
+.sol-buscar-solicitante-wrap {
+    position: relative;
+}
+
+#sugerenciasSolicitante.autocomplete-sugerencias {
+    position: absolute;
+    left: 0;
+    right: auto;
+    top: 100%;
+    width: 100%;
+    min-width: unset;
+}
+
 
 /* ANIMACIONES DE DESPLAZAMIENTO */
 .highlight-required {

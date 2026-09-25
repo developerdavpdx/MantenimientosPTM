@@ -27,6 +27,17 @@ class MantenimientosCorrectivosApp {
         );
         this.pdfManager = new PDFManagerMantenimiento();
         this.printManager = new PrintManagerMantenimiento(); // 🔥 Nueva instancia
+        this.autocompleteSolicitante = new AutocompleteSolicitante(
+            {
+                inputSelector: '#Solicitante',
+                sugerenciasSelector: '#sugerenciasSolicitante',
+                nominaSelector: '#NominaSolicitante'
+            },
+            this.URLBase,
+            this.datos_usuario[0],
+            (areaTecnica) => areaTecnica === "MANTENIMIENTO HERRAMENTALES" ? "95,101" : "3,100,82",
+            '#AreaTecnicaR'
+        );
 
         window.AppMantenimientos = this;
     }
@@ -42,6 +53,7 @@ class MantenimientosCorrectivosApp {
         this.configurarEventosMantenimientosManager();
         this.configurarEventosPDF();
         this.configurarEventosImpresion(); // 🔥 Nuevos eventos
+        this.autocompleteSolicitante.configurarEventos();
 
         console.log('✅ Sistema Completo de Mantenimientos Correctivos inicializado correctamente');
     }

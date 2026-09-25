@@ -659,6 +659,163 @@ class GestionTecnicos {
     }
 }
 
+// ========================================
+// AUTOCOMPLETE TECNICOS (reutilizable)
+// ========================================
+class AutocompleteTecnicos {
+    /**
+     * @param {GestionTecnicos} gestionTecnicos - instancia ya creada
+     * @param {object} datosUsuario - this.datos_usuario[0]
+     * @param {Function} resolverPosicionId - función que regresa el posicionId según el contexto de la vista
+     */
+    constructor(gestionTecnicos, datosUsuario, resolverPosicionId) {
+        this.gestionTecnicos = gestionTecnicos;
+        this.datosUsuario = datosUsuario;
+        this.resolverPosicionId = resolverPosicionId; // (contexto) => "3,100,82"
+    }
+
+    configurarEventos(contextoProvider = () => null) {
+        $('#BuscarTecnico').on('input', (e) => {
+            const query = $(e.target).val().trim();
+            const posicionId = this.resolverPosicionId(contextoProvider());
+
+            this._buscar(query, posicionId);
+        });
+
+        $('#btnAgregarTecnico').on('click', () => {
+            this.gestionTecnicos.agregarTecnicoDesdeInput();
+        });
+
+        $('#BuscarTecnico').on('keypress', (e) => {
+            if (e.which === 13) {
+                e.preventDefault();
+                this.gestionTecnicos.agregarTecnicoDesdeInput();
+            }
+        });
+
+        $(document).on('click', (e) => {
+            if (!$(e.target).closest('#BuscarTecnico, #sugerenciasTecnicos').length) {
+                this.gestionTecnicos.ocultarSugerencias();
+            }
+        });
+    }
+
+    _buscar(query, posicionId) {
+        const { PLANTA: planta, USUARIOWEB: usuarioWeb, TIPOUSUARIO: tipoUsuario } = this.datosUsuario;
+
+        if (query.length >= 2 && tipoUsuario === "TecnicoMtto") {
+            this.gestionTecnicos.buscarTecnicos(query, planta, posicionId, usuarioWeb, tipoUsuario);
+        } else {
+            this.gestionTecnicos.ocultarSugerencias();
+        }
+    }
+}
+
+// ========================================
+// AUTOCOMPLETE SOLICITANTE (selección única)
+// ========================================
+class AutocompleteSolicitante {
+    /**
+     * @param {object} opciones
+     * @param {string} opciones.inputSelector - input de búsqueda (ej. '#Solicitante')
+     * @param {string} opciones.sugerenciasSelector - contenedor de sugerencias (ej. '#sugerenciasSolicitante')
+     * @param {string} opciones.nominaSelector - input donde se llena la nómina (ej. '#NominaSolicitante')
+     * @param {string} URLBase - base del endpoint (ej. 'MantenimientosCorrectivos')
+     * @param {object} datosUsuario - this.datos_usuario[0]
+     * @param {Function} resolverPosicionId - (areaTecnica) => "95,101" | "3,100,82"
+     * @param {string} areaSelector - select del área técnica (ej. '#AreaTecnicaR')
+     */
+    constructor({ inputSelector, sugerenciasSelector, nominaSelector }, URLBase, datosUsuario, resolverPosicionId, areaSelector) {
+        this.inputSelector = inputSelector;
+        this.sugerenciasSelector = sugerenciasSelector;
+        this.nominaSelector = nominaSelector;
+        this.URLBase = URLBase;
+        this.datosUsuario = datosUsuario;
+        this.resolverPosicionId = resolverPosicionId;
+        this.areaSelector = areaSelector;
+    }
+
+    configurarEventos() {
+        $(this.inputSelector).on('input', (e) => {
+            const query = $(e.target).val().trim();
+            const areaTecnica = $(this.areaSelector).val();
+
+            if (!areaTecnica) {
+                AlertManager.mostrar('Selecciona el tipo de mantenimiento antes de realizar una búsqueda', 'warning');
+                $(this.inputSelector).val('');
+                return;
+            }
+
+            if (query.length >= 2) {
+                this._buscar(query, areaTecnica);
+            } else {
+                this._ocultarSugerencias();
+            }
+        });
+
+        $(document).on('click', (e) => {
+            if (!$(e.target).closest(`${this.inputSelector}, ${this.sugerenciasSelector}`).length) {
+                this._ocultarSugerencias();
+            }
+        });
+    }
+
+    async _buscar(query, areaTecnica) {
+        const posicionId = null; /*this.resolverPosicionId(areaTecnica);*/
+        let { PLANTA: planta, USUARIOWEB: usuarioWeb, TIPOUSUARIO: tipoUsuario } = this.datosUsuario;
+        tipoUsuario = null;
+
+        try {
+            const response = await $.ajax({
+                url: `/${this.URLBase}/BuscarEmpleados`,
+                method: 'GET',
+                data: { planta, query, posicionId, usuarioWeb, tipoUsuario },
+                dataType: 'json'
+            });
+
+            this._mostrarSugerencias(response);
+        } catch (error) {
+            AlertManager.mostrar('No es posible mostrar la lista de solicitantes: ' + error, 'warning');
+        }
+    }
+
+    _mostrarSugerencias(empleados) {
+        const container = $(this.sugerenciasSelector);
+        container.empty();
+
+        if (!empleados || empleados.length === 0) {
+            container.html(`
+                <div class="sugerencia-item text-muted">
+                    <i class="bi bi-exclamation-circle"></i> No se encontraron solicitantes
+                </div>
+            `);
+        } else {
+            empleados.forEach(empleado => {
+                const item = $(`
+                    <div class="sugerencia-item" data-nomina="${empleado.NOMINA || ''}">
+                        <div class="sugerencia-nomina">📛 #${empleado.NOMINA || 'S/A'}</div>
+                        <div class="sugerencia-nombre">👷 ${empleado.NOMBRE_COMPLETO}</div>
+                        <div class="sugerencia-puesto">🏭 ${empleado.DEPARTAMENTO || 'N/A'}</div>
+                    </div>
+                `);
+
+                item.on('click', () => {
+                    $(this.inputSelector).val(empleado.NOMBRE_COMPLETO);
+                    $(this.nominaSelector).val(empleado.NOMINA || '');
+                    this._ocultarSugerencias();
+                });
+
+                container.append(item);
+            });
+        }
+
+        container.addClass('show');
+    }
+
+    _ocultarSugerencias() {
+        $(this.sugerenciasSelector).removeClass('show').empty();
+    }
+}
 
 // ========================================
 // PRINT MANAGER GENERICO
