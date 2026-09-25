@@ -88,6 +88,7 @@ namespace MantenimientosPTM
                     ReqName = Header[0].NombreSolicita,
                     U_URGENCIA = "NO",
                     U_REQ_CALIDAD = "NO APLICA",
+                    U_PDX_ORDEN_TRABAJO = Header[0].OrdenTrabajo,
                     U_U_PDX_SOLICITANTE = Header[0].NombreSolicita,
                     Comments = $"Documento creado por interfaz PTM Mantenimientos — {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
                     DocumentLines = documentLines
@@ -119,6 +120,27 @@ namespace MantenimientosPTM
                     responseAbx.Message = "Purchase Request creada correctamente en SAP.";
 
                     log.Info($"✅ Purchase Request creada — DocNum: {responseAbx.DocNum} | DocEntry: {responseAbx.DocEntry}");
+
+                    foreach (var item in Detalle)
+                    {
+                        //Actualizar las solicitudes de refaccion a Pendiente de nuevo
+                        var paramsRefaccion = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                        {
+                            { "P_IDSOLICITUD",(item.IdSolicitudRefaccion,ParameterDirection.Input, HanaDbType.Integer)  },
+                            { "P_ORDENTRABAJO",(null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                            { "P_REFACCIONSOLICITADA",(null,ParameterDirection.Input, HanaDbType.NVarChar) },
+                            { "P_CANTIDAD",(null,ParameterDirection.Input, HanaDbType.NVarChar) },
+                            { "P_ESTATUS",("Pendiente",ParameterDirection.Input, HanaDbType.NVarChar) },
+                            { "P_USUARIOATIENDE",(null,ParameterDirection.Input, HanaDbType.NVarChar) },
+                            { "P_ACEPTADAMANTENIMIENTO",(null,ParameterDirection.Input, HanaDbType.NVarChar) },
+                        };
+
+                        if (item.IdSolicitudRefaccion != null)
+                            GlobalCommands.ExecuteProcedureHanaAuto(
+                               AD.GCActualizaSolicitudRefaccion,
+                               paramsRefaccion
+                           );
+                    }
                 }
                 else
                 {
@@ -367,7 +389,7 @@ namespace MantenimientosPTM
                         newLine["CostingCode4"] = articulo.Cedis;
                         newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe; //AUTORIZA (RECIBE)
                         newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega; //ALMACENISTA (ENTREGA)
-                      
+
 
                         // ✅ Cuenta contable si aplica
                         if (!string.IsNullOrWhiteSpace(linea["CuentaContable"]?.ToString()))
@@ -410,7 +432,7 @@ namespace MantenimientosPTM
                 dictGI["U_U_PDX_SOLICITANTE"] = payload.DataMovimiento.NumEmpleado;
 
                 //Obtener la Serie en base a la planta y objectype
-                                
+
                 //Validar de que CEDIS viene
                 var cedis = "";
                 if (payload.Contabilizacion[0].Cedis == "PLANTA2")
@@ -640,16 +662,19 @@ namespace MantenimientosPTM
 
                 //Validar de que CEDIS viene
                 var cedis = "";
-                if (payload.Contabilizacion[0].Cedis == "PLANTA2") {
+                if (payload.Contabilizacion[0].Cedis == "PLANTA2")
+                {
                     cedis = "P2";
-                } else {
+                }
+                else
+                {
                     cedis = "CORP";
                 }
 
                 var serie = GetSerieByName(cedis, ConfigurationManager.AppSettings["ObjectTypeEntrada"]);
                 dictGR["Series"] = serie.Result;
 
-                
+
                 foreach (var linea in articulosData)
                 {
                     var newLine = new ExpandoObject() as IDictionary<string, object>;
@@ -788,7 +813,7 @@ namespace MantenimientosPTM
 
             return responseAbx;
         }
-       
+
         public async Task<int> GetSerieByName(string Cedis, string objectCode = null)
         {
             var paramgs = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
@@ -803,17 +828,18 @@ namespace MantenimientosPTM
 
 
             string resultadoSerie = resultGS.JsonResult.ToString();
-                       
+
             JArray series = JArray.Parse(resultadoSerie);
-                 
+
 
             if (series.Count > 0)
             {
                 var first = series[0];
 
                 //Validar Error real
-                int error = Convert.ToInt32(first ["Error"]);
-                if (error != 0) { 
+                int error = Convert.ToInt32(first["Error"]);
+                if (error != 0)
+                {
                     throw new Exception($"Error al obtener la serie de numeración: " + resultadoSerie);
                 }
 

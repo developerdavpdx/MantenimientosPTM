@@ -4,6 +4,7 @@ using MantenimientosPTM.Models.Dto;
 using MantenimientosPTM.Models.LogicaNegocio;
 using MantenimientosPTM.Service.Email.Implementations;
 using MantenimientosPTM.Service.Email.Models;
+using Microsoft.Ajax.Utilities;
 using Microsoft.AspNet.SignalR;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -15,6 +16,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
@@ -215,7 +217,7 @@ namespace MantenimientosPTM.Controllers
                     {
                         "P_NUMERO_NOMINA", (string.IsNullOrEmpty(numeroNomina) ? (object)null : numeroNomina, ParameterDirection.Input, HanaDbType.NVarChar)
                     }
-                    
+
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -635,7 +637,7 @@ namespace MantenimientosPTM.Controllers
             }
         }
         [HttpPost]
-        public async Task<JsonResult> InsertarSolicitudOrdenCompraMP()
+        public JsonResult InsertarSolicitudOrdenCompraMP()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
             PurchaseRequest RequestData;
@@ -681,7 +683,7 @@ namespace MantenimientosPTM.Controllers
                 var codigoEmpleado = RequestData.CodigoEmpleadoSolicita;
                 string FolioCompra = encabezadoData[0]["FOLIO_COMPRA"].ToString();
                 //List<ArticuloRequisicionModel> articulos = new List<ArticuloRequisicionModel>();
-                
+
 
                 // 2️⃣ Insertar cada línea de detalles
                 var errores = new List<string>();
@@ -962,7 +964,6 @@ namespace MantenimientosPTM.Controllers
                 return Json(jsonResponse);
             }
         }
-
 
         [HttpPost]
         public JsonResult ActualizarRefaccionOT()
@@ -1287,6 +1288,7 @@ namespace MantenimientosPTM.Controllers
                     ViewBag.Mensaje = currentStatus == "Aprobado"
                         ? "Esta solicitud ya fue autorizada anteriormente."
                         : "Esta solicitud ya fue rechazada anteriormente.";
+
                     return View("AprobacionSolicitud");
                 }
 
@@ -1597,8 +1599,8 @@ namespace MantenimientosPTM.Controllers
                     SolicitudCompraDetalle = JsonConvert.DeserializeObject<List<SolicitudCompraDetalle>>(resultHana.JsonResult);
                 }
 
-
                 var logicaAlmacen = new LogicaAlmacen();
+
                 var sapResult = await logicaAlmacen.CrearPurchaseRequestAsync(SolicitudCompraHeader, SolicitudCompraDetalle);
                 // Al guardar el error en la cabecera
                 var responseSap = sapResult.Message?.Length > 1000
@@ -1855,7 +1857,7 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 //Enviar Correo Autorizacion Salida Mercancia
-                var resultEmtail = EnviarAutorizacionSalida(payload);
+                //var resultEmtail = EnviarAutorizacionSalida(payload);
 
 
                 // Validar que TODOS tengan Diferencia = 0
@@ -1866,52 +1868,58 @@ namespace MantenimientosPTM.Controllers
                 };
 
                 //SE QUITO DE ESTA VERSION POR LA MULTIPLE SOLICITUD DE REFACCIONES SIMULTANEAS
-                //var resultBalance = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                //    Logic.AD.GCGetBalanceOT,
-                //    parameters
-                //);
+                var resultBalance = Logic.GlobalCommands.ExecuteProcedureHanaMultiResult(
+                    Logic.AD.GCGetBalanceOT,
+                    parameters
+                );
 
 
-                //if (resultBalance.JsonResult.Contains("ERROR") || resultBalance.JsonResult.Contains("Error"))
-                //{
-                //    log.Info($"🚀 ═══════════════════════════════════════════════════");
-                //    log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
-                //    log.Info($"🚀 ═══════════════════════════════════════════════════");
+                if (resultBalance.JsonResult.Contains("ERROR") || resultBalance.JsonResult.Contains("Error"))
+                {
+                    log.Info($"🚀 ═══════════════════════════════════════════════════");
+                    log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                    log.Info($"🚀 ═══════════════════════════════════════════════════");
 
-                //    log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible validar el balance de el estatus de la refacción: " + resultBalance.JsonResult);
-                //}
+                    log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible validar el balance de el estatus de la refacción: " + resultBalance.JsonResult);
+                }
 
-                //else
-                //{
-                //    balance = JArray.Parse(resultBalance.JsonResult);
+                else
+                {
+                    var sets = JsonConvert.DeserializeObject<List<List<Dictionary<string, object>>>>(resultBalance.JsonResult);
+                    var detalle = sets[0]; // solicitudes
+                    var resumen = sets[1][0]; // fila unica del resumen
+                    bool otLiberada = Convert.ToInt32(resumen["OT_LIBERADA"]) == 1;
 
 
-                //    bool todosCompletos = balance
-                //        .OfType<JObject>()
-                //        .All(obj => obj["ESTATUS_SURTIDO"]?.ToObject<string>() == "COMPLETA");
+                    bool todosCompletos = otLiberada;
 
-                //    if (todosCompletos)
-                //    { //Los balances con 0s todas las salidas ok
-                //        var paramUpdateOT = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                //    {
-                //        { "P_OT",     ( payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.Integer) },
-                //        { "P_ESTATUS", (2, ParameterDirection.Input, HanaDbType.NVarChar) },
-                //    };
+                    if (todosCompletos)
+                    { //Los balances con 0s todas las salidas ok
+                        var paramUpdateOT = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                    {
+                        { "P_OT",     ( payload.OrdenTrabajo, ParameterDirection.Input, HanaDbType.Integer) },
+                        { "P_ESTATUS", (2, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    };
 
-                //        var resultUpdateOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                //            Logic.AD.GCUpdateStatusOT, paramUpdateOT
-                //        );
+                        var resultUpdateOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                            Logic.AD.GCUpdateStatusOT, paramUpdateOT
+                        );
 
-                //        if (resultUpdateOT.JsonResult.Contains("Error") || resultUpdateOT.JsonResult.Contains("ERROR"))
-                //        {
-                //            log.Info($"🚀 ═══════════════════════════════════════════════════");
-                //            log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
-                //            log.Info($"🚀 ═══════════════════════════════════════════════════");
+                        if (resultUpdateOT.JsonResult.Contains("Error") || resultUpdateOT.JsonResult.Contains("ERROR"))
+                        {
+                            JArray OrdenTrabajoResult = JArray.Parse(resultUpdateOT.JsonResult);
+                            string Error = OrdenTrabajoResult[0]["ERROR"].ToString();
+                            if (Error != "0")
+                            {
+                                log.Info($"🚀 ═══════════════════════════════════════════════════");
+                                log.Info($"🚀 Error CrearSalidaMercancia — OT: {payload.Referencia}");
+                                log.Info($"🚀 ═══════════════════════════════════════════════════");
 
-                //            log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar el estatus de la OT, " + resultBalance.JsonResult);
-                //        }
-                //    }
-                //}
+                                log.Error($"❌ Se registró la salida de mercancía generada en sap con folio: {data.DocNum} ,pero no fue posible actualizar el estatus de la OT, " + resultBalance.JsonResult);
+                            }
+                        }
+                    }
+                }
 
                 //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
                 string rolQueCambio = Request.Headers["X-Rol-Usuario"] ?? "Desconocido";
@@ -1954,7 +1962,8 @@ namespace MantenimientosPTM.Controllers
                     var parametersEmail = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                     {
                         { "P_PLANTA", (paylaod.Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
-                        { "P_TIPO", ("SM", ParameterDirection.Input, HanaDbType.NVarChar) }
+                        { "P_TIPO", ("SM", ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_CODE", ("SM", ParameterDirection.Input, HanaDbType.NVarChar) }
                     };
                     // Ejecutar stored procedure de actualización
                     var resultHanaEmails = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -2612,7 +2621,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetArticulosPorOrdenTrabajo(string ordenTrabajo, int? planta,string Estatus)
+        public JsonResult GetArticulosPorOrdenTrabajo(string ordenTrabajo, int? planta, string Estatus)
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
 

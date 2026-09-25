@@ -156,6 +156,134 @@ namespace MantenimientosPTM
             return result;
         }
 
+        public HanaProcedureResult ExecuteProcedureHanaMultiResult(
+    string commandText,
+    Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)> parameters)
+        {
+            HanaProcedureResult result = new HanaProcedureResult();
+            string ConnectionString = ConfigurationManager.ConnectionStrings["HANAConnection"].ConnectionString;
+
+            using (HanaConnection myConnection = new HanaConnection(ConnectionString))
+            {
+                try
+                {
+                    myConnection.Open();
+
+                    using (HanaCommand cmd = new HanaCommand(commandText, myConnection))
+                    {
+                        cmd.CommandTimeout = 60;
+                        cmd.CommandType = CommandType.StoredProcedure;
+
+                        if (parameters != null)
+                        {
+                            foreach (var param in parameters)
+                            {
+                                HanaDbType type;
+
+                                if (param.Value.value == null)
+                                {
+                                    type = param.Value.type;
+                                }
+                                else if (param.Value.value is int || param.Value.value is int?)
+                                {
+                                    type = HanaDbType.Integer;
+                                }
+                                else if (param.Value.value is decimal || param.Value.value is decimal?)
+                                {
+                                    type = HanaDbType.Decimal;
+                                }
+                                else if (param.Value.value is DateTime || param.Value.value is DateTime?)
+                                {
+                                    type = HanaDbType.TimeStamp;
+                                }
+                                else
+                                {
+                                    type = HanaDbType.NVarChar;
+                                }
+
+                                var hanaParam = new HanaParameter(param.Key, type)
+                                {
+                                    Direction = param.Value.direction,
+                                    Value = param.Value.value ?? DBNull.Value
+                                };
+
+                                if (type == HanaDbType.NVarChar && param.Value.value is string strVal)
+                                {
+                                    hanaParam.Size = Math.Max(strVal.Length, 1);
+                                }
+
+                                cmd.Parameters.Add(hanaParam);
+                            }
+                        }
+
+                        using (HanaDataReader reader = cmd.ExecuteReader())
+                        {
+                            var resultSets = new List<List<Dictionary<string, object>>>(); // 🆕
+
+                            do // 🆕 itera sobre cada ResultSet
+                            {
+                                var rows = new List<Dictionary<string, object>>();
+
+                                while (reader.Read())
+                                {
+                                    var row = new Dictionary<string, object>();
+
+                                    for (int i = 0; i < reader.FieldCount; i++)
+                                    {
+                                        string name = reader.GetName(i);
+                                        object raw = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                                        object value = raw;
+
+                                        if (raw != null)
+                                        {
+                                            string typeName = raw.GetType().FullName ?? string.Empty;
+
+                                            if (typeName == "Sap.Data.Hana.HanaDecimal")
+                                            {
+                                                if (decimal.TryParse(raw.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dec))
+                                                    value = dec;
+                                                else
+                                                    value = raw.ToString();
+                                            }
+                                            else if (typeName == "Sap.Data.Hana.HanaDateTime" || typeName == "Sap.Data.Hana.HanaTimeStamp" || typeName == "Sap.Data.Hana.HanaTime")
+                                            {
+                                                if (DateTime.TryParse(raw.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt))
+                                                    value = dt;
+                                                else
+                                                    value = raw.ToString();
+                                            }
+                                        }
+
+                                        row.Add(name, value);
+                                    }
+
+                                    rows.Add(row);
+                                }
+
+                                resultSets.Add(rows); // 🆕 agrega el ResultSet actual
+
+                            } while (reader.NextResult()); // 🆕 avanza al siguiente ResultSet
+
+                            result.JsonResult = JsonConvert.SerializeObject(
+                                resultSets, // 🆕 array de arrays
+                                Formatting.None,
+                                new JsonSerializerSettings
+                                {
+                                    DateFormatString = "yyyy-MM-ddTHH:mm:ss.fff",
+                                    NullValueHandling = NullValueHandling.Include
+                                });
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.JsonResult = $"Error: {ex.Message} | Inner: {ex.InnerException?.Message}";
+                }
+            }
+
+            return result;
+        }
+
         public string ExecuteProcedure(string commandText, Dictionary<string, string> parameters)
         {
             string result = string.Empty;

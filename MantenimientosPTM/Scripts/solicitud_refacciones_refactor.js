@@ -3154,7 +3154,7 @@ class SolicitudManager {
     _getColumnDefsConfig() {
         return [
             { orderable: false, targets: [0, 1, 2] },
-            { visible: false, targets: [9] },
+            //{ visible: false, targets: [9] },
             { className: "text-center", targets: '_all' },
             // Prioridades responsive
             { responsivePriority: 1, targets: 0 },
@@ -3191,13 +3191,15 @@ class SolicitudManager {
                 <i class="bi bi-${icon}"></i>
             </button>`;
 
+        const enCompra = estatus === 'En Compra'; // 🆕
+        const disabledAttr = enCompra ? 'disabled' : ''; // 🆕
+
         const devolucionBtn = esAdmin && totalPendienteDevolucion > 0
-            ? btn('btn-ptm-primary', 'btn-devolucion-mercancia', 'arrow-return-left', 'Generar Devolución de Mercancía')
+            ? btn('btn-ptm-primary', 'btn-devolucion-mercancia', 'arrow-return-left', 'Generar Devolución de Mercancía', disabledAttr) // 🆕
             : '';
 
-            //&& estatus === 'Pendiente'
-        const salidaBtn = esAdmin 
-            ? btn('btn-ptm-mid', 'btn-salida-mercancia', 'box-arrow-up', 'Generar Salida de Mercancía')
+        const salidaBtn = esAdmin
+            ? btn('btn-ptm-mid', 'btn-salida-mercancia', 'box-arrow-up', 'Generar Salida de Mercancía', disabledAttr) // 🆕
             : '';
 
         return `${devolucionBtn}${salidaBtn}`;
@@ -3221,13 +3223,14 @@ class SolicitudManager {
         if (!data) return '';
 
         const map = {
-            'Pendiente': { icon: 'clock' },
-            'Atendida': { icon: 'check-circle' },
-            'Cancelado': { icon: 'x-circle' }
+            'Pendiente': { icon: 'hourglass-split', color: 'bg-warning text-dark' },  // 🆕
+            'Atendida': { icon: 'check-circle-fill', color: 'btn-ptm-success' },  // 🆕
+            'Cancelado': { icon: 'x-circle-fill', color: 'btn-ptm-danger' },  // 🆕
+            'En Compra': { icon: 'cart-check-fill', color: 'btn-ptm-mid' },  // 🆕
         };
 
-        const cfg = map[data] || { icon: 'circle' };
-        return `<span class="badge btn-ptm-primary badge-custom"><i class="bi bi-${cfg.icon} me-1"></i>${data}</span>`;
+        const cfg = map[data] || { icon: 'circle-fill', color: 'btn-ptm-primary' };
+        return `<span class="badge ${cfg.color} badge-custom"><i class="bi bi-${cfg.icon} me-1"></i>${data}</span>`;
     }
 
     _configurarEventosDataTable() {
