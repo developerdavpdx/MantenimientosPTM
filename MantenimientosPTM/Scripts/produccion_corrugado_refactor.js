@@ -2212,8 +2212,13 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             KgNetosHrReales: 0,
             PorcentajeRendimiento: null, PorcentajeCalidad: null,
             PorcentajeOEE: null, PorcentajeEficienciaProducto: null,
-            ObjetivoEficiencia: 0, EficienciaOperativa: null
+            ObjetivoEficiencia: null,   // se calcula como promedio al final
+            EficienciaOperativa: null
         };
+
+        // Acumuladores para el promedio de ObjetivoEficiencia
+        let sumaObjetivoEficiencia = 0;
+        let conteoObjetivoEficiencia = 0;
 
         this.gridApi.forEachNode(node => {
             if (!node.data || node.data.id === 'TOTALES') return;
@@ -2243,8 +2248,18 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             totales.TiempoProductivo += Number(node.data.TiempoProductivo || 0);
             totales.KgPorTiempoDisponible += Number(node.data.KgPorTiempoDisponible || 0);
             totales.KgNetosHrReales += Number(node.data.KgNetosHrReales || 0);
-            totales.ObjetivoEficiencia += Number(node.data.ObjetivoEficiencia || 0);
+
+            // ObjetivoEficiencia: se promedia, no se suma
+            const objetivo = node.data.ObjetivoEficiencia;
+            if (objetivo !== null && objetivo !== undefined && objetivo !== '' && !isNaN(Number(objetivo))) {
+                sumaObjetivoEficiencia += Number(objetivo);
+                conteoObjetivoEficiencia++;
+            }
         });
+
+        totales.ObjetivoEficiencia = conteoObjetivoEficiencia > 0
+            ? sumaObjetivoEficiencia / conteoObjetivoEficiencia
+            : null;
 
         if (totales.PesoEstandar > 0) {
             totales.PorcentajeSobrepeso = ((totales.ProduccionNeta / totales.PesoEstandar) - 1) * 100;

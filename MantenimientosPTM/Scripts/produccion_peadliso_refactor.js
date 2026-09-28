@@ -2636,7 +2636,11 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             TiempoDisponible: 0,
 
             TiempoProductivo: 0,
-            // 🔥 RENDIMIENTO Y OEE
+
+            // =====================================
+            // RENDIMIENTO Y OEE
+            // =====================================
+
             DisponibilidadPorcentaje: null,
             KgPorTiempoDisponible: 0,
             KgHrLinea: null,
@@ -2646,10 +2650,14 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             PorcentajeCalidad: null,
             PorcentajeOEE: null,
             PorcentajeEficienciaProducto: null,
-            ObjetivoEficiencia: 0,
+            ObjetivoEficiencia: null,   // se calcula como promedio al final
             EficienciaOperativa: null
 
         };
+
+        // Acumuladores para el promedio de ObjetivoEficiencia
+        let sumaObjetivoEficiencia = 0;
+        let conteoObjetivoEficiencia = 0;
 
         this.gridApi.forEachNode((node) => {
 
@@ -2720,9 +2728,20 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             totales.KgPorTiempoDisponible += Number(node.data.KgPorTiempoDisponible || 0);
             totales.KgNetosHrReales += Number(node.data.KgNetosHrReales || 0);
-            totales.ObjetivoEficiencia += Number(node.data.ObjetivoEficiencia || 0);
+
+            // ObjetivoEficiencia: se promedia, no se suma
+            const objetivo = node.data.ObjetivoEficiencia;
+            if (objetivo !== null && objetivo !== undefined && objetivo !== '' && !isNaN(Number(objetivo))) {
+                sumaObjetivoEficiencia += Number(objetivo);
+                conteoObjetivoEficiencia++;
+            }
 
         });
+
+        // Promedio de Objetivo de Eficiencia
+        totales.ObjetivoEficiencia = conteoObjetivoEficiencia > 0
+            ? sumaObjetivoEficiencia / conteoObjetivoEficiencia
+            : null;
 
         // ========================================
         // CALCULAR PORCENTAJES EN TOTALES
@@ -2741,19 +2760,16 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             totales.PorcentajeTotalScrap =
                 (totales.TotalScrap / totalProduccion) * 100;
+
+            // Calidad % — usa ProduccionNeta y TotalScrap (PEAD Liso)
+            totales.PorcentajeCalidad =
+                (totales.ProduccionNeta / totalProduccion) * 100;
         }
 
-        // 🔥 Disponibilidad % desde totales
+        // Disponibilidad % desde totales
         if (totales.TiempoDisponible > 0) {
             totales.DisponibilidadPorcentaje =
                 (totales.TiempoProductivo / totales.TiempoDisponible) * 100;
-        }
-
-        // 🔥 Calidad % — usa ProduccionNeta y TotalScrap (PEAD Liso)
-        const totalProdCalidad = totales.ProduccionNeta + totales.TotalScrap;
-        if (totalProdCalidad > 0) {
-            totales.PorcentajeCalidad =
-                (totales.ProduccionNeta / totalProdCalidad) * 100;
         }
 
         return totales;

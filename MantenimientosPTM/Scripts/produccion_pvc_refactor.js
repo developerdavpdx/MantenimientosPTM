@@ -3353,19 +3353,23 @@ class GestionProduccionPVC extends GestionProduccionBase {
             TiempoDisponible: 0,
             TiempoProductivo: 0,
 
-            // 🔥 NUEVO: RENDIMIENTO Y OEE
+            // RENDIMIENTO Y OEE
             DisponibilidadPorcentaje: null,
             KgPorTiempoDisponible: 0,
-            KgHrLinea: null,                     // 🔲 en blanco, mezcla productos/líneas distintas
-            KgHrProducto: null,                  // 🔲 en blanco, mezcla productos/líneas distintas
+            KgHrLinea: null,                     // en blanco, mezcla productos/líneas distintos
+            KgHrProducto: null,                  // en blanco, mezcla productos/líneas distintos
             KgNetosHrReales: 0,
-            PorcentajeRendimiento: null,         // 🔲 en blanco, depende de KgHrProducto
+            PorcentajeRendimiento: null,         // en blanco, depende de KgHrProducto
             PorcentajeCalidad: null,
-            PorcentajeOEE: null,                 // 🔲 en blanco, depende de %Rendimiento
-            PorcentajeEficienciaProducto: null,  // 🔲 en blanco, igual que %Rendimiento (DJ=DG)
-            ObjetivoEficiencia: 0,
+            PorcentajeOEE: null,                 // en blanco, depende de %Rendimiento
+            PorcentajeEficienciaProducto: null,  // en blanco, igual que %Rendimiento
+            ObjetivoEficiencia: null,            // se calcula como promedio al final
             EficienciaOperativa: null
         };
+
+        // Acumuladores para el promedio de ObjetivoEficiencia
+        let sumaObjetivoEficiencia = 0;
+        let conteoObjetivoEficiencia = 0;
 
         this.gridApi.forEachNode((node) => {
 
@@ -3403,15 +3407,25 @@ class GestionProduccionPVC extends GestionProduccionBase {
             totales.TiempoDisponible += Number(node.data.TiempoDisponible || 0);
             totales.TiempoProductivo += Number(node.data.TiempoProductivo || 0);
 
-            // 🔥 NUEVO: acumulables (sí tienen sentido sumados)
+            // Acumulables (sí tienen sentido sumados)
             totales.KgPorTiempoDisponible += Number(node.data.KgPorTiempoDisponible || 0);
             totales.KgNetosHrReales += Number(node.data.KgNetosHrReales || 0);
-            totales.ObjetivoEficiencia += Number(node.data.ObjetivoEficiencia || 0);
+
+            // ObjetivoEficiencia: se promedia, no se suma
+            const objetivo = node.data.ObjetivoEficiencia;
+            if (objetivo !== null && objetivo !== undefined && objetivo !== '' && !isNaN(Number(objetivo))) {
+                sumaObjetivoEficiencia += Number(objetivo);
+                conteoObjetivoEficiencia++;
+            }
 
         });
 
-        if (totales.PesoEstandar > 0) {
+        // Promedio de Objetivo de Eficiencia
+        totales.ObjetivoEficiencia = conteoObjetivoEficiencia > 0
+            ? sumaObjetivoEficiencia / conteoObjetivoEficiencia
+            : null;
 
+        if (totales.PesoEstandar > 0) {
             totales.PorcentajeSobrepeso =
                 ((totales.ProduccionNetaReal / totales.PesoEstandar) - 1) * 100;
         }
@@ -3420,27 +3434,23 @@ class GestionProduccionPVC extends GestionProduccionBase {
             totales.ProduccionNetaReal + totales.TotalScrapKg;
 
         if (totalProduccion > 0) {
-
             totales.PorcentajeScrap =
                 (totales.TotalScrapKg / totalProduccion) * 100;
+
+            // % Calidad recalculado desde los totales de kg
+            totales.PorcentajeCalidad =
+                (totales.ProduccionNetaReal / totalProduccion) * 100;
         }
 
-        // 🔥 NUEVO: Disponibilidad % recalculada desde los totales de tiempo
+        // Disponibilidad % recalculada desde los totales de tiempo
         if (totales.TiempoDisponible > 0) {
             totales.DisponibilidadPorcentaje =
                 (totales.TiempoProductivo / totales.TiempoDisponible) * 100;
         }
 
-        // 🔥 NUEVO: % Calidad recalculado desde los totales de kg
-        const totalProduccionCalidad = totales.ProduccionNetaReal + totales.TotalScrapKg;
-        if (totalProduccionCalidad > 0) {
-            totales.PorcentajeCalidad =
-                (totales.ProduccionNetaReal / totalProduccionCalidad) * 100;
-        }
-
         // KgHrLinea, KgHrProducto, PorcentajeRendimiento, PorcentajeOEE,
         // PorcentajeEficienciaProducto y EficienciaOperativa se quedan en null
-        // porque mezclan productos/líneas distintas — igual que en el Excel.
+        // porque mezclan productos/líneas distintas, igual que en el Excel.
 
         return totales;
     }

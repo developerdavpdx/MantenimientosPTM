@@ -2139,7 +2139,7 @@ class GestionProduccionINY extends GestionProduccionBase {
             PorcentajeOEE: 0,
 
             PorcentajeEficienciaProducto: 0,
-            ObjetivoEficiencia: 0,
+            ObjetivoEficiencia: null,   // se calcula como promedio al final
             EficienciaOperativa: 0,
 
             // Estos NO se suman porque pueden cambiar
@@ -2147,6 +2147,10 @@ class GestionProduccionINY extends GestionProduccionBase {
             KgHrLinea: null,
             KgHrProducto: null
         };
+
+        // Acumuladores para el promedio de ObjetivoEficiencia
+        let sumaObjetivoEficiencia = 0;
+        let conteoObjetivoEficiencia = 0;
 
 
         // ========================================
@@ -2188,8 +2192,19 @@ class GestionProduccionINY extends GestionProduccionBase {
             // KPIs BASE
             totales.KgPorTiempoDisponible += Number(row.KgPorTiempoDisponible || 0);
             totales.KgNetosHrReales += Number(row.KgNetosHrReales || 0);
-            totales.ObjetivoEficiencia += Number(row.ObjetivoEficiencia || 0);
+
+            // ObjetivoEficiencia: se promedia, no se suma
+            const objetivo = row.ObjetivoEficiencia;
+            if (objetivo !== null && objetivo !== undefined && objetivo !== '' && !isNaN(Number(objetivo))) {
+                sumaObjetivoEficiencia += Number(objetivo);
+                conteoObjetivoEficiencia++;
+            }
         });
+
+        // Promedio de Objetivo de Eficiencia
+        totales.ObjetivoEficiencia = conteoObjetivoEficiencia > 0
+            ? sumaObjetivoEficiencia / conteoObjetivoEficiencia
+            : null;
 
 
         // ========================================
