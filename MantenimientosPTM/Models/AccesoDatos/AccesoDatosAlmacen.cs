@@ -780,6 +780,9 @@ namespace MantenimientosPTM
             public string ResponseSap { get; set; }
             [JsonProperty("COMENTARIOS_RECHAZO")]
             public string ComentariosRechazo { get; set; }
+
+            [JsonProperty("PLANTA")]
+            public int Planta { get; set; }
         }
 
         public class OrdenCompraDTO

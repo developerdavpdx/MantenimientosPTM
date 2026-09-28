@@ -1298,7 +1298,7 @@ namespace MantenimientosPTM.Controllers
 
                     // ✅ 4. Si fue autorizada, crear PR en SAP
 
-                    var sapResp = await GenerarSolicitudCompra(idSolicitudCompra, folio);
+                    var sapResp = await GenerarSolicitudCompra(idSolicitudCompra, folio,int.Parse(planta));
 
                     if (sapResp != null && !sapResp.IsError)
                     {
@@ -1554,7 +1554,7 @@ namespace MantenimientosPTM.Controllers
         //}
 
         [HttpPost]
-        public async Task<GlobalCommands.SapResponse> GenerarSolicitudCompra(int IdSolicitudCompra, string Folio)
+        public async Task<GlobalCommands.SapResponse> GenerarSolicitudCompra(int IdSolicitudCompra, string Folio,int Planta)
         {
             try
             {
@@ -1578,6 +1578,7 @@ namespace MantenimientosPTM.Controllers
                 if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
                 {
                     SolicitudCompraHeader = JsonConvert.DeserializeObject<List<SolicitudCompraResume>>(resultHana.JsonResult);
+                    SolicitudCompraHeader[0].Planta = Planta; // Asignar la planta al primer elemento
                 }
 
                 // ✅ Parameters

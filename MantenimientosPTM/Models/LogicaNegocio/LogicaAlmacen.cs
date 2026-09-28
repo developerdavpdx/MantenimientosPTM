@@ -72,7 +72,8 @@ namespace MantenimientosPTM
                     CostingCode = Header[0].Departamento, //Departamento
                     CostingCode2 = Header[0].Proceso,//Proceso
                     CostingCode3 = Header[0].Gastos,//Gastos
-                    CostingCode4 = Header[0].Cedis//Cedis
+                    CostingCode4 = Header[0].Cedis,//Cedis
+                    WarehouseCode = (Header[0].Planta == 1 ? ConfigurationManager.AppSettings["AlmacenP1"] : ConfigurationManager.AppSettings["AlmacenP2"])
                 }).ToList();
 
                 foreach (var line in documentLines)
