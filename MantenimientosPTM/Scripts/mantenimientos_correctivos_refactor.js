@@ -2205,34 +2205,31 @@ class MantenimientoManager {
             $('#TextoCorto').val(data.textoCorto || '');
             $("#EstatusOrden").val(data.descEstatusOrden || '');
 
+            // 🆕 Convierte "dd/MM/yyyy HH:mm[:ss]" -> "yyyy-MM-ddTHH:mm" (formato datetime-local)
+            const aDateTimeLocal = (texto) => { // 🆕
+                if (!texto || !texto.includes(' ')) return ''; // 🆕
+                const [fechaParte, horaParte] = texto.trim().split(' '); // 🆕
+                const [dia, mes, anio] = fechaParte.split('/'); // 🆕
+                const [hh, mm] = (horaParte || '').split(':'); // 🆕
+                if (!dia || !mes || !anio || !hh || !mm) return ''; // 🆕
+                return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}T${hh.padStart(2, '0')}:${mm.substring(0, 2)}`; // 🆕
+            }; // 🆕
+
             // ========================================
             // 5️ FECHA/HORA APERTURA
             // ========================================
             if (data.horaApertura) {
-                try {
-                    const [fechaParte, horaParte] = data.horaApertura.split(' ');
-                    const [dia, mes, anio] = fechaParte.split('/');
-                    const HoraAperturaOT = horaParte.substring(0, 5);
-                    $("#FechaInicioExtrema").val(`${anio}-${mes}-${dia}`);
-                    $("#HoraInicio").val(HoraAperturaOT);
-                    $("#HoraInicioTrabajo").val(HoraAperturaOT).attr("readonly", false);
-                } catch (err) {
-                    console.warn("⚠️ Error parseando horaApertura:", data.horaApertura);
-                }
+                $("#FechaInicioExtrema").val(aDateTimeLocal(data.horaApertura)); // 🆕
+                // 🆕 HoraInicioTrabajo se sigue llenando con la hora de apertura
+                const horaAperturaOT = (data.horaApertura.split(' ')[1] || '').substring(0, 5); // 🆕
+                $("#HoraInicioTrabajo").val(horaAperturaOT).attr("readonly", false); // 🆕
             }
+
             // ========================================
             // 5️ FECHA/HORA CIERRE
             // ========================================
             if (data.horaCierre) {
-                try {
-                    const [fechaParte, horaParte] = data.horaCierre.split(' ');
-                    const [dia, mes, anio] = fechaParte.split('/');
-                    const HoraCierreOT = horaParte.substring(0, 5);
-                    $("#FechaFinExtrema").val(`${anio}-${mes}-${dia}`);
-                    $("#HoraCierre").val(HoraCierreOT);
-                } catch (err) {
-                    console.warn("⚠️ Error parseando horaApertura:", data.horaApertura);
-                }
+                $("#FechaFinExtrema").val(aDateTimeLocal(data.horaCierre)); // 🆕
             }
 
             $("#Scrap").val(data.scrap);
@@ -2597,6 +2594,79 @@ class MantenimientoManager {
         return false;
     }
 
+    // 🔥 GUARDAR BORRADOR DE OT CORRECTIVO
+    async guardarOTBorrador(e) {
+        e.preventDefault();
+
+        // Mostrar loading
+        $('#btnGuardarBorrador').html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando Borrador...').prop('disabled', true);
+
+        try {
+            const datos = GlobalUtil.obtenerDatosAnyFormulario("formOrdenMantenimiento");
+
+            const regexHora24 = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+            const validarHora = (campoId, valor, etiqueta, obligatoria = false) => { // 🆕 parámetro obligatoria
+                const el = document.getElementById(campoId);
+                const incompleta = el && el.validity && el.validity.badInput;
+                const sinValor = !valor || valor.trim() === '';
+
+                // 🆕 Vacío del todo: solo es error si el campo es obligatorio
+                const vacioInvalido = sinValor && !incompleta && obligatoria; // 🆕
+                // 🆕 Con valor, que el formato sea válido
+                const formatoInvalido = !sinValor && !regexHora24.test(valor.trim()); // 🆕
+
+                if (incompleta || vacioInvalido || formatoInvalido) { // 🆕
+                    AlertManager.mostrar(`La hora de ${etiqueta} se debe llenar correctamente seleccionando a.m. o p.m.`, 'warning');
+                    $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
+                    return false;
+                }
+                return true;
+            };
+
+            if (!validarHora('HoraInicioTrabajo', datos.HoraInicioTrabajo, 'inicio', true)) return false; // 🆕 obligatoria
+            if (!validarHora('HoraFin', datos.HoraFin, 'fin')) return false; // 🆕 opcional
+
+            datos.Usuario = this.datos_usuario[0].EMAIL;
+            datos.TipoOperacion = "B"; // B = Borrador (Draft)
+            datos.EstatusOrden = 2; // Status 2 = Draft
+
+            // Convertir horas de 12h a 24h
+            if (datos.HoraInicioTrabajo) {
+                datos.HoraInicio = this.convertirA24Horas(datos.HoraInicioTrabajo);
+            }
+            if (datos.HoraFin) {
+                datos.HoraFin = this.convertirA24Horas(datos.HoraFin);
+            }
+
+            datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
+            datos.IdMantenimiento = this.ID_MANTENIMIENTO;
+
+            // Estado de máquina detenida
+            datos.MaquinaDetenida = $('#MaquinaDetenidaToggle').is(':checked') ? 1 : 0;
+
+            // 🔥 OBTENER Y AGREGAR FIRMAS DIGITALES (sin validar)
+            const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
+
+            datos.FirmaRealizo = firmas.realizo.firma || '';
+            datos.NombreRealizo = firmas.realizo.nombre || '';
+            datos.FirmaSuperviso = firmas.superviso.firma || '';
+            datos.NombreSuperviso = firmas.superviso.nombre || '';
+            datos.FirmaMantenimiento = firmas.mantenimiento.firma || '';
+            datos.NombreMantenimiento = firmas.mantenimiento.nombre || '';
+
+            // Guardar el borrador
+            await this.guardarOTBorradorDefinitivo(datos);
+
+        } catch (error) {
+            console.error('Error en el proceso:', error);
+            AlertManager.mostrar('No es posible guardar el borrador: ' + error, 'warning', "alertOrdenContainer");
+            $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
+        }
+
+        return false;
+    }
+
     // ✅ Método para convertir de 12h a 24h (formato TIME)
     convertirA24Horas(hora12h) {
         if (!hora12h || hora12h.trim() === '') {
@@ -2676,68 +2746,6 @@ class MantenimientoManager {
         });
     }
 
-    // 🔥 GUARDAR BORRADOR DE OT CORRECTIVO
-    async guardarOTBorrador(e) {
-        e.preventDefault();
-
-        // Mostrar loading
-        $('#btnGuardarBorrador').html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando Borrador...').prop('disabled', true);
-
-        try {
-            const datos = GlobalUtil.obtenerDatosAnyFormulario("formOrdenMantenimiento");
-
-            // Validar que las fechas de inicio y fin no estén vacías
-            if (!datos.HoraInicioTrabajo || datos.HoraInicioTrabajo.trim() === '') {
-                AlertManager.mostrar('La hora de inicio se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
-                $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
-                return false;
-            }
-
-            if (!datos.HoraFin || datos.HoraFin.trim() === '') {
-                AlertManager.mostrar('La hora de fin se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
-                $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
-                return false;
-            }
-
-            datos.Usuario = this.datos_usuario[0].EMAIL;
-            datos.TipoOperacion = "B"; // B = Borrador (Draft)
-            datos.EstatusOrden = 2; // Status 2 = Draft
-
-            // Convertir horas de 12h a 24h
-            if (datos.HoraInicioTrabajo) {
-                datos.HoraInicio = this.convertirA24Horas(datos.HoraInicioTrabajo);
-            }
-            if (datos.HoraFin) {
-                datos.HoraFin = this.convertirA24Horas(datos.HoraFin);
-            }
-
-            datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
-            datos.IdMantenimiento = this.ID_MANTENIMIENTO;
-
-            // Estado de máquina detenida
-            datos.MaquinaDetenida = $('#MaquinaDetenidaToggle').is(':checked') ? 1 : 0;
-
-            // 🔥 OBTENER Y AGREGAR FIRMAS DIGITALES (sin validar)
-            const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
-
-            datos.FirmaRealizo = firmas.realizo.firma || '';
-            datos.NombreRealizo = firmas.realizo.nombre || '';
-            datos.FirmaSuperviso = firmas.superviso.firma || '';
-            datos.NombreSuperviso = firmas.superviso.nombre || '';
-            datos.FirmaMantenimiento = firmas.mantenimiento.firma || '';
-            datos.NombreMantenimiento = firmas.mantenimiento.nombre || '';
-
-            // Guardar el borrador
-            await this.guardarOTBorradorDefinitivo(datos);
-
-        } catch (error) {
-            console.error('Error en el proceso:', error);
-            AlertManager.mostrar('No es posible guardar el borrador: ' + error, 'warning', "alertOrdenContainer");
-            $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
-        }
-
-        return false;
-    }
 
     // 🔥 MÉTODO PARA GUARDAR EL BORRADOR EN LA BD
     async guardarOTBorradorDefinitivo(datos) {

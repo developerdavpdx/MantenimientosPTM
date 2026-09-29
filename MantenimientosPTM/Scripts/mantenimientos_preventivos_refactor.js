@@ -473,7 +473,7 @@ class MantenimientosPreventivoApp {
 
                         // ✅ NUEVO: Verificar si hay alguna solicitud que se pueda cerrar (Pendiente + ESTATUSOT == 3)
                         const hayCierrePendiente = refacciones.some(item =>
-                           item.ESTATUS === 'Pendiente'
+                            item.ESTATUS === 'Pendiente'
                         );
 
                         // 🔥 MOSTRAR/OCULTAR COLUMNA BASADO EN LOS DATOS
@@ -519,8 +519,8 @@ class MantenimientosPreventivoApp {
                             <td class="text-center text-muted">
                                 <small>—</small>
                             </td>`;
-                                            } else if (devuelta > 0) {
-                                                cantidadHTML = `
+                            } else if (devuelta > 0) {
+                                cantidadHTML = `
                             <td class="text-center">
                                 <span class="d-block" title="Cantidad surtida por almacén">
                                     📦 ${surtida}+
@@ -533,8 +533,8 @@ class MantenimientosPreventivoApp {
                                    ✅ ${consumida}
                                 </span>
                             </td>`;
-                                            } else {
-                                                cantidadHTML = `
+                            } else {
+                                cantidadHTML = `
                             <td class="text-center">
                                 <span title="Cantidad surtida / consumida">
                                     ✅ ${surtida}
@@ -560,10 +560,10 @@ class MantenimientosPreventivoApp {
                                             </button>
                                         </td>
                                     `;
-                                                    }
-                                                    else if (esAdmin) {
-                                                        if (item.ESTATUS === 'Atendida' && (item.ACEPTADA_MANTENIMIENTO == "" || item.ACEPTADA_MANTENIMIENTO == null)) {
-                                                            accionesHTML = `
+                            }
+                            else if (esAdmin) {
+                                if (item.ESTATUS === 'Atendida' && (item.ACEPTADA_MANTENIMIENTO == "" || item.ACEPTADA_MANTENIMIENTO == null)) {
+                                    accionesHTML = `
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-ptm-primary btn-autorizar-refaccion" 
                                                     data-refaccion-id="${item.ID_SOLICITUD || ''}"
@@ -573,20 +573,20 @@ class MantenimientosPreventivoApp {
                                             </button>
                                         </td>
                                     `;
-                                                        } else if (item.ACEPTADA_MANTENIMIENTO == "true") {
-                                                            accionesHTML = `
+                                } else if (item.ACEPTADA_MANTENIMIENTO == "true") {
+                                    accionesHTML = `
                                         <td class="text-center">
                                             <span class="badge btn-ptm-primary badge-custom">Aceptada por mantenimiento</span>
                                         </td>
                                     `;
-                                                        } else if (item.ESTATUS === 'Atendida' && item.ACEPTADA_MANTENIMIENTO == "false") {
-                                                            accionesHTML = `
+                                } else if (item.ESTATUS === 'Atendida' && item.ACEPTADA_MANTENIMIENTO == "false") {
+                                    accionesHTML = `
                                         <td class="text-center">
                                             <span class="badge bg-danger badge-custom">Rechazada por mantenimiento</span>
                                         </td>
                                     `;
-                                                        } else {
-                                                            accionesHTML = `
+                                } else {
+                                    accionesHTML = `
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-secondary" disabled title="Solo se pueden autorizar refacciones completadas">
                                                 <i class="bi bi-lock me-1"></i>No disponible
@@ -1113,83 +1113,6 @@ class MantenimientoManager {
         this.PLANTA_PDF = "";
         this.pdfTemporalRutina = null;
     }
-
-    // ========================================
-    // LIMITAR FECHAS AL MES ACTUAL
-    // ========================================
-    // configurarLimiteFechasMesActual() {
-
-    //     const hoy = new Date();
-
-    //     // Último día del mes actual a las 23:59
-    //     const ultimoDiaMes = new Date(
-    //         hoy.getFullYear(),
-    //         hoy.getMonth() + 1,
-    //         0,
-    //         23,
-    //         59,
-    //         59
-    //     );
-
-    //     // Formato YYYY-MM-DDTHH:mm
-    //     const maxFecha =
-    //         `${ultimoDiaMes.getFullYear()}-` +
-    //         `${String(ultimoDiaMes.getMonth() + 1).padStart(2, '0')}-` +
-    //         `${String(ultimoDiaMes.getDate()).padStart(2, '0')}T23:59`;
-
-    //     // ========================================
-    //     // 1. LIMITAR EL CALENDARIO
-    //     // ========================================
-    //     $('#TiempoArranque, #TiempoLiberacionLinea')
-    //         .attr('max', maxFecha);
-
-
-    //     // ========================================
-    //     // 2. VALIDAR FECHA INGRESADA MANUALMENTE
-    //     // ========================================
-    //     $('#TiempoArranque, #TiempoLiberacionLinea')
-    //         .off('change.limiteMes')
-    //         .on('change.limiteMes', function () {
-
-    //             const valor = $(this).val();
-
-    //             // Si está vacío, no hacemos nada
-    //             if (!valor) {
-    //                 return;
-    //             }
-
-    //             const fechaSeleccionada = new Date(valor);
-
-    //             // Validar fecha inválida
-    //             if (isNaN(fechaSeleccionada.getTime())) {
-
-    //                 AlertManager.mostrar(
-    //                     'La fecha ingresada no es válida.',
-    //                     'warning'
-    //                 );
-
-    //                 $(this).val('');
-
-    //                 return;
-    //             }
-
-    //             // ========================================
-    //             // FECHA POSTERIOR AL MES ACTUAL
-    //             // ========================================
-    //             if (fechaSeleccionada > ultimoDiaMes) {
-
-    //                 AlertManager.mostrar(
-    //                     'No puedes seleccionar una fecha posterior al mes actual.',
-    //                     'warning'
-    //                 );
-
-    //                 $(this).val('');
-
-    //                 return;
-    //             }
-    //         });
-    // }
-
     // ============================
     // GUARDAR DATOS DEL BOTÓN
     // ============================
@@ -1217,7 +1140,6 @@ class MantenimientoManager {
             motivo: btn.data('motivo'),
         };
     }
-
     // ============================
     // REPROGRAMACIÓN DE MANTENIMIENTO
     // ============================
@@ -1601,7 +1523,7 @@ class MantenimientoManager {
             this.llenarMantenimientosPorRango();
         }
         EquiposUtil.llenarLineas(this.datos_usuario[0].PLANTA, "none", "FiltroLinea");
-        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA,1, "none", "FiltroArea");
+        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, 1, "none", "FiltroArea");
 
         console.log('✅ MantenimientoManager inicializado correctamente');
     }
@@ -2748,7 +2670,7 @@ class MantenimientoManager {
             $('#DescEquipo').val(data.descripcionEquipo || '');
 
             // ========================================
-            // 6 FECHA / HORA APERTURA
+            // 6 FECHA / HORA APERTURA REAL
             // ========================================
             if (data.horaApertura && data.horaApertura.includes(' ')) {
                 try {
@@ -2756,13 +2678,32 @@ class MantenimientoManager {
                     const [dia, mes, anio] = fechaParte.split('/');
 
                     if (dia && mes && anio && horaParte) {
-                        $("#FechaInicioExtrema").val(`${anio}-${mes}-${dia}`);
                         $("#HoraInicio").val(horaParte.substring(0, 5));
                     }
                 } catch (err) {
                     console.warn("⚠️ Error parseando horaApertura:", data.horaApertura);
                 }
             }
+
+            // 🆕 Convierte "dd/MM/yyyy HH:mm[:ss]" -> "yyyy-MM-ddTHH:mm" (formato datetime-local)
+            const aDateTimeLocal = (texto) => { // 🆕
+                if (!texto || !texto.includes(' ')) return ''; // 🆕
+                const [fechaParte, horaParte] = texto.trim().split(' '); // 🆕
+                const [dia, mes, anio] = fechaParte.split('/'); // 🆕
+                const [hh, mm] = (horaParte || '').split(':'); // 🆕
+                if (!dia || !mes || !anio || !hh || !mm) return ''; // 🆕
+                return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}T${hh.padStart(2, '0')}:${mm.substring(0, 2)}`; // 🆕
+            }; // 🆕
+
+            // ========================================
+            // 6 FECHA / HORA APERTURA REAL
+            // ========================================
+            $("#FechaInicioExtrema").val(aDateTimeLocal(data.horaApertura)); // 🆕
+
+            // ========================================
+            // 6 FECHA / HORA CIERRE REAL
+            // ========================================
+            $("#FechaFinExtrema").val(aDateTimeLocal(data.horaCierre)); // 🆕
 
             // ========================================
             // 7 UBICACIÓN / DATOS TÉCNICOS
@@ -3628,7 +3569,6 @@ class MantenimientoManager {
             // 🔥 OBTENER DATOS DEL FORMULARIO
             const datos = GlobalUtil.obtenerDatosAnyFormulario("formOrdenMantenimiento");
 
-
             // ========================================
             // VALIDAR HORAS
             // ========================================
@@ -3708,7 +3648,6 @@ class MantenimientoManager {
 
         return false;
     }
-    // 🔥 MÉTODO SEPARADO PARA GUARDAR LA OT (también async)
     // 🔥 MÉTODO PARA GUARDAR BORRADOR (sin validaciones estrictas)
     async guardarBorrador(e) {
         if (e) e.preventDefault();
@@ -3726,79 +3665,65 @@ class MantenimientoManager {
         try {
             // 🔥 OBTENER SOLO LOS DATOS DISPONIBLES (sin validaciones)
             const datosBorrador = this._obtenerDatosBorrador();
+            if (!datosBorrador) return false; // 🆕
 
-            // ========================================
-            // VALIDAR HORAS
-            // ========================================
-            // Validar que las fechas de inicio y fin no estén vacías
-            if (!datosBorrador.HoraInicio || datosBorrador.HoraInicio.trim() === '') {
-                AlertManager.mostrar('La hora de inicio se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
-                $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
-                return false;
-            }
+            
+                console.log('📝 Datos del borrador:', datosBorrador);
 
-            if (!datosBorrador.HoraFin || datosBorrador.HoraFin.trim() === '') {
-                AlertManager.mostrar('La hora de fin se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
-                $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
-                return false;
-            }
-
-            console.log('📝 Datos del borrador:', datosBorrador);
-
-            // 🔥 GUARDAR RUTINA EN BORRADOR (validación relajada)
-            const rutinaGuardada = await this.guardarRutinaParaBorrador(datosBorrador.NumeroOrden, datosBorrador.EstatusOrden);
-            if (!rutinaGuardada) {
-                $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
-                return false;
-            }
-
-            // ✅ SUBIR PDF SI EXISTE (cuando es rutina default para TecnicoMtto)
-            if (this.pdfTemporalRutina) {
-                console.log('📄 Subiendo PDF de rutina...');
-                const pdfSubido = await this.SubirPdfRutinaAsync(this.pdfTemporalRutina);
-                if (!pdfSubido) {
-                    console.warn('⚠️ Advertencia: El PDF no se subió, pero continuaremos con el borrador');
+                // 🔥 GUARDAR RUTINA EN BORRADOR (validación relajada)
+                const rutinaGuardada = await this.guardarRutinaParaBorrador(datosBorrador.NumeroOrden, datosBorrador.EstatusOrden);
+                if (!rutinaGuardada) {
+                    $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+                    return false;
                 }
-                this.pdfTemporalRutina = null;
-            }
 
-            // ✅ AGREGAR DATOS REQUERIDOS PARA GUARDADO
-            datosBorrador.Usuario = this.datos_usuario[0].EMAIL;
-            datosBorrador.TipoOperacion = 'BORRADOR'; // 🔥 Tipo especial para borrador
-            datosBorrador.IdMantenimiento = this.ID_MANTENIMIENTO;
+                // ✅ SUBIR PDF SI EXISTE (cuando es rutina default para TecnicoMtto)
+                if (this.pdfTemporalRutina) {
+                    console.log('📄 Subiendo PDF de rutina...');
+                    const pdfSubido = await this.SubirPdfRutinaAsync(this.pdfTemporalRutina);
+                    if (!pdfSubido) {
+                        console.warn('⚠️ Advertencia: El PDF no se subió, pero continuaremos con el borrador');
+                    }
+                    this.pdfTemporalRutina = null;
+                }
 
-            // ✅ Convertir horas si existen
-            if (datosBorrador.HoraInicio) {
-                datosBorrador.HoraInicio = this.convertirA24Horas(datosBorrador.HoraInicio);
-            }
-            if (datosBorrador.HoraFin) {
-                datosBorrador.HoraFin = this.convertirA24Horas(datosBorrador.HoraFin);
-            }
+                // ✅ AGREGAR DATOS REQUERIDOS PARA GUARDADO
+                datosBorrador.Usuario = this.datos_usuario[0].EMAIL;
+                datosBorrador.TipoOperacion = 'BORRADOR'; // 🔥 Tipo especial para borrador
+                datosBorrador.IdMantenimiento = this.ID_MANTENIMIENTO;
 
-            // ✅ Agregar técnicos si existen
-            if (this.gestionTecnicos.tecnicosAsignados.length > 0) {
-                datosBorrador.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
-            }
+                // ✅ Convertir horas si existen
+                if (datosBorrador.HoraInicio) {
+                    datosBorrador.HoraInicio = this.convertirA24Horas(datosBorrador.HoraInicio);
+                }
+                if (datosBorrador.HoraFin) {
+                    datosBorrador.HoraFin = this.convertirA24Horas(datosBorrador.HoraFin);
+                }
 
-            // 🔥 GUARDAR LAS FIRMAS (si existen) - SIN VALIDAR QUE SEAN OBLIGATORIAS
-            if ($('#SeccionFirmas').is(':visible')) {
-                // Guardar firmas en los campos ocultos si están disponibles
-                this.gestionFirmas.guardarTodasLasFirmas();
+                // ✅ Agregar técnicos si existen
+                if (this.gestionTecnicos.tecnicosAsignados.length > 0) {
+                    datosBorrador.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
+                }
 
-                // Obtener las firmas
-                const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
+                // 🔥 GUARDAR LAS FIRMAS (si existen) - SIN VALIDAR QUE SEAN OBLIGATORIAS
+                if ($('#SeccionFirmas').is(':visible')) {
+                    // Guardar firmas en los campos ocultos si están disponibles
+                    this.gestionFirmas.guardarTodasLasFirmas();
 
-                // Agregar datos de firmas al objeto (aunque estén vacías, va)
-                datosBorrador.FirmaRealizo = firmas.realizo.firma || '';
-                datosBorrador.NombreRealizo = firmas.realizo.nombre || '';
-                datosBorrador.FirmaSuperviso = firmas.superviso.firma || '';
-                datosBorrador.NombreSuperviso = firmas.superviso.nombre || '';
-                datosBorrador.FirmaMantenimiento = firmas.mantenimiento.firma || '';
-                datosBorrador.NombreMantenimiento = firmas.mantenimiento.nombre || '';
-            }
+                    // Obtener las firmas
+                    const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
 
-            // ✅ Guardar el borrador
-            await this.guardarBorradorDefinitivo(datosBorrador);
+                    // Agregar datos de firmas al objeto (aunque estén vacías, va)
+                    datosBorrador.FirmaRealizo = firmas.realizo.firma || '';
+                    datosBorrador.NombreRealizo = firmas.realizo.nombre || '';
+                    datosBorrador.FirmaSuperviso = firmas.superviso.firma || '';
+                    datosBorrador.NombreSuperviso = firmas.superviso.nombre || '';
+                    datosBorrador.FirmaMantenimiento = firmas.mantenimiento.firma || '';
+                    datosBorrador.NombreMantenimiento = firmas.mantenimiento.nombre || '';
+                }
+
+                // ✅ Guardar el borrador
+                await this.guardarBorradorDefinitivo(datosBorrador);
 
         } catch (error) {
             console.error('Error en guardarBorrador:', error);
@@ -3841,6 +3766,21 @@ class MantenimientoManager {
                 datos[campo] = valor;
             }
         });
+
+        // 🆕 Detecta horas llenadas a medias (ej. "10:00" sin a.m./p.m.) -> .val() regresa ""
+        const camposHora = [
+            { id: 'HoraInicio', etiqueta: 'inicio' }, // 🆕
+            { id: 'HoraFin', etiqueta: 'fin' }        // 🆕
+        ];
+
+        for (const { id, etiqueta } of camposHora) { // 🆕
+            const el = document.getElementById(id); // 🆕
+            if (el && el.validity && el.validity.badInput) { // 🆕
+                AlertManager.mostrar(`La hora de ${etiqueta} se debe llenar correctamente seleccionando a.m. o p.m.`, 'warning'); // 🆕
+                $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false); // 🆕
+                return null; // 🆕
+            }
+        }
 
         return datos;
     }
@@ -5845,7 +5785,7 @@ class PrintManagerMantenimiento {
             });
         });
         return actividades;
-    } MantenimientoManager 
+    } MantenimientoManager
 
     imprimirOrdenMantenimiento(datos, win) {
         try {
