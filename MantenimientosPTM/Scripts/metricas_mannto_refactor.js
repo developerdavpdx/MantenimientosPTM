@@ -116,6 +116,10 @@ class UIManager {
         $("#metric-disponibilidad, #metric-rendimiento, #metric-calidad, #metric-oee, #metric-tiempomuerto, #metric-mtta, #metric-cumplimientopm, #metric-mttr, #metric-mtbf, #metric-dt")
             .html('<span class="text-muted small">Sin datos</span>');
     }
+
+    static fmt(v, max = 2) {
+        return Number.isFinite(v) ? Number(v.toFixed(max)).toString() : '--';
+    }
 }
 
 // ========================================
@@ -362,7 +366,7 @@ class MetricasManager {
         this.mttrDonutChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['T. Correctivos', 'T. Productivo'],
+                labels: ['Paros Correctivo', 'Paros manuales'],
                 datasets: [{
                     data: [0, 0],
                     backgroundColor: ['#eda100', '#fde5a0'],
@@ -390,7 +394,7 @@ class MetricasManager {
         this.mtbfDonutChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['T. Disponible', 'T. Correctivos'],
+                labels: ['T. Total Disponible', 'T. de inactividad'],
                 datasets: [{
                     data: [0, 0],
                     backgroundColor: ['#0dcaf0', '#a8eaf7'],
@@ -436,31 +440,32 @@ class MetricasManager {
         });
     }
 
-    actualizarGraficaDT(mtbfVal, mttrVal) {
+    actualizarGraficaDT(mtbfVal, mttrVal, sinParadas = false) {
         if (!this.dtDonutChart) return;
 
-        this.dtDonutChart.data.datasets[0].data = [mtbfVal, mttrVal];
+        this.dtDonutChart.data.datasets[0].data = sinParadas ? [1, 0] : [mtbfVal, mttrVal];
         this.dtDonutChart.update();
 
-        $('#lbl-dt-mtbf').text(mtbfVal.toFixed(1) + ' hr');
-        $('#lbl-dt-mttr').text(mttrVal.toFixed(1) + ' hr');
+        $('#lbl-dt-mtbf').text(sinParadas ? 'N/A' : UIManager.fmt(mtbfVal) + ' hr');
+        $('#lbl-dt-mttr').text(UIManager.fmt(mttrVal) + ' hr');
     }
 
-    actualizarGraficaMTBF(tiempoDisponibleVal, tiempoCorrectivosVal) {
+    actualizarGraficaMTBF(operativo, paro) {
         if (!this.mtbfDonutChart) return;
-
-        this.mtbfDonutChart.data.datasets[0].data = [tiempoDisponibleVal, tiempoCorrectivosVal];
+        this.mtbfDonutChart.data.labels = ['T. operativo', 'T. de inactividad'];
+        this.mtbfDonutChart.data.datasets[0].data = [operativo, paro];
         this.mtbfDonutChart.update();
-
-        $('#lbl-mtbf-disponible').text(tiempoDisponibleVal.toFixed(1) + ' hr');
-        $('#lbl-mtbf-correctivos').text(tiempoCorrectivosVal.toFixed(1) + ' hr');
+        $('#lbl-mtbf-disponible').text(UIManager.fmt(operativo) + ' hr');
+        $('#lbl-mtbf-correctivos').text(UIManager.fmt(paro) + ' hr');
     }
 
-    actualizarGraficaMTTR(tiempoReparacionVal, totalReparacionesVal) {
+    actualizarGraficaMTTR(otmc, manuales) {
         if (!this.mttrDonutChart) return;
-
-        this.mttrDonutChart.data.datasets[0].data = [tiempoReparacionVal, totalReparacionesVal];
+        this.mttrDonutChart.data.labels = ['Paros Correctivo', 'Paros manuales'];
+        this.mttrDonutChart.data.datasets[0].data = [otmc, manuales];
         this.mttrDonutChart.update();
+        $('#lbl-mttr-correctivos').text(otmc);
+        $('#lbl-mttr-productivo').text(manuales);
     }
 
     actualizarGraficaOEE(disponibilidad, rendimiento, calidad) {
@@ -469,9 +474,9 @@ class MetricasManager {
         this.oeeDonutChart.data.datasets[0].data = [disponibilidad, rendimiento, calidad];
         this.oeeDonutChart.update();
 
-        document.getElementById('lbl-disp-oee').textContent = disponibilidad.toFixed(1) + '%';
-        document.getElementById('lbl-rend-oee').textContent = rendimiento.toFixed(1) + '%';
-        document.getElementById('lbl-cal-oee').textContent = calidad.toFixed(1) + '%';
+        document.getElementById('lbl-disp-oee').textContent = UIManager.fmt(disponibilidad) + '%';
+        document.getElementById('lbl-rend-oee').textContent = UIManager.fmt(rendimiento) + '%';
+        document.getElementById('lbl-cal-oee').textContent = UIManager.fmt(calidad) + '%';
     }
 
     actualizarGraficaTiempoMuerto(tiempoNoDisponible, tiempoNoProductivo) {
@@ -480,8 +485,8 @@ class MetricasManager {
         this.tiempoMuertoDonutChart.data.datasets[0].data = [tiempoNoDisponible, tiempoNoProductivo];
         this.tiempoMuertoDonutChart.update();
 
-        $('#lbl-tiempo-no-disponible').text(tiempoNoDisponible.toFixed(1) + ' hr');
-        $('#lbl-tiempo-no-productivo').text(tiempoNoProductivo.toFixed(1) + ' hr');
+        $('#lbl-tiempo-no-disponible').text(UIManager.fmt(tiempoNoDisponible) + ' hr');
+        $('#lbl-tiempo-no-productivo').text(UIManager.fmt(tiempoNoProductivo) + ' hr');
     }
 
     actualizarGraficaTiempoEspera(totalHrs, promedioHrs) {
@@ -559,42 +564,47 @@ class MetricasManager {
 
                 // 🔥 Valores de MTTR
                 const tiempoReparacionTotalVal = parseFloat(m.TIEMPO_REPARACION_TOTAL_HRS) || 0;
-                const totalReparacionesVal = parseInt(m.TOTAL_REPARACIONES) || 0;
-                const mttrVal = parseFloat(m.MTTR_HRS) || 0;
-
-                // 🔥 Valores de MTBF
-                const mtbfVal = parseFloat(m.MTBF_HRS) || 0;
+                const mttrVal = parseFloat(m.MTTR_HRS) || 0;          // ← FALTA ESTA LÍNEA
                 const totalParadasVal = parseInt(m.TOTAL_PARADAS) || 0;
-                const tiempoCorrectivosBitacoraVal = parseFloat(m.TIEMPO_CORRECTIVOS_BITACORA_HRS) || 0; // 🔥 NUEVO
+                const totalOTMCVal = parseInt(m.TOTAL_OTMC) || 0;
+                const totalManualesVal = parseInt(m.TOTAL_PAROS_MANUALES) || 0;
+
+                // 🔥 MTBF (null = sin paradas)
+                const mtbfNulo = m.MTBF_HRS === null || m.MTBF_HRS === undefined;
+                const mtbfVal = mtbfNulo ? 0 : parseFloat(m.MTBF_HRS);
+                const tiempoOperativoVal = tiempoNoDisponibleVal - tiempoReparacionTotalVal; // Disponible - Paro
+
+                $('#lbl-mtbf-paradas').text(totalParadasVal);
+                $('#lbl-mttr-horas').text(UIManager.fmt(tiempoReparacionTotalVal) + ' hr');
+                $('#lbl-mttr-paradas').text(totalParadasVal);
+                $('#lbl-mtbf-total-disponible').text(UIManager.fmt(tiempoNoDisponibleVal) + ' hr');
 
                 // 🔥 Valores de DT (Disponibilidad Técnica)
                 const dtVal = parseFloat(m.DT_PORCENTAJE) || 0;
 
                 // 🔥 KPI central de OEE
-                UIManager.actualizarMetrica('rendimiento', rendVal.toFixed(1), '%');
-                UIManager.actualizarMetrica('calidad', calVal.toFixed(1), '%');
-                UIManager.actualizarMetrica('oee', oeeVal.toFixed(1), '%');
+                UIManager.actualizarMetrica('rendimiento', UIManager.fmt(rendVal), '%');
+                UIManager.actualizarMetrica('calidad', UIManager.fmt(calVal), '%');
+                UIManager.actualizarMetrica('oee', UIManager.fmt(oeeVal), '%');
                 // 🔥 KPI central de MTBF
-                UIManager.actualizarMetrica('mtbf', mtbfVal.toFixed(1), 'hrs');
+                UIManager.actualizarMetrica('mtbf', mtbfNulo ? 'N/A' : UIManager.fmt(mtbfVal), 'hrs');
 
                 // 🔥 KPI central de cumplimiento PM
-                UIManager.actualizarMetrica('cumplimientopm', pmPorcentajeVal.toFixed(1), '%');
+                UIManager.actualizarMetrica('cumplimientopm', UIManager.fmt(pmPorcentajeVal), '%');
 
                 // 🔥 KPI central de DT
-                UIManager.actualizarMetrica('dt', dtVal.toFixed(1), '%');
+                UIManager.actualizarMetrica('dt', UIManager.fmt(dtVal), '%');
                 $('#lbl-pm-cerrados').text(pmCerradosVal);
                 $('#lbl-pm-programados').text(pmProgramadosVal);
 
                 // 🔥 KPI central de MTTR
-                UIManager.actualizarMetrica('mttr', mttrVal.toFixed(1), 'hrs');
-                $('#lbl-mttr-correctivos').text(tiempoReparacionTotalVal.toFixed(1) + ' hr');
-                $('#lbl-mttr-productivo').text(totalReparacionesVal);
+                UIManager.actualizarMetrica('mttr', UIManager.fmt(mttrVal), 'hrs');
 
                 // 🔥 Tiempo Muerto: valor central como % sobre horas programadas
                 const tiempoMuertoPct = horasProgramadas > 0
                     ? (tiempoMuertoVal / horasProgramadas) * 100
                     : 0;
-                UIManager.actualizarMetrica('tiempomuerto', tiempoMuertoPct.toFixed(1), '%');
+                UIManager.actualizarMetrica('tiempomuerto', UIManager.fmt(tiempoMuertoPct), '%');
 
 
                 // 🔥 Valores de Tiempo de Espera / MTTA
@@ -603,8 +613,8 @@ class MetricasManager {
                 const mttaVal = parseFloat(m.PROMEDIO_TIEMPO_ESPERA_HRS) || 0;
 
                 // 🔥 KPI central ahora es el MTTA
-                UIManager.actualizarMetrica('mtta', mttaVal.toFixed(1), 'hrs');
-                $('#lbl-tiempo-espera-total').text(tiempoEsperaTotalVal.toFixed(1) + ' hr');
+                UIManager.actualizarMetrica('mtta', UIManager.fmt(mttaVal), 'hrs');
+                $('#lbl-tiempo-espera-total').text(UIManager.fmt(tiempoEsperaTotalVal) + ' hr');
                 $('#lbl-tiempo-espera-total-ots').text(tiempoEsperaOtsVal);
 
 
@@ -613,9 +623,9 @@ class MetricasManager {
                 this.actualizarGraficaTiempoMuerto(tiempoNoDisponibleVal, tiempoNoProductivoVal);
                 this.actualizarGraficaTiempoEspera(tiempoEsperaTotalVal, mttaVal);
                 this.actualizarGraficaCumplimientoPM(pmProgramadosVal, pmCerradosVal);
-                this.actualizarGraficaMTTR(tiempoReparacionTotalVal, totalReparacionesVal);
-                this.actualizarGraficaMTBF(tiempoNoDisponibleVal, tiempoCorrectivosBitacoraVal); // 🔥 corregido
-                this.actualizarGraficaDT(mtbfVal, mttrVal);
+                this.actualizarGraficaMTTR(totalOTMCVal, totalManualesVal);
+                this.actualizarGraficaMTBF(tiempoOperativoVal, tiempoReparacionTotalVal);
+                this.actualizarGraficaDT(mtbfVal, mttrVal, mtbfNulo);
 
 
                 $('#labelProcesoActivo').text(filtros.proceso);

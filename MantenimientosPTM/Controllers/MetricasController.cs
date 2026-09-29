@@ -64,8 +64,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
                     { "P_FECHA_FIN",    (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date) },
                     { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)  ? (object)null : FiltroLinea,  ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_AREA",       (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    //{ "P_AREA",       (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(

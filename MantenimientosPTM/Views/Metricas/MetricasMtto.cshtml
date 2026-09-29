@@ -161,12 +161,20 @@
                                     <!-- Desglose -->
                                     <div class="mt-2" style="font-size:12px;">
                                         <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#0dcaf0;display:inline-block;border-radius:2px;margin-right:4px;"></span>T. Disponible</span>
+                                            <span><span style="width:8px;height:8px;border:2px solid #6c757d;display:inline-block;border-radius:2px;margin-right:4px;box-sizing:border-box;"></span>T. total disponible</span>
+                                            <span id="lbl-mtbf-total-disponible">-- hr</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span><span style="width:8px;height:8px;background:#a8eaf7;display:inline-block;border-radius:2px;margin-right:4px;"></span>(−) T. de inactividad</span>
+                                            <span id="lbl-mtbf-correctivos">-- hr</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-top mt-1 pt-1">
+                                            <span><span style="width:8px;height:8px;background:#0dcaf0;display:inline-block;border-radius:2px;margin-right:4px;"></span>(=) T. operativo</span>
                                             <span id="lbl-mtbf-disponible">-- hr</span>
                                         </div>
                                         <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#a8eaf7;display:inline-block;border-radius:2px;margin-right:4px;"></span>T. Correctivos</span>
-                                            <span id="lbl-mtbf-correctivos">-- hr</span>
+                                            <span><span style="width:8px;height:8px;visibility:hidden;display:inline-block;margin-right:4px;"></span>(÷) N° de paradas</span>
+                                            <span id="lbl-mtbf-paradas">--</span>
                                         </div>
                                     </div>
                                 </div>
@@ -202,13 +210,24 @@
                                     <!-- Desglose -->
                                     <div class="mt-2" style="font-size:12px;">
                                         <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#eda100;display:inline-block;border-radius:2px;margin-right:4px;"></span>T. Correctivos</span>
-                                            <span id="lbl-mttr-correctivos">-- hr</span>
+                                            <span><span style="width:8px;height:8px;border:2px solid #6c757d;display:inline-block;border-radius:2px;margin-right:4px;box-sizing:border-box;"></span>T. total de reparación</span>
+                                            <span id="lbl-mttr-horas">-- hr</span>
                                         </div>
-                                        <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;background:#fde5a0;display:inline-block;border-radius:2px;margin-right:4px;"></span>T. Productivo</span>
-                                            <span id="lbl-mttr-productivo">-- hr</span>
+                                        <div class="d-flex justify-content-between border-top mt-1 pt-1">
+                                            <span><span style="width:8px;height:8px;visibility:hidden;display:inline-block;margin-right:4px;"></span>(÷) N° de paradas</span>
+                                            <span id="lbl-mttr-paradas">--</span>
                                         </div>
+                                        <div class="d-flex justify-content-between ps-3">
+                                            <span><span style="width:8px;height:8px;background:#eda100;display:inline-block;border-radius:2px;margin-right:4px;"></span>Paros correctivos</span>
+                                            <span id="lbl-mttr-correctivos">--</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between ps-3">
+                                            <span><span style="width:8px;height:8px;background:#fde5a0;display:inline-block;border-radius:2px;margin-right:4px;"></span>Paros manuales</span>
+                                            <span id="lbl-mttr-productivo">--</span>
+                                        </div>
+                                        <p class="text-muted mb-2 mt-1" style="font-size:11px;">
+                                            MTTR = T. total de reparación / N° de paradas (correctivos + manuales)
+                                        </p>
                                     </div>
                                 </div>
                                 <div class="card-footer bg-light text-muted small">
@@ -241,6 +260,9 @@
                                         <div class="d-flex justify-content-between"><span><span style="width:8px;height:8px;background:#1baf7a;display:inline-block;border-radius:2px;margin-right:4px;"></span>Rendimiento</span><span id="lbl-rend-oee">--%</span></div>
                                         <div class="d-flex justify-content-between"><span><span style="width:8px;height:8px;background:#eda100;display:inline-block;border-radius:2px;margin-right:4px;"></span>Calidad</span><span id="lbl-cal-oee">--%</span></div>
                                     </div>
+                                    <p class="text-muted mb-2" style="font-size:11px;">
+                                        OEE = (Disponibilidad * Rendimiento * Calidad)
+                                    </p>
                                 </div>
                                 <div class="card-footer bg-light text-muted small">
                                     <i class="bi bi-info-circle me-1"></i>Última actualización: <span id="oee-update">--</span>
@@ -280,6 +302,9 @@
                                             <span><span style="width:8px;height:8px;background:#e0e0e0;display:inline-block;border-radius:2px;margin-right:4px;"></span>PM Programados</span>
                                             <span id="lbl-pm-programados">--</span>
                                         </div>
+                                        <p class="text-muted mb-2 mt-1" style="font-size:11px;">
+                                            CMP = MP Cerrados / MP Liberados
+                                        </p>
                                     </div>
                                 </div>
                                 <div class="card-footer bg-light text-muted small">
@@ -318,6 +343,9 @@
                                             <span><span style="width:8px;height:8px;background:#eda100;display:inline-block;border-radius:2px;margin-right:4px;"></span>MTTR</span>
                                             <span id="lbl-dt-mttr">-- hr</span>
                                         </div>
+                                        <p class="text-muted mb-2 mt-1" style="font-size:11px;">
+                                            DT = MTBF / (MTBF + MTTR)
+                                        </p>
                                     </div>
                                 </div>
                                 <div class="card-footer bg-light text-muted small">

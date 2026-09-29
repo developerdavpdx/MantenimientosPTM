@@ -100,6 +100,7 @@ class UIManager {
 // APLICACIÓN PRINCIPAL - GESTIÓN PVC
 // ========================================
 class GestionProduccionPVC extends GestionProduccionBase {
+
     constructor(datos_usuario, URLBase) {
         super(datos_usuario, URLBase, 110);
         this.URLBaseMantenimientosCorrectivos = "MantenimientosCorrectivos";
