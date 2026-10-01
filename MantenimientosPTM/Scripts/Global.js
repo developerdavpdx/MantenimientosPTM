@@ -2041,32 +2041,47 @@ class GlobalUtil {
         if (!horaInicio || !horaFin)
             return null;
 
-        // Extrae solo la parte de hora, sin importar si el separador es espacio o 'T'
-        const extraerHora = (valor) => {
-            if (valor.includes('T')) {
-                return valor.split('T')[1];
-            }
-            if (valor.includes(' ')) {
-                return valor.split(' ')[1];
-            }
-            return valor;
+        // Convierte "dd/MM/yyyy HH:mm[:ss]" o "yyyy-MM-dd[T ]HH:mm[:ss]" a Date.
+        // Regresa null si el valor solo trae la hora.
+        const aFecha = (valor) => {
+            valor = String(valor).trim();
+
+            let m = valor.match(/^(\d{2})\/(\d{2})\/(\d{4})[ T](\d{1,2}):(\d{2})/);
+            if (m) return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]);
+
+            m = valor.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/);
+            if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+
+            return null;
         };
 
-        horaInicio = extraerHora(horaInicio);
-        horaFin = extraerHora(horaFin);
+        const d1 = aFecha(horaInicio);
+        const d2 = aFecha(horaFin);
 
-        const [h1, m1] = horaInicio.split(':').map(Number);
-        const [h2, m2] = horaFin.split(':').map(Number);
+        let diferencia; // en minutos
 
-        let inicioMin = h1 * 60 + m1;
-        let finMin = h2 * 60 + m2;
+        if (d1 && d2) {
+            // ✅ Con fecha: diferencia real. Si el fin quedó antes del inicio, no hay tiempo transcurrido.
+            diferencia = Math.max(0, Math.round((d2 - d1) / 60000));
+        } else {
+            // Solo hora (comportamiento anterior)
+            const extraerHora = (valor) => {
+                if (valor.includes('T')) return valor.split('T')[1];
+                if (valor.includes(' ')) return valor.split(' ')[1];
+                return valor;
+            };
 
-        // Si cruza medianoche
-        if (finMin < inicioMin) {
-            finMin += 24 * 60;
+            const [h1, m1] = extraerHora(horaInicio).split(':').map(Number);
+            const [h2, m2] = extraerHora(horaFin).split(':').map(Number);
+
+            let inicioMin = h1 * 60 + m1;
+            let finMin = h2 * 60 + m2;
+
+            // Si cruza medianoche
+            if (finMin < inicioMin) finMin += 24 * 60;
+
+            diferencia = finMin - inicioMin;
         }
-
-        const diferencia = finMin - inicioMin;
 
         const horas = Math.floor(diferencia / 60);
         const minutos = diferencia % 60;

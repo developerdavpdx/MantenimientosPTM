@@ -257,35 +257,98 @@ class MantenimientosCorrectivosApp {
             }
         });
 
-        $('#HoraInicioTrabajo, #HoraFin').on('change', () => {
+        // Actualiza min solo si cambió (evita reiniciar la edición del segmento)
+        const setMin = (sel, valor) => {
+            const el = $(sel)[0];
+            if (!el) return;
+            if ((el.getAttribute('min') || '') !== (valor || '')) {
+                if (valor) el.setAttribute('min', valor);
+                else el.removeAttribute('min');
+            }
+        };
+
+        // Devuelve true si el rango es válido. Si no, marca el campo y (opcional) alerta.
+        const validarRangoHoras = (mostrarAlerta = true) => {
+            const fallar = (sel, msg) => {
+                $(sel).addClass('is-invalid');
+                if (mostrarAlerta) AlertManager.mostrar(msg, 'warning');
+                return false;
+            };
+
+            $('#HoraInicioTrabajo, #HoraFin, #HoraCierreMan').removeClass('is-invalid');
+
+            // Inputs incompletos (falta hora, minutos o a. m./p. m.)
+            if ($('#HoraInicioTrabajo')[0]?.validity?.badInput)
+                return fallar('#HoraInicioTrabajo', 'La hora de inicio está incompleta.');
+            if ($('#HoraFin')[0]?.validity?.badInput)
+                return fallar('#HoraFin', 'La hora de fin está incompleta.');
+            if ($('#HoraCierreMan')[0]?.validity?.badInput)
+                return fallar('#HoraCierreMan', 'La hora de cierre de la OT está incompleta.');
+
+            const inicio = $('#HoraInicioTrabajo').val();
+            const fin = $('#HoraFin').val();
+            const cierre = $('#HoraCierreMan').val();
+            const aperturaDia = $('#HoraInicioTrabajo').data('aperturaDia') || '';
+
+            // La FECHA no puede ser anterior al día de apertura (la hora sí puede)
+            if (aperturaDia && inicio && inicio.substring(0, 10) < aperturaDia)
+                return fallar('#HoraInicioTrabajo', 'La fecha de inicio no puede ser anterior al día de apertura de la orden.');
+
+            if (aperturaDia && fin && fin.substring(0, 10) < aperturaDia)
+                return fallar('#HoraFin', 'La fecha de fin no puede ser anterior al día de apertura de la orden.');
+
+            if (inicio && fin && new Date(fin) < new Date(inicio))
+                return fallar('#HoraFin', 'La fecha y hora fin no puede ser menor a la de inicio.');
+
+            // ✅ Cierre de la OT no puede ser menor a la hora fin del técnico
+            if (fin && cierre && new Date(cierre) < new Date(fin))
+                return fallar('#HoraCierreMan', 'La hora de cierre de la OT no puede ser menor a la hora fin.');
+
+            return true;
+        };
+
+        // MIENTRAS ESCRIBE: cálculo silencioso, sin alertas ni limpiezas
+        $('#HoraInicioTrabajo, #HoraFin').on('input', function () {
+            $(this).removeClass('is-invalid');
+
+            const inicio = $('#HoraInicioTrabajo').val();
+            const fin = $('#HoraFin').val();
+            const dInicio = new Date(inicio);
+            const dFin = new Date(fin);
+
+            const valido = inicio && fin &&
+                !isNaN(dInicio.getTime()) && !isNaN(dFin.getTime()) &&
+                dFin >= dInicio;
+
+            $("#DuracionHrs").val(valido ? ((dFin - dInicio) / 3600000).toFixed(2) : '');
+        });
+
+        // AL SALIR DEL CAMPO: validaciones estrictas (sin limpiar el valor)
+        $('#HoraInicioTrabajo, #HoraFin').on('blur', function () {
+            if (!validarRangoHoras(true)) {
+                $("#DuracionHrs").val('');
+                return;
+            }
+
             const inicio = $('#HoraInicioTrabajo').val();
             const fin = $('#HoraFin').val();
 
-            if (!inicio || !fin) return;
+            // Ya salió del campo, es seguro actualizar el min del fin
+            setMin('#HoraFin', inicio || `${$('#HoraInicioTrabajo').data('aperturaDia')}T00:00`);
+            setMin('#HoraCierreMan', fin || inicio);
 
-            const toDate = (t) => new Date(`1970-01-01T${t}`);
+            $("#DuracionHrs").val(inicio && fin
+                ? ((new Date(fin) - new Date(inicio)) / 3600000).toFixed(2)
+                : '');
+        });
 
-            const d1 = toDate(inicio);
-            const d2 = toDate(fin);
+        // HORA CIERRE OT: quita el rojo al escribir y valida al salir del campo
+        $('#HoraCierreMan').on('input', function () {
+            $(this).removeClass('is-invalid');
+        });
 
-            if (isNaN(d1) || isNaN(d2)) {
-                $("#DuracionHrs").val('');
-                return;
-            }
-
-            // 🔥 Validación
-            if (d2 < d1) {
-                AlertManager.mostrar(`Hora Inicio no puede ser mayor a Hora Fin`, 'warning');
-                $('#HoraFin').val('');
-                $("#DuracionHrs").val('');
-                return;
-            }
-
-            const diffMs = d2 - d1;
-            const horas = diffMs / (1000 * 60 * 60);
-
-            $("#DuracionHrs").val(horas.toFixed(2));
-           
+        $('#HoraCierreMan').on('blur', function () {
+            validarRangoHoras(true);
         });
 
         $("#FiltroArea")
@@ -731,432 +794,8 @@ class MantenimientosCorrectivosApp {
             });
         });
 
-        //// Lista de refacciones
-        //$(document).on('click', '.btn-list-refacciones', function () {
-        //    const $btn = $(this);
-        //    const ordenTrabajo = $btn.data('numeroorden');
-
-        //    if (!ordenTrabajo) {
-        //        alert('No se encontró el número de orden de trabajo.');
-        //        return;
-        //    }
-
-        //    // Actualizar subtítulo del modal con el número de OT
-        //    $('#refaccionesOTNumero').text(ordenTrabajo);
-
-        //    // Mostrar estado de carga
-        //    $('#bodyRefaccionesOT').html(`
-        //    <tr>
-        //        <td colspan="7" class="text-center text-muted py-4">
-        //            <i class="bi bi-hourglass-split me-1"></i>Cargando refacciones...
-        //        </td>
-        //    </tr>
-        //`);
-
-        //    // Mostrar modal
-        //    const modalElement = document.getElementById('modalRefaccionesOT');
-        //    const modalRefacciones = new bootstrap.Modal(modalElement);
-        //    modalRefacciones.show();
-
-        //    // Obtener datos del método obtenerArticulosPorOT
-        //    $.ajax({
-        //        url: `/Almacen/GetArticulosPorOrdenTrabajo`,
-        //        type: 'GET',
-        //        data: { ordenTrabajo: ordenTrabajo },
-        //        dataType: 'json',
-        //        success: function (response) {
-        //            // 🔥 VERIFICAR TIPO DE USUARIO
-        //            const tipoUsuario = AppMantenimientos.datos_usuario[0].TIPOUSUARIO;
-        //            const esAdmin = tipoUsuario === "Administrador" || tipoUsuario === "AdminMtto" || tipoUsuario === "SupervisorMantenimiento";
-        //            const esTecnico = tipoUsuario === "TecnicoMtto";
-
-        //            if (response.Status === 'OK') {
-        //                let refacciones = JSON.parse(response.Data);
-
-        //                // 🔥 VERIFICAR SI HAY ALGÚN ELEMENTO CON ACEPTADA_MANTENIMIENTO ESTABLECIDO
-        //                const hayAceptacionMantenimiento = refacciones.some(item =>
-        //                    item.ACEPTADA_MANTENIMIENTO !== "" && item.ACEPTADA_MANTENIMIENTO !== null
-        //                );
-
-        //                // ✅ NUEVO: Verificar si hay alguna solicitud que se pueda cerrar (Pendiente + ESTATUSOT == 3)
-        //                const hayCierrePendiente = refacciones.some(item =>
-        //                    item.ESTATUSOT == 3 && item.ESTATUS === 'Pendiente'
-        //                );
-
-        //                // 🔥 MOSTRAR/OCULTAR COLUMNA BASADO EN LOS DATOS
-        //                if (esAdmin || hayAceptacionMantenimiento || (esTecnico && hayCierrePendiente)) {
-        //                    $('#tablaRefaccionesOT thead th:last-child').show();
-        //                } else {
-        //                    $('#tablaRefaccionesOT thead th:last-child').hide();
-        //                }
-
-        //                let html = '';
-        //                refacciones.forEach(item => {
-
-        //                    const surtida = parseFloat(item.CANTIDAD_SURTIDA) || 0;
-        //                    const devuelta = parseFloat(item.CANTIDAD_DEVUELTA) || 0;
-        //                    const consumida = parseFloat(item.CANTIDAD_CONSUMIDA) || 0;
-
-        //                    const cantidadSolicitada = parseFloat(item.CANTIDAD) || 0;
-        //                    const esParcialModal = item.ESTATUS === 'Atendida' && consumida > 0 && consumida < cantidadSolicitada;
-
-        //                    let classBadge = 'bg-warning text-dark'; // Pendiente
-        //                    let textoEstatus = item.ESTATUS || '';
-
-        //                    if (item.ESTATUS === 'Atendida') {
-        //                        if (esParcialModal) {
-        //                            classBadge = 'bg-orange text-dark';
-        //                            textoEstatus = 'Atendida Parcialmente';
-        //                        } else {
-        //                            classBadge = 'bg-success text-white';
-        //                        }
-        //                    } else if (item.ESTATUS === 'Cerrada') {
-        //                        classBadge = 'bg-danger text-white';
-        //                        textoEstatus = 'Cerrada por el técnico';
-        //                    } else if (item.ESTATUS === 'ELIMINADA') {
-        //                        classBadge = 'bg-danger text-white';
-        //                        textoEstatus = 'Eliminada por almacén';
-        //                    }
-
-        //                    // 🔥 Celda de cantidades surtidas/devueltas/consumidas
-        //                    let cantidadHTML = '';
-
-        //                    if (surtida === 0) {
-        //                        cantidadHTML = `
-        //                    <td class="text-center text-muted">
-        //                        <small>—</small>
-        //                    </td>`;
-        //                    } else if (devuelta > 0) {
-        //                        cantidadHTML = `
-        //                    <td class="text-center">
-        //                        <span class="d-block" title="Cantidad surtida por almacén">
-        //                            📦 ${surtida}+
-        //                        </span>
-        //                        <span class="d-block text-danger" title="Cantidad devuelta">
-        //                            ↩️ ${devuelta}-
-        //                        </span>
-        //                        <hr class="my-1"/>
-        //                        <span class="d-block fw-bold" title="Consumo neto">
-        //                           ✅ ${consumida}
-        //                        </span>
-        //                    </td>`;
-        //                    } else {
-        //                        cantidadHTML = `
-        //                    <td class="text-center">
-        //                        <span title="Cantidad surtida / consumida">
-        //                            ✅ ${surtida}
-        //                        </span>
-        //                    </td>`;
-        //                    }
-
-        //                    // 🔥 Generar botón de acción
-        //                    let accionesHTML = '';
-
-        //                    // ✅ NUEVO: Botón para CERRAR solicitud - aplica tanto para ADMIN como para TÉCNICO
-        //                    const puedeCerrarSolicitud = (esAdmin || esTecnico) && item.ESTATUSOT == 3 && item.ESTATUS === 'Pendiente';
-
-        //                    if (puedeCerrarSolicitud) {
-        //                        accionesHTML = `
-        //                                <td class="text-center">
-        //                                    <button class="btn btn-sm btn-danger btn-cerrar-solicitud" 
-        //                                            data-refaccion-id="${item.ID_SOLICITUD || ''}"
-        //                                            data-orden-trabajo="${item.ORDEN_TRABAJO}"
-        //                                            data-id-orden-trabajo="${item.ID_ORDENTRABAJO}"
-        //                                            title="Cerrar esta solicitud">
-        //                                        <i class="bi bi-x-circle me-1"></i>Cerrar Solicitud
-        //                                    </button>
-        //                                </td>
-        //                            `;
-        //                    }
-        //                    else if (esAdmin) {
-        //                        if (item.ESTATUS === 'Atendida' && (item.ACEPTADA_MANTENIMIENTO == "" || item.ACEPTADA_MANTENIMIENTO == null)) {
-        //                            accionesHTML = `
-        //                                <td class="text-center">
-        //                                    <button class="btn btn-sm btn-ptm-primary btn-autorizar-refaccion" 
-        //                                            data-refaccion-id="${item.ID_SOLICITUD || ''}"
-        //                                            data-orden-trabajo="${ordenTrabajo}"
-        //                                            title="Autorizar esta refacción">
-        //                                        <i class="bi bi-check-circle me-1"></i>Autorizar
-        //                                    </button>
-        //                                </td>
-        //                            `;
-        //                        } else if (item.ACEPTADA_MANTENIMIENTO == "true") {
-        //                            accionesHTML = `
-        //                                <td class="text-center">
-        //                                    <span class="badge btn-ptm-primary badge-custom">Aceptada por mantenimiento</span>
-        //                                </td>
-        //                            `;
-        //                        } else if (item.ESTATUS === 'Atendida' && item.ACEPTADA_MANTENIMIENTO == "false") {
-        //                            accionesHTML = `
-        //                                <td class="text-center">
-        //                                    <span class="badge bg-danger badge-custom">Rechazada por mantenimiento</span>
-        //                                </td>
-        //                            `;
-        //                        } else {
-        //                            accionesHTML = `
-        //                                <td class="text-center">
-        //                                    <button class="btn btn-sm btn-secondary" disabled title="Solo se pueden autorizar refacciones completadas">
-        //                                        <i class="bi bi-lock me-1"></i>No disponible
-        //                                    </button>
-        //                                </td>
-        //                            `;
-        //                        }
-        //                    }
-
-        //                    // 🔥 PARA EL TÉCNICO - mostrar estado si existe ACEPTADA_MANTENIMIENTO (solo si NO se mostró el botón de cerrar)
-        //                    if (!esAdmin && !puedeCerrarSolicitud && item.ACEPTADA_MANTENIMIENTO != "" && item.ACEPTADA_MANTENIMIENTO != null) {
-        //                        let badgeClass = (item.ACEPTADA_MANTENIMIENTO == "true") ? "btn-ptm-primary badge-custom" : "bg-danger badge-custom";
-        //                        let badgeText = (item.ACEPTADA_MANTENIMIENTO == "true") ? "Aceptada por mantenimiento" : "Rechazada por mantenimiento";
-        //                        accionesHTML = `
-        //                        <td class="text-center">
-        //                            <span class="badge ${badgeClass}">${badgeText}</span>
-        //                        </td>`;
-        //                    }
-
-        //                    html += `
-        //                    <tr>
-        //                        <td>${item.REFACCION_SOLICITADA || ''}</td>
-        //                        <td>${item.NOMBRE_ARTICULO || ''}</td>
-        //                        <td class="text-center">${item.CANTIDAD || 0}</td>
-        //                        <td class="text-center">${item.NIVEL_URGENCIA || ''}</td>
-        //                        <td class="text-center">
-        //                            <span class="badge ${classBadge}">${textoEstatus}</span>
-        //                        </td>
-        //                        ${cantidadHTML}
-        //                        ${accionesHTML}
-        //                    </tr>
-        //                `;
-        //                });
-
-        //                $('#bodyRefaccionesOT').html(html);
-
-        //            } else {
-        //                $('#bodyRefaccionesOT').html(`
-        //                <tr>
-        //                    <td colspan="7" class="text-center text-muted py-4">
-        //                        <i class="bi bi-info-circle me-1"></i>No hay refacciones registradas para esta orden.
-        //                    </td>
-        //                </tr>
-        //            `);
-        //            }
-        //        },
-        //        error: function (xhr, status, error) {
-        //            console.error('Error al cargar refacciones:', error);
-        //            $('#bodyRefaccionesOT').html(`
-        //        <tr>
-        //            <td colspan="7" class="text-center text-muted py-4">
-        //                <i class="bi bi-exclamation-triangle me-1"></i>Error al cargar las refacciones.
-        //            </td>
-        //        </tr>
-        //    `);
-        //        }
-        //    });
-        //});
-
-        //// 🔥 NUEVO: Evento para autorizar refacción (solo para admins)
-        //$(document).on('click', '.btn-autorizar-refaccion', function () {
-        //    const $btn = $(this);
-        //    const refaccionId = $btn.data('refaccion-id');
-        //    const ordenTrabajo = $btn.data('orden-trabajo');
-
-        //    // 🔥 VERIFICAR PERMISOS NUEVAMENTE
-        //    const tipoUsuario = AppMantenimientos.datos_usuario[0].TIPOUSUARIO;
-        //    const esAdmin = tipoUsuario === "Administrador" || tipoUsuario === "AdminMtto" || tipoUsuario === "SupervisorMantenimiento";
-
-        //    if (!esAdmin) {
-        //        AlertManager.mostrar('No tienes permisos para autorizar refacciones', 'warning');
-        //        return;
-        //    }
-
-        //    if (!refaccionId || !ordenTrabajo) {
-        //        AlertManager.mostrar('No se pudo obtener los datos de la refacción', 'warning');
-        //        return;
-        //    }
-
-        //    let TipoUsuario = AppMantenimientos.datos_usuario[0].TIPOUSUARIO;
-        //    // Mostrar confirmación con ReprogramacionConfirmManager (3 botones)
-        //    ReprogramacionConfirmManager.mostrar({
-        //        titulo: `¿Autorizar refacción?`,
-        //        mensaje: `
-        //        <div style="text-align:left; font-size:0.95rem; line-height:1.6;">
-        //            <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        //                <div style="min-width:180px;"><i class="bi bi-clipboard-data me-2" style="color:#1195d0;"></i><strong>Orden de Trabajo:</strong> ${ordenTrabajo}</div>
-        //                <div style="min-width:180px;"><i class="bi bi-tools me-2" style="color:#1195d0;"></i><strong>ID Refacción:</strong> ${refaccionId}</div>
-        //            </div>
-        //            <hr style="margin:10px 0;">
-        //            <div style="font-size:0.85rem;color:#fff7d6;">
-        //                <strong>Importante:</strong> Al aceptar, se autorizará esta refacción para mantenimiento. Al rechazar, se marcará como no válida.
-        //            </div>
-        //        </div>
-        //        `,
-        //        onSi: () => {
-        //            $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Autorizando...').prop('disabled', true);
-
-        //            $.ajax({
-        //                url: `/Almacen/AutorizarRefaccion`,
-        //                type: 'POST',
-        //                headers: {
-        //                    contentType: 'application/x-www-form-urlencoded',
-        //                    'X-Rol-Usuario': TipoUsuario
-        //                },
-        //                data: {
-        //                    idSolicitud: refaccionId,
-        //                    aceptadaMantenimiento: true
-        //                },
-        //                dataType: 'json',
-        //                success: function (response) {
-        //                    if (response.Status === 'OK') {
-        //                        AlertManager.mostrar(response.Message || 'Refacción autorizada correctamente', 'success');
-
-        //                        // ✅ Cambiar texto del botón a estado de éxito
-        //                        $btn.html('<i class="bi bi-check-circle-fill me-1"></i>Autorizada').addClass('btn-success').removeClass('btn-ptm-primary');
-
-        //                        // ✅ Cerrar el modal después de 2 segundos
-        //                        setTimeout(() => {
-        //                            const modalElement = document.getElementById('modalRefaccionesOT');
-        //                            const modal = bootstrap.Modal.getInstance(modalElement);
-        //                            if (modal) {
-        //                                modal.hide();
-        //                            }
-        //                        }, 2000);
-        //                    } else {
-        //                        AlertManager.mostrar(response.Message || 'Error al autorizar la refacción', 'warning');
-        //                        $btn.html('<i class="bi bi-check-circle me-1"></i>Autorizar').prop('disabled', false);
-        //                    }
-        //                },
-        //                error: function (xhr, status, error) {
-        //                    AlertManager.mostrar('Error al conectar con el servidor', 'warning');
-        //                    $btn.html('<i class="bi bi-check-circle me-1"></i>Autorizar').prop('disabled', false);
-        //                }
-        //            });
-        //        },
-        //        onNo: () => {
-        //            $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Rechazando...').prop('disabled', true);
-
-        //            $.ajax({
-        //                url: `/Almacen/AutorizarRefaccion`,
-        //                type: 'POST',
-        //                contentType: 'application/x-www-form-urlencoded',
-        //                data: {
-        //                    idSolicitud: refaccionId,
-        //                    aceptadaMantenimiento: false
-        //                },
-        //                dataType: 'json',
-        //                success: function (response) {
-        //                    if (response.Status === 'OK') {
-        //                        AlertManager.mostrar(response.Message || 'Refacción rechazada correctamente', 'success');
-
-        //                        // ✅ Cambiar texto del botón a estado de rechazo
-        //                        $btn.html('<i class="bi bi-x-circle-fill me-1"></i>Rechazada').addClass('btn-danger').removeClass('btn-ptm-primary');
-
-        //                        // ✅ Cerrar el modal después de 2 segundos
-        //                        setTimeout(() => {
-        //                            const modalElement = document.getElementById('modalRefaccionesOT');
-        //                            const modal = bootstrap.Modal.getInstance(modalElement);
-        //                            if (modal) {
-        //                                modal.hide();
-        //                            }
-        //                        }, 2000);
-        //                    } else {
-        //                        AlertManager.mostrar(response.Message || 'Error al rechazar la refacción', 'warning');
-        //                        $btn.html('<i class="bi bi-check-circle me-1"></i>Autorizar').prop('disabled', false);
-        //                    }
-        //                },
-        //                error: function (xhr, status, error) {
-        //                    AlertManager.mostrar('Error al conectar con el servidor', 'warning');
-        //                    $btn.html('<i class="bi bi-check-circle me-1"></i>Autorizar').prop('disabled', false);
-        //                }
-        //            });
-        //        }
-        //    });
-        //});
-
-        //// 🔥 NUEVO: Evento para CERRAR solicitud de refacción (solo admins, estatus 3)
-        //$(document).on('click', '.btn-cerrar-solicitud', function () {
-        //    const $btn = $(this);
-        //    const refaccionId = $btn.data('refaccion-id');
-        //    const ordenTrabajo = $btn.data('orden-trabajo');
-        //    const IdordenTrabajo = $btn.data('id-orden-trabajo');
-
-        //    // Verificar permisos: admin O técnico
-        //    const tipoUsuario = AppMantenimientos.datos_usuario[0].TIPOUSUARIO;
-        //    const esAdmin = tipoUsuario === "Administrador" || tipoUsuario === "AdminMtto" || tipoUsuario === "SupervisorMantenimiento";
-        //    const esTecnico = tipoUsuario === "TecnicoMtto";
-
-        //    if (!esAdmin && !esTecnico) {
-        //        AlertManager.mostrar('No tienes permisos para cerrar esta solicitud', 'warning');
-        //        return;
-        //    }
-
-        //    if (!refaccionId) {
-        //        AlertManager.mostrar('No se pudo obtener el ID de la solicitud', 'warning');
-        //        return;
-        //    }
-
-        //    let TipoUsuario = AppMantenimientos.datos_usuario[0].TIPOUSUARIO;
-        //    let Usuario = AppMantenimientos.datos_usuario[0].EMAIL;
-
-        //    ReprogramacionConfirmManager.mostrar({
-        //        titulo: `¿Cerrar solicitud de refacción?`,
-        //        mensaje: `
-        //    <div style="text-align:left; font-size:0.95rem; line-height:1.6;">
-        //        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        //            <div style="min-width:180px;"><i class="bi bi-clipboard-data me-2" style="color:#1195d0;"></i><strong>Orden de Trabajo:</strong> ${ordenTrabajo}</div>
-        //            <div style="min-width:180px;"><i class="bi bi-tools me-2" style="color:#1195d0;"></i><strong>ID Solicitud:</strong> ${refaccionId}</div>
-        //        </div>
-        //        <hr style="margin:10px 0;">
-        //        <div style="font-size:0.85rem;color:#fff7d6;">
-        //            <strong>Importante:</strong> Esta acción cerrará (cancelará) la solicitud de refacción de forma permanente.
-        //        </div>
-        //    </div>
-        //`,
-        //        onSi: () => {
-        //            $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Cerrando...').prop('disabled', true);
-
-        //            $.ajax({
-        //                url: `/Almacen/ActualizarSolicitudRefaccion`,
-        //                type: 'POST',
-        //                headers: {
-        //                    'X-Rol-Usuario': TipoUsuario
-        //                },
-        //                data: {
-        //                    idSolicitud: refaccionId,
-        //                    Usuario: Usuario,
-        //                    IdOrdenTrabajo: IdordenTrabajo,
-        //                    TipoMantenimiento: "Correctivo"
-        //                },
-        //                dataType: 'json',
-        //                success: function (response) {
-        //                    if (response.Status === 'OK') {
-        //                        AlertManager.mostrar(response.Message || 'Solicitud cerrada correctamente', 'success');
-
-        //                        $btn.html('<i class="bi bi-check-circle-fill me-1"></i>Cerrada').addClass('btn-secondary').removeClass('btn-danger');
-
-        //                        setTimeout(() => {
-        //                            const modalElement = document.getElementById('modalRefaccionesOT');
-        //                            const modal = bootstrap.Modal.getInstance(modalElement);
-        //                            if (modal) modal.hide();
-
-        //                            if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
-        //                                $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
-        //                            }
-        //                        }, 2000);
-        //                    } else {
-        //                        AlertManager.mostrar(response.Message || 'Error al cerrar la solicitud', 'warning');
-        //                        $btn.html('<i class="bi bi-x-circle me-1"></i>Cerrar Solicitud').prop('disabled', false);
-        //                    }
-        //                },
-        //                error: function (xhr, status, error) {
-        //                    AlertManager.mostrar('Error al conectar con el servidor', 'warning');
-        //                    $btn.html('<i class="bi bi-x-circle me-1"></i>Cerrar Solicitud').prop('disabled', false);
-        //                }
-        //            });
-        //        },
-        //        onNo: () => {
-        //            // No hace nada
-        //        }
-        //    });
-        //});
+        // EXPONER LA FUNCIÓN EN LA INSTANCIA
+        this.validarRangoHoras = validarRangoHoras;
     }
 
     configurarEventosPDF() {
@@ -2205,25 +1844,42 @@ class MantenimientoManager {
             $('#TextoCorto').val(data.textoCorto || '');
             $("#EstatusOrden").val(data.descEstatusOrden || '');
 
-            // 🆕 Convierte "dd/MM/yyyy HH:mm[:ss]" -> "yyyy-MM-ddTHH:mm" (formato datetime-local)
-            const aDateTimeLocal = (texto) => { // 🆕
-                if (!texto || !texto.includes(' ')) return ''; // 🆕
-                const [fechaParte, horaParte] = texto.trim().split(' '); // 🆕
-                const [dia, mes, anio] = fechaParte.split('/'); // 🆕
-                const [hh, mm] = (horaParte || '').split(':'); // 🆕
-                if (!dia || !mes || !anio || !hh || !mm) return ''; // 🆕
-                return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}T${hh.padStart(2, '0')}:${mm.substring(0, 2)}`; // 🆕
-            }; // 🆕
+            // Convierte "dd/MM/yyyy HH:mm[:ss]" o ISO -> "yyyy-MM-ddTHH:mm"
+            const aDateTimeLocal = (texto) => {
+                if (!texto) return '';
+                texto = String(texto).trim();
+
+                if (/^\d{4}-\d{2}-\d{2}/.test(texto))
+                    return texto.replace(' ', 'T').substring(0, 16);
+
+                if (!texto.includes(' ')) return '';
+                const [fechaParte, horaParte] = texto.split(' ');
+                const [dia, mes, anio] = fechaParte.split('/');
+                const [hh, mm] = (horaParte || '').split(':');
+                if (!dia || !mes || !anio || !hh || !mm) return '';
+                return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}T${hh.padStart(2, '0')}:${mm.substring(0, 2)}`;
+            };
 
             // ========================================
-            // 5️ FECHA/HORA APERTURA
+            // 5️ FECHA/HORA APERTURA + LÍMITE POR DÍA
             // ========================================
-            if (data.horaApertura) {
-                $("#FechaInicioExtrema").val(aDateTimeLocal(data.horaApertura)); // 🆕
-                // 🆕 HoraInicioTrabajo se sigue llenando con la hora de apertura
-                const horaAperturaOT = (data.horaApertura.split(' ')[1] || '').substring(0, 5); // 🆕
-                $("#HoraInicioTrabajo").val(horaAperturaOT).attr("readonly", false); // 🆕
+            const aperturaLocal = aDateTimeLocal(data.horaApertura);          // yyyy-MM-ddTHH:mm
+            const aperturaDia = aperturaLocal ? aperturaLocal.substring(0, 10) : '';
+
+            $("#FechaInicioExtrema").val(aperturaLocal);
+
+            $('#HoraInicioTrabajo, #HoraFin, #HoraCierreMan').removeAttr('min').removeClass('is-invalid');
+            $('#HoraInicioTrabajo').data('aperturaDia', aperturaDia);
+
+            if (aperturaDia) {
+                // Mismo día de apertura desde las 00:00: la hora es libre, el día no
+                $('#HoraInicioTrabajo').attr('min', `${aperturaDia}T00:00`);
+                $('#HoraFin').attr('min', `${aperturaDia}T00:00`);
             }
+
+            // Sugerencia por defecto = apertura (el técnico la puede cambiar)
+            $('#HoraInicioTrabajo').val(aperturaLocal).attr('readonly', false);
+            $('#HoraFin').val('');
 
             // ========================================
             // 5️ FECHA/HORA CIERRE
@@ -2257,21 +1913,15 @@ class MantenimientoManager {
             // ========================================
             // 7️ REGISTRO DE TRABAJO
             // ========================================
-            if (data.horaInicioTime)
-                $("#HoraInicioTrabajo").val(data.horaInicioTime.substring(0, 5)).attr("readonly", false);
-            else
-                $("#HoraInicioTrabajo").attr("readonly", false);
+            // Si ya hay datos guardados (borrador), sobrescriben la sugerencia de apertura
+            if (data.horaInicio) $("#HoraInicioTrabajo").val(aDateTimeLocal(data.horaInicio));
+            if (data.horaFin) $("#HoraFin").val(aDateTimeLocal(data.horaFin));
 
-            if (data.horaFinTime)
-                $("#HoraFin").val(data.horaFinTime.substring(0, 5)).attr("readonly", false);
-            else
-                $("#HoraFin").attr("readonly", false);
+            $("#HoraInicioTrabajo").attr("readonly", false);
+            $("#HoraFin").attr("readonly", false);
 
             $("#TextoSecuencia").val(data.textoSecuencia || '').attr("readonly", false);
-            //$("#DuracionHrs").val(data.duracionHrs || '');
-            $("#DuracionHrs").val(
-                GlobalUtil.calcularDiferenciaHoras(data.horaInicioTime, data.horaFinTime)
-            );
+            $("#DuracionHrs").val(data.duracionHrs || '');
 
             // ========================================
             // 8️ IDS
@@ -2506,6 +2156,16 @@ class MantenimientoManager {
     async guardarOT(e) {
         e.preventDefault();
 
+        // ✅ Candado de fechas/horas (incompleto, día de apertura, fin >= inicio)
+        if (!this.appReferencia.validarRangoHoras(true)) return false;
+
+        // ✅ Obligatorias solo cuando el campo es editable (required lo define la vista por rol/estatus)
+        if (($('#HoraInicioTrabajo').prop('required') && !$('#HoraInicioTrabajo').val()) ||
+            ($('#HoraFin').prop('required') && !$('#HoraFin').val())) {
+            AlertManager.mostrar('Debe capturar la fecha y hora de inicio y de fin.', 'warning', "alertOrdenContainer");
+            return false;
+        }
+
         // Validar formulario
         if (!ValidationManager.validarFormulario('#formOrdenMantenimiento')) {
             AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', "alertOrdenContainer");
@@ -2553,12 +2213,12 @@ class MantenimientoManager {
             datos.Usuario = this.datos_usuario[0].EMAIL;
             datos.TipoOperacion = this.TIPO_OPERACION;
             // ✅ Convertir horas de 12h (10:00 AM) a 24h (10:00:00)
-            if (datos.HoraInicioTrabajo) {
-                datos.HoraInicio = this.convertirA24Horas(datos.HoraInicioTrabajo);
-            }
-            if (datos.HoraFin) {
-                datos.HoraFin = this.convertirA24Horas(datos.HoraFin);
-            }
+            // if (datos.HoraInicioTrabajo) {
+            //     datos.HoraInicio = this.convertirA24Horas(datos.HoraInicioTrabajo);
+            // }
+            // if (datos.HoraFin) {
+            //     datos.HoraFin = this.convertirA24Horas(datos.HoraFin);
+            // }
 
             datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
             datos.IdMantenimiento = this.ID_MANTENIMIENTO;
@@ -2596,7 +2256,11 @@ class MantenimientoManager {
 
     // 🔥 GUARDAR BORRADOR DE OT CORRECTIVO
     async guardarOTBorrador(e) {
+
         e.preventDefault();
+
+        // ✅ Candado de fechas/horas
+        if (!this.appReferencia.validarRangoHoras(true)) return false;
 
         // Mostrar loading
         $('#btnGuardarBorrador').html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando Borrador...').prop('disabled', true);
@@ -2604,40 +2268,10 @@ class MantenimientoManager {
         try {
             const datos = GlobalUtil.obtenerDatosAnyFormulario("formOrdenMantenimiento");
 
-            const regexHora24 = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-            const validarHora = (campoId, valor, etiqueta, obligatoria = false) => { // 🆕 parámetro obligatoria
-                const el = document.getElementById(campoId);
-                const incompleta = el && el.validity && el.validity.badInput;
-                const sinValor = !valor || valor.trim() === '';
-
-                // 🆕 Vacío del todo: solo es error si el campo es obligatorio
-                const vacioInvalido = sinValor && !incompleta && obligatoria; // 🆕
-                // 🆕 Con valor, que el formato sea válido
-                const formatoInvalido = !sinValor && !regexHora24.test(valor.trim()); // 🆕
-
-                if (incompleta || vacioInvalido || formatoInvalido) { // 🆕
-                    AlertManager.mostrar(`La hora de ${etiqueta} se debe llenar correctamente seleccionando a.m. o p.m.`, 'warning');
-                    $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
-                    return false;
-                }
-                return true;
-            };
-
-            if (!validarHora('HoraInicioTrabajo', datos.HoraInicioTrabajo, 'inicio', true)) return false; // 🆕 obligatoria
-            if (!validarHora('HoraFin', datos.HoraFin, 'fin')) return false; // 🆕 opcional
-
             datos.Usuario = this.datos_usuario[0].EMAIL;
             datos.TipoOperacion = "B"; // B = Borrador (Draft)
             datos.EstatusOrden = 2; // Status 2 = Draft
-
-            // Convertir horas de 12h a 24h
-            if (datos.HoraInicioTrabajo) {
-                datos.HoraInicio = this.convertirA24Horas(datos.HoraInicioTrabajo);
-            }
-            if (datos.HoraFin) {
-                datos.HoraFin = this.convertirA24Horas(datos.HoraFin);
-            }
+            datos.HoraInicio = datos.HoraInicioTrabajo;
 
             datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
             datos.IdMantenimiento = this.ID_MANTENIMIENTO;
@@ -3463,8 +3097,8 @@ class PDFManagerMantenimiento {
     // ============================
     obtenerRegistroTrabajo() {
         return {
-            HoraInicio: $('#HoraInicioTrabajo').val() || '',
-            HoraFin: $('#HoraFin').val() || '',
+            HoraInicio: this.formatearFechaHora($('#HoraInicioTrabajo').val()),
+            HoraFin: this.formatearFechaHora($('#HoraFin').val()),
             TextoSecuencia: $('#TextoSecuencia').val() || '',
             DuracionHrs: $('#DuracionHrs').val() || '',
             TiempoEspera: $('#TiempoEspera').val() || '',
@@ -3576,7 +3210,7 @@ class PDFManagerMantenimiento {
                     <table style="width: 100%; border-collapse: collapse;">
                         ${this.generarFilaDetalle('Número de Orden', datos.NumeroOrden, 'Solicitante', datos.Solicitante)}
                         ${this.generarFilaDetalle('Número de Nómina', datos.NominaSolicitante, 'Estatus de la Orden', datos.EstatusOrden)}
-                        ${this.generarFilaDetalle('Fecha Inicio Extrema', this.formatearFecha(datos.FechaInicioExtrema), 'Hora', datos.HoraInicio)}
+                        ${this.generarFilaDetalle('Fecha Apertura OT', this.formatearFechaHora(datos.FechaInicioExtrema), 'Hora', datos.HoraInicio)}
                         ${this.generarFilaDetalle('Ubicación Técnica', datos.UbicacionTecnica, 'Tipo de Mantenimiento', datos.TipoMantenimiento)}
                     </table>
 
@@ -3780,6 +3414,20 @@ class PDFManagerMantenimiento {
         return fecha;
     }
 
+    // "2026-09-30T10:45" | "30/09/2026 10:45:00" -> "30/09/2026 10:45"
+    formatearFechaHora(valor) {
+        if (!valor) return '';
+        valor = String(valor).trim();
+
+        let m = valor.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2}))?/);
+        if (m) return `${m[3]}/${m[2]}/${m[1]}` + (m[4] ? ` ${m[4].padStart(2, '0')}:${m[5]}` : '');
+
+        m = valor.match(/^(\d{2}\/\d{2}\/\d{4})(?:[T ](\d{1,2}):(\d{2}))?/);
+        if (m) return m[1] + (m[2] ? ` ${m[2].padStart(2, '0')}:${m[3]}` : '');
+
+        return valor;
+    }
+
     obtenerOpcionesPDF() {
         const numeroOrden = document.getElementById('NumeroOrden')?.value || 'SIN_NUMERO';
         const fecha = new Date().toISOString().split('T')[0];
@@ -3898,8 +3546,8 @@ class PrintManagerMantenimiento {
             AreaTecnica: btn.data('area') || '',
 
             // 🔥🔥🔥 TRABAJO REAL
-            HoraInicioTrabajo: btn.data('horainicio') || '',
-            HoraFin: btn.data('horafin') || '',
+            HoraInicioTrabajo: this.formatearFechaHora(btn.data('horainicio')),
+            HoraFin: this.formatearFechaHora(btn.data('horafin')),
             DuracionHrs: btn.data('duracionhrs') || '',
             TextoSecuencia: btn.data('textosecuencia') || '',
 
@@ -3962,7 +3610,7 @@ class PrintManagerMantenimiento {
             <table class="tabla-detalles">
                 ${this.generarFilaDetalle('Número de Orden', datos.NumeroOrden, 'Solicitante', datos.Solicitante)}
                 ${this.generarFilaDetalle('Número de Nómina', datos.NominaSolicitante, 'Estatus de la Orden', datos.EstatusOrden)}
-                ${this.generarFilaDetalle('Fecha Inicio Extrema', this.formatearFecha(datos.FechaInicioExtrema), 'Hora', datos.HoraInicio)}
+                ${this.generarFilaDetalle('Fecha Apertura OT', this.formatearFechaHora(datos.FechaInicioExtrema), 'Hora', datos.HoraInicio)}
                 ${this.generarFilaDetalle('Scrap', '', 'Hora Cierre', '')}
                 ${this.generarFilaDetalle('Ubicación Técnica', 'ÁREA ' + datos.AreaTecnica, 'Tipo de Mantenimiento', datos.TipoMantenimiento)}
             </table>
@@ -4067,6 +3715,20 @@ class PrintManagerMantenimiento {
             return `${dia}/${mes}/${anio}`;
         }
         return fecha;
+    }
+
+    // "2026-09-30T10:45" | "30/09/2026 10:45:00" -> "30/09/2026 10:45"
+    formatearFechaHora(valor) {
+        if (!valor) return '';
+        valor = String(valor).trim();
+
+        let m = valor.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2}))?/);
+        if (m) return `${m[3]}/${m[2]}/${m[1]}` + (m[4] ? ` ${m[4].padStart(2, '0')}:${m[5]}` : '');
+
+        m = valor.match(/^(\d{2}\/\d{2}\/\d{4})(?:[T ](\d{1,2}):(\d{2}))?/);
+        if (m) return m[1] + (m[2] ? ` ${m[2].padStart(2, '0')}:${m[3]}` : '');
+
+        return valor;
     }
 
     obtenerIconoCampo(label) {

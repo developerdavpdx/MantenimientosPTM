@@ -202,6 +202,7 @@ namespace MantenimientosPTM
 
             [JsonProperty("HORA_FIN")]
             public string HoraFin { get; set; }
+
             [JsonProperty("HORA_INICIO_TIME")]
             public string HoraInicioTime { get; set; }
 

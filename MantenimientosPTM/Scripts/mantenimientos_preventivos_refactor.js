@@ -341,73 +341,100 @@ class MantenimientosPreventivoApp {
             return true;
         }
 
-        $('#HoraInicio, #HoraFin').on('change', () => {
+        // Actualiza min solo si cambió (evita reiniciar la edición del segmento)
+        const setMin = (sel, valor) => {
+            const el = $(sel)[0];
+            if (!el) return;
+            if ((el.getAttribute('min') || '') !== (valor || '')) {
+                if (valor) el.setAttribute('min', valor);
+                else el.removeAttribute('min');
+            }
+        };
+
+        // Devuelve true si el rango es válido. Si no, marca el campo y (opcional) alerta.
+        const validarRangoHoras = (mostrarAlerta = true) => {
+            const fallar = (sel, msg) => {
+                $(sel).addClass('is-invalid');
+                if (mostrarAlerta) AlertManager.mostrar(msg, 'warning');
+                return false;
+            };
+
+            $('#HoraInicio, #HoraFin').removeClass('is-invalid');
+
+            if ($('#HoraInicio')[0]?.validity?.badInput)
+                return fallar('#HoraInicio', 'La hora de inicio está incompleta.');
+            if ($('#HoraFin')[0]?.validity?.badInput)
+                return fallar('#HoraFin', 'La hora de fin está incompleta.');
+
+            const inicio = $('#HoraInicio').val();
+            const fin = $('#HoraFin').val();
+            const aperturaDia = $('#HoraInicio').data('aperturaDia') || '';
+
+            // La FECHA no puede ser anterior al día de apertura (la hora sí puede)
+            if (aperturaDia && inicio && inicio.substring(0, 10) < aperturaDia)
+                return fallar('#HoraInicio', 'La fecha de inicio no puede ser anterior al día de apertura de la orden.');
+
+            if (aperturaDia && fin && fin.substring(0, 10) < aperturaDia)
+                return fallar('#HoraFin', 'La fecha de fin no puede ser anterior al día de apertura de la orden.');
+
+            if (inicio && fin && new Date(fin) < new Date(inicio))
+                return fallar('#HoraFin', 'La hora fin no puede ser menor a la de inicio.');
+
+            return true;
+        };
+
+        // MIENTRAS ESCRIBE: cálculo silencioso
+        $('#HoraInicio, #HoraFin').on('input', function () {
+            $(this).removeClass('is-invalid');
 
             const inicio = $('#HoraInicio').val();
             const fin = $('#HoraFin').val();
 
-            // Si falta alguna hora, no hacemos ninguna validación todavía
-            if (!inicio || !fin) {
-                $("#DuracionHrs").val('');
-                return;
-            }
+            const dInicio = new Date(inicio);
+            const dFin = new Date(fin);
 
-            // ========================================
-            // CONVERTIR HORAS
-            // ========================================
-            const toDate = (t) => new Date(`1970-01-01T${t}`);
+            const valido =
+                inicio && fin &&
+                !isNaN(dInicio.getTime()) && !isNaN(dFin.getTime()) &&
+                dFin >= dInicio;
 
-            const d1 = toDate(inicio);
-            const d2 = toDate(fin);
-
-            // ========================================
-            // VALIDAR QUE SEAN VÁLIDAS
-            // ========================================
-            if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
-                AlertManager.mostrar(
-                    'Ingrese correctamente la hora de inicio y la hora de fin.',
-                    'warning'
-                );
-
-                $("#DuracionHrs").val('');
-                return;
-            }
-
-            // ========================================
-            // VALIDAR HORA FIN < HORA INICIO
-            // ========================================
-            if (d2 < d1) {
-                AlertManager.mostrar(
-                    'La hora fin no puede ser menor a la hora inicio.',
-                    'warning'
-                );
-
-                $('#HoraFin').val('');
-                $("#DuracionHrs").val('');
-                return;
-            }
-
-            // ========================================
-            // VALIDAR PM
-            // ========================================
-            if (!validarHoraCompletaPM('#HoraInicio', 'Hora Inicio')) {
-                $("#DuracionHrs").val('');
-                return;
-            }
-
-            if (!validarHoraCompletaPM('#HoraFin', 'Hora Fin')) {
-                $("#DuracionHrs").val('');
-                return;
-            }
-
-            // ========================================
-            // CALCULAR DURACIÓN
-            // ========================================
-            const diffMs = d2 - d1;
-            const horas = diffMs / (1000 * 60 * 60);
-
-            $("#DuracionHrs").val(horas.toFixed(2));
+            $("#DuracionHrs").val(valido ? ((dFin - dInicio) / 3600000).toFixed(2) : '');
         });
+
+        // AL SALIR DEL CAMPO: validaciones estrictas
+        $('#HoraInicio, #HoraFin').on('blur', function () {
+            if (!validarRangoHoras(true)) {
+                $("#DuracionHrs").val('');
+                return;
+            }
+
+            const inicio = $('#HoraInicio').val();
+            const fin = $('#HoraFin').val();
+
+            // Ya salió del campo, es seguro actualizar el min del fin
+            setMin('#HoraFin', inicio || `${$('#HoraInicio').data('aperturaDia')}T00:00`);
+
+            $("#DuracionHrs").val(inicio && fin
+                ? ((new Date(fin) - new Date(inicio)) / 3600000).toFixed(2)
+                : '');
+        });
+
+        // Devuelve true si el usuario dejó el datetime-local a medias
+        const tieneBadInput = (sel) => $(sel)[0]?.validity?.badInput === true;
+
+        // Valida que un datetime-local esté completo (día, mes, año, hora, minutos y a. m./p. m.)
+        const validarFechaHoraCompleta = (sel, nombre) => {
+            if (tieneBadInput(sel)) {
+                $(sel).addClass('is-invalid');
+                AlertManager.mostrar(
+                    `${nombre} está incompleta. Complete fecha, hora, minutos y a. m./p. m.`,
+                    'warning'
+                );
+                return false;
+            }
+            $(sel).removeClass('is-invalid');
+            return true;
+        };
 
         $("#FiltroArea")
             .off('change')
@@ -851,8 +878,10 @@ class MantenimientosPreventivoApp {
             });
         });
 
-        // EXPONER LA FUNCIÓN EN LA INSTANCIA
+        // EXPONER LAS FUNCIONES EN LA INSTANCIA
         this.validarHoraCompletaPM = validarHoraCompletaPM;
+        this.validarHoraCompletaPM = validarHoraCompletaPM;
+        this.validarRangoHoras = validarRangoHoras;
     }
 
     configurarEventosPDF() {
@@ -2669,31 +2698,24 @@ class MantenimientoManager {
             $('#NombreEquipo').val(data.nombreEquipo || '');
             $('#DescEquipo').val(data.descripcionEquipo || '');
 
-            // ========================================
-            // 6 FECHA / HORA APERTURA REAL
-            // ========================================
-            if (data.horaApertura && data.horaApertura.includes(' ')) {
-                try {
-                    const [fechaParte, horaParte] = data.horaApertura.split(' ');
-                    const [dia, mes, anio] = fechaParte.split('/');
+            // Convierte "dd/MM/yyyy HH:mm[:ss]" o "yyyy-MM-dd HH:mm[:ss]" / ISO -> "yyyy-MM-ddTHH:mm"
+            const aDateTimeLocal = (texto) => {
+                if (!texto) return '';
+                texto = String(texto).trim();
 
-                    if (dia && mes && anio && horaParte) {
-                        $("#HoraInicio").val(horaParte.substring(0, 5));
-                    }
-                } catch (err) {
-                    console.warn("⚠️ Error parseando horaApertura:", data.horaApertura);
+                // Ya viene en formato ISO / yyyy-MM-dd
+                if (/^\d{4}-\d{2}-\d{2}/.test(texto)) {
+                    return texto.replace(' ', 'T').substring(0, 16);
                 }
-            }
 
-            // 🆕 Convierte "dd/MM/yyyy HH:mm[:ss]" -> "yyyy-MM-ddTHH:mm" (formato datetime-local)
-            const aDateTimeLocal = (texto) => { // 🆕
-                if (!texto || !texto.includes(' ')) return ''; // 🆕
-                const [fechaParte, horaParte] = texto.trim().split(' '); // 🆕
-                const [dia, mes, anio] = fechaParte.split('/'); // 🆕
-                const [hh, mm] = (horaParte || '').split(':'); // 🆕
-                if (!dia || !mes || !anio || !hh || !mm) return ''; // 🆕
-                return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}T${hh.padStart(2, '0')}:${mm.substring(0, 2)}`; // 🆕
-            }; // 🆕
+                // dd/MM/yyyy HH:mm
+                if (!texto.includes(' ')) return '';
+                const [fechaParte, horaParte] = texto.split(' ');
+                const [dia, mes, anio] = fechaParte.split('/');
+                const [hh, mm] = (horaParte || '').split(':');
+                if (!dia || !mes || !anio || !hh || !mm) return '';
+                return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}T${hh.padStart(2, '0')}:${mm.substring(0, 2)}`;
+            };
 
             // ========================================
             // 6 FECHA / HORA APERTURA REAL
@@ -2701,12 +2723,31 @@ class MantenimientoManager {
             $("#FechaInicioExtrema").val(aDateTimeLocal(data.horaApertura)); // 🆕
 
             // ========================================
-            // 6 FECHA / HORA CIERRE REAL
+            // 7 FECHA / HORA CIERRE REAL
             // ========================================
             $("#FechaFinExtrema").val(aDateTimeLocal(data.horaCierre)); // 🆕
 
             // ========================================
-            // 7 UBICACIÓN / DATOS TÉCNICOS
+            // 8 SUGERIR FECHA / HORA INICIO
+            // ========================================
+            const aperturaLocal = aDateTimeLocal(data.horaApertura);     // yyyy-MM-ddTHH:mm
+            const aperturaDia = aperturaLocal ? aperturaLocal.substring(0, 10) : '';  // yyyy-MM-dd
+
+            $('#HoraInicio, #HoraFin').removeAttr('min').removeClass('is-invalid');
+            $('#HoraInicio').data('aperturaDia', aperturaDia);
+
+            if (aperturaDia) {
+                // Mismo día de apertura desde las 00:00: la hora es libre, el día no
+                $('#HoraInicio').attr('min', `${aperturaDia}T00:00`);
+                $('#HoraFin').attr('min', `${aperturaDia}T00:00`);
+            }
+
+            // Sugerencia por defecto = apertura (el técnico la puede cambiar)
+            $('#HoraInicio').val(aperturaLocal);
+            $('#HoraFin').val('');
+
+            // ========================================
+            // 9 UBICACIÓN / DATOS TÉCNICOS
             // ========================================
             $("#UbicacionTecnica").val(data.area ? `AREA ${data.area}` : '');
             $("#CentroCostos").val(data.centroCostos || '');
@@ -2725,15 +2766,10 @@ class MantenimientoManager {
             $("#fechaImpresion").text(DateUtils.obtenerFechaHora());
 
             // ========================================
-            // 8 REGISTRO DE TRABAJO
+            // 8 LLENAR CON FECHA Y HORA REAL
             // ========================================
-            if (data.horaInicio) {
-                $("#HoraInicioTrabajo").val(data.horaInicio.substring(0, 5));
-            }
-
-            if (data.horaFin) {
-                $("#HoraFin").val(data.horaFin.substring(0, 5));
-            }
+            if (data.horaInicio) $("#HoraInicio").val(aDateTimeLocal(data.horaInicio));
+            if (data.horaFin) $("#HoraFin").val(aDateTimeLocal(data.horaFin));
 
             // ✅ Poblar campos nuevos: Tiempo de Arranque y Liberación de Línea
             // Se llenan SIEMPRE (cerrada, borrador, etc.), solo cambia si son editables o no
@@ -2876,170 +2912,6 @@ class MantenimientoManager {
         catch (error) {
             console.error("❌ Error en abrirModalCaratulaOnline:", error);
             AlertManager.mostrar("Error al abrir la orden, intente de nuevo más tarde.", "danger");
-        }
-    }
-
-    // ========================================
-    // 🆕 Helper: convierte "DD/MM/YYYY HH24:MI:SS" (formato del SP)
-    // a "YYYY-MM-DDTHH:MM" (formato requerido por <input type="datetime-local">)
-    // ========================================
-    _formatearDatetimeLocal(valor) {
-        if (!valor || typeof valor !== 'string' || !valor.includes(' ')) return '';
-
-        try {
-            const [fechaParte, horaParte] = valor.split(' ');
-            const [dia, mes, anio] = fechaParte.split('/');
-
-            if (!dia || !mes || !anio || !horaParte) return '';
-
-            // HH:MM (recortamos segundos, datetime-local no los necesita)
-            const horaCorta = horaParte.substring(0, 5);
-
-            return `${anio}-${mes}-${dia}T${horaCorta}`;
-        } catch (err) {
-            console.warn("⚠️ Error parseando datetime:", valor);
-            return '';
-        }
-    }
-
-    getDataFromButtonMP(btn) {
-        const d = btn.data();
-
-        return {
-            idEquipo: d.idequipo,
-            planta: d.planta,
-            numeroDocPmCalidad: d.numerodocpmcalidad,
-            nombreEquipo: d.nombreequipo,
-            descripcionEquipo: d.descripcionequipo,
-            area: d.area,
-            lineaProduccion: d.lineaproduccion,
-            centroCostos: d.centrocostos,
-
-            periodicidadMantenimiento: d.periodicidadmantenimiento,
-            idPeriodicidad: d.idperiodicidad,
-            idEquipoPeriodicidad: d.idequipoperiodicidad,
-            fechaInicioMantenimiento: d.fechainiciomantenimiento,
-            fechaFinMantenimiento: d.fechafinmantenimiento,
-            fechaReferencia: d.fechareferencia,
-
-            numeroOrden: d.numeroorden,
-            horaApertura: d.horaapertura,
-            horaCierre: d.horacierre,
-
-            // 🔥 NUEVOS (IMPORTANTES)
-            horaInicio: d.horainicio,
-            horaFin: d.horafin,
-            textoSecuencia: d.textosecuencia,
-            duracionHrs: d.duracionhrs,
-            tiempoArranque: d.tiempoarranque,               // 🆕 aquí
-            tiempoLiberacionLinea: d.tiempoliberacionlinea,  // 🆕 aquí
-
-            estatusOrden: d.estatusorden,
-            descEstatusOrden: d.descestatusorden,
-            idMantenimiento: d.idmantenimiento,
-            comentariosRutina: d.comentariosrutina,
-
-            // 🔥 FIRMAS
-            firmaRealizo: d.firmarealizo || '',
-            nombreRealizo: d.nombrerealizo || '',
-            firmaSuperviso: d.firmasuperviso || '',
-            nombreSuperviso: d.nombresuperviso || '',
-            firmaMantenimiento: d.firmamantenimiento || '',
-            nombreMantenimiento: d.nombremantenimiento || ''
-        };
-    }
-
-    cargarFirmasExistentes(firmas) {
-
-        this.gestionFirmas._cargarFirmaFromDB('realizo', firmas.firmaRealizo, firmas.nombreRealizo);
-        this.gestionFirmas._cargarFirmaFromDB('superviso', firmas.firmaSuperviso, firmas.nombreSuperviso);
-        this.gestionFirmas._cargarFirmaFromDB('mantenimiento', firmas.firmaMantenimiento, firmas.nombreMantenimiento);
-
-    }
-
-    cargarTecnicos(numeroOrden, tipo) {
-
-        const key = `${numeroOrden}_${tipo}`;
-
-        //if (!this.cacheTecnicos) {
-        //    this.cacheTecnicos = {};
-        //}
-
-        //// 🔥 CACHE
-        //if (this.cacheTecnicos[key]) {
-        //    if (this.cacheTecnicos[key].length > 0)
-        //        this.gestionTecnicos.cargarTecnicosDesdeDB(this.cacheTecnicos[key]);
-        //    return;
-        //}
-
-        $.ajax({
-            url: `/${this.URLBaseCorrectivos}/ObtenerTecnicosOT`,
-            type: 'GET',
-            data: {
-                numeroOrden: numeroOrden,
-                tipo: tipo
-            },
-            dataType: 'json',
-
-            beforeSend: () => {
-                $('#listaTecnicosAsignados').html(`
-                <div class="text-center py-2">
-                    <div class="spinner-border spinner-border-sm text-primary"></div>
-                </div>
-            `);
-            },
-
-            success: (data) => {
-
-                //this.cacheTecnicos[key] = data;
-
-                this.gestionTecnicos.cargarTecnicosDesdeDB(data);
-            },
-
-            error: (xhr, status, error) => {
-
-                $('#listaTecnicosAsignados').html(`
-                <div style="color:red; font-size:0.9rem;">
-                    Error al cargar técnicos
-                </div>
-            `);
-
-                console.error(error);
-            }
-        });
-    }
-
-    async cargarTecnicosLista(numeroOrden, tipo) {
-
-        const key = `${numeroOrden}_${tipo}`;
-
-        if (!this.cacheTecnicos) {
-            this.cacheTecnicos = {};
-        }
-
-        // 🔥 CACHE
-        if (this.cacheTecnicos[key]) {
-            return this.cacheTecnicos[key];
-        }
-
-        try {
-            const response = await $.ajax({
-                url: `/${this.URLBase}/ObtenerTecnicosOT`,
-                type: 'GET',
-                data: {
-                    numeroOrden: numeroOrden,
-                    tipo: tipo
-                },
-                dataType: 'json'
-            });
-
-            this.cacheTecnicos[key] = response;
-
-            return response;
-
-        } catch (error) {
-            console.error("Error obteniendo técnicos:", error);
-            return [];
         }
     }
 
@@ -3443,6 +3315,169 @@ class MantenimientoManager {
         }
 
     }
+    // ========================================
+    // 🆕 Helper: convierte "DD/MM/YYYY HH24:MI:SS" (formato del SP)
+    // a "YYYY-MM-DDTHH:MM" (formato requerido por <input type="datetime-local">)
+    // ========================================
+    _formatearDatetimeLocal(valor) {
+        if (!valor || typeof valor !== 'string' || !valor.includes(' ')) return '';
+
+        try {
+            const [fechaParte, horaParte] = valor.split(' ');
+            const [dia, mes, anio] = fechaParte.split('/');
+
+            if (!dia || !mes || !anio || !horaParte) return '';
+
+            // HH:MM (recortamos segundos, datetime-local no los necesita)
+            const horaCorta = horaParte.substring(0, 5);
+
+            return `${anio}-${mes}-${dia}T${horaCorta}`;
+        } catch (err) {
+            console.warn("⚠️ Error parseando datetime:", valor);
+            return '';
+        }
+    }
+
+    getDataFromButtonMP(btn) {
+        const d = btn.data();
+
+        return {
+            idEquipo: d.idequipo,
+            planta: d.planta,
+            numeroDocPmCalidad: d.numerodocpmcalidad,
+            nombreEquipo: d.nombreequipo,
+            descripcionEquipo: d.descripcionequipo,
+            area: d.area,
+            lineaProduccion: d.lineaproduccion,
+            centroCostos: d.centrocostos,
+
+            periodicidadMantenimiento: d.periodicidadmantenimiento,
+            idPeriodicidad: d.idperiodicidad,
+            idEquipoPeriodicidad: d.idequipoperiodicidad,
+            fechaInicioMantenimiento: d.fechainiciomantenimiento,
+            fechaFinMantenimiento: d.fechafinmantenimiento,
+            fechaReferencia: d.fechareferencia,
+
+            numeroOrden: d.numeroorden,
+            horaApertura: d.horaapertura,
+            horaCierre: d.horacierre,
+
+            // 🔥 NUEVOS (IMPORTANTES)
+            horaInicio: d.horainicio,
+            horaFin: d.horafin,
+            textoSecuencia: d.textosecuencia,
+            duracionHrs: d.duracionhrs,
+            tiempoArranque: d.tiempoarranque,               // 🆕 aquí
+            tiempoLiberacionLinea: d.tiempoliberacionlinea,  // 🆕 aquí
+
+            estatusOrden: d.estatusorden,
+            descEstatusOrden: d.descestatusorden,
+            idMantenimiento: d.idmantenimiento,
+            comentariosRutina: d.comentariosrutina,
+
+            // 🔥 FIRMAS
+            firmaRealizo: d.firmarealizo || '',
+            nombreRealizo: d.nombrerealizo || '',
+            firmaSuperviso: d.firmasuperviso || '',
+            nombreSuperviso: d.nombresuperviso || '',
+            firmaMantenimiento: d.firmamantenimiento || '',
+            nombreMantenimiento: d.nombremantenimiento || ''
+        };
+    }
+
+    cargarFirmasExistentes(firmas) {
+
+        this.gestionFirmas._cargarFirmaFromDB('realizo', firmas.firmaRealizo, firmas.nombreRealizo);
+        this.gestionFirmas._cargarFirmaFromDB('superviso', firmas.firmaSuperviso, firmas.nombreSuperviso);
+        this.gestionFirmas._cargarFirmaFromDB('mantenimiento', firmas.firmaMantenimiento, firmas.nombreMantenimiento);
+
+    }
+
+    cargarTecnicos(numeroOrden, tipo) {
+
+        const key = `${numeroOrden}_${tipo}`;
+
+        //if (!this.cacheTecnicos) {
+        //    this.cacheTecnicos = {};
+        //}
+
+        //// 🔥 CACHE
+        //if (this.cacheTecnicos[key]) {
+        //    if (this.cacheTecnicos[key].length > 0)
+        //        this.gestionTecnicos.cargarTecnicosDesdeDB(this.cacheTecnicos[key]);
+        //    return;
+        //}
+
+        $.ajax({
+            url: `/${this.URLBaseCorrectivos}/ObtenerTecnicosOT`,
+            type: 'GET',
+            data: {
+                numeroOrden: numeroOrden,
+                tipo: tipo
+            },
+            dataType: 'json',
+
+            beforeSend: () => {
+                $('#listaTecnicosAsignados').html(`
+                <div class="text-center py-2">
+                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                </div>
+            `);
+            },
+
+            success: (data) => {
+
+                //this.cacheTecnicos[key] = data;
+
+                this.gestionTecnicos.cargarTecnicosDesdeDB(data);
+            },
+
+            error: (xhr, status, error) => {
+
+                $('#listaTecnicosAsignados').html(`
+                <div style="color:red; font-size:0.9rem;">
+                    Error al cargar técnicos
+                </div>
+            `);
+
+                console.error(error);
+            }
+        });
+    }
+
+    async cargarTecnicosLista(numeroOrden, tipo) {
+
+        const key = `${numeroOrden}_${tipo}`;
+
+        if (!this.cacheTecnicos) {
+            this.cacheTecnicos = {};
+        }
+
+        // 🔥 CACHE
+        if (this.cacheTecnicos[key]) {
+            return this.cacheTecnicos[key];
+        }
+
+        try {
+            const response = await $.ajax({
+                url: `/${this.URLBase}/ObtenerTecnicosOT`,
+                type: 'GET',
+                data: {
+                    numeroOrden: numeroOrden,
+                    tipo: tipo
+                },
+                dataType: 'json'
+            });
+
+            this.cacheTecnicos[key] = response;
+
+            return response;
+
+        } catch (error) {
+            console.error("Error obteniendo técnicos:", error);
+            return [];
+        }
+    }
 
     // ============================
     // Helper: configurar uploader (activar/desactivar)
@@ -3518,8 +3553,13 @@ class MantenimientoManager {
         else if (deshabilitarMantenimiento) this.gestionFirmas.deshabilitarFirma('Mantenimiento', true);
     }
 
+
     async guardarOT(e) {
         e.preventDefault();
+
+        // ✅ Candado de fechas/horas
+        if (this.datos_usuario[0].TIPOUSUARIO === "TecnicoMtto" &&
+            !this.appReferencia.validarRangoHoras(true)) return false;
 
         // Validar formulario
         if (!ValidationManager.validarFormulario('#formOrdenMantenimiento')) {
@@ -3613,13 +3653,13 @@ class MantenimientoManager {
 
             datos.Usuario = this.datos_usuario[0].EMAIL;
             datos.TipoOperacion = this.TIPO_OPERACION;
-            // ✅ Convertir horas de 12h a 24h
-            if (datos.HoraInicio) {
-                datos.HoraInicio = this.convertirA24Horas(datos.HoraInicio);
-            }
-            if (datos.HoraFin) {
-                datos.HoraFin = this.convertirA24Horas(datos.HoraFin);
-            }
+            // ✅ Se elimino Convertir horas de 12h a 24h
+            // if (datos.HoraInicio) {
+            //     datos.HoraInicio = this.convertirA24Horas(datos.HoraInicio);
+            // }
+            // if (datos.HoraFin) {
+            //     datos.HoraFin = this.convertirA24Horas(datos.HoraFin);
+            // }
 
             // ✅ Agregar técnicos
             datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
@@ -3648,9 +3688,15 @@ class MantenimientoManager {
 
         return false;
     }
+
     // 🔥 MÉTODO PARA GUARDAR BORRADOR (sin validaciones estrictas)
     async guardarBorrador(e) {
+
         if (e) e.preventDefault();
+
+        // ✅ Candado de fechas/horas
+        if (this.datos_usuario[0].TIPOUSUARIO === "TecnicoMtto" &&
+            !this.appReferencia.validarRangoHoras(true)) return false;
 
         // ✅ Validar solo campo crítico: Número de Orden
         const numeroOrden = $('#NumeroOrden').val();
@@ -3692,13 +3738,13 @@ class MantenimientoManager {
                 datosBorrador.TipoOperacion = 'BORRADOR'; // 🔥 Tipo especial para borrador
                 datosBorrador.IdMantenimiento = this.ID_MANTENIMIENTO;
 
-                // ✅ Convertir horas si existen
-                if (datosBorrador.HoraInicio) {
-                    datosBorrador.HoraInicio = this.convertirA24Horas(datosBorrador.HoraInicio);
-                }
-                if (datosBorrador.HoraFin) {
-                    datosBorrador.HoraFin = this.convertirA24Horas(datosBorrador.HoraFin);
-                }
+                // ✅ Se elimino Convertir horas si existen
+                // if (datosBorrador.HoraInicio) {
+                //     datosBorrador.HoraInicio = this.convertirA24Horas(datosBorrador.HoraInicio);
+                // }
+                // if (datosBorrador.HoraFin) {
+                //     datosBorrador.HoraFin = this.convertirA24Horas(datosBorrador.HoraFin);
+                // }
 
                 // ✅ Agregar técnicos si existen
                 if (this.gestionTecnicos.tecnicosAsignados.length > 0) {
@@ -5017,8 +5063,6 @@ class MantenimientoManager {
 
 }
 
-
-
 // ========================================
 // GESTION TECNICOS PREVENTIVOS
 // ========================================
@@ -5301,8 +5345,8 @@ class PDFManagerMantenimiento {
                     </div>
                     <table style="width: 100%; border-collapse: collapse;">
                         ${this.generarFilaDetalle('Clase de Mantenimiento', datos.ClaseMantenimiento, 'Código del Mantenimiento', datos.CodigoMantenimiento)}
-                        ${this.generarFilaDetalle('Estatus de la Orden', datos.EstatusOrden, 'Fecha Inicio Extrema', datos.FechaInicioExtrema)}
-                        ${this.generarFilaDetalle('Fecha Fin Extrema', datos.FechaFinExtrema, 'Ubicación Técnica', datos.UbicacionTecnica)}
+                        ${this.generarFilaDetalle('Estatus de la Orden', datos.EstatusOrden, 'Fecha Apertura OT', datos.FechaInicioExtrema)}
+                        ${this.generarFilaDetalle('Fecha Cierre OT', datos.FechaFinExtrema, 'Ubicación Técnica', datos.UbicacionTecnica)}
                         ${this.generarFilaDetalle('Centro de Costos', datos.CentroCostos, 'Descripción', datos.DescripcionEquipo)}
                         ${this.generarFilaDetalle('Número de Equipo', datos.NumeroEquipo, 'Grupo de Planeación', datos.GrupoPlaneacion)}
                     </table>

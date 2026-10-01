@@ -443,8 +443,8 @@ namespace MantenimientosPTM
             public string UbicacionTecnica { get; set; }
             public string CentroCostos { get; set; }
             public string GrupoPlaneacion { get; set; }
-            public string HoraInicio { get; set; }
-            public string HoraFin { get; set; }
+            public DateTime? HoraInicio { get; set; }
+            public DateTime? HoraFin { get; set; }
             public string TextoSecuencia { get; set; }
             public string TecnicosAsignados { get; set; }
             public decimal? DuracionHrs { get; set; }
