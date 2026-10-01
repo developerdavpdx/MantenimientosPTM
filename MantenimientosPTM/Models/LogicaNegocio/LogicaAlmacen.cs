@@ -83,14 +83,19 @@ namespace MantenimientosPTM
                 }
 
                 // ✅ 3 — Armar body
+                var nombreSolicita = (Header[0].NombreSolicita ?? string.Empty).Trim();
+                if (nombreSolicita.Length > 20)
+                    nombreSolicita = nombreSolicita.Substring(0, 20).TrimEnd();
+
+                // ✅ 3 — Armar body
                 var purchaseRequest = new
                 {
                     RequriedDate = DateTime.Now.AddDays(7).ToString("yyyy-MM-dd"),  // ✅ typo intencional de SAP
-                    ReqName = Header[0].NombreSolicita,
+                    //ReqName = Header[0].NombreSolicita,
                     U_URGENCIA = "NO",
                     U_REQ_CALIDAD = "NO APLICA",
                     U_PDX_ORDEN_TRABAJO = Header[0].OrdenTrabajo,
-                    U_U_PDX_SOLICITANTE = Header[0].NombreSolicita,
+                    U_U_PDX_SOLICITANTE = nombreSolicita,
                     Comments = $"Documento creado por interfaz PTM Mantenimientos — {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
                     DocumentLines = documentLines
                 };
