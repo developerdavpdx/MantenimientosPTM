@@ -84,8 +84,8 @@ namespace MantenimientosPTM
 
                 // ✅ 3 — Armar body
                 var nombreSolicita = (Header[0].NombreSolicita ?? string.Empty).Trim();
-                if (nombreSolicita.Length > 20)
-                    nombreSolicita = nombreSolicita.Substring(0, 20).TrimEnd();
+                //if (nombreSolicita.Length > 20)
+                //    nombreSolicita = nombreSolicita.Substring(0, 20).TrimEnd();
 
                 // ✅ 3 — Armar body
                 var purchaseRequest = new
