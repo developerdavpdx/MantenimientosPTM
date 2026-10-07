@@ -191,8 +191,10 @@ class GestionEquiposApp {
                 if (tabId === 'tab-listar') {
                     $('#btnGuardarLinea,#btnCancelarGLinea').hide();
                     $("#footer_lineas").addClass("justify-content-start");
+                    $("#GestionPlanta").val(this.datos_usuario[0].PLANTA);
                     this.equipoManager.renderListarLineas();
                 } else {
+                    $("#PlantaLine").val(this.datos_usuario[0].PLANTA);
                     $('#btnGuardarLinea,#btnCancelarGLinea').show();
                     $("#footer_lineas").removeClass("justify-content-start");
                 }
@@ -2664,7 +2666,7 @@ class EquipoManager {
     abrirModalGestionarLineas(e) {
         e.preventDefault();
 
-        $('#GestionPlanta').val(this.PLANTA);
+        $('#PlantaLine').val(this.PLANTA);
         // Llenar select de áreas (usa la misma función que ya existe)
         EquiposUtil.llenarProcesos(this.PLANTA,1, 'GestionArea', 'AreaLine');
 
