@@ -2200,9 +2200,14 @@ class MantenimientoManager {
                         data.FechaRealFin !== '';
 
                     const estatusReprogramacion = data.EstatusSolicitudRepro;
+                    const TieneSolicitudPendiente = data.TieneSolicitudPendiente;
 
+                    // 🟡 SOLICITUD PENDIENTE - Amarillo suave (prioridad más alta)
+                    if (TieneSolicitudPendiente === 'SI') {
+                        $(row).addClass('solicitud-pendiente');
+                    }
                     // 🔵 Reprogramado (Mes Siguiente)
-                    if (estatusReprogramacion === 'Aceptada' && enviarSiguiente) {
+                    else if (estatusReprogramacion === 'Aceptada' && enviarSiguiente) {
                         $(row).addClass('mantenimiento-reprogramado');
                     }
                     // 🟢 Reprogramado

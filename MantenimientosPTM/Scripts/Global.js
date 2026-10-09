@@ -3102,7 +3102,7 @@ class SessionManager {
         if (tipoUsuario === "SupervisorPlaneacion" || tipoUsuario === "Planeacion") {
             /*$("#MantenimientosMainContainer").addClass("d-none");*/ //MANTENIMIENTOS
             $("#GestionEquiposURL").addClass("d-none"); //GESTION EQUIPOS
-            $("#CalendarioManttoURL").addClass("d-none"); //CALENDARIO MANTENIMIENTO URL
+           /* $("#CalendarioManttoURL").addClass("d-none");*/ //CALENDARIO MANTENIMIENTO URL
             $("#MCProgramadoURL").addClass("d-none"); //CALENDARIO MANTENIMIENTO URL
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION

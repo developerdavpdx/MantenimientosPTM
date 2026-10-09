@@ -407,13 +407,14 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             // ✅ IMPORTANTE: También pasar datosFormateados para acumular preventivos
             const seAgregaronPreventivos = await this.traerPreventivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
 
+            // 🟦 NUEVO: Paros de producción se agregan también
+            // ✅ IMPORTANTE: También pasar datosFormateados para acumular paros
+            const seAgregaronParos = await this.traerParosProduccionCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
+
             // ✅ NUEVO: Productos terminados se agregan también
             const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, 'PCORR');
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
 
-            // 🟦 NUEVO: Paros de producción se agregan también
-            // ✅ IMPORTANTE: También pasar datosFormateados para acumular paros
-            const seAgregaronParos = await this.traerParosProduccionCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
 
             // If no hay datos originales, correctivos, preventivos, paros NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {

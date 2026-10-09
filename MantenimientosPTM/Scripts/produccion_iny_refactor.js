@@ -304,14 +304,23 @@ class GestionProduccionINY extends GestionProduccionBase {
                 }
             }
 
-            // ✅ AHORA pasando datosFormateados para acumular ANTES de pintar
+            // 🔥 Correctivos se agregan ANTES de pintar totales
+            // ✅ NUEVO: Pasar datosFormateados para acumular ANTES de agregar al grid
             const seAgregaronCorrectivos = await this.traerCorrectivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
+
+            // 🔥 NUEVO: Preventivos se agregan también
+            // ✅ IMPORTANTE: También pasar datosFormateados para acumular preventivos
             const seAgregaronPreventivos = await this.traerPreventivosCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
 
+            // 🟦 NUEVO: Paros de producción se agregan también
+            // ✅ IMPORTANTE: También pasar datosFormateados para acumular paros
+            const seAgregaronParos = await this.traerParosProduccionCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
+
+            // ✅ NUEVO: Productos terminados se agregan también
             const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, 'INY');
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
 
-            const seAgregaronParos = await this.traerParosProduccionCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
+            
 
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {
                 this.gridApi.setRowData([]);

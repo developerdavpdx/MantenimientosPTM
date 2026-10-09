@@ -805,8 +805,7 @@ class ProduccionManager {
 
             const articulo = $(this)
                 .find('.paro-articulo')
-                .val()
-                .trim();
+                .val();
 
             // 🔥 VALIDAR AUTOCOMPLETE REAL - Solo si hay contenido
             const articuloData = $(this).data('articulo');
@@ -1087,67 +1086,76 @@ class ProduccionManager {
             return;
         }
 
-        $('#tablaParos tbody tr').empty();
+        // ✅ CAMBIO: Usar .empty() es insuficiente. Mejor usar .html('') o .empty() + reiniciar
+        // pero lo ideal es REEMPLAZAR completamente las filas
+        const tbody = $('#tablaParos tbody');
+        tbody.empty();  // Vaciar contenido
 
-        // 🟦 NUEVO: Guardar el ID_AREA en cada fila cuando se agrega
+        // 🔥 IMPORTANTE: Limpiar dropdowns de autocomplete huérfanos
+        $('.autocomplete-dropdownv2').remove();
+
         const areaIdActual = $('#FiltroProcesoParo').val() || 0;
 
         lineasSeleccionadas.forEach(linea => {
-
-            // Evitar duplicados
-            // let existe = false;
-
-            // $('#tablaParos tbody tr').each(function () {
-
-            //     const lineaTabla = $(this).find('td').eq(0).attr('data-value');
-
-            //     if (lineaTabla == linea.id) {
-            //         existe = true;
-            //     }
-
-            // });
-
-            // if (existe) return;
             const fila = `
-                <tr data-area-id="${areaIdActual}">
-                    <td data-value="${linea.id}">
-                        ${linea.texto}
-                    </td>
+            <tr data-area-id="${areaIdActual}">
+                <td data-value="${linea.id}">
+                    ${linea.texto}
+                </td>
 
-                    <td>
-                        <select class="form-select form-select-sm paro-categoria" data-value="${categoria}">
-                            ${this.generarOpcionesCategorias(categoria)}
-                        </select>
-                    </td>
+                <td>
+                    <select class="form-select form-select-sm paro-categoria" data-value="${categoria}">
+                        ${this.generarOpcionesCategorias(categoria)}
+                    </select>
+                </td>
 
-                    <td>
-                        <input type="text" step="0.1"
-                               class="form-control form-control-sm paro-articulo" />
-                    </td>
+                <td>
+                    <input type="text" step="0.1"
+                           class="form-control form-control-sm paro-articulo" />
+                </td>
 
-                    <td>
-                        <input type="number" step="0.1"
-                               class="form-control form-control-sm paro-duracion" />
-                    </td>
+                <td>
+                    <input type="number" step="0.1"
+                           class="form-control form-control-sm paro-duracion" />
+                </td>
 
-                    <td>
-                        <input type="text"
-                               class="form-control form-control-sm paro-comentarios" />
-                    </td>
+                <td>
+                    <input type="text"
+                           class="form-control form-control-sm paro-comentarios" />
+                </td>
 
-                    <td class="text-center">
-                        <button type="button"
-                                class="btn btn-sm btn-danger btnEliminarFila">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </td>
-                </tr>
+                <td class="text-center">
+                    <button type="button"
+                            class="btn btn-sm btn-danger btnEliminarFila">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
         `;
 
-            $('#tablaParos tbody').append(fila);
-
+            tbody.append(fila);
         });
 
+        // ✅ CRÍTICO: Reinicializar event listeners del autocomplete para los NUEVOS inputs
+        // Esto evita que queden handlers "fantasma" en elementos eliminados
+        this.reinicializarAutocompleteArticulos();
+    }
+
+    // ✅ NUEVO MÉTODO: Reinicializar autocomplete para los inputs agregados
+    reinicializarAutocompleteArticulos() {
+        // Limpiar handlers anteriores
+        $('.paro-articulo').off('input');
+
+        // Reagregar el handler al autocomplete (delegado)
+        // Ya que en AutocompleteParoArticulo.inicializar() usas $(document).on()
+        // Los nuevos elementos deberían capturarse automáticamente
+        // Pero si necesitas força una reinicialización:
+
+        const autocomplete = window.gestionArticulosMP ||
+            (window.AppSolicitudRefacciones && window.AppSolicitudRefacciones.gestionArticulosMP);
+
+        // Si existe instancia, opcional: forzar reinit
+        // (Normalmente con $(document).on() funciona automáticamente)
     }
 
     generarOpcionesCategorias(selected) {

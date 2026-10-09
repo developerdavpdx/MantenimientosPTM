@@ -1075,3 +1075,73 @@ textarea.form-control-document {
 .bg-orangeFRE {
     background-color: #fd7e14 !important;
 }
+
+/* 🟡 ALERTA PARA SOLICITUD PENDIENTE - AMARILLO SUAVE */
+.solicitud-pendiente {
+    background: linear-gradient(90deg, rgba(255, 235, 130, 0.15) 0%, rgba(255, 235, 130, 0.08) 100%) !important;
+    border-left: 5px solid #ffe682 !important;
+    box-shadow: inset 0 0 6px rgba(255, 235, 130, 0.25);
+    position: relative;
+}
+
+.solicitud-pendiente td {
+    background: rgba(255, 235, 130, 0.03);
+    vertical-align: middle;
+}
+
+/* Badge flotante en la esquina superior izquierda de la fila */
+.solicitud-pendiente td:nth-child(3) {
+    position: relative;
+}
+
+.solicitud-pendiente td:nth-child(3)::before {
+    content: '⏳ SOLICITUD REPROGRAMACIÓN (MES SIGUIENTE) PENDIENTE';
+    position: absolute;
+    top: -25px;
+    left: -5px;
+    background: linear-gradient(135deg, #ffe682 0%, #ffd966 100%);
+    color: #664d03;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 4px;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(255, 235, 130, 0.5);
+    text-align: center;
+    line-height: 1.2;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* ✅ MOSTRAR BADGE AL PASAR EL MOUSE */
+.solicitud-pendiente:hover td:nth-child(3)::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+.solicitud-pendiente td:nth-child(3)::after {
+    content: '';
+    display: none;
+}
+
+/* Animación pulse suave para solicitud pendiente */
+@keyframes pulse-solicitud-pendiente {
+    0% {
+        box-shadow: inset 0 0 0 0 rgba(255, 235, 130, 0.5);
+    }
+    70% {
+        box-shadow: inset 0 0 10px rgba(255, 235, 130, 0.25);
+    }
+    100% {
+        box-shadow: inset 0 0 0 0 rgba(255, 235, 130, 0.5);
+    }
+}
+
+.solicitud-pendiente {
+    animation: pulse-solicitud-pendiente 2s infinite;
+}
+
+/* 🟢 ALERTA PARA SOLICITUD PENDIENTE */

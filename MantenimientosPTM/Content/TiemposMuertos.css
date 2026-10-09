@@ -177,6 +177,56 @@
     max-width: 300px;
 }
 
+/* ========================================
+   BOOTSTRAP TOOLTIPS - ESTILO UNIFICADO
+   ======================================== */
+/* Asegurar que los tooltips de Bootstrap usen un estilo consistente */
+.bs-tooltip-auto[data-popper-placement^="top"] > .tooltip-arrow,
+.bs-tooltip-top > .tooltip-arrow {
+    border-top-color: #0066cc;
+}
+
+.bs-tooltip-auto[data-popper-placement^="bottom"] > .tooltip-arrow,
+.bs-tooltip-bottom > .tooltip-arrow {
+    border-bottom-color: #0066cc;
+}
+
+.bs-tooltip-auto[data-popper-placement^="left"] > .tooltip-arrow,
+.bs-tooltip-left > .tooltip-arrow {
+    border-left-color: #0066cc;
+}
+
+.bs-tooltip-auto[data-popper-placement^="right"] > .tooltip-arrow,
+.bs-tooltip-right > .tooltip-arrow {
+    border-right-color: #0066cc;
+}
+
+/* Estilo base del tooltip interior - Bootstrap 5 */
+.bs-tooltip-auto > .tooltip-inner,
+.bs-tooltip-top > .tooltip-inner,
+.bs-tooltip-bottom > .tooltip-inner,
+.bs-tooltip-left > .tooltip-inner,
+.bs-tooltip-right > .tooltip-inner {
+    background-color: #0066cc !important;
+    color: white;
+    font-weight: 500;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+/* Fallback para Bootstrap 4 (.tooltip-inner sin .bs-tooltip) */
+.tooltip-inner {
+    background-color: #0066cc !important;
+    color: white;
+    font-weight: 500;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+.tooltip.show {
+    opacity: 1;
+}
+
 
 /* ========================================
    DIFERENCIACIÓN DE FILAS POR ORIGEN

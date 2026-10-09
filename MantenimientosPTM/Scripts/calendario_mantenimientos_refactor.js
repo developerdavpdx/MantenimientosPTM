@@ -261,7 +261,7 @@ class CalendarManager {
             dayMaxEvents: false,    // ✅ No limitar eventos por día
             events: [], // ✅ Inicialmente vacío, se carga después
             datesSet: (info) => this.actualizarTitulo(info),
-            dateClick: (info) => this.handleDateClick(info),
+            //dateClick: (info) => this.handleDateClick(info),
             eventClick: (info) => this.handleEventClick(info),
             eventClassNames: (arg) => {
                 return arg.event.extendedProps.tipo === 'Preventivo'
