@@ -390,6 +390,41 @@ class SolicitudRefaccionesApp {
         }
     }
 
+    async _abrirModalDevolucion(e) {
+        const $btn = $(e.currentTarget);
+        const ot = $btn.data('ordentrabajo');
+        const solicita = $btn.data('solicita');
+        const Nombresolicita = $btn.data('nombresolicita');
+        const numeroempleado = $btn.data('numeroempleado');
+        const departamento = $btn.data('departamento');
+
+        GlobalUtil.mostrarLoader(true);
+        try {
+            const [salidas, devoluciones] = await Promise.all([
+                this.solicitudManager.obtenerSalidasPorOrdenTrabajo(ot),
+                this.solicitudManager.obtenerDevolucionesPorOrdenTrabajo(ot)
+            ]);
+
+            if (!salidas || salidas.length === 0) {
+                AlertManager.mostrar('No hay artículos disponibles para devolver.', 'info');
+                return;
+            }
+
+            //Datos del solicitante
+            $('#devolucionSolicitante').val(Nombresolicita || '');
+            $('#devolucionNumEmpleado').val(numeroempleado || '');
+            $('#devolucionArea').val(departamento || '');
+
+            // ✅ Ya no filtramos aquí: el render decide qué es editable
+            this.solicitudManager.abrirModalDevolucion(salidas, devoluciones);
+        } catch (error) {
+            console.error('Error al obtener artículos atendidos:', error);
+            AlertManager.mostrar('Error al obtener los artículos atendidos.', 'warning');
+        } finally {
+            GlobalUtil.mostrarLoader(false);
+        }
+    }
+
     //Buscar datos del solicitante
     async buscarDatosSolicitante(nombre, numeroNomina) {
 
@@ -486,32 +521,6 @@ class SolicitudRefaccionesApp {
                 'No se encontró el solicitante ingresado. Verifique que el nombre o número de nómina sean correctos y que pertenezca a la misma planta.',
                 'info'
             );
-        }
-    }
-
-   
-    async _abrirModalDevolucion(e) {
-        const $btn = $(e.currentTarget);
-        const ot = $btn.data('ordentrabajo');
-        GlobalUtil.mostrarLoader(true);
-        try {
-            const [salidas, devoluciones] = await Promise.all([
-                this.solicitudManager.obtenerSalidasPorOrdenTrabajo(ot),
-                this.solicitudManager.obtenerDevolucionesPorOrdenTrabajo(ot)
-            ]);
-
-            if (!salidas || salidas.length === 0) {
-                AlertManager.mostrar('No hay artículos disponibles para devolver.', 'info');
-                return;
-            }
-
-            // ✅ Ya no filtramos aquí: el render decide qué es editable
-            this.solicitudManager.abrirModalDevolucion(salidas, devoluciones);
-        } catch (error) {
-            console.error('Error al obtener artículos atendidos:', error);
-            AlertManager.mostrar('Error al obtener los artículos atendidos.', 'warning');
-        } finally {
-            GlobalUtil.mostrarLoader(false);
         }
     }
 
@@ -2485,9 +2494,6 @@ class SolicitudManager {
         this._configurarEventosDevolucion();
         await this.llenarFirmas(null);
 
-        $('#devolucionSolicitante').val('');
-        $('#devolucionNumEmpleado').val('');
-        $('#devolucionArea').val('');
         $('#formDevolucionMercancia').removeClass('was-validated');
         $('#alertDevolucionContainer').empty();
 
