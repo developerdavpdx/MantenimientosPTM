@@ -1829,7 +1829,10 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     {
                         field: 'Fecha',
                         headerName: 'Fecha',
-                        editable: false,
+                        editable: (params) => {
+                            // Habilitar edición solo si la fila NO tiene ID_REGISTRO (es una fila nueva)
+                            return !params.data?.ID_REGISTRO;
+                        },
                         width: 120,
                         cellClass: 'celda-azul',
                         pinned: 'left',
@@ -1859,7 +1862,10 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     {
                         field: 'Linea',
                         headerName: 'Línea',
-                        editable: false,
+                        editable: (params) => {
+                            // Habilitar edición solo si la fila NO tiene ID_REGISTRO (es una fila nueva)
+                            return !params.data?.ID_REGISTRO;
+                        },
                         width: 120,
                         cellClass: 'celda-azul',
                         pinned: 'left',
@@ -2344,6 +2350,10 @@ class GestionProduccionPVC extends GestionProduccionBase {
             groupHeaderHeight: 40,
             headerHeight: 80,
 
+            onCellEditingStarted: (event) => this.onCellEditingStarted(event),
+
+            onCellEditingStopped: (event) => this.onCellEditingStopped(event),
+
             onCellValueChanged: (event) => this.onCellChanged(event),
 
             onGridReady: (params) => {
@@ -2494,6 +2504,52 @@ class GestionProduccionPVC extends GestionProduccionBase {
         });
 
         this.recalcularTotales();
+    }
+
+    // 🔥 NUEVO: Guardar valor anterior cuando se inicia la edición
+    onCellEditingStarted(event) {
+        // Guardar valor anterior en un objeto temporal
+        if (!this._valorAnterior) {
+            this._valorAnterior = {};
+        }
+
+        const key = `${event.rowIndex}_${event.column.field}`;
+        this._valorAnterior[key] = event.value;
+
+        // Seleccionar el texto si es campo numérico o texto
+        if (event.node.data?.id !== 'TOTALES') {
+            setTimeout(() => {
+                // Dar foco al editor y seleccionar texto
+                const editor = event.editor;
+                if (editor && editor.gui && editor.gui.input) {
+                    editor.gui.input.select?.();
+                }
+            }, 0);
+        }
+    }
+
+    // 🔥 NUEVO: Restaurar valor anterior si la celda queda vacía
+    onCellEditingStopped(event) {
+        if (!event || !event.column || event.node.data?.id === 'TOTALES') {
+            return;
+        }
+
+        // Si no cambió nada, no hacer nada
+        if (event.newValue === event.oldValue) {
+            return;
+        }
+
+        const key = `${event.rowIndex}_${event.column.field}`;
+        const valorAnterior = this._valorAnterior?.[key];
+
+        // Si el nuevo valor está vacío o es null, restaurar el anterior
+        if ((event.newValue === null || event.newValue === '' || event.newValue === undefined) && valorAnterior !== null && valorAnterior !== undefined) {
+            // Restablecer el valor anterior
+            event.node.setDataValue(event.column.field, valorAnterior);
+        }
+
+        // Limpiar el registro temporal
+        delete this._valorAnterior[key];
     }
 
     recalcularFila(row) {
