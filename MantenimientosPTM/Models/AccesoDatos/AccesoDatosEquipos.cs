@@ -552,6 +552,10 @@ namespace MantenimientosPTM
             [JsonProperty("FECHA_ULT_MOD", DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string FechaUltMod { get; set; }
+            // Clasificacion
+            [JsonProperty("CLASIFICACION", DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string Clasificacion { get; set; }
         }
         public class SolicitudBajaEquipo
         {

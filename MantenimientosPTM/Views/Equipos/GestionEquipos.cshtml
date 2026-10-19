@@ -109,6 +109,23 @@
                                    name="FiltroFechaInicioMantenimiento">
                         </div>
 
+                        <!-- Filtro Clasificación -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroClasificacion">
+                                <i class="bi bi-tag-fill"></i> Clasificación
+                            </label>
+                            <div class="select-wrapper">
+                                <select class="filtro-input" id="FiltroClasificacion" name="FiltroClasificacion">
+                                    <option value="">Todas las clasificaciones...</option>
+                                    <option value="MANTENIMIENTO">MANTENIMIENTO</option>
+                                    <option value="HERRAMENTALES">HERRAMENTALES</option>
+                                </select>
+                                <div class="select-loader d-none" id="loader_FiltroClasificacion">
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Filtro Estatus -->
                         <div class="col-12 col-sm-6 col-md-4 col-xl-2">
                             <label class="filtro-label" for="FiltroEstatus">
@@ -148,6 +165,7 @@
                                 <th scope="col">Línea</th>
                                 <th scope="col">Equipo</th>
                                 <th scope="col">Descripción</th>
+                                <th scope="col">Clasificación</th>
                                 <th scope="col">Centro Costos</th>
                                 <th scope="col">Doc Pm.Calidad</th>
                                 <th scope="col">Fecha inicial mantenimiento</th>

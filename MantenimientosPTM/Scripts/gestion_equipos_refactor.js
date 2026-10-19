@@ -178,6 +178,12 @@ class GestionEquiposApp {
                 );
             });
 
+        $("#FiltroClasificacion")
+            .off('change')
+            .on('change', (e) => {
+                $('#tablaEquipos').DataTable().ajax.reload();
+            });
+
         $('#FiltroOrdenTrabajo').on('keypress', function (e) {
             if (e.key === 'Enter') {
                 $('#tablaEquipos').DataTable().ajax.reload();
@@ -581,6 +587,7 @@ class EquipoManager {
                                     'LINEA': 'bi bi-diagram-3-fill',
                                     'EQUIPO': 'bi bi-tools',
                                     'DESCRIPCION': 'bi bi-card-text',
+                                    'CLASIFICACION': 'bi bi-tag-fill',
                                     'CENTRO COSTOS': 'bi bi-cash-coin',
                                     'DOC PM.CALIDAD': 'bi bi-file-earmark-text',
                                     'DOC PMCALIDAD': 'bi bi-file-earmark-text',
@@ -652,6 +659,7 @@ class EquipoManager {
                             "FiltroOrdenTrabajo": $("#FiltroOrdenTrabajo").val() || null,
                             "FiltroNombreEquipo": $("#FiltroNombreEquipo").val() || null,
                             "FiltroFechaInicioMantenimiento": $("#FiltroFechaInicioMantenimiento").val() || null,
+                            "FiltroClasificacion": $("#FiltroClasificacion").val() || null,
                             "FiltroEstatus": $("#FiltroEstatus").val()
                         });
                     },
@@ -748,6 +756,14 @@ class EquipoManager {
                         }
                     },
 
+                    // Clasificación
+                    {
+                        data: "Clasificacion",
+                        render: function (data) {
+                            return `<i class="bi bi-tag-fill me-1 text-muted"></i>${data || ''}`;
+                        }
+                    },
+
                     // Centro Costos
                     {
                         data: "CentroCostos",
@@ -785,6 +801,12 @@ class EquipoManager {
                                 .split(',')
                                 .map(x => x.trim())
                                 .filter(x => x);
+
+                            if (periodicidades.includes("anual"))
+                            {
+                                console.log("anual");
+                            }
+
 
                             let html = `<div class="d-flex flex-wrap justify-content-center gap-1">
                                 ${periodicidades.map(p => `
@@ -866,23 +888,24 @@ class EquipoManager {
                     { className: "text-center", targets: '_all' },
 
                     // Columnas no ordenables
-                    { orderable: false, targets: [0, 1, 10, 12, 13] },
+                    { orderable: false, targets: [0, 1, 11, 13, 14] },
 
                     // 🎯 PRIORIDADES RESPONSIVE (menor número = más importante, se oculta último)
                     { responsivePriority: 1, targets: 0 },   // Control +/- (siempre visible)
                     { responsivePriority: 2, targets: 1 },   // Acciones (siempre visible)
                     { responsivePriority: 3, targets: 5 },   // Nombre Equipo (importante)
-                    { responsivePriority: 4, targets: 11 },  // Estatus (importante)
+                    { responsivePriority: 4, targets: 12 },  // Estatus (importante)
                     { responsivePriority: 5, targets: 2 },   // Planta
                     { responsivePriority: 6, targets: 3 },   // Proceso/Area
                     { responsivePriority: 7, targets: 4 },   // Línea
                     { responsivePriority: 8, targets: 6 },   // Descripción
-                    { responsivePriority: 9, targets: 9 },   // Fecha Inicio Mant
-                    { responsivePriority: 10, targets: 10 }, // Periodicidad MP
-                    { responsivePriority: 11, targets: 7 },  // Centro Costos
-                    { responsivePriority: 12, targets: 8 },  // Doc PM Calidad
-                    { responsivePriority: 13, targets: 12 }, // Comentarios Pausa
-                    { responsivePriority: 14, targets: 13 }  // Fecha de Pausa
+                    { responsivePriority: 9, targets: 10 },  // Fecha Inicio Mant
+                    { responsivePriority: 10, targets: 11 }, // Periodicidad MP
+                    { responsivePriority: 11, targets: 8 },  // Centro Costos
+                    { responsivePriority: 12, targets: 9 },  // Doc PM Calidad
+                    { responsivePriority: 13, targets: 7 },  // Clasificación
+                    { responsivePriority: 14, targets: 13 }, // Comentarios Pausa
+                    { responsivePriority: 15, targets: 14 }  // Fecha de Pausa
                 ],
                 ordering: false,
                 info: true,

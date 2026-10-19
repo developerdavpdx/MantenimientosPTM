@@ -1489,6 +1489,7 @@ namespace MantenimientosPTM.Controllers
                 string FiltroNombreEquipo = Request.Form["FiltroNombreEquipo"];
                 string FiltroFechaInicioMantenimiento = Request.Form["FiltroFechaInicioMantenimiento"];
                 string FiltroEstatus = Request.Form["FiltroEstatus"];
+                string FiltroClasificacion = Request.Form["FiltroClasificacion"];
 
                 // Convertir la fecha string a DateTime si viene con valor
                 DateTime? fechaInicioMant = null;
@@ -1519,7 +1520,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_QUERY", (null, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_TOP", (null, ParameterDirection.Input, HanaDbType.Integer) },
                     { "P_MODO", ("FULL", ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_ESTATUS", (string.IsNullOrEmpty(FiltroEstatus) ? (object)null : FiltroEstatus, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_ESTATUS", (string.IsNullOrEmpty(FiltroEstatus) ? (object)null : FiltroEstatus, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CLASIFICACION", (string.IsNullOrEmpty(FiltroClasificacion) ? (object)null : FiltroClasificacion, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 // Ejecutar stored procedure
