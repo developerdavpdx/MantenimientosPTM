@@ -171,6 +171,16 @@ class SolicitudRefaccionesApp {
             await self._abrirModalDevolucion(e);
         });
 
+        // Contador de caracteres
+        $(document).on('input', '#devolucionComentarios', function () {
+            $('#contadorComentarios').text(this.value.length);
+        });
+
+        $('#devolucionMercancia').on('hidden.bs.modal', () => {
+            $('#devolucionComentarios').val('').removeClass('is-invalid');
+            $('#contadorComentarios').text(0);
+        });
+
         // Guardar devolución (botón en modal de devolución)
         $(document).on('click', '#btnGuardarDevolucion', (e) => {
             e.preventDefault();
@@ -657,6 +667,7 @@ class SolicitudRefaccionesApp {
             const area = ($('#devolucionArea').val() || '').toString().trim();
             const entrega = ($('#devolucionEntrega').val() || '').toString().trim();
             const recibe = ($('#devolucionRecibe').val() || '').toString().trim();
+            const comentarios = ($('#devolucionComentarios').val() || '').toString().trim();
 
             //const entrega = ($('#devolucionEntrega').val() || $('#firmaAlmacen').val() || '').toString().trim();
             //const recibe = ($('#devolucionRecibe').val() || $('#firmaAutoriza').val() || '').toString().trim();
@@ -759,7 +770,7 @@ class SolicitudRefaccionesApp {
            
 
             // ✅ Limpiar clases de error si todas las validaciones pasaron
-            $('#devolucionSolicitante, #devolucionNumEmpleado, #devolucionArea, #devolucionEntrega, #devolucionRecibe')
+            $('#devolucionSolicitante, #devolucionNumEmpleado, #devolucionArea, #devolucionEntrega, #devolucionRecibe, #devolucionComentarios')
                 .removeClass('is-invalid');
 
             // Armar DataMovimiento desde inputs del modal (usando los valores validados)
@@ -768,7 +779,8 @@ class SolicitudRefaccionesApp {
                 NumEmpleado: numEmpleado,
                 Area: area,
                 Entrega: entrega,
-                Recibe: recibe
+                Recibe: recibe,
+                Comentarios: comentarios
             };
 
             const payload = {
@@ -780,10 +792,13 @@ class SolicitudRefaccionesApp {
             };
 
             // Enviar
-            await this.solicitudManager.postEntradaDevolucionMercancia(payload, $btn);
+            const okdev = await this.solicitudManager.postEntradaDevolucionMercancia(payload, $btn);
 
-            // Si todo OK, cerrar modal y limpiar
-            $('#devolucionMercancia').modal('hide');
+            // Si todo OK, cerrar modal
+            if (okdev) {
+                $('#devolucionMercancia').modal('hide');
+            }
+
         } catch (err) {
             console.error('Error en guardarDevolucion:', err);
             AlertManager.mostrar('Error al procesar la devolución.', 'warning', 'alertDevolucionContainer');
@@ -2808,12 +2823,15 @@ class SolicitudManager {
                 AlertManager.mostrar(`Devolución de Mercancía generada correctamente. Folio: ${data.DocNum}`, 'success');
                 $('#salidaMercancia').modal('hide');
                 this.appPrincipal._recargarDataTable();
+                return true;
             } else {
                 AlertManager.mostrar(response.Message || 'Error al generar devolución de mercancía', 'warning');
+                return false;
             }
         } catch (error) {
             console.error('Error en postEntradaDevolucionMercancia:', error);
             AlertManager.mostrar('Error al conectar con el servidor', 'warning');
+            return false;
         } finally {
             // ✅ CORREGIDO: Solo si $btn existe
             if ($btn && $btn.length) {

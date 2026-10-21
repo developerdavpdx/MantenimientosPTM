@@ -1018,6 +1018,7 @@ namespace MantenimientosPTM
             public string Area { get; set; }
             public string Entrega { get; set; }
             public string Recibe { get; set; }
+            public string Comentarios { get; set; }
         }
 
         // Reporte de Stock Almacén

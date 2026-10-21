@@ -662,7 +662,7 @@ namespace MantenimientosPTM
                 dictGR["JournalMemo"] = $"Devolución interna solicitud: {payload.Referencia} orden trabajo: {payload.OrdenTrabajo}";
                 dictGR["Reference2"] = payload.DataMovimiento.Recibe;
                 dictGR["U_PDX_ORDEN_TRABAJO"] = payload.OrdenTrabajo;
-                dictGR["U_U_PDX_SOLICITANTE"] = payload.DataMovimiento.NumEmpleado;
+                dictGR["U_U_PDX_SOLICITANTE"] = payload.DataMovimiento.Solicitante;
                 dictGR["DocumentLines"] = new List<object>();
                 //FALTA SERIE = CEDIS
 
@@ -694,6 +694,7 @@ namespace MantenimientosPTM
                     newLine["CostingCode4"] = linea["CostingCode4"];
                     newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
                     newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
+                    newLine["U_OBS_CALIDAD"] = payload.DataMovimiento.Comentarios;
 
                     // Cuenta contable (opcional pero recomendable)
                     if (linea.ContainsKey("CuentaContable") && !string.IsNullOrWhiteSpace(linea["CuentaContable"]?.ToString()))

@@ -215,7 +215,7 @@ namespace MantenimientosPTM.Controllers
                         "P_NOMBRE", ( string.IsNullOrEmpty(nombreSolicitante) ? (object)null : nombreSolicitante, ParameterDirection.Input, HanaDbType.NVarChar)
                     },
                     {
-                        "P_NUMERO_NOMINA", (string.IsNullOrEmpty(numeroNomina) ? (object)null : numeroNomina, ParameterDirection.Input, HanaDbType.NVarChar)
+                        "P_NUM_NOMINA", (string.IsNullOrEmpty(numeroNomina) ? (object)null : numeroNomina, ParameterDirection.Input, HanaDbType.NVarChar)
                     }
 
                 };
@@ -2214,7 +2214,8 @@ namespace MantenimientosPTM.Controllers
                         { "P_GASTOS", (articulo.Gastos, ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_CEDIS", (articulo.Cedis, ParameterDirection.Input, HanaDbType.NVarChar) },
                         { "P_CANTIDAD_REAL",     (articulo.CantidadDevolver, ParameterDirection.Input, HanaDbType.Decimal) },
-                        { "P_ESTATUS",(1, ParameterDirection.Input, HanaDbType.Integer) }
+                        { "P_ESTATUS",(1, ParameterDirection.Input, HanaDbType.Integer) },
+                        { "P_COMENTARIOS",(payload.DataMovimiento.Comentarios, ParameterDirection.Input, HanaDbType.NVarChar) }
                     };
 
                     var resultInsert = Logic.GlobalCommands.ExecuteProcedureHanaAuto(

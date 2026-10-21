@@ -380,7 +380,16 @@
                             <div class="modal-error-msg invalid-feedback">⚠️ Seleccione quien recibe.</div>
                         </div>
                     </div>
-
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 mt-2">
+                            <label for="devolucionComentarios" class="form-label">
+                                Comentarios <small class="text-muted">(opcional)</small>
+                            </label>
+                            <textarea id="devolucionComentarios" class="form-control" rows="2" maxlength="500"
+                                      placeholder="Ej. Material sobrante, pieza dañada, error en la solicitud..."></textarea>
+                            <div class="form-text text-end"><span id="contadorComentarios">0</span>/500</div>
+                        </div>
+                    </div>
                     <!-- Tabla de artículos a devolver -->
                     <div class="mb-3">
                         <h6 class="mb-3 pb-2 border-bottom" style="color: var(--modal-primary); font-weight:700;">
@@ -449,7 +458,6 @@
         </div>
     </div>
 </div>
-
 
 <!-- ══════════════════════════════════════════════
      MODAL: SALIDA DE MATERIALES
