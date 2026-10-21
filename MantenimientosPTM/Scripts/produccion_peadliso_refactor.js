@@ -375,7 +375,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, 'PPEADLISO');
             const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
 
-            
+
 
             // If no hay datos originales, correctivos, preventivos, paros NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {
@@ -1897,6 +1897,8 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             onCellValueChanged: (event) =>
                 this.onCellChanged(event),
 
+            onFilterChanged: () => this.recalcularTotales(),
+
             onGridReady: (params) => {
 
                 this.gridApi = params.api;
@@ -2570,47 +2572,17 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
     }
 
     agregarFilaTotales() {
-
         if (!this.gridApi) return;
 
-        let filaTotalesVieja = null;
-
-        this.gridApi.forEachNode(node => {
-            if (node.data?.id === 'TOTALES') {
-                filaTotalesVieja = node.data;
-            }
-        });
-
-        if (filaTotalesVieja) {
-            this.gridApi.applyTransaction({ remove: [filaTotalesVieja] });
-        }
-
         const totales = this.obtenerTotalesGrid();
-
-        this.gridApi.applyTransaction({
-            add: [totales]
-        });
+        this.gridApi.setPinnedBottomRowData([totales]);
     }
 
     recalcularTotales() {
-
         if (!this.gridApi) return;
 
         const filaTotales = this.obtenerTotalesGrid();
-
-        this.gridApi.forEachNode((node) => {
-
-            if (node.data?.id === 'TOTALES') {
-
-                node.setData(filaTotales);
-            }
-
-        });
-
-        this.gridApi.refreshCells({
-            force: true
-        });
-
+        this.gridApi.setPinnedBottomRowData([filaTotales]);
     }
 
     obtenerTotalesGrid() {
@@ -2717,7 +2689,8 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         let sumaObjetivoEficiencia = 0;
         let conteoObjetivoEficiencia = 0;
 
-        this.gridApi.forEachNode((node) => {
+        // 🔥 CAMBIO: solo suma las filas que pasan el filtro
+        this.gridApi.forEachNodeAfterFilter((node) => {
 
             if (!node.data || node.data.id === 'TOTALES') {
                 return;
@@ -3169,48 +3142,52 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
     configurarMenuContextual() {
 
         const menu = document.getElementById("menuContextual");
+        const tabla = document.querySelector('#tablaProduccion');
+
+        if (!tabla) return;
+
+        tabla.addEventListener("contextmenu", (e) => {
+
+            e.preventDefault();
+
+            menu.style.display = "block";
+            menu.style.left = e.pageX + "px";
+            menu.style.top = e.pageY + "px";
+
+            // 🔥 CAMBIO: detectar si la celda enfocada es de la fila anclada (totales)
+            const focused = this.gridApi.getFocusedCell();
+
+            if (focused && focused.rowPinned === 'bottom') {
+                this.filaSeleccionada = this.gridApi.getPinnedBottomRow(focused.rowIndex);
+            } else {
+                const rowIndex = focused?.rowIndex
+                    ?? this.gridApi.getDisplayedRowCount() - 1;
+                this.filaSeleccionada = this.gridApi.getDisplayedRowAtIndex(rowIndex);
+            }
+
+            const eliminar = menu.querySelector('[data-action="eliminar"]');
+            const copiar = menu.querySelector('[data-action="copiar"]');
+
+            // En la fila de TOTALES solo permitir "Agregar"
+            if (this.filaSeleccionada?.data?.id === 'TOTALES') {
+                eliminar.style.display = "none";
+                copiar.style.display = "none";
+                return;
+            }
+
+            // Ocultar eliminar si ya está guardado
+            if (this.filaSeleccionada?.data?.ID_REGISTRO) {
+                eliminar.style.display = "none";
+            } else {
+                eliminar.style.display = "block";
+            }
+
+            copiar.style.display = "block";
+        });
 
         document.addEventListener("click", () => {
             menu.style.display = "none";
         });
-
-        document
-            .querySelector("#tablaProduccion")
-            .addEventListener("contextmenu", (event) => {
-
-                event.preventDefault();
-
-                const cell = this.gridApi.getFocusedCell();
-
-                const rowIndex = cell?.rowIndex;
-
-                this.filaSeleccionada =
-                    this.gridApi.getDisplayedRowAtIndex(rowIndex);
-
-                if (!this.filaSeleccionada) return;
-
-                const eliminar = menu.querySelector('[data-action="eliminar"]');
-                const copiar = menu.querySelector('[data-action="copiar"]');
-
-                // 🔥 En la fila de TOTALES solo permitir "Agregar", desactivar "Copiar" y "Eliminar"
-                if (this.filaSeleccionada?.data?.id === 'TOTALES') {
-                    eliminar.style.display = "none";
-                    copiar.style.display = "none";
-                } else {
-                    // Para filas normales
-                    if (this.filaSeleccionada?.data?.ID_REGISTRO) {
-                        eliminar.style.display = "none";
-                    } else {
-                        eliminar.style.display = "block";
-                    }
-                    copiar.style.display = "block";
-                }
-
-                menu.style.display = "block";
-                menu.style.left = event.pageX + "px";
-                menu.style.top = event.pageY + "px";
-
-            });
 
         menu.addEventListener("click", (event) => {
 
@@ -3258,125 +3235,20 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
     agregarFila(params) {
 
-        const nuevaFila = {
+        const nuevaFila = this.crearFilaVacia();
+        nuevaFila.id = this.generarIdTemporal();
 
-            id: this.generarIdTemporal(),
-
-            ID_REGISTRO: null,
-
-            // =====================================
-            // GENERALES
-            // =====================================
-
-            Mes: null,
-
-            Fecha: null,
-            Linea: null,
-            Producto: null,
-            Turno: null,
-            Grupo: null,
-
-            // =====================================
-            // PRODUCCIÓN
-            // =====================================
-
-            PesoMinimo: 0,
-
-            TRLiberados: null,
-            ProduccionNeta: null,
-
-            PesoEstandar: 0,
-
-            PorcentajeSobrepeso: 0,
-
-            TotalScrap: null,
-
-            PorcentajeTotalScrap: 0,
-
-            // =====================================
-            // DISPONIBILIDAD
-            // =====================================
-
-            HorasProgramadas: null,
-
-            // =====================================
-            // TIEMPO NO DISPONIBLE
-            // =====================================
-
-            Preventivo: null,
-
-            ControlInventarios: null,
-
-            FaltaEnergiaElectrica: null,
-
-            FaltaMateriaPrimaInsumos: null,
-
-            TiempoCalentamientoCI: null,
-
-            PreparacionLineaCambioHerramental: null,
-
-            TiempoCalentamientoHerramental: null,
-
-            ArranqueEstabilizacionLinea: null,
-
-            // =====================================
-            // TIEMPO NO PRODUCTIVO
-            // =====================================
-
-            TiempoMuertoCorrectivos: null,
-
-            TiempoMuertoHerramentales: null,
-
-            CambioMoldeSetupExcesos: null,
-
-            FaltaPersonal: null,
-
-            TiempoMuertoProceso: null,
-
-            // =====================================
-            // KPI
-            // =====================================
-
-            TiempoDisponible: 0,
-
-            TiempoProductivo: 0,
-            // 🔥 RENDIMIENTO Y OEE
-            DisponibilidadPorcentaje: 0,
-            KgPorTiempoDisponible: 0,
-            KgHrLinea: null,
-            KgHrProducto: null,
-            KgNetosHrReales: 0,
-            PorcentajeRendimiento: 0,
-            PorcentajeCalidad: 0,
-            PorcentajeOEE: 0,
-            PorcentajeEficienciaProducto: 0,
-            ObjetivoEficiencia: 91,
-            EficienciaOperativa: 0
-
-        };
-
-        // 🔥 Si es la fila de TOTALES, insertar ANTES de ella (en su índice)
-        // Si no, insertar DESPUÉS de la fila seleccionada
-        const addIndex = params.data?.id === 'TOTALES' 
-            ? params.rowIndex 
-            : params.rowIndex + 1;
+        // 🔥 CAMBIO: si se hizo clic en TOTALES (fila anclada), agregar al final.
+        // Si no, insertar justo después de la fila seleccionada.
+        const esTotales = params.data?.id === 'TOTALES';
+        const addIndex = esTotales ? undefined : params.rowIndex + 1;
 
         this.gridApi.applyTransaction({
-
             add: [nuevaFila],
-
             addIndex: addIndex
-
         });
 
         this.recalcularTotales();
-
-        this.gridApi.refreshCells({
-            force: true
-        });
-
-        this.gridApi.redrawRows();
-
     }
 
     copiarFilaAnterior(params) {
@@ -3390,17 +3262,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         const nuevaFila = JSON.parse(JSON.stringify(filaActual));
 
-        // ========================================
-        // NUEVO REGISTRO — limpiar todo lo que
-        // identifica a la fila original como
-        // correctivo / preventivo / producto
-        // terminado / paro manual sincronizado
-        // ========================================
-
         nuevaFila.id = this.generarIdTemporal();
         nuevaFila.ID_REGISTRO = null;
         nuevaFila.PesoMinimo = 0;
-
         nuevaFila.OTMC = null;
         nuevaFila.OTMP = null;
         nuevaFila.ID_PRODUCTO_TERMINADO = null;
@@ -3410,48 +3274,22 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         nuevaFila._rowClass = null;
         nuevaFila._esNuevo = null;
 
-        // ========================================
-        // RECALCULAR MES
-        // ========================================
-
         if (nuevaFila.Fecha) {
-
-            const fecha = new Date(nuevaFila.Fecha);
-
-            const meses = [
-                'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-                'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
-            ];
-
-            nuevaFila.Mes = meses[fecha.getMonth()];
+            const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+                'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+            nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
         }
-
-        // ========================================
-        // RECALCULAR KPIs
-        // ========================================
 
         this.recalcularFila(nuevaFila);
 
+        // 🔥 CAMBIO: undefined = al final
         const addIndex = node?.data?.id === 'TOTALES'
-            ? node.rowIndex
+            ? undefined
             : node.rowIndex + 1;
 
-        this.gridApi.applyTransaction({
-
-            add: [nuevaFila],
-
-            addIndex: addIndex
-
-        });
+        this.gridApi.applyTransaction({ add: [nuevaFila], addIndex });
 
         this.recalcularTotales();
-
-        this.gridApi.refreshCells({
-            force: true
-        });
-
-        this.gridApi.redrawRows();
-
     }
 
     eliminarFila(params) {
@@ -3748,25 +3586,33 @@ class ExcelExporterPeadLiso extends ExcelExporterBase {
     }
 
     agregarFilasDatos(worksheet, estructura) {
+        const camposTexto = ['Mes', 'Fecha', 'Linea', 'Producto', 'Turno', 'Grupo'];
+        const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+        // ========================================
+        // FILAS DE DATOS (solo las filtradas/ordenadas)
+        // ========================================
         this.gridApi.forEachNodeAfterFilterAndSort((node) => {
+
+            if (!node.data || node.data.id === 'TOTALES') return;
+
             const fila = [];
 
             estructura.grupos.forEach(grupo => {
                 grupo.children.forEach(col => {
                     let valor = node.data[col.field];
 
-                    // ⚠️ AJUSTA los campos de texto según Pead Liso
+                    // Calcular Mes si viene vacío
+                    if (col.field === 'Mes' && (!valor || valor === '') && node.data.Fecha) {
+                        valor = meses[new Date(node.data.Fecha).getMonth()];
+                    }
+
                     if (valor !== null && valor !== undefined && valor !== '' &&
-                        !['Mes', 'Fecha', 'Linea', 'Producto', 'Turno', 'Grupo'].includes(col.field)) {
+                        !camposTexto.includes(col.field)) {
                         valor = parseFloat(valor);
                     }
 
-                    if (node.data.id === 'TOTALES' &&
-                        ['Mes', 'Fecha', 'Linea', 'Producto', 'Turno', 'Grupo'].includes(col.field)) {
-                        valor = '';
-                    }
-
-                    // 🔥 Si el valor es 0, mantener el 0 (no convertir a string vacío)
                     if (valor === 0 || valor === '0') {
                         fila.push(0);
                     } else {
@@ -3777,6 +3623,38 @@ class ExcelExporterPeadLiso extends ExcelExporterBase {
 
             worksheet.addRow(fila);
         });
+
+        // ========================================
+        // FILA DE TOTALES (desde la fila anclada)
+        // ========================================
+        const nodoTotales = this.gridApi.getPinnedBottomRow(0);
+
+        if (nodoTotales && nodoTotales.data) {
+
+            const fila = [];
+
+            estructura.grupos.forEach(grupo => {
+                grupo.children.forEach(col => {
+                    let valor = nodoTotales.data[col.field];
+
+                    if (valor !== null && valor !== undefined && valor !== '') {
+                        if (!camposTexto.includes(col.field)) {
+                            valor = parseFloat(valor);
+                        }
+                    } else {
+                        valor = '';
+                    }
+
+                    if (valor === 0 || valor === '0') {
+                        fila.push(0);
+                    } else {
+                        fila.push(valor || '');
+                    }
+                });
+            });
+
+            worksheet.addRow(fila);
+        }
     }
 
     aplicarEstilos(worksheet, estructura) {

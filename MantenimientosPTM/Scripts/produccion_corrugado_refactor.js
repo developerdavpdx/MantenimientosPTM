@@ -467,23 +467,9 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
     // ✅ FIX: agregarFilaTotales idempotente — siempre quita la vieja y agrega al final
     // ========================================
     agregarFilaTotales() {
-
         if (!this.gridApi) return;
-
-        let filaTotalesVieja = null;
-
-        this.gridApi.forEachNode(node => {
-            if (node.data?.id === 'TOTALES') {
-                filaTotalesVieja = node.data;
-            }
-        });
-
-        if (filaTotalesVieja) {
-            this.gridApi.applyTransaction({ remove: [filaTotalesVieja] });
-        }
-
         const totales = this.obtenerTotalesGrid();
-        this.gridApi.applyTransaction({ add: [totales] });
+        this.gridApi.setPinnedBottomRowData([totales]);
     }
 
     // ========================================
@@ -1978,6 +1964,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
             onCellValueChanged: (event) => this.onCellChanged(event),
 
+            onFilterChanged: () => this.recalcularTotales(),
+
             onGridReady: (params) => {
                 this.gridApi = params.api;
                 this.gridColumnApi = params.columnApi;
@@ -2133,12 +2121,9 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
     }
 
     recalcularTotales() {
+        if (!this.gridApi) return;
         const filaTotales = this.obtenerTotalesGrid();
-        this.gridApi.forEachNode(node => {
-            if (node.data?.id === 'TOTALES') {
-                node.setData(filaTotales);
-            }
-        });
+        this.gridApi.setPinnedBottomRowData([filaTotales]);
     }
     // ========================================
     // 🔥 Métodos wrapper para validación de Productos Terminados
@@ -2296,7 +2281,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         let sumaObjetivoEficiencia = 0;
         let conteoObjetivoEficiencia = 0;
 
-        this.gridApi.forEachNode(node => {
+        // 🔥 CAMBIO: solo suma las filas que pasan el filtro
+        this.gridApi.forEachNodeAfterFilter(node => {
             if (!node.data || node.data.id === 'TOTALES') return;
 
             totales.PesoMinimo += Number(node.data.PesoMinimo || 0);
@@ -2661,8 +2647,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
         // 🔥 Si es la fila de TOTALES, insertar ANTES de ella (en su índice)
         // Si no, insertar DESPUÉS de la fila seleccionada
-        const addIndex = params.node.data?.id === 'TOTALES' 
-            ? params.node.rowIndex 
+        const addIndex = params.node.data?.id === 'TOTALES'
+            ? undefined
             : params.node.rowIndex + 1;
 
         this.gridApi.applyTransaction({
@@ -2700,7 +2686,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         this.recalcularFila(nuevaFila);
 
         const addIndex = params.node.data?.id === 'TOTALES'
-            ? params.node.rowIndex
+            ? undefined
             : params.node.rowIndex + 1;
 
         this.gridApi.applyTransaction({ add: [nuevaFila], addIndex });
@@ -2727,8 +2713,15 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         document.querySelector('#tablaProduccion').addEventListener("contextmenu", (e) => {
             e.preventDefault();
 
-            const rowIndex = this.gridApi.getFocusedCell()?.rowIndex;
-            this.filaSeleccionada = this.gridApi.getDisplayedRowAtIndex(rowIndex);
+            // 🔥 CAMBIO: detectar si la celda enfocada es de la fila anclada (totales)
+            const focused = this.gridApi.getFocusedCell();
+
+            if (focused && focused.rowPinned === 'bottom') {
+                this.filaSeleccionada = this.gridApi.getPinnedBottomRow(focused.rowIndex);
+            } else {
+                const rowIndex = focused?.rowIndex;
+                this.filaSeleccionada = this.gridApi.getDisplayedRowAtIndex(rowIndex);
+            }
 
             const eliminar = menu.querySelector('[data-action="eliminar"]');
             const copiar = menu.querySelector('[data-action="copiar"]');
@@ -2990,7 +2983,14 @@ class ExcelExporterCorrugado extends ExcelExporterBase {
     }
 
     agregarFilasDatos(worksheet, estructura) {
+        const textFields = this.getTextFields();
+
+        // ========================================
+        // FILAS DE DATOS (solo las filtradas/ordenadas)
+        // ========================================
         this.gridApi.forEachNodeAfterFilterAndSort((node) => {
+            if (!node.data || node.data.id === 'TOTALES') return;
+
             const fila = [];
 
             estructura.grupos.forEach(grupo => {
@@ -2998,33 +2998,10 @@ class ExcelExporterCorrugado extends ExcelExporterBase {
                     let valor = node.data[col.field];
 
                     if (valor !== null && valor !== undefined && valor !== '' &&
-                        ![
-                            'Mes',
-                            'Fecha',
-                            'Linea',
-                            'Corrugador',
-                            'Producto',
-                            'Turno',
-                            'Grupo'
-                        ].includes(col.field)) {
-
+                        !textFields.includes(col.field)) {
                         valor = parseFloat(valor);
                     }
 
-                    if (node.data.id === 'TOTALES' &&
-                        [
-                            'Mes',
-                            'Fecha',
-                            'Linea',
-                            'Corrugador',
-                            'Producto',
-                            'Turno',
-                            'Grupo'
-                        ].includes(col.field)) {
-                        valor = '';
-                    }
-
-                    // 🔥 Si el valor es 0, mantener el 0 (no convertir a string vacío)
                     if (valor === 0 || valor === '0') {
                         fila.push(0);
                     } else {
@@ -3035,6 +3012,36 @@ class ExcelExporterCorrugado extends ExcelExporterBase {
 
             worksheet.addRow(fila);
         });
+
+        // ========================================
+        // FILA DE TOTALES (desde la fila anclada)
+        // ========================================
+        const nodoTotales = this.gridApi.getPinnedBottomRow(0);
+
+        if (nodoTotales && nodoTotales.data) {
+            const fila = [];
+
+            estructura.grupos.forEach(grupo => {
+                grupo.children.forEach(col => {
+                    let valor = nodoTotales.data[col.field];
+
+                    if (valor !== null && valor !== undefined && valor !== '' &&
+                        !textFields.includes(col.field)) {
+                        valor = parseFloat(valor);
+                    } else if (textFields.includes(col.field)) {
+                        valor = '';
+                    }
+
+                    if (valor === 0 || valor === '0') {
+                        fila.push(0);
+                    } else {
+                        fila.push(valor || '');
+                    }
+                });
+            });
+
+            worksheet.addRow(fila);
+        }
     }
 
     aplicarEstilos(worksheet, estructura) {

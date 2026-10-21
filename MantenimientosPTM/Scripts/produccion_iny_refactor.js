@@ -1951,6 +1951,8 @@ class GestionProduccionINY extends GestionProduccionBase {
 
             onCellValueChanged: (event) => this.onCellChanged(event),
 
+            onFilterChanged: () => this.recalcularTotales(),
+
             onGridReady: (params) => {
                 this.gridApi = params.api;
                 this.gridColumnApi = params.columnApi;
@@ -2126,32 +2128,15 @@ class GestionProduccionINY extends GestionProduccionBase {
     // RECALCULAR TOTALES
     // ========================================
     recalcularTotales() {
+        if (!this.gridApi) return;
         const filaTotales = this.obtenerTotalesGrid();
-        this.gridApi.forEachNode(node => {
-            if (node.data?.id === 'TOTALES') node.setData(filaTotales);
-        });
+        this.gridApi.setPinnedBottomRowData([filaTotales]);
     }
 
     agregarFilaTotales() {
-        // 🔥 Si ya existe una fila de TOTALES, la quitamos primero
-        // para que siempre quede una sola, y al final de todo
-        let filaTotalesVieja = null;
-
-        this.gridApi.forEachNode(node => {
-            if (node.data?.id === 'TOTALES') {
-                filaTotalesVieja = node.data;
-            }
-        });
-
-        if (filaTotalesVieja) {
-            this.gridApi.applyTransaction({ remove: [filaTotalesVieja] });
-        }
-
+        if (!this.gridApi) return;
         const totales = this.obtenerTotalesGrid();
-
-        this.gridApi.applyTransaction({
-            add: [totales]
-        });
+        this.gridApi.setPinnedBottomRowData([totales]);
     }
 
     obtenerTotalesGrid() {
@@ -2223,7 +2208,8 @@ class GestionProduccionINY extends GestionProduccionBase {
         // ========================================
         // SUMAR TODAS LAS FILAS
         // ========================================
-        this.gridApi.forEachNode(node => {
+        // 🔥 CAMBIO: solo suma las filas que pasan el filtro
+        this.gridApi.forEachNodeAfterFilter(node => {
 
             if (!node.data || node.data.id === 'TOTALES') return;
 
@@ -2637,7 +2623,7 @@ class GestionProduccionINY extends GestionProduccionBase {
         nuevaFila.id = this.generarIdTemporal();
 
         const addIndex = params.node.data?.id === 'TOTALES'
-            ? params.node.rowIndex
+            ? undefined
             : params.node.rowIndex + 1;
 
         this.gridApi.applyTransaction({ add: [nuevaFila], addIndex });
@@ -2666,7 +2652,7 @@ class GestionProduccionINY extends GestionProduccionBase {
         this.recalcularFila(nuevaFila);
 
         const addIndex = params.node.data?.id === 'TOTALES'
-            ? params.node.rowIndex
+            ? undefined
             : params.node.rowIndex + 1;
 
         this.gridApi.applyTransaction({ add: [nuevaFila], addIndex });
@@ -2702,10 +2688,16 @@ class GestionProduccionINY extends GestionProduccionBase {
             menu.style.left = e.pageX + "px";
             menu.style.top = e.pageY + "px";
 
-            const rowIndex = this.gridApi.getFocusedCell()?.rowIndex
-                ?? this.gridApi.getDisplayedRowCount() - 1;
+            // 🔥 CAMBIO: detectar si la celda enfocada es de la fila anclada (totales)
+            const focused = this.gridApi.getFocusedCell();
 
-            this.filaSeleccionada = this.gridApi.getDisplayedRowAtIndex(rowIndex);
+            if (focused && focused.rowPinned === 'bottom') {
+                this.filaSeleccionada = this.gridApi.getPinnedBottomRow(focused.rowIndex);
+            } else {
+                const rowIndex = focused?.rowIndex
+                    ?? this.gridApi.getDisplayedRowCount() - 1;
+                this.filaSeleccionada = this.gridApi.getDisplayedRowAtIndex(rowIndex);
+            }
 
             const eliminar = menu.querySelector('[data-action="eliminar"]');
             const copiar = menu.querySelector('[data-action="copiar"]');
@@ -3024,17 +3016,20 @@ class ExcelExporterINY extends ExcelExporterBase {
     }
 
     agregarFilasDatos(worksheet, estructura) {
-        let filaTotales = null;
+        const textFields = this.getTextFields();
 
+        // ========================================
+        // FILAS DE DATOS (solo las filtradas/ordenadas)
+        // ========================================
         this.gridApi.forEachNodeAfterFilterAndSort(node => {
-            if (node.data && node.data.id === 'TOTALES') { filaTotales = node; return; }
+            if (!node.data || node.data.id === 'TOTALES') return;
 
             const fila = [];
             estructura.grupos.forEach(grupo => {
                 grupo.children.forEach(col => {
                     let valor = node.data[col.field];
                     if (valor !== null && valor !== undefined && valor !== '' &&
-                        !this.getTextFields().includes(col.field)) {
+                        !textFields.includes(col.field)) {
                         valor = parseFloat(valor);
                     }
                     fila.push((valor === 0 || valor === '0') ? 0 : (valor || ''));
@@ -3043,13 +3038,18 @@ class ExcelExporterINY extends ExcelExporterBase {
             worksheet.addRow(fila);
         });
 
-        if (filaTotales) {
+        // ========================================
+        // FILA DE TOTALES (desde la fila anclada)
+        // ========================================
+        const nodoTotales = this.gridApi.getPinnedBottomRow(0);
+
+        if (nodoTotales && nodoTotales.data) {
             const fila = [];
             estructura.grupos.forEach(grupo => {
                 grupo.children.forEach(col => {
-                    let valor = filaTotales.data[col.field];
+                    let valor = nodoTotales.data[col.field];
                     if (valor !== null && valor !== undefined && valor !== '' &&
-                        !this.getTextFields().includes(col.field)) {
+                        !textFields.includes(col.field)) {
                         valor = parseFloat(valor);
                     } else if (!valor) { valor = ''; }
                     fila.push((valor === 0 || valor === '0') ? 0 : (valor || ''));
