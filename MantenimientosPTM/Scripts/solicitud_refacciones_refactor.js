@@ -226,6 +226,22 @@ class SolicitudRefaccionesApp {
         $(document).on('change', '.chk-articuloSalida', () => {
             self.solicitudManager.actualizarContadorArticulos();
         });
+
+        //Eventos para busqueda de solicitantes
+        $('#numEmpleado')
+            .off('input blur')
+            .on('input', function () {
+                $(this).data('editado', true);
+            })
+            .on('blur', (e) => {
+                const $el = $(e.currentTarget);
+
+                if (!$el.data('editado')) return;
+                $el.data('editado', false);
+
+                this.busquedaSolicitanteDevPendiente =
+                    self.solicitudManager.buscarDatosSolicitanteChangeDev('nomina', 'salida');
+            });
     }
 
     // ========================================
@@ -357,6 +373,8 @@ class SolicitudRefaccionesApp {
             $('#solicitante').val(Nombresolicita || '');
             $('#numEmpleado').val(numeroempleado || '');
             $('#area').val(departamento || '');
+
+
             //Buscamos la informacion correcta del solicitante
             const datosSolicitante = await this.buscarDatosSolicitante(Nombresolicita, numeroempleado)
 
@@ -372,6 +390,8 @@ class SolicitudRefaccionesApp {
                     numeroNomina: $('#numEmpleado').val()
                 };  
             }                      
+
+
 
             // Firmas
             await this.solicitudManager.llenarFirmas(datosSolicitante);
@@ -415,8 +435,12 @@ class SolicitudRefaccionesApp {
             $('#devolucionNumEmpleado').val(numeroempleado || '');
             $('#devolucionArea').val(departamento || '');
 
+            this.busquedaSolicitanteDevPendiente =
+                this.solicitudManager.buscarDatosSolicitanteChangeDev('nomina','devolucion');
+
             // ✅ Ya no filtramos aquí: el render decide qué es editable
             this.solicitudManager.abrirModalDevolucion(salidas, devoluciones);
+
         } catch (error) {
             console.error('Error al obtener artículos atendidos:', error);
             AlertManager.mostrar('Error al obtener los artículos atendidos.', 'warning');
@@ -2126,12 +2150,26 @@ class SolicitudManager {
 
 
     //Busquda de solicitante en devoluciones
-    async buscarDatosSolicitanteChangeDev(tipoBusqueda) {
+    async buscarDatosSolicitanteChangeDev(tipoBusqueda,origen) {
 
-        const nombre = ($('#devolucionSolicitante').val() || '').toString().trim();
-        const numeroNomina = ($('#devolucionNumEmpleado').val() || '').toString().trim();
+        let nombre = "";
+
+        let numeroNomina = "";
+
+        switch (origen) {
+            case "devolucion":
+                nombre = ($('#devolucionSolicitante').val() || '').toString().trim();
+                numeroNomina = ($('#devolucionNumEmpleado').val() || '').toString().trim();
+                break;
+
+            case "salida":
+                nombre = ($('#solicitante').val() || '').toString().trim();
+                numeroNomina = ($('#numEmpleado').val() || '').toString().trim();
+                break;
+        }
 
         let nombreBusqueda = '';
+
         let nominaBusqueda = '';
 
         if (tipoBusqueda === 'nombre') {
@@ -2155,17 +2193,38 @@ class SolicitudManager {
 
         if (datosSolicitante) {
 
-            $('#devolucionSolicitante').val(
-                datosSolicitante.datos.NOMBRE_COMPLETO || ''
-            );
+            switch (origen)
+            {
+                case "devolucion":
+                    $('#devolucionSolicitante').val(
+                        datosSolicitante.datos.NOMBRE_COMPLETO || ''
+                    );
 
-            $('#devolucionNumEmpleado').val(
-                datosSolicitante.datos.NUM_NOMINA || ''
-            );
+                    $('#devolucionNumEmpleado').val(
+                        datosSolicitante.datos.NUM_NOMINA || ''
+                    );
 
-            $('#devolucionArea').val(
-                datosSolicitante.datos.DEPARTAMENTO || ''
-            );
+                    $('#devolucionArea').val(
+                        datosSolicitante.datos.DEPARTAMENTO || ''
+                    );
+                    break;
+
+                case "salida":
+                    $('#solicitante').val(
+                        datosSolicitante.datos.NOMBRE_COMPLETO || ''
+                    );
+
+                    $('#numEmpleado').val(
+                        datosSolicitante.datos.NUM_NOMINA || ''
+                    );
+
+                    $('#area').val(
+                        datosSolicitante.datos.DEPARTAMENTO || ''
+                    );
+                    break;
+            }
+
+            
 
             this.cargaFirmasPendiente = this.llenarFirmas(datosSolicitante);
 
@@ -2175,9 +2234,19 @@ class SolicitudManager {
 
         } else {
 
-            $('#devolucionSolicitante').val('');
-            $('#devolucionNumEmpleado').val('');
-            $('#devolucionArea').val('');
+            switch (origen) {
+                case "devolucion":
+                    $('#devolucionSolicitante').val('');
+                    $('#devolucionNumEmpleado').val('');
+                    $('#devolucionArea').val('');
+                    break;
+
+                case "salida":
+                    $('#solicitante').val('');
+                    $('#numEmpleado').val('');
+                    $('#area').val('');
+                    break;
+            }
 
             await this.llenarFirmas(null);
 
@@ -2582,24 +2651,20 @@ class SolicitudManager {
             }
         });
 
-        //Eventos para busqueda de solicitantes
-        $('#devolucionSolicitante')
-            .off('change.buscarSolicitanteDev')
-            .on('change.buscarSolicitanteDev', () => {
-
-                this.busquedaSolicitanteDevPendiente =
-                    this.buscarDatosSolicitanteChangeDev('nombre');
-
-            });
-
 
         $('#devolucionNumEmpleado')
-            .off('change.buscarSolicitanteDev')
-            .on('change.buscarSolicitanteDev', () => {
+            .off('input blur')
+            .on('input', function () {
+                $(this).data('editado', true);
+            })
+            .on('blur', (e) => {
+                const $el = $(e.currentTarget);
+
+                if (!$el.data('editado')) return;
+                $el.data('editado', false);
 
                 this.busquedaSolicitanteDevPendiente =
-                    this.buscarDatosSolicitanteChangeDev('nomina');
-
+                    this.buscarDatosSolicitanteChangeDev('nomina','devolucion');
             });
     }
     
@@ -3637,17 +3702,6 @@ $(document).ready(function () {
     const iniciarApp = () => {
         const app = new SolicitudRefaccionesApp();
         app.inicializar();
-
-        $('#solicitante').on('change', function () {
-           
-            app.busquedaSolicitantePendiente =
-                app.buscarDatosSolicitanteChange('nombre');
-        });
-
-        $('#numEmpleado').on('change', function () {
-            app.busquedaSolicitantePendiente =
-                app.buscarDatosSolicitanteChange('nomina');
-        });
 
         // ✅ Exponer para debugging (solo desarrollo)
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {

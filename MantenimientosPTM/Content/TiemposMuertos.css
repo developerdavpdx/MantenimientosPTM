@@ -439,3 +439,9 @@
     .btn-colapso-filtros.colapsado i {
         transform: rotate(180deg);
     }
+
+.ag-floating-bottom .ag-row {
+    font-weight: bold;
+    background-color: #e9ecef;
+    border-top: 2px solid #0058a1;
+}

@@ -2484,24 +2484,24 @@ class GestionProduccionINY extends GestionProduccionBase {
             return;
         }
 
-        const camposObligatorios = [
-            { campo: "FECHA", nombre: "Fecha" },
-            { campo: "LINEA", nombre: "Línea" },
-            { campo: "TURNO", nombre: "Turno" },
-            { campo: "HORAS_PROGRAMADAS", nombre: "Horas Programadas" }
-        ];
+        //const camposObligatorios = [
+        //    { campo: "FECHA", nombre: "Fecha" },
+        //    { campo: "LINEA", nombre: "Línea" },
+        //    { campo: "TURNO", nombre: "Turno" },
+        //    { campo: "HORAS_PROGRAMADAS", nombre: "Horas Programadas" }
+        //];
 
-        for (let i = 0; i < datos.length; i++) {
-            const fila = datos[i];
-            for (const campo of camposObligatorios) {
-                if (!fila[campo.campo] && fila[campo.campo] !== 0) {
-                    AlertManager.mostrar(`Falta el campo "${campo.nombre}" en la fila ${i + 1}`, 'warning');
-                    $("#btnGuardarCambios").prop("disabled", false);
-                    $("#btnGuardarCambios").html('<i class="bi bi-save me-1"></i>Guardar');
-                    return;
-                }
-            }
-        }
+        //for (let i = 0; i < datos.length; i++) {
+        //    const fila = datos[i];
+        //    for (const campo of camposObligatorios) {
+        //        if (!fila[campo.campo] && fila[campo.campo] !== 0) {
+        //            AlertManager.mostrar(`Falta el campo "${campo.nombre}" en la fila ${i + 1}`, 'warning');
+        //            $("#btnGuardarCambios").prop("disabled", false);
+        //            $("#btnGuardarCambios").html('<i class="bi bi-save me-1"></i>Guardar');
+        //            return;
+        //        }
+        //    }
+        //}
 
         $.ajax({
             url: `/${this.URLBase}/GuardarTiemposMuertosINY`,

@@ -3053,35 +3053,35 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         // ========================================
         // VALIDACIONES CAMPOS OBLIGATORIOS
         // ========================================
-        const camposObligatorios = [
-            { campo: "MES", nombre: "Mes" },
-            { campo: "FECHA", nombre: "Fecha" },
-            { campo: "LINEA", nombre: "Línea" },
-            { campo: "PRODUCTO", nombre: "Producto" },
-            { campo: "TURNO", nombre: "Turno" },
-            { campo: "GRUPO", nombre: "Grupo" },
-            { campo: "HORAS_PROGRAMADAS", nombre: "Horas Programadas" }
-        ];
+        //const camposObligatorios = [
+        //    { campo: "MES", nombre: "Mes" },
+        //    { campo: "FECHA", nombre: "Fecha" },
+        //    { campo: "LINEA", nombre: "Línea" },
+        //    { campo: "PRODUCTO", nombre: "Producto" },
+        //    { campo: "TURNO", nombre: "Turno" },
+        //    { campo: "GRUPO", nombre: "Grupo" },
+        //    { campo: "HORAS_PROGRAMADAS", nombre: "Horas Programadas" }
+        //];
 
-        for (let i = 0; i < datos.length; i++) {
+        //for (let i = 0; i < datos.length; i++) {
 
-            const fila = datos[i];
+        //    const fila = datos[i];
 
-            for (const campo of camposObligatorios) {
+        //    for (const campo of camposObligatorios) {
 
-                if (!fila[campo.campo] && fila[campo.campo] !== 0) {
+        //        if (!fila[campo.campo] && fila[campo.campo] !== 0) {
 
-                    AlertManager.mostrar(
-                        `Falta el campo "${campo.nombre}" en la fila ${i + 1}`,
-                        "warning"
-                    );
+        //            AlertManager.mostrar(
+        //                `Falta el campo "${campo.nombre}" en la fila ${i + 1}`,
+        //                "warning"
+        //            );
 
-                    return;
-                }
+        //            return;
+        //        }
 
-            }
+        //    }
 
-        }
+        //}
 
         // ========================================
         // BOTÓN LOADING

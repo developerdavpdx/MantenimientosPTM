@@ -2370,25 +2370,25 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             return;
         }
 
-        const camposObligatorios = [
-            { campo: "FECHA", nombre: "Fecha" },
-            { campo: "LINEA", nombre: "Línea" },
-            { campo: "CORRUGADOR", nombre: "Corrugador" },
-            { campo: "PRODUCTO", nombre: "Producto" },
-            { campo: "TURNO", nombre: "Turno" },
-            { campo: "GRUPO", nombre: "Grupo" },
-            { campo: "HORAS_PROGRAMADAS", nombre: "Horas Programadas" }
-        ];
+        //const camposObligatorios = [
+        //    { campo: "FECHA", nombre: "Fecha" },
+        //    { campo: "LINEA", nombre: "Línea" },
+        //    { campo: "CORRUGADOR", nombre: "Corrugador" },
+        //    { campo: "PRODUCTO", nombre: "Producto" },
+        //    { campo: "TURNO", nombre: "Turno" },
+        //    { campo: "GRUPO", nombre: "Grupo" },
+        //    { campo: "HORAS_PROGRAMADAS", nombre: "Horas Programadas" }
+        //];
 
-        for (let i = 0; i < datos.length; i++) {
-            const fila = datos[i];
-            for (const campo of camposObligatorios) {
-                if (!fila[campo.campo] && fila[campo.campo] !== 0) {
-                    AlertManager.mostrar(`Falta el campo "${campo.nombre}" en la fila ${i + 1}`, "warning");
-                    return;
-                }
-            }
-        }
+        //for (let i = 0; i < datos.length; i++) {
+        //    const fila = datos[i];
+        //    for (const campo of camposObligatorios) {
+        //        if (!fila[campo.campo] && fila[campo.campo] !== 0) {
+        //            AlertManager.mostrar(`Falta el campo "${campo.nombre}" en la fila ${i + 1}`, "warning");
+        //            return;
+        //        }
+        //    }
+        //}
 
         $("#btnGuardarCambios")
             .prop("disabled", true)

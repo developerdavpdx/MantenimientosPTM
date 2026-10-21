@@ -1604,7 +1604,8 @@ namespace MantenimientosPTM.Controllers
                 { "P_QUERY", (null, ParameterDirection.Input, HanaDbType.NVarChar) },
                 { "P_TOP", (null, ParameterDirection.Input, HanaDbType.Integer) },
                 { "P_MODO", ("SELECT", ParameterDirection.Input, HanaDbType.NVarChar) },
-                { "P_ESTATUS", (string.IsNullOrEmpty(FiltroEstatus) ? (object)null : FiltroEstatus, ParameterDirection.Input, HanaDbType.NVarChar) }
+                { "P_ESTATUS", (string.IsNullOrEmpty(FiltroEstatus) ? (object)null : FiltroEstatus, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_CLASIFICACION", (null, ParameterDirection.Input, HanaDbType.NVarChar) }
             };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -1684,7 +1685,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_QUERY", (string.IsNullOrEmpty(query) ? (object)null : query, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_TOP", (20, ParameterDirection.Input, HanaDbType.Integer) },
                     { "P_MODO", ("SEARCH", ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_ESTATUS", (string.IsNullOrEmpty(FiltroEstatus) ? (object)null : FiltroEstatus, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_ESTATUS", (string.IsNullOrEmpty(FiltroEstatus) ? (object)null : FiltroEstatus, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CLASIFICACION", (null, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure

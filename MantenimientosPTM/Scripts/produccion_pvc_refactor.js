@@ -350,7 +350,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             // ✅ NUEVO: Productos terminados se agregan también
             const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados,FiltroTurno, false);
+            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
 
             // If no hay datos originales, correctivos, preventivos, paros NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {
@@ -2356,6 +2356,8 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             onCellValueChanged: (event) => this.onCellChanged(event),
 
+            onFilterChanged: () => this.recalcularTotales(),
+
             onGridReady: (params) => {
                 this.gridApi = params.api;
                 this.gridColumnApi = params.columnApi;
@@ -2426,29 +2428,35 @@ class GestionProduccionPVC extends GestionProduccionBase {
     }
 
     agregarFilaTotales() {
-
         if (!this.gridApi) return;
 
-        // 🔥 Si ya existe una fila de TOTALES, la quitamos primero
-        // para que siempre quede una sola, y al final de todo
-        let filaTotalesVieja = null;
-
-        this.gridApi.forEachNode(node => {
-            if (node.data?.id === 'TOTALES') {
-                filaTotalesVieja = node.data;
-            }
-        });
-
-        if (filaTotalesVieja) {
-            this.gridApi.applyTransaction({ remove: [filaTotalesVieja] });
-        }
-
         const totales = this.obtenerTotalesGrid();
-
-        this.gridApi.applyTransaction({
-            add: [totales]
-        });
+        this.gridApi.setPinnedBottomRowData([totales]);
     }
+    //agregarFilaTotales() {
+
+    //    if (!this.gridApi) return;
+
+    //    // 🔥 Si ya existe una fila de TOTALES, la quitamos primero
+    //    // para que siempre quede una sola, y al final de todo
+    //    let filaTotalesVieja = null;
+
+    //    this.gridApi.forEachNode(node => {
+    //        if (node.data?.id === 'TOTALES') {
+    //            filaTotalesVieja = node.data;
+    //        }
+    //    });
+
+    //    if (filaTotalesVieja) {
+    //        this.gridApi.applyTransaction({ remove: [filaTotalesVieja] });
+    //    }
+
+    //    const totales = this.obtenerTotalesGrid();
+
+    //    this.gridApi.applyTransaction({
+    //        add: [totales]
+    //    });
+    //}
 
     formatearNumero(valor) {
         if (valor === null || valor === undefined || valor === '') return '';
@@ -2581,18 +2589,25 @@ class GestionProduccionPVC extends GestionProduccionBase {
     }
 
     recalcularTotales() {
+        if (!this.gridApi) return;
 
         const filaTotales = this.obtenerTotalesGrid();
-
-        this.gridApi.forEachNode((node) => {
-
-            if (node.data?.id === 'TOTALES') {
-
-                node.setData(filaTotales);
-            }
-
-        });
+        this.gridApi.setPinnedBottomRowData([filaTotales]);
     }
+
+    //recalcularTotales() {
+
+    //    const filaTotales = this.obtenerTotalesGrid();
+
+    //    this.gridApi.forEachNode((node) => {
+
+    //        if (node.data?.id === 'TOTALES') {
+
+    //            node.setData(filaTotales);
+    //        }
+
+    //    });
+    //}
 
     configurarEventos() {
         $('#btnExportarExcel').on('click', () => this.exportarExcel());
@@ -2737,35 +2752,35 @@ class GestionProduccionPVC extends GestionProduccionBase {
             return;
         }
 
-        const camposObligatorios = [
-            { campo: "FECHA", nombre: "Fecha" },
-            { campo: "LINEA", nombre: "Línea" },
-            { campo: "PRODUCTO", nombre: "Producto" },
-            { campo: "TURNO", nombre: "Turno" },
-            { campo: "TRIP", nombre: "TRIP" },
-            { campo: "HORAS_PROGRAMADAS", nombre: "Horas Programadas" }
-        ];
+        //const camposObligatorios = [
+        //    { campo: "FECHA", nombre: "Fecha" },
+        //    { campo: "LINEA", nombre: "Línea" },
+        //    { campo: "PRODUCTO", nombre: "Producto" },
+        //    { campo: "TURNO", nombre: "Turno" },
+        //    { campo: "TRIP", nombre: "TRIP" },
+        //    { campo: "HORAS_PROGRAMADAS", nombre: "Horas Programadas" }
+        //];
 
-        for (let i = 0; i < datos.length; i++) {
+        //for (let i = 0; i < datos.length; i++) {
 
-            const fila = datos[i];
+        //    const fila = datos[i];
 
-            for (const campo of camposObligatorios) {
+        //    for (const campo of camposObligatorios) {
 
-                if (!fila[campo.campo] && fila[campo.campo] !== 0) {
+        //        if (!fila[campo.campo] && fila[campo.campo] !== 0) {
 
-                    AlertManager.mostrar(
-                        `Falta el campo "${campo.nombre}" en la fila ${i + 1}`,
-                        'warning'
-                    );
-                    $("#btnGuardarCambios").prop("disabled", false);
-                    $("#btnGuardarCambios").html('<i class="bi bi-save me-1"></i>Guardar');
-                    return;
-                }
+        //            AlertManager.mostrar(
+        //                `Falta el campo "${campo.nombre}" en la fila ${i + 1}`,
+        //                'warning'
+        //            );
+        //            $("#btnGuardarCambios").prop("disabled", false);
+        //            $("#btnGuardarCambios").html('<i class="bi bi-save me-1"></i>Guardar');
+        //            return;
+        //        }
 
-            }
+        //    }
 
-        }
+        //}
 
         $.ajax({
 
@@ -2977,91 +2992,13 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
     agregarFila(params) {
 
-        const nuevaFila = {
+        const nuevaFila = this.crearFilaVacia();
+        nuevaFila.id = this.generarIdTemporal();
 
-            id: this.generarIdTemporal(),
-
-            // ========================================
-            // GENERALES
-            // ========================================
-
-            Mes: null,
-            Fecha: null,
-            Linea: null,
-            Producto: null,
-            Turno: null,
-            TRIP: null,
-
-            // ========================================
-            // PRODUCCIÓN
-            // ========================================
-
-            PesoMinimo: 0,
-            TRFabricados: null,
-            ProduccionNetaReal: null,
-            PesoEstandar: 0,
-            PorcentajeSobrepeso: 0,
-            TotalScrapKg: null,
-            PorcentajeScrap: 0,
-
-            // ========================================
-            // DISPONIBILIDAD
-            // ========================================
-
-            HorasProgramadas: null,
-
-            // ========================================
-            // TIEMPO NO DISPONIBLE
-            // ========================================
-
-            MantenimientoPreventivo: null,
-            ControlInventarios: null,
-            FaltaMateriaInsumos: null,
-            CambioMolde: null,
-            Calentamiento: null,
-            ParoArranqueNoProgramado: null,
-            ArranqueEstabilizacion: null,
-
-            // ========================================
-            // TIEMPO NO PRODUCTIVO
-            // ========================================
-
-            MttoCorrectivos: null,
-            FallaElectrica: null,
-            Servicios: null,
-            CambioMoldeSetupExcesos: null,
-            Herramental: null,
-            FallaOperacion: null,
-            LimpiezaTanque: null,
-            FaltaMaterial: null,
-            FaltaPersonal: null,
-            FaltaRefacciones: null,
-
-            // ========================================
-            // KPIS
-            // ========================================
-
-            TiempoDisponible: 0,
-            TiempoProductivo: 0,
-            // 🔥 AGREGAR:
-            DisponibilidadPorcentaje: 0,
-            KgPorTiempoDisponible: 0,
-            KgHrLinea: null,
-            KgHrProducto: null,
-            KgNetosHrReales: 0,
-            PorcentajeRendimiento: 0,
-            PorcentajeCalidad: 0,
-            PorcentajeOEE: 0,
-            PorcentajeEficienciaProducto: 0,
-            ObjetivoEficiencia: 91,
-            EficienciaOperativa: 0
-        };
-
-        // 🔥 Si es la fila de TOTALES, insertar ANTES de ella (en su índice)
-        // Si no, insertar DESPUÉS de la fila seleccionada
-        const addIndex = params.node.data?.id === 'TOTALES' 
-            ? params.node.rowIndex 
-            : params.node.rowIndex + 1;
+        // 🔥 CAMBIO: si se hizo clic en TOTALES (fila anclada), agregar al final.
+        // Si no, insertar justo después de la fila seleccionada.
+        const esTotales = params.node.data?.id === 'TOTALES';
+        const addIndex = esTotales ? undefined : params.node.rowIndex + 1;
 
         this.gridApi.applyTransaction({
             add: [nuevaFila],
@@ -3069,7 +3006,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
         });
 
         this.recalcularTotales();
-
     }
 
     copiarFilaAnterior(params) {
@@ -3096,8 +3032,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         this.recalcularFila(nuevaFila);
 
+        // 🔥 CAMBIO: undefined = al final
         const addIndex = params.node.data?.id === 'TOTALES'
-            ? params.node.rowIndex
+            ? undefined
             : params.node.rowIndex + 1;
 
         this.gridApi.applyTransaction({ add: [nuevaFila], addIndex });
@@ -3106,31 +3043,20 @@ class GestionProduccionPVC extends GestionProduccionBase {
     }
 
     eliminarFila(params) {
-
         if (params.node.data.id === 'TOTALES') return;
 
-        // 🔥 No permitir eliminar si tiene ID
         if (params.node.data.ID_REGISTRO) {
-
-            AlertManager.mostrar(
-                "No se puede eliminar un registro guardado",
-                "warning"
-            );
-
+            AlertManager.mostrar("No se puede eliminar un registro guardado", "warning");
             return;
         }
 
-        this.gridApi.applyTransaction({
-            remove: [params.node.data]
-        });
-
+        this.gridApi.applyTransaction({ remove: [params.node.data] });
         this.recalcularTotales();
     }
 
     configurarMenuContextual() {
 
         const menu = document.getElementById("menuContextual");
-
         const tabla = document.querySelector('#tablaProduccion');
 
         if (!tabla) return;
@@ -3143,25 +3069,28 @@ class GestionProduccionPVC extends GestionProduccionBase {
             menu.style.left = e.pageX + "px";
             menu.style.top = e.pageY + "px";
 
-            const cell = this.gridApi.getCellRanges()?.[0];
-            const rowIndex = this.gridApi.getFocusedCell()?.rowIndex
-                ?? this.gridApi.getDisplayedRowCount() - 1;
+            // 🔥 CAMBIO: detectar si la celda enfocada es de la fila anclada (totales)
+            const focused = this.gridApi.getFocusedCell();
 
-            this.filaSeleccionada =
-                this.gridApi.getDisplayedRowAtIndex(rowIndex);
+            if (focused && focused.rowPinned === 'bottom') {
+                this.filaSeleccionada = this.gridApi.getPinnedBottomRow(focused.rowIndex);
+            } else {
+                const rowIndex = focused?.rowIndex
+                    ?? this.gridApi.getDisplayedRowCount() - 1;
+                this.filaSeleccionada = this.gridApi.getDisplayedRowAtIndex(rowIndex);
+            }
 
             const eliminar = menu.querySelector('[data-action="eliminar"]');
             const copiar = menu.querySelector('[data-action="copiar"]');
 
-            // 🔥 En la fila de TOTALES solo permitir "Agregar", desactivar "Copiar" y "Eliminar"
+            // En la fila de TOTALES solo permitir "Agregar"
             if (this.filaSeleccionada?.data?.id === 'TOTALES') {
                 eliminar.style.display = "none";
                 copiar.style.display = "none";
-                menu.style.display = "block";
                 return;
             }
 
-            // 🔥 Ocultar eliminar si tiene ID
+            // Ocultar eliminar si ya está guardado
             if (this.filaSeleccionada?.data?.ID_REGISTRO) {
                 eliminar.style.display = "none";
             } else {
@@ -3169,7 +3098,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }
 
             copiar.style.display = "block";
-
         });
 
         document.addEventListener("click", () => {
@@ -3413,22 +3341,22 @@ class GestionProduccionPVC extends GestionProduccionBase {
             // RENDIMIENTO Y OEE
             DisponibilidadPorcentaje: null,
             KgPorTiempoDisponible: 0,
-            KgHrLinea: null,                     // en blanco, mezcla productos/líneas distintos
-            KgHrProducto: null,                  // en blanco, mezcla productos/líneas distintos
+            KgHrLinea: null,
+            KgHrProducto: null,
             KgNetosHrReales: 0,
-            PorcentajeRendimiento: null,         // en blanco, depende de KgHrProducto
+            PorcentajeRendimiento: null,
             PorcentajeCalidad: null,
-            PorcentajeOEE: null,                 // en blanco, depende de %Rendimiento
-            PorcentajeEficienciaProducto: null,  // en blanco, igual que %Rendimiento
-            ObjetivoEficiencia: null,            // se calcula como promedio al final
+            PorcentajeOEE: null,
+            PorcentajeEficienciaProducto: null,
+            ObjetivoEficiencia: null,
             EficienciaOperativa: null
         };
 
-        // Acumuladores para el promedio de ObjetivoEficiencia
         let sumaObjetivoEficiencia = 0;
         let conteoObjetivoEficiencia = 0;
 
-        this.gridApi.forEachNode((node) => {
+        // 🔥 CAMBIO: solo suma las filas que pasan el filtro
+        this.gridApi.forEachNodeAfterFilter((node) => {
 
             if (!node.data || node.data.id === 'TOTALES') {
                 return;
@@ -3464,20 +3392,16 @@ class GestionProduccionPVC extends GestionProduccionBase {
             totales.TiempoDisponible += Number(node.data.TiempoDisponible || 0);
             totales.TiempoProductivo += Number(node.data.TiempoProductivo || 0);
 
-            // Acumulables (sí tienen sentido sumados)
             totales.KgPorTiempoDisponible += Number(node.data.KgPorTiempoDisponible || 0);
             totales.KgNetosHrReales += Number(node.data.KgNetosHrReales || 0);
 
-            // ObjetivoEficiencia: se promedia, no se suma
             const objetivo = node.data.ObjetivoEficiencia;
             if (objetivo !== null && objetivo !== undefined && objetivo !== '' && !isNaN(Number(objetivo))) {
                 sumaObjetivoEficiencia += Number(objetivo);
                 conteoObjetivoEficiencia++;
             }
-
         });
 
-        // Promedio de Objetivo de Eficiencia
         totales.ObjetivoEficiencia = conteoObjetivoEficiencia > 0
             ? sumaObjetivoEficiencia / conteoObjetivoEficiencia
             : null;
@@ -3487,27 +3411,17 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 ((totales.ProduccionNetaReal / totales.PesoEstandar) - 1) * 100;
         }
 
-        const totalProduccion =
-            totales.ProduccionNetaReal + totales.TotalScrapKg;
+        const totalProduccion = totales.ProduccionNetaReal + totales.TotalScrapKg;
 
         if (totalProduccion > 0) {
-            totales.PorcentajeScrap =
-                (totales.TotalScrapKg / totalProduccion) * 100;
-
-            // % Calidad recalculado desde los totales de kg
-            totales.PorcentajeCalidad =
-                (totales.ProduccionNetaReal / totalProduccion) * 100;
+            totales.PorcentajeScrap = (totales.TotalScrapKg / totalProduccion) * 100;
+            totales.PorcentajeCalidad = (totales.ProduccionNetaReal / totalProduccion) * 100;
         }
 
-        // Disponibilidad % recalculada desde los totales de tiempo
         if (totales.TiempoDisponible > 0) {
             totales.DisponibilidadPorcentaje =
                 (totales.TiempoProductivo / totales.TiempoDisponible) * 100;
         }
-
-        // KgHrLinea, KgHrProducto, PorcentajeRendimiento, PorcentajeOEE,
-        // PorcentajeEficienciaProducto y EficienciaOperativa se quedan en null
-        // porque mezclan productos/líneas distintas, igual que en el Excel.
 
         return totales;
     }
@@ -3737,15 +3651,17 @@ class ExcelExporterPVC extends ExcelExporterBase {
     }
 
     agregarFilasDatos(worksheet, estructura) {
-        let filaTotales = null;
 
-        // Primero, recopilar todos los datos (excluyendo TOTALES)
+        const camposTexto = ['Mes', 'Fecha', 'Producto', 'TRIP', 'Linea', 'Turno'];
+        const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+        // ========================================
+        // FILAS DE DATOS (solo las filtradas/ordenadas)
+        // ========================================
         this.gridApi.forEachNodeAfterFilterAndSort((node) => {
-            // Guardar la fila de totales para procesarla al final
-            if (node.data && node.data.id === 'TOTALES') {
-                filaTotales = node;
-                return; // No procesarla aquí, la haremos al final
-            }
+
+            if (!node.data || node.data.id === 'TOTALES') return;
 
             const fila = [];
 
@@ -3753,48 +3669,16 @@ class ExcelExporterPVC extends ExcelExporterBase {
                 grupo.children.forEach(col => {
                     let valor = node.data[col.field];
 
-                    // ========================================
-                    // CALCULAR MES SI VIENE VACÍO
-                    // ========================================
-
-                    if (
-                        col.field === 'Mes' &&
-                        (!valor || valor === '')
-                    ) {
-
-                        if (node.data.Fecha) {
-
-                            valor = [
-                                'ENERO',
-                                'FEBRERO',
-                                'MARZO',
-                                'ABRIL',
-                                'MAYO',
-                                'JUNIO',
-                                'JULIO',
-                                'AGOSTO',
-                                'SEPTIEMBRE',
-                                'OCTUBRE',
-                                'NOVIEMBRE',
-                                'DICIEMBRE'
-                            ][new Date(node.data.Fecha).getMonth()];
-                        }
-
+                    // Calcular Mes si viene vacío
+                    if (col.field === 'Mes' && (!valor || valor === '') && node.data.Fecha) {
+                        valor = meses[new Date(node.data.Fecha).getMonth()];
                     }
 
                     if (valor !== null && valor !== undefined && valor !== '' &&
-                        ![
-                            'Mes',
-                            'Fecha',
-                            'Producto',
-                            'TRIP',
-                            'Linea',
-                            'Turno'
-                        ].includes(col.field)) {
+                        !camposTexto.includes(col.field)) {
                         valor = parseFloat(valor);
                     }
 
-                    // 🔥 Si el valor es 0, mantener el 0 (no convertir a string vacío)
                     if (valor === 0 || valor === '0') {
                         fila.push(0);
                     } else {
@@ -3806,31 +3690,27 @@ class ExcelExporterPVC extends ExcelExporterBase {
             worksheet.addRow(fila);
         });
 
-        // Ahora procesar la fila de totales si existe
-        if (filaTotales) {
+        // ========================================
+        // FILA DE TOTALES (desde la fila anclada)
+        // ========================================
+        const nodoTotales = this.gridApi.getPinnedBottomRow(0);
+
+        if (nodoTotales && nodoTotales.data) {
+
             const fila = [];
 
             estructura.grupos.forEach(grupo => {
                 grupo.children.forEach(col => {
-                    let valor = filaTotales.data[col.field];
+                    let valor = nodoTotales.data[col.field];
 
-                    // Para TOTALES, mostrar valores numéricos (no vacíos)
                     if (valor !== null && valor !== undefined && valor !== '') {
-                        if (![
-                            'Mes',
-                            'Fecha',
-                            'Producto',
-                            'TRIP',
-                            'Linea',
-                            'Turno'
-                        ].includes(col.field)) {
+                        if (!camposTexto.includes(col.field)) {
                             valor = parseFloat(valor);
                         }
                     } else {
                         valor = '';
                     }
 
-                    // 🔥 Si el valor es 0, mantener el 0 (no convertir a string vacío)
                     if (valor === 0 || valor === '0') {
                         fila.push(0);
                     } else {
