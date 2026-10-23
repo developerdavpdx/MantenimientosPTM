@@ -45,7 +45,6 @@ class ReporteStockApp {
         });
 
         // ✅ Generar solicitud de compra desde artículos seleccionados en el reporte
-        // ✅ Generar solicitud de compra desde artículos seleccionados en el reporte
         $('#btnGenerarSolicitudCompra').on('click', async () => {
             const dt = this.reporteManager.table;
             if (!dt) {
@@ -121,10 +120,11 @@ class ReporteStockApp {
 
                     // ✅ SI ES DESDE REPORTE STOCK: Cantidad editable | SI NO: Badge solo lectura
                     const cantidadHTML = esDesdeReporteStock
-                        ? `<input type="number" class="form-control form-control-sm text-center cantidad-editable" 
+                        ? `<input type="number" max="${item.Cantidad || 0}" class="form-control form-control-sm text-center CantidadEditable" 
                                   id="CantidadEditable_${i}" 
-                                  value="${item.Cantidad || 0}" 
+                                  value="${item.StatusValidacion == "Go!" ? item.Cantidad : 0}" 
                                   min="1" 
+                                  maxstock="${item.Max}"
                                   data-cantidad-original="${item.Cantidad || 0}"
                                   style="width: 80px;">`
                         : `<span class="badge bg-blue-ptm badge-custom">${item.Cantidad || 0}</span>`;
@@ -185,6 +185,57 @@ class ReporteStockApp {
                 AlertManager.mostrar('Error al procesar los artículos: ' + error.message, 'warning');
                 console.error(error);
             }
+        });
+
+        //Validacion de cantidades en salidas
+        $(document).on('input', '.CantidadEditable', function () {
+
+            const $input = $(this);
+            let maxstock = $input.attr('maxstock');
+            let value = $input.val();
+            if (!value) {
+                AlertManager.mostrar(
+                    `Por favor ingrese una cantidad valida`,
+                    'warning'
+                );
+                let finalval = $input.val().toString()
+                    .replace(/[^\d.]/g, '')   // Solo números y punto
+                    .replace(/(\..*)\./g, '$1') // Solo un punto decimal
+                    .replace('e', ''); // Solo un punto decimal
+
+                setTimeout(() => {
+                    $($input.val(finalval));
+                }, 1000);
+
+                return false;
+            }
+
+            value = value
+                .toString()
+                .replace(/[^\d.]/g, '')   // Solo números y punto
+                .replace(/(\..*)\./g, '$1') // Solo un punto decimal
+                .replace('e', ''); // Solo un punto decimal
+
+            clearTimeout($input.data('timer'));
+
+            const timer = setTimeout(() => {
+
+                const cantidad = parseInt(value) || 0;
+                const maximo = parseInt($input.attr('max')) || 0;
+
+                if (cantidad > maximo) {
+
+                    $input.val(maximo);
+
+                    AlertManager.mostrar(
+                        `La cantidad máxima permitida es ${maximo} para llegar al maximo de stock del artículo con un máximo de (${maxstock})`,
+                        'warning'
+                    );
+                }
+
+            }, 1000);
+
+            $input.data('timer', timer);
         });
     }
 
@@ -459,8 +510,10 @@ class ReporteStockManager {
                         className: "text-center",
                         orderable: false,
                         width: '80px',
-                        render: (data) =>
-                            `<i class="bi bi-cart-plus text-primary me-1"></i>${this.formatearNumero(data)}`
+                        render: (data, type, row) => {
+                            const cantidad = row.StatusValidacion === "Stop!" ? 0 : data;
+                            return `<i class="bi bi-cart-plus text-primary me-1"></i>${this.formatearNumero(cantidad)}`;
+                        }
                     }
                 ],
 
