@@ -133,7 +133,7 @@ class FiltrosManager {
 
     inicializar() {
         EquiposUtil.llenarLineas(this.datos_usuario[0].PLANTA, "none", "FiltroLinea");
-        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA,1, "none", "FiltroProceso");
+        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, 1, "none", "FiltroProceso");
         console.log('✅ FiltrosManager inicializado');
     }
 
@@ -159,8 +159,6 @@ class MetricasManager {
         this.oeeDonutChart = null;
         this.tiempoMuertoDonutChart = null; // 🔥 nuevo
         this.tiempoEsperaDonutChart = null; // 🔥 nuevo
-        this.tiempoEsperaDonutChart = null; // 🔥 nuevo
-        this.cumplimientoPMDonutChart = null; // 🔥 nuevo
         this.cumplimientoPMDonutChart = null; // 🔥 nuevo
         this.mttrDonutChart = null; // 🔥 nuevo
         this.mtbfDonutChart = null; // 🔥 nuevo
@@ -202,6 +200,7 @@ class MetricasManager {
         this.cargarMetricasPorProceso();
         $("#FiltroPlanta").val(this.datos_usuario[0].PLANTA);
         console.log('✅ MetricasManager inicializado');
+        window.addEventListener('resize', () => this.ajustarTextosCentrales());
     }
 
     // ========================================
@@ -224,7 +223,7 @@ class MetricasManager {
 
         switch (Planta) {
             case 1:
-              clavesProceso = this.mapaProcesosP1[String(proceso)] ?? proceso;
+                clavesProceso = this.mapaProcesosP1[String(proceso)] ?? proceso;
                 break;
             case 2:
                 clavesProceso = this.mapaProcesosP2[String(proceso)] ?? proceso;
@@ -399,7 +398,7 @@ class MetricasManager {
                     data: [0, 0],
                     backgroundColor: ['#0dcaf0', '#a8eaf7'],
                     borderWidth: 3,
-                    borderColor: 'transparent'
+                    borderColor: 'transparent',
                 }]
             },
             options: {
@@ -459,13 +458,13 @@ class MetricasManager {
         $('#lbl-mtbf-correctivos').text(UIManager.fmt(paro) + ' hr');
     }
 
-    actualizarGraficaMTTR(otmc, manuales) {
+    actualizarGraficaMTTR(otmc, manuales, tiemporeparaciontotalval) {
         if (!this.mttrDonutChart) return;
-        this.mttrDonutChart.data.labels = ['Paros Correctivo', 'Paros manuales'];
-        this.mttrDonutChart.data.datasets[0].data = [otmc, manuales];
+        this.mttrDonutChart.data.labels = ['Paros Correctivo', 'Tiempo Reparación'];
+        this.mttrDonutChart.data.datasets[0].data = [otmc, tiemporeparaciontotalval];
         this.mttrDonutChart.update();
         $('#lbl-mttr-correctivos').text(otmc);
-        $('#lbl-mttr-productivo').text(manuales);
+        // $('#lbl-mttr-productivo').text(manuales);
     }
 
     actualizarGraficaOEE(disponibilidad, rendimiento, calidad) {
@@ -623,10 +622,10 @@ class MetricasManager {
                 this.actualizarGraficaTiempoMuerto(tiempoNoDisponibleVal, tiempoNoProductivoVal);
                 this.actualizarGraficaTiempoEspera(tiempoEsperaTotalVal, mttaVal);
                 this.actualizarGraficaCumplimientoPM(pmProgramadosVal, pmCerradosVal);
-                this.actualizarGraficaMTTR(totalOTMCVal, totalManualesVal);
+                this.actualizarGraficaMTTR(totalOTMCVal, totalManualesVal, tiempoReparacionTotalVal);
                 this.actualizarGraficaMTBF(tiempoOperativoVal, tiempoReparacionTotalVal);
                 this.actualizarGraficaDT(mtbfVal, mttrVal, mtbfNulo);
-
+                this.ajustarTextosCentrales();   // 👈 aquí
 
                 $('#labelProcesoActivo').text(filtros.proceso);
 
@@ -637,6 +636,41 @@ class MetricasManager {
                 AlertManager.mostrar('Error al obtener métricas', 'warning');
                 UIManager.mostrarSinDatos();
             }
+        });
+    }
+
+    // Ajusta el font-size del texto central para que quepa dentro del hueco del donut
+    ajustarTextoDonut(chart, el, maxPx = 30, minPx = 12) {
+        if (!chart || !el) return;
+        const canvas = chart.canvas;
+        const diametro = Math.min(canvas.clientWidth, canvas.clientHeight);
+        if (!diametro) return;                      // canvas oculto o sin tamaño aún
+
+        const hueco = diametro * 0.68 * 0.85;       // 0.68 = cutout, 0.85 = margen
+
+        el.style.display = 'inline-block';
+        el.style.whiteSpace = 'nowrap';
+
+        let size = maxPx;
+        el.style.fontSize = size + 'px';
+        while (el.scrollWidth > hueco && size > minPx) {
+            size--;
+            el.style.fontSize = size + 'px';
+        }
+    }
+
+    ajustarTextosCentrales() {
+        const mapa = [
+            ['metric-oee', this.oeeDonutChart],
+            ['metric-mtbf', this.mtbfDonutChart],
+            ['metric-mttr', this.mttrDonutChart],
+            ['metric-dt', this.dtDonutChart],
+            ['metric-cumplimientopm', this.cumplimientoPMDonutChart],
+            ['metric-tiempomuerto', this.tiempoMuertoDonutChart],
+            ['metric-mtta', this.tiempoEsperaDonutChart]
+        ];
+        mapa.forEach(([id, chart]) => {
+            this.ajustarTextoDonut(chart, document.getElementById(id));
         });
     }
 }

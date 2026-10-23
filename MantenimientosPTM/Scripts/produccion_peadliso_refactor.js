@@ -3169,7 +3169,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             const copiar = menu.querySelector('[data-action="copiar"]');
 
             // En la fila de TOTALES solo permitir "Agregar"
-            if (this.filaSeleccionada?.data?.id === 'TOTALES') {
+            if (!this.filaSeleccionada || this.filaSeleccionada?.data?.id === 'TOTALES') {
                 eliminar.style.display = "none";
                 copiar.style.display = "none";
                 return;
@@ -3191,10 +3191,16 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         menu.addEventListener("click", (event) => {
 
-            const action =
-                event.target.getAttribute("data-action");
+            const action = event.target.getAttribute("data-action");
 
-            if (!this.filaSeleccionada) return;
+            // 🔥 Grid vacío: solo permitir agregar
+            if (!this.filaSeleccionada) {
+                if (action === "agregar") {
+                    this.agregarFila({ data: { id: 'TOTALES' } });
+                }
+                menu.style.display = "none";
+                return;
+            }
 
             switch (action) {
 
@@ -3381,13 +3387,16 @@ class ArticuloAutocompleteEditor {
     init(params) {
 
         this.params = params;
+        this.valorInicial = params.value || '';   // 🔥 NUEVO
+        this.articuloSeleccionado = null;         // 🔥 NUEVO
+        this._avisado = false;                    // 🔥 NUEVO
 
         this.eContainer = document.createElement('div');
         this.eContainer.style.position = 'relative';
 
         this.eInput = document.createElement('input');
         this.eInput.className = 'form-control';
-        this.eInput.value = params.value || '';
+        this.eInput.value = this.valorInicial;    // 🔥 CAMBIO: usa valorInicial
 
         this.eDropdown = document.createElement('div');
         this.eDropdown.className = 'autocomplete-dropdown';
@@ -3509,11 +3518,23 @@ class ArticuloAutocompleteEditor {
     afterGuiAttached() {
         this.eInput.focus();
         this.eInput.select();
-        this.eInput.value = '';
     }
 
     getValue() {
-        return this.eInput.value;
+        // ✅ Eligió un artículo de la lista
+        if (this.articuloSeleccionado) {
+            return this.articuloSeleccionado.CodigoArticulo;
+        }
+
+        // ⚠️ Cambió el texto pero no seleccionó nada de la lista
+        const textoActual = (this.eInput.value || '').trim();
+        if (textoActual !== this.valorInicial && !this._avisado) {
+            this._avisado = true;
+            AlertManager.mostrar("Selecciona un artículo válido de la lista", "warning");
+        }
+
+        // En ambos casos se conserva el valor original
+        return this.valorInicial;
     }
 
     destroy() { }

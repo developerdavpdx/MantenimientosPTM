@@ -2377,8 +2377,8 @@ class GestionProduccionINY extends GestionProduccionBase {
 
                 datos.push({
                     ID_REGISTRO: node.data.ID_REGISTRO || null,
-                    OTMC: node.data.OTMC || null,
-                    OTMP: node.data.OTMP || null,
+                    OTMC: otmcFinal,   // antes: node.data.OTMC || null
+                    OTMP: otmpFinal,   // antes: node.data.OTMP || null
                     ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null,
                     ID_PARO: node.data.ID_PARO || null, // 🟦 NUEVO: Identificador del paro manual
                     MES: node.data.Mes,
@@ -2703,7 +2703,7 @@ class GestionProduccionINY extends GestionProduccionBase {
             const copiar = menu.querySelector('[data-action="copiar"]');
 
             // 🔥 En la fila de TOTALES solo permitir "Agregar", desactivar "Copiar" y "Eliminar"
-            if (this.filaSeleccionada?.data?.id === 'TOTALES') {
+            if (!this.filaSeleccionada || this.filaSeleccionada?.data?.id === 'TOTALES') {
                 eliminar.style.display = "none";
                 copiar.style.display = "none";
             } else {
@@ -2717,7 +2717,15 @@ class GestionProduccionINY extends GestionProduccionBase {
 
         menu.addEventListener("click", (e) => {
             const accion = e.target.dataset.action;
-            if (!this.filaSeleccionada) return;
+
+            // 🔥 Grid vacío: solo permitir agregar, tratándolo como click en TOTALES (agrega al final)
+            if (!this.filaSeleccionada) {
+                if (accion === "agregar") {
+                    this.agregarFila({ node: { data: { id: 'TOTALES' } } });
+                }
+                menu.style.display = "none";
+                return;
+            }
             const params = { node: this.filaSeleccionada };
             if (accion === "agregar") this.agregarFila(params);
             if (accion === "copiar") this.copiarFilaAnterior(params);
@@ -2866,13 +2874,16 @@ class ArticuloAutocompleteEditorINY {
 
     init(params) {
         this.params = params;
+        this.valorInicial = params.value || '';   // 🔥 NUEVO
+        this.articuloSeleccionado = null;         // 🔥 NUEVO
+        this._avisado = false;                    // 🔥 NUEVO
 
         this.eContainer = document.createElement('div');
         this.eContainer.style.position = 'relative';
 
         this.eInput = document.createElement('input');
         this.eInput.className = 'form-control';
-        this.eInput.value = params.value || '';
+        this.eInput.value = this.valorInicial;    // 🔥 CAMBIO
 
         this.eDropdown = document.createElement('div');
         this.eDropdown.className = 'autocomplete-dropdown';
@@ -2902,10 +2913,27 @@ class ArticuloAutocompleteEditorINY {
 
     mostrarSugerencias(articulos) {
         this.eDropdown.innerHTML = '';
+
         const rect = this.eInput.getBoundingClientRect();
-        this.eDropdown.style.top = rect.bottom + 'px';
-        this.eDropdown.style.left = rect.left + 'px';
-        this.eDropdown.style.width = Math.max(rect.width, 450) + 'px';
+        const anchoDropdown = Math.max(rect.width, 450);
+        const altoDropdown = 280;
+
+        // Evitar que se salga por la derecha
+        let left = rect.left;
+        if (left + anchoDropdown > window.innerWidth) {
+            left = window.innerWidth - anchoDropdown - 10;
+        }
+
+        // Voltear hacia arriba si no cabe abajo
+        const espacioAbajo = window.innerHeight - rect.bottom;
+        if (espacioAbajo >= altoDropdown) {
+            this.eDropdown.style.top = rect.bottom + 'px';
+        } else {
+            this.eDropdown.style.top = Math.max(rect.top - altoDropdown, 10) + 'px';
+        }
+
+        this.eDropdown.style.left = left + 'px';
+        this.eDropdown.style.width = anchoDropdown + 'px';
 
         articulos.forEach(articulo => {
             const item = document.createElement('div');
@@ -2955,9 +2983,31 @@ class ArticuloAutocompleteEditorINY {
     }
 
     getGui() { return this.eContainer; }
-    afterGuiAttached() { this.eInput.focus(); this.eInput.select(); this.eInput.value = ''; }
-    getValue() { return this.eInput.value; }
+
+    afterGuiAttached() {
+        this.eInput.focus();
+        this.eInput.select();
+    }
+
+    getValue() {
+        // ✅ Eligió un artículo de la lista
+        if (this.articuloSeleccionado) {
+            return this.articuloSeleccionado.CodigoArticulo;
+        }
+
+        // ⚠️ Cambió el texto pero no seleccionó nada de la lista
+        const textoActual = (this.eInput.value || '').trim();
+        if (textoActual !== this.valorInicial && !this._avisado) {
+            this._avisado = true;
+            AlertManager.mostrar("Selecciona un artículo válido de la lista", "warning");
+        }
+
+        // En ambos casos se conserva el valor original
+        return this.valorInicial;
+    }
+
     destroy() { }
+
     isPopup() { return true; }
 }
 

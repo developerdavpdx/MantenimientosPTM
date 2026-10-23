@@ -153,7 +153,7 @@
                                     <div style="position:relative; height:160px; width:160px; margin:0 auto;">
                                         <canvas id="mtbfDonutChart" role="img" aria-label="Gráfica MTBF: tiempo disponible vs correctivos">MTBF</canvas>
                                         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-                                            <div class="fw-bold text-info fs-4" id="metric-mtbf">--</div>
+                                            <div class="fw-bold text-info fs-5" id="metric-mtbf">--</div>
                                             <small class="text-muted" style="font-size:10px;">hrs</small>
                                         </div>
                                     </div>
@@ -173,7 +173,7 @@
                                             <span id="lbl-mtbf-disponible">-- hr</span>
                                         </div>
                                         <div class="d-flex justify-content-between">
-                                            <span><span style="width:8px;height:8px;visibility:hidden;display:inline-block;margin-right:4px;"></span>(÷) N° de paradas</span>
+                                            <span><span style="width:8px;height:8px;visibility:hidden;display:inline-block;margin-right:4px;"></span>(÷) N° de paradas (correctivos)</span>
                                             <span id="lbl-mtbf-paradas">--</span>
                                         </div>
                                     </div>
@@ -202,7 +202,7 @@
                                     <div style="position:relative; height:160px; width:160px; margin:0 auto;">
                                         <canvas id="mttrDonutChart" role="img" aria-label="Gráfica MTTR: correctivos vs productivo">MTTR</canvas>
                                         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-                                            <div class="fw-bold text-warning fs-4" id="metric-mttr">--</div>
+                                            <div class="fw-bold text-warning fs-5" id="metric-mttr">--</div>
                                             <small class="text-muted" style="font-size:10px;">hrs</small>
                                         </div>
                                     </div>
@@ -221,12 +221,12 @@
                                             <span><span style="width:8px;height:8px;background:#eda100;display:inline-block;border-radius:2px;margin-right:4px;"></span>Paros correctivos</span>
                                             <span id="lbl-mttr-correctivos">--</span>
                                         </div>
-                                        <div class="d-flex justify-content-between ps-3">
+                                        @*<div class="d-flex justify-content-between ps-3">
                                             <span><span style="width:8px;height:8px;background:#fde5a0;display:inline-block;border-radius:2px;margin-right:4px;"></span>Paros manuales</span>
                                             <span id="lbl-mttr-productivo">--</span>
-                                        </div>
+                                        </div>*@
                                         <p class="text-muted mb-2 mt-1" style="font-size:11px;">
-                                            MTTR = T. total de reparación / N° de paradas (correctivos + manuales)
+                                            MTTR = T. total de reparación / N° de paradas (correctivos)
                                         </p>
                                     </div>
                                 </div>
@@ -251,7 +251,7 @@
                                     <div style="position:relative; height:160px; width:160px; margin:0 auto;">
                                         <canvas id="oeeDonutChart" role="img" aria-label="Gráfica OEE: disponibilidad, rendimiento y calidad">OEE</canvas>
                                         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-                                            <div class="fw-bold text-danger fs-4" id="metric-oee">--</div>
+                                            <div class="fw-bold text-danger fs-5" id="metric-oee">--</div>
                                             <small class="text-muted" style="font-size:10px;">OEE</small>
                                         </div>
                                     </div>
@@ -287,7 +287,7 @@
                                     <div style="position:relative; height:160px; width:160px; margin:0 auto;">
                                         <canvas id="cumplimientoPMDonutChart" role="img" aria-label="Gráfica Cumplimiento PM">Cumplimiento PM</canvas>
                                         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-                                            <div class="fw-bold text-primary fs-4" id="metric-cumplimientopm">--</div>
+                                            <div class="fw-bold text-primary fs-5" id="metric-cumplimientopm">--</div>
                                             <small class="text-muted" style="font-size:10px;">Cumplimiento PM</small>
                                         </div>
                                     </div>
@@ -329,7 +329,7 @@
                                     <div style="position:relative; height:160px; width:160px; margin:0 auto;">
                                         <canvas id="dtDonutChart" role="img" aria-label="Gráfica Disponibilidad Técnica">DT</canvas>
                                         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-                                            <div class="fw-bold text-primary fs-4" id="metric-dt">--</div>
+                                            <div class="fw-bold text-primary fs-5" id="metric-dt">--</div>
                                             <small class="text-muted" style="font-size:10px;">disponibilidad</small>
                                         </div>
                                     </div>
@@ -403,7 +403,7 @@
 
                 <!-- Información Adicional -->
                 <div class="alert alert-info bg-light border-info d-flex align-items-start" role="alert">
-                    <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+                    <i class="bi bi-info-circle-fill fs-5 me-3 text-info"></i>
                     <div>
                         <h6 class="fw-bold mb-1">
                             <i class="bi bi-lightbulb me-1"></i>Información

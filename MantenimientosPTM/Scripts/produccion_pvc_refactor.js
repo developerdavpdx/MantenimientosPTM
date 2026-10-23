@@ -2995,8 +2995,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
         const nuevaFila = this.crearFilaVacia();
         nuevaFila.id = this.generarIdTemporal();
 
-        // 🔥 CAMBIO: si se hizo clic en TOTALES (fila anclada), agregar al final.
-        // Si no, insertar justo después de la fila seleccionada.
         const esTotales = params.node.data?.id === 'TOTALES';
         const addIndex = esTotales ? undefined : params.node.rowIndex + 1;
 
@@ -3011,6 +3009,10 @@ class GestionProduccionPVC extends GestionProduccionBase {
     copiarFilaAnterior(params) {
 
         const filaActual = params.node.data;
+
+        if (!filaActual || filaActual.id === 'TOTALES') {
+            return;
+        }
 
         const nuevaFila = JSON.parse(JSON.stringify(filaActual));
 
@@ -3032,7 +3034,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
         this.recalcularFila(nuevaFila);
 
-        // 🔥 CAMBIO: undefined = al final
         const addIndex = params.node.data?.id === 'TOTALES'
             ? undefined
             : params.node.rowIndex + 1;
@@ -3043,15 +3044,32 @@ class GestionProduccionPVC extends GestionProduccionBase {
     }
 
     eliminarFila(params) {
-        if (params.node.data.id === 'TOTALES') return;
+
+        if (params.node.data.id === 'TOTALES')
+            return;
 
         if (params.node.data.ID_REGISTRO) {
-            AlertManager.mostrar("No se puede eliminar un registro guardado", "warning");
+
+            AlertManager.mostrar(
+                "No se puede eliminar un registro guardado",
+                "warning"
+            );
+
             return;
         }
 
-        this.gridApi.applyTransaction({ remove: [params.node.data] });
+        this.gridApi.applyTransaction({
+            remove: [params.node.data]
+        });
+
         this.recalcularTotales();
+
+        this.gridApi.refreshCells({
+            force: true
+        });
+
+        this.gridApi.redrawRows();
+
     }
 
     configurarMenuContextual() {
@@ -3084,7 +3102,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             const copiar = menu.querySelector('[data-action="copiar"]');
 
             // En la fila de TOTALES solo permitir "Agregar"
-            if (this.filaSeleccionada?.data?.id === 'TOTALES') {
+            if (!this.filaSeleccionada || this.filaSeleccionada?.data?.id === 'TOTALES') {
                 eliminar.style.display = "none";
                 copiar.style.display = "none";
                 return;
@@ -3108,25 +3126,23 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             const accion = e.target.dataset.action;
 
-            if (!this.filaSeleccionada) return;
-
-            const params = {
-                node: this.filaSeleccionada
-            };
-
-            if (accion === "agregar") {
-                this.agregarFila(params);
+            // 🔥 Grid vacío: solo permitir agregar, tratándolo como click en TOTALES
+            if (!this.filaSeleccionada) {
+                if (accion === "agregar") {
+                    this.agregarFila({ node: { data: { id: 'TOTALES' } } });
+                }
+                menu.style.display = "none";
+                return;
             }
 
-            if (accion === "copiar") {
-                this.copiarFilaAnterior(params);
-            }
+            const params = { node: this.filaSeleccionada };
 
-            if (accion === "eliminar") {
-                this.eliminarFila(params);
-            }
+            if (accion === "agregar") this.agregarFila(params);
+            if (accion === "copiar") this.copiarFilaAnterior(params);
+            if (accion === "eliminar") this.eliminarFila(params);
 
             menu.style.display = "none";
+            this.recalcularTotales();
         });
     }
 
@@ -3436,13 +3452,16 @@ class ArticuloAutocompleteEditor {
     init(params) {
 
         this.params = params;
+        this.valorInicial = params.value || '';
+        this.articuloSeleccionado = null;
+        this._avisado = false;
 
         this.eContainer = document.createElement('div');
         this.eContainer.style.position = 'relative';
 
         this.eInput = document.createElement('input');
         this.eInput.className = 'form-control';
-        this.eInput.value = params.value || '';
+        this.eInput.value = this.valorInicial;
 
         this.eDropdown = document.createElement('div');
         this.eDropdown.className = 'autocomplete-dropdown';
@@ -3570,11 +3589,23 @@ class ArticuloAutocompleteEditor {
     afterGuiAttached() {
         this.eInput.focus();
         this.eInput.select();
-        this.eInput.value = ''; // 🔥 limpiar input
     }
 
     getValue() {
-        return this.eInput.value;
+        // ✅ Eligió un artículo de la lista
+        if (this.articuloSeleccionado) {
+            return this.articuloSeleccionado.CodigoArticulo;
+        }
+
+        // ⚠️ Cambió el texto pero no seleccionó nada de la lista
+        const textoActual = (this.eInput.value || '').trim();
+        if (textoActual !== this.valorInicial && !this._avisado) {
+            this._avisado = true; // evita que el aviso salga dos veces
+            AlertManager.mostrar("Selecciona un artículo válido de la lista", "warning");
+        }
+
+        // En ambos casos se conserva el valor original
+        return this.valorInicial;
     }
 
     destroy() { }

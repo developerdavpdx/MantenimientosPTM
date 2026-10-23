@@ -2727,7 +2727,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             const copiar = menu.querySelector('[data-action="copiar"]');
 
             // 🔥 En la fila de TOTALES solo permitir "Agregar", desactivar "Copiar" y "Eliminar"
-            if (this.filaSeleccionada?.data?.id === 'TOTALES') {
+            if (!this.filaSeleccionada || this.filaSeleccionada?.data?.id === 'TOTALES') {
                 eliminar.style.display = "none";
                 copiar.style.display = "none";
                 menu.style.display = "block";
@@ -2754,7 +2754,15 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
         menu.addEventListener("click", (e) => {
             const accion = e.target.dataset.action;
-            if (!this.filaSeleccionada) return;
+
+            // 🔥 Grid vacío: solo permitir agregar, tratándolo como click en TOTALES (agrega al final)
+            if (!this.filaSeleccionada) {
+                if (accion === "agregar") {
+                    this.agregarFila({ node: { data: { id: 'TOTALES' } } });
+                }
+                menu.style.display = "none";
+                return;
+            }
             const params = { node: this.filaSeleccionada };
             if (accion === "agregar") this.agregarFila(params);
             if (accion === "copiar") this.copiarFilaAnterior(params);
@@ -2805,13 +2813,16 @@ class ArticuloAutocompleteEditor {
 
     init(params) {
         this.params = params;
+        this.valorInicial = params.value || '';   // 🔥 NUEVO
+        this.articuloSeleccionado = null;         // 🔥 NUEVO
+        this._avisado = false;                    // 🔥 NUEVO
 
         this.eContainer = document.createElement('div');
         this.eContainer.style.position = 'relative';
 
         this.eInput = document.createElement('input');
         this.eInput.className = 'form-control';
-        this.eInput.value = params.value || '';
+        this.eInput.value = this.valorInicial;    // 🔥 CAMBIO
 
         this.eDropdown = document.createElement('div');
         this.eDropdown.className = 'autocomplete-dropdown';
@@ -2905,10 +2916,24 @@ class ArticuloAutocompleteEditor {
     afterGuiAttached() {
         this.eInput.focus();
         this.eInput.select();
-        this.eInput.value = '';
     }
 
-    getValue() { return this.eInput.value; }
+    getValue() {
+        // ✅ Eligió un artículo de la lista
+        if (this.articuloSeleccionado) {
+            return this.articuloSeleccionado.CodigoArticulo;
+        }
+
+        // ⚠️ Cambió el texto pero no seleccionó nada de la lista
+        const textoActual = (this.eInput.value || '').trim();
+        if (textoActual !== this.valorInicial && !this._avisado) {
+            this._avisado = true;
+            AlertManager.mostrar("Selecciona un artículo válido de la lista", "warning");
+        }
+
+        // En ambos casos se conserva el valor original
+        return this.valorInicial;
+    }
 
     destroy() { }
 
