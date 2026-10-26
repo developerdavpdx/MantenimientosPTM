@@ -1139,7 +1139,7 @@ class GlobalUtil {
         return datos_usuario ? JSON.parse(datos_usuario) : null;
     }
     // ✅ Nueva función para mostrar/ocultar loader
-    static mostrarLoader(mostrar,description = "") {
+    static mostrarLoader(mostrar, description = "") {
         const loader = document.getElementById('calendarLoader');
         if (loader) {
             loader.style.display = mostrar ? 'flex' : 'none';
@@ -1822,17 +1822,17 @@ class GlobalUtil {
                             const dt = slots[i];
                             const cell = histRow.getCell(colIndex);
                             if (dt >= new Date(hStart.getFullYear(), hStart.getMonth(), hStart.getDate()) && dt <= new Date(hEnd.getFullYear(), hEnd.getMonth(), hEnd.getDate())) {
-                            // Usar gradiente más contrastado para historiales (fallback a colores fuertes si alpha ignorado)
-                            cell.fill = {
-                                type: 'gradient',
-                                gradient: 'angle',
-                                degree: 90,
-                                stops: [
-                                    { position: 0, color: { argb: histStrongStart } },
-                                    { position: 1, color: { argb: histStrongEnd } }
-                                ]
-                            };
-                            cell.border = { left: { style: 'thin', color: { argb: histStrongEnd } }, right: { style: 'thin', color: { argb: histStrongEnd } } };
+                                // Usar gradiente más contrastado para historiales (fallback a colores fuertes si alpha ignorado)
+                                cell.fill = {
+                                    type: 'gradient',
+                                    gradient: 'angle',
+                                    degree: 90,
+                                    stops: [
+                                        { position: 0, color: { argb: histStrongStart } },
+                                        { position: 1, color: { argb: histStrongEnd } }
+                                    ]
+                                };
+                                cell.border = { left: { style: 'thin', color: { argb: histStrongEnd } }, right: { style: 'thin', color: { argb: histStrongEnd } } };
                             }
                         }
                     } else {
@@ -2135,10 +2135,11 @@ class ValidationManager {
 // ========================================
 class EquiposUtil {
 
-    static llenarLineas(Planta, Area, Produccion, Fieldoptiongroup, Fieldfilter, callback = null,valueIsID = true) {
+    static llenarLineas(Planta, Area, Produccion, Fieldoptiongroup, Fieldfilter, callback = null, valueIsID = true, ShouldDehabiliteFiled = false) {
 
         const selectElement = $(`#${Fieldoptiongroup}`);
         const FiltroLinea = $(`#${Fieldfilter}`);
+        const habilitefiled = ShouldDehabiliteFiled ? false : true;
 
         // 🔥 Mostrar loaders
         this.showSelectLoader(Fieldoptiongroup);
@@ -2153,8 +2154,10 @@ class EquiposUtil {
             },
             success: (data) => {
 
-                this.hideSelectLoader(Fieldoptiongroup);
+                this.hideSelectLoader(Fieldoptiongroup, habilitefiled);
                 this.hideSelectLoader(Fieldfilter);
+
+
                 selectElement.empty();
                 FiltroLinea.empty();
 
@@ -2190,7 +2193,7 @@ class EquiposUtil {
                         const optgroup1 = $(`<optgroup label="Planta ${planta}"></optgroup>`);
                         const optgroup2 = $(`<optgroup label="Planta ${planta}"></optgroup>`);
 
-                        grouped[planta].forEach(linea => { 
+                        grouped[planta].forEach(linea => {
                             const whichvalue = valueIsID ? linea.ID_LINEA : linea.LINEA
                             optgroup1.append(`<option value="${whichvalue}">${linea.LINEA}</option>`);
                             optgroup2.append(`<option value="${whichvalue}">${linea.LINEA}</option>`);
@@ -2199,7 +2202,6 @@ class EquiposUtil {
                         selectElement.append(optgroup1);
                         FiltroLinea.append(optgroup2);
                     });
-
 
                 } else if (data.Status === 'NO') {
 
@@ -2423,7 +2425,7 @@ class EquiposUtil {
         });
     }
 
-    static llenarProcesos(Planta,Produccion, Fieldoptiongroup, Fieldfilter) {
+    static llenarProcesos(Planta, Produccion, Fieldoptiongroup, Fieldfilter, FirtsOptionHasValue = false) {
 
         const selectElement = $(`#${Fieldoptiongroup}`);
         const FiltroProceso = $(`#${Fieldfilter}`);
@@ -2459,14 +2461,15 @@ class EquiposUtil {
 
                     selectElement.empty();
                     FiltroProceso.empty();
-
+                    let valueforFO = (FirtsOptionHasValue ? "TODOS" : "");
                     selectElement.append('<option value="">Todas las áreas</option>');
-                    FiltroProceso.append('<option value="">Todos los procesos</option>');
+                    FiltroProceso.append(`<option value="${valueforFO}">Todos los procesos</option>`);
 
                     AreasData.forEach(area => {
                         selectElement.append(`<option value="${area.ID_AREA}">${area.AREA}</option>`);
                         FiltroProceso.append(`<option value="${area.ID_AREA}">${area.AREA}</option>`);
                     });
+
 
                 } else if (data.Status === 'NO') {
 
@@ -2762,12 +2765,13 @@ class EquiposUtil {
         select.addClass("select-loading"); // 🔥 Oculta flecha
     }
 
-    static hideSelectLoader(selectId) {
+    static hideSelectLoader(selectId,shouldhabilite = true) {
 
         const select = $(`#${selectId}`);
 
         setTimeout(() => {
             $(`#loader_${selectId}`).addClass("d-none");
+            if(shouldhabilite)
             select.prop("disabled", false);
             select.removeClass("select-loading"); // 🔥 Mostrar flecha
         }, 500); // ⏱️ 2 segundos
@@ -3102,7 +3106,7 @@ class SessionManager {
         if (tipoUsuario === "SupervisorPlaneacion" || tipoUsuario === "Planeacion") {
             /*$("#MantenimientosMainContainer").addClass("d-none");*/ //MANTENIMIENTOS
             $("#GestionEquiposURL").addClass("d-none"); //GESTION EQUIPOS
-           /* $("#CalendarioManttoURL").addClass("d-none");*/ //CALENDARIO MANTENIMIENTO URL
+            /* $("#CalendarioManttoURL").addClass("d-none");*/ //CALENDARIO MANTENIMIENTO URL
             $("#MCProgramadoURL").addClass("d-none"); //CALENDARIO MANTENIMIENTO URL
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
@@ -3120,11 +3124,11 @@ class SessionManager {
                 $("#RegistroProduccionCorrugadoURL").addClass("d-none");
                 $("#RegistroProduccionPLURL").addClass("d-none");
             } else {
-                $("#RegistroProduccionINYURL").addClass("d-none");                
-            } 
+                $("#RegistroProduccionINYURL").addClass("d-none");
+            }
         }
 
-        if (tipoUsuario === "Administrador" || tipoUsuario === "AdminMTTO") {           
+        if (tipoUsuario === "Administrador" || tipoUsuario === "AdminMTTO") {
             if (planta == 2) {
                 $("#RegistroProduccionCorrugadoURL").addClass("d-none");
                 $("#RegistroProduccionPLURL").addClass("d-none");
@@ -4128,7 +4132,7 @@ class ChecklistManager {
         }
     }
 
-    mostrarGaleriaImagenes(urls,showbutton) {
+    mostrarGaleriaImagenes(urls, showbutton) {
         if (!urls || urls.length === 0) return;
 
         this.crearSeccionGaleriaImagenes();
@@ -4320,10 +4324,10 @@ class ChecklistManager {
     }
 
     // Cargar imágenes existentes en la galería
-    cargarImagenesExistentes(urls,showbutton = true) {
+    cargarImagenesExistentes(urls, showbutton = true) {
         if (!urls || urls.length === 0) return;
 
-        this.mostrarGaleriaImagenes(urls,showbutton);
+        this.mostrarGaleriaImagenes(urls, showbutton);
     }
 
     // ============================================

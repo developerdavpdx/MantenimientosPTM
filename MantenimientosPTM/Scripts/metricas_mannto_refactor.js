@@ -30,13 +30,17 @@ class MetricasApp {
             .on('change', (e) => {
 
                 let Area = $(e.currentTarget).val();
+                let ShouldDehabiliteField = (Area == "TODOS" ? true : false); //Determina si se debe deshabilitar el select de las lineas
 
                 EquiposUtil.llenarLineas(
                     this.datos_usuario[0].PLANTA,
                     Area,
                     null,
                     "FiltroLinea",
-                    null
+                    null,
+                    null,
+                    null,
+                    ShouldDehabiliteField
                 );
             });
     }
@@ -133,7 +137,7 @@ class FiltrosManager {
 
     inicializar() {
         EquiposUtil.llenarLineas(this.datos_usuario[0].PLANTA, "none", "FiltroLinea");
-        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, 1, "none", "FiltroProceso");
+        EquiposUtil.llenarProcesos(this.datos_usuario[0].PLANTA, 1, "none", "FiltroProceso",true);
         console.log('✅ FiltrosManager inicializado');
     }
 
@@ -169,13 +173,15 @@ class MetricasManager {
         this.mapaProcesosP1 = {
             '1': 'PVC',
             '7': 'PEAD_CORR',
-            '9': 'PEAD_LISO'
+            '9': 'PEAD_LISO',
+            '':'TODOS'
         };
 
         // 🔥 Mapa ID → clave de proceso
         this.mapaProcesosP2 = {
             '14': 'PVC',
-            '15': 'INY'
+            '15': 'INY',
+            '': 'TODOS'
         };
 
         // 🔥 Mapa proceso → endpoint
@@ -183,7 +189,8 @@ class MetricasManager {
             'PVC': 'GetMetricasOEE_PVC',
             'PEAD_LISO': 'GetMetricasOEE_PeadLiso',
             'PEAD_CORR': 'GetMetricasOEE_Corrugado',
-            'INY': 'GetMetricasOEE_INY'   // 🔥 nuevo
+            'INY': 'GetMetricasOEE_INY',
+            'TODOS': 'GetMetricasOEE_TodosLosProcesos'// 🔥 nuevo
         };
     }
 
@@ -212,11 +219,12 @@ class MetricasManager {
         const proceso = filtros.proceso;
 
         // Sin proceso seleccionado
-        if (!proceso) {
-            if (showwarning)
-                AlertManager.mostrar('Selecciona un proceso', 'warning', 'alertMainContainer');
-            return;
-        }
+        // if (!proceso) {
+        //     if (showwarning)
+        //         AlertManager.mostrar('Selecciona un proceso', 'warning', 'alertMainContainer');
+        //     return;
+        // }
+
         const Planta = this.datos_usuario[0].PLANTA;
         // 🔥 Si viene como ID numérico, lo convierte a clave
         let clavesProceso;

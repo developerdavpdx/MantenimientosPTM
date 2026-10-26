@@ -239,6 +239,72 @@ namespace MantenimientosPTM.Controllers
         }
 
         // ========================================
+        // INYECCIÓN
+        // ========================================
+        [HttpGet]
+        public JsonResult GetMetricasOEE_TodosLosProcesos(
+            DateTime? FiltroFechaInicio,
+            DateTime? FiltroFechaFin,
+            string FiltroPlanta,
+            string FiltroProceso,
+            string FiltroLinea = null)
+        {
+            GlobalCommands.JsonResponseMtto jsonResponse;
+
+            try
+            {
+                DateTime dtFechaInicio, dtFechaFin;
+
+                if (FiltroFechaInicio == null || FiltroFechaFin == null)
+                {
+                    DateTime hoy = DateTime.Now;
+                    dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1);
+                    dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1);
+                }
+                else
+                {
+                    dtFechaInicio = (DateTime)FiltroFechaInicio;
+                    dtFechaFin = (DateTime)FiltroFechaFin;
+                }
+
+                var parameters = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
+                {
+                    { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN",    (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)  ? (object)null : FiltroLinea,  ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                };
+
+                var procesos = new Dictionary<string, MetricasOEEDto>();
+
+                switch (FiltroPlanta)
+                {
+                    case "1":
+                        procesos["PVC"] = Logic.EjecutarProceso(Logic.AD.GCGetMetricasOEE_PVC, parameters);
+                        procesos["PEAD_CORR"] = Logic.EjecutarProceso(Logic.AD.GCGetMetricasOEE_Corrugado, parameters);
+                        procesos["PEAD_LISO"] = Logic.EjecutarProceso(Logic.AD.GCGetMetricasOEE_PeadLiso, parameters);
+                        break;
+                    case "2":
+                        procesos["PVC"] = Logic.EjecutarProceso(Logic.AD.GCGetMetricasOEE_PVC, parameters);
+                        procesos["INY"] = Logic.EjecutarProceso(Logic.AD.GCGetMetricasOEE_INY, parameters);
+                        break;
+                }
+
+
+                var consolidado = Logic.ConsolidarMetricas(procesos.Values);
+
+
+                // Mismo formato que PVC (arreglo de 1 objeto) para reutilizar el front
+                jsonResponse = BuildResponse(JsonConvert.SerializeObject(new[] { consolidado }));
+                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new GlobalCommands.JsonResponseMtto { Status = "ERROR", Message = ex.ToString() });
+            }
+        }
+
+        // ========================================
         // 🔥 HELPER — evita repetir el if/else en los 3
         // ========================================
         private GlobalCommands.JsonResponseMtto BuildResponse(string jsonResult)
