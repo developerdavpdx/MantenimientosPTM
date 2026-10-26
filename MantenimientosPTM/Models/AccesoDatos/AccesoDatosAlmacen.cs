@@ -745,6 +745,8 @@ namespace MantenimientosPTM
 
             [JsonProperty("FECHA_SOLICITUD")]
             public string FechaSolicitud { get; set; }
+            [JsonProperty("FECHA_ENTREGA")]
+            public DateTime? FechaEntrega { get; set; }
 
             [JsonProperty("ESTATUS")]
             public string Estatus { get; set; }

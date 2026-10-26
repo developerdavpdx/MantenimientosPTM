@@ -90,7 +90,7 @@ namespace MantenimientosPTM
                 // ✅ 3 — Armar body
                 var purchaseRequest = new
                 {
-                    RequriedDate = DateTime.Now.ToString("yyyy-MM-dd"),  // ✅ typo intencional de SAP
+                    RequriedDate = (Header[0].FechaEntrega ?? DateTime.Now).ToString("yyyy-MM-dd"),  // typo intencional de SAP //DateTime.Now.ToString("yyyy-MM-dd"),  // ✅ typo intencional de SAP
                     //ReqName = Header[0].NombreSolicita,
                     U_URGENCIA = "NO",
                     U_REQ_CALIDAD = "NO APLICA",

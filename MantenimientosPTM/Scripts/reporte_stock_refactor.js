@@ -120,7 +120,7 @@ class ReporteStockApp {
 
                     // ✅ SI ES DESDE REPORTE STOCK: Cantidad editable | SI NO: Badge solo lectura
                     const cantidadHTML = esDesdeReporteStock
-                        ? `<input type="number" max="${item.Cantidad || 0}" class="form-control form-control-sm text-center CantidadEditable" 
+                        ? `<input type="number" max="${item.Cantidad || 0}" class="form-control form-control-sm text-center CantidadEditable cantidad-editable" 
                                   id="CantidadEditable_${i}" 
                                   value="${item.StatusValidacion == "Go!" ? item.Cantidad : 0}" 
                                   min="1" 
@@ -193,7 +193,7 @@ class ReporteStockApp {
             const $input = $(this);
             let maxstock = $input.attr('maxstock');
             let value = $input.val();
-            if (!value) {
+            if (!value || value == "0") {
                 AlertManager.mostrar(
                     `Por favor ingrese una cantidad valida`,
                     'warning'
@@ -203,9 +203,11 @@ class ReporteStockApp {
                     .replace(/(\..*)\./g, '$1') // Solo un punto decimal
                     .replace('e', ''); // Solo un punto decimal
 
-                setTimeout(() => {
-                    $($input.val(finalval));
-                }, 1000);
+                $($input.val(finalval));
+
+                //setTimeout(() => {
+                //    $($input.val(finalval));
+                //}, 1000);
 
                 return false;
             }
@@ -218,24 +220,24 @@ class ReporteStockApp {
 
             clearTimeout($input.data('timer'));
 
-            const timer = setTimeout(() => {
+            //const timer = setTimeout(() => {
 
-                const cantidad = parseInt(value) || 0;
-                const maximo = parseInt($input.attr('max')) || 0;
+            //    const cantidad = parseInt(value) || 0;
+            //    const maximo = parseInt($input.attr('max')) || 0;
 
-                if (cantidad > maximo) {
+            //    if (cantidad > maximo) {
 
-                    $input.val(maximo);
+            //        $input.val(maximo);
 
-                    AlertManager.mostrar(
-                        `La cantidad máxima permitida es ${maximo} para llegar al maximo de stock del artículo con un máximo de (${maxstock})`,
-                        'warning'
-                    );
-                }
+            //        AlertManager.mostrar(
+            //            `La cantidad máxima permitida es ${maximo} para llegar al maximo de stock del artículo con un máximo de (${maxstock})`,
+            //            'warning'
+            //        );
+            //    }
 
-            }, 1000);
+            //}, 1000);
 
-            $input.data('timer', timer);
+            //$input.data('timer', timer);
         });
     }
 
