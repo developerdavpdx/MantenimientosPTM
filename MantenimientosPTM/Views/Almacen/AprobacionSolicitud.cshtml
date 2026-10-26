@@ -136,6 +136,47 @@
                 color: white;
             }
 
+        .fecha-input {
+            width: 100%;
+            max-width: 260px;
+            border: 1px solid #c9dceb;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 15px;
+            color: #444;
+        }
+
+            .fecha-input:focus {
+                outline: none;
+                border-color: var(--ptm-azul-claro);
+                box-shadow: 0 0 0 3px rgba(41, 171, 226, 0.15);
+            }
+
+            .fecha-input.is-invalid {
+                border-color: #dc3545;
+                box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12);
+            }
+
+            .btn-aprobar-confirmar {
+                display: inline-block;
+                padding: 12px 30px;
+                background-color: var(--ptm-azul-oscuro);
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-weight: bold;
+                cursor: pointer;
+            }
+
+            .btn-aprobar-confirmar:hover {
+                background-color: var(--ptm-azul-claro);
+            }
+
+            .btn-aprobar-confirmar:disabled {
+                opacity: .6;
+                cursor: not-allowed;
+            }
+
         .comentario-form {
             text-align: left;
             margin-top: 10px;
@@ -254,7 +295,12 @@
                     string iconClass = "";
                     string badgeClass = "";
 
-                    if (ViewBag.RequiereComentario == true)
+                    if (ViewBag.RequiereFecha == true)
+                    {
+                        headerClass = "success";
+                        iconClass = "bi-calendar-check-fill";
+                    }
+                    else if (ViewBag.RequiereComentario == true)
                     {
                         headerClass = "warning";
                         iconClass = "bi-chat-square-text-fill";
@@ -307,7 +353,32 @@
                         </p>
                     }
 
-                    @if (ViewBag.RequiereComentario == true)
+                    @if (ViewBag.RequiereFecha == true)
+                    {
+                        <form id="formAprobar" class="comentario-form text-center" method="post" action="@Url.Action("AprobarSolicitudCompra", "Almacen")" novalidate>
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@ViewBag.EncodedId" />
+                            <input type="hidden" name="token" value="@ViewBag.EncodedToken" />
+
+                            <label class="comentario-label" for="fechaRequerida">Fecha requerida</label>
+                            <input type="date" id="fechaRequerida" name="fechaRequerida" class="fecha-input"
+                                   min="@ViewBag.FechaMinima" required />
+
+                            <div id="fechaError" class="comentario-error mt-2" style="@(ViewBag.ErrorFecha != null ? "display:block" : "")">
+                                @(ViewBag.ErrorFecha ?? "Selecciona la fecha requerida.")
+                            </div>
+
+                            <div class="comentario-acciones">
+                                <a href="@Url.Action("SolicitudOC", "Almacen")" class="btn-cancelar">Cancelar</a>
+                                <button type="submit" id="btnConfirmarAprobar" class="btn-aprobar-confirmar">
+                                    <i class="bi bi-check-circle me-2"></i>Guardar y autorizar
+                                </button>
+                            </div>
+                        </form>
+                    }
+
+
+                    else if (ViewBag.RequiereComentario == true)
                     {
                         <form id="formRechazo" class="comentario-form" method="post" action="@Url.Action("AprobarSolicitudCompra", "Almacen")" novalidate>
                             @Html.AntiForgeryToken()
@@ -349,6 +420,40 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    @if (ViewBag.RequiereFecha == true)
+    {
+        <script>
+            (function () {
+                var input = document.getElementById('fechaRequerida');
+                var error = document.getElementById('fechaError');
+                var form = document.getElementById('formAprobar');
+
+                input.addEventListener('input', function () {
+                    input.classList.remove('is-invalid');
+                    error.style.display = 'none';
+                });
+
+                form.addEventListener('submit', function (e) {
+                    var valor = input.value;
+                    var min = input.getAttribute('min');
+
+                    if (!valor || valor < min) {
+                        e.preventDefault();
+                        input.classList.add('is-invalid');
+                        error.textContent = !valor ? 'Selecciona la fecha requerida.' : 'La fecha no puede ser anterior a hoy.';
+                        error.style.display = 'block';
+                        input.focus();
+                        return;
+                    }
+
+                    var btn = document.getElementById('btnConfirmarAprobar');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Creando solicitud en SAP...';
+                });
+            })();
+        </script>
+    }
 
     @if (ViewBag.RequiereComentario == true)
     {
