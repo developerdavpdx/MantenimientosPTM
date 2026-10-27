@@ -1188,8 +1188,16 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             productosTerminados.forEach(item => {
 
-                if (idsYaExistentesEnBD.has(String(item.Id))) {
-                    return; // ✅ ya viene con detalle completo desde validarProductosTerminadosExistentes
+                //if (idsYaExistentesEnBD.has(String(item.Id))) {
+                //    return; // ✅ ya viene con detalle completo desde validarProductosTerminadosExistentes
+                //}
+
+                const idStr = String(item.Id);
+                const nodoExistente = nodosExistentes.get(idStr);
+
+                // Existe en BD pero no está en el grid: se ignora en silencio
+                if (!nodoExistente && idsYaExistentesEnBD.has(idStr)) {
+                    return;
                 }
 
                 const fecha = this.calcularFechaOperativaTurno(item.FechaPesaje, item.Turno);
@@ -1219,8 +1227,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     lineasNoEncontradas.push(`${item.Codigo} (Línea ${item.Id_Linea})`);
                     return;
                 }
-
-                const nodoExistente = nodosExistentes.get(String(item.Id));
 
                 if (nodoExistente) {
                     const dataActualizada = { ...nodoExistente.data };
@@ -1277,7 +1283,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             if (filasActualizadas.length > 0) {
                 AlertManager.mostrar(
-                    `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno == "0" ? "Reporte del dia" : filtroTurno || 'de acuerdo a la hora actual'} con información reciente en el grid`,
+                    `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno == "0" ? "Reporte del dia" : filtroTurno || 'de acuerdo a la hora actual'} con información reciente en el grid, recuerda guardar los datos dando clic en Guardar.`,
                     "info"
                 );
             }
@@ -1294,9 +1300,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }
 
             // 🔥 NUEVO: avisar cuáles se omitieron por ya existir en BD
-            if (productosYaRegistrados.length > 0) {
-                this.mostrarModalProductosOmitidos(productosYaRegistrados);
-            }
+            //if (productosYaRegistrados.length > 0) {
+            //    this.mostrarModalProductosOmitidos(productosYaRegistrados);
+            //}
 
             if (lineasNoEncontradas.length > 0) {
                 AlertManager.mostrar(

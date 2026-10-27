@@ -2013,8 +2013,16 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             productosTerminados.forEach(item => {
 
-                if (idsYaExistentesEnBD.has(String(item.Id))) {
-                    return; // ✅ ya viene con detalle completo desde validarProductosTerminadosExistentes
+                //if (idsYaExistentesEnBD.has(String(item.Id))) {
+                //    return; // ✅ ya viene con detalle completo desde validarProductosTerminadosExistentes
+                //}
+
+                const idStr = String(item.Id);
+                const nodoExistente = nodosExistentes.get(idStr);
+
+                // Existe en BD pero no está en el grid: se ignora en silencio
+                if (!nodoExistente && idsYaExistentesEnBD.has(idStr)) {
+                    return;
                 }
 
                 const fecha = this.calcularFechaOperativaTurno(item.FechaPesaje, item.Turno);
@@ -2047,7 +2055,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     return;
                 }
 
-                const nodoExistente = nodosExistentes.get(String(item.Id));
+                //const nodoExistente = nodosExistentes.get(String(item.Id));
 
                 // 🆕 REEMPLAZAR el bloque if (nodoExistente) en agregarProductosTerminadosAlGrid de GestionProduccionPeadLiso
                 if (nodoExistente) {
@@ -2121,9 +2129,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             }
 
             // 🔥 NUEVO: avisar cuáles se omitieron por ya existir en BD
-            if (productosYaRegistrados.length > 0) {
-                this.mostrarModalProductosOmitidos(productosYaRegistrados);
-            }
+            //if (productosYaRegistrados.length > 0) {
+            //    this.mostrarModalProductosOmitidos(productosYaRegistrados);
+            //}
 
             if (lineasNoEncontradas.length > 0) {
                 AlertManager.mostrar(
