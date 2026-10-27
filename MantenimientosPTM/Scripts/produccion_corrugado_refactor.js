@@ -287,11 +287,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 FaltaMateriaPrima: item.FALTA_MATERIA_PRIMA,
                 PreparacionCambio: item.PREPARACION_CAMBIO,
                 ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION,
-                Mes: item.MES || (
-                    item.FECHA
-                        ? ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'][new Date(item.FECHA).getMonth()]
-                        : null
-                ),
+                Mes: item.MES || this.obtenerNombreMes(item.FECHA),
                 PesoMinimo: item.PESO_MINIMO || 0,
                 TRLiberados: item.TRLIBERADOS,
                 ProduccionNeta: item.PRODUCCION_NETA,
@@ -782,10 +778,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 nuevaFila._esNuevo = true;
                 nuevaFila.Linea = nombreLinea;
 
-                if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
-                }
+                nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
 
                 // ✅ Recalcular antes de agregar
                 this.recalcularFila(nuevaFila);
@@ -1034,10 +1027,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 nuevaFila._esNuevo = true;
                 nuevaFila.Linea = nombreLinea;
 
-                if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
-                }
+                nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
 
                 // ✅ Recalcular antes de agregar
                 this.recalcularFila(nuevaFila);
@@ -1296,10 +1286,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     nuevaFila.KgHrLinea = parseFloat(primerItem.KGS_DIA) / 24 || 0;
                 }
 
-                if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
-                }
+                nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
 
                 this.recalcularFila(nuevaFila);
                 filasNuevas.push(nuevaFila);
@@ -1502,8 +1489,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     return;
                 }
 
-                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
                 let lineaLabel = null;
 
@@ -1534,7 +1519,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     dataActualizada.ScrapSinCorteSierra = parseFloat(item.ScrapTotal) || 0;
                     dataActualizada.ScrapCorteSierra = 0;
                     dataActualizada.Linea = lineaLabel;
-                    dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+                    dataActualizada.Mes = this.obtenerNombreMes(fecha);
                     dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     dataActualizada.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     dataActualizada.KgHrProducto = parseFloat(item.KgsDia) || 0;
@@ -1543,7 +1528,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     dataActualizada._rowClass = 'row-producto-terminado';
 
                     this.recalcularFila(dataActualizada);
-
+                    nodoExistente.setData(dataActualizada);
                     filasActualizadas.push({ rowNode: nodoExistente, data: dataActualizada });
 
                 } else {
@@ -1560,7 +1545,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     nuevaFila.ScrapSinCorteSierra = parseFloat(item.ScrapTotal) || 0;
                     nuevaFila.ScrapCorteSierra = 0;
                     nuevaFila.Linea = lineaLabel;
-                    nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+                    nuevaFila.Mes = this.obtenerNombreMes(fecha);
                     nuevaFila.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     nuevaFila.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     nuevaFila.KgHrProducto = parseFloat(item.KgsDia) || 0;
@@ -1577,8 +1562,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             });
 
             if (filasActualizadas.length > 0) {
-                this.gridApi.applyTransaction({ update: filasActualizadas.map(f => f.data) });
-
                 AlertManager.mostrar(
                     `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno == "0" ? "Reporte del dia" : filtroTurno || 'de acuerdo a la hora actual'} con información reciente en el grid`,
                     "info"
@@ -1617,6 +1600,25 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             console.error("Error al agregar productos terminados:", error);
             return false;
         }
+    }
+
+    obtenerNombreMes(fechaStr) {
+        if (!fechaStr) return null;
+        const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+        let soloFecha;
+        if (fechaStr instanceof Date) {
+            const y = fechaStr.getFullYear();
+            const m = String(fechaStr.getMonth() + 1).padStart(2, '0');
+            const d = String(fechaStr.getDate()).padStart(2, '0');
+            soloFecha = `${y}-${m}-${d}`;
+        } else {
+            soloFecha = String(fechaStr).split('T')[0];
+        }
+
+        const mes = parseInt(soloFecha.split('-')[1], 10);
+        return meses[mes - 1] || null;
     }
 
     // ========================================
@@ -1732,8 +1734,9 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                             };
 
                             const tooltipText = tooltipTexts[origen] || '';
-                            const tooltipAttr = tooltipText
-                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
+                            const tooltipSafe = tooltipText.replace(/"/g, '&quot;');
+                            const tooltipAttr = tooltipSafe
+                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipSafe}" title="${tooltipSafe}"`
                                 : '';
 
                             // 🔥 NUEVO: Mostrar punto pulsante si es un registro nuevo (sin ID_REGISTRO)
@@ -1999,14 +2002,6 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 return params.value;
             },
 
-            // ✅ Renderer personalizado para el Mes
-            cellRenderer: {
-                'mesRenderer': function (params) {
-                    if (!params.value) return '';
-                    const emoji = params.data?._marcador || '';
-                    return emoji ? `<span style="font-size: 14px; margin-right: 4px;">${emoji}</span><span>${params.value}</span>` : params.value;
-                }
-            }
         };
 
         new agGrid.Grid(gridDiv, gridOptions);
@@ -2036,10 +2031,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         const row = event.data;
 
         if (row.Fecha) {
-            const fecha = new Date(row.Fecha);
-            const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-                'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-            row.Mes = meses[fecha.getMonth()];
+            row.Mes = this.obtenerNombreMes(row.Fecha);
         }
 
         this.recalcularFila(row);
@@ -2400,7 +2392,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
         } catch (error) {
             console.error(error);
-            AlertManager.mostrar("Error al guardar", "danger");
+            AlertManager.mostrar(error?.responseJSON?.Message || error?.responseText || 'Error al guardar', "danger");
         } finally {
             $("#btnGuardarCambios")
                 .prop("disabled", false)
@@ -2543,7 +2535,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, 'PCORR');
                 const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
 
-                // ✅ Siempre borrar fila vacía ANTES de agregar productos
+                // ✅ Siempre borrar fila vacía DESPUÉS de agregar productos
                 const filasVacias = [];
                 this.gridApi.forEachNode(node => {
                     if (node.data &&
@@ -2679,8 +2671,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         nuevaFila._esNuevo = null;
 
         if (nuevaFila.Fecha) {
-            const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-            nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+            nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
         }
 
         this.recalcularFila(nuevaFila);

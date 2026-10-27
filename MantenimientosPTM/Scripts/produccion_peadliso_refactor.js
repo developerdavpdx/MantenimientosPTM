@@ -441,11 +441,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 PorcentajeSobrepeso: item.PORCENTAJE_SOBREPESO,
                 TotalScrap: item.TOTAL_SCRAP,
                 PorcentajeTotalScrap: item.PORCENTAJE_TOTAL_SCRAP,
-                Mes: item.MES || (
-                    item.FECHA
-                        ? ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'][new Date(item.FECHA).getMonth()]
-                        : null
-                ),
+                Mes: item.MES || this.obtenerNombreMes(item.FECHA),
                 TiempoDisponible: item.TIEMPO_DISPONIBLE,
                 TiempoProductivo: item.TIEMPO_PRODUCTIVO,
                 KgHrLinea: item.KG_HR_LINEA,
@@ -808,10 +804,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 nuevaFila._esNuevo = true;
                 nuevaFila.Linea = nombreLinea;
 
-                if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
-                }
+                nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
 
                 // ✅ Recalcular antes de agregar
                 this.recalcularFila(nuevaFila);
@@ -1047,10 +1040,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 nuevaFila._esNuevo = true;
                 nuevaFila.Linea = nombreLinea;
 
-                if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
-                }
+                nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
 
                 // ✅ Recalcular antes de agregar
                 this.recalcularFila(nuevaFila);
@@ -1293,10 +1283,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     nuevaFila[col] = categorias[col];
                 });
 
-                if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
-                }
+                nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
 
                 this.recalcularFila(nuevaFila);
                 filasNuevas.push(nuevaFila);
@@ -1487,8 +1474,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                             };
 
                             const tooltipText = tooltipTexts[origen] || '';
-                            const tooltipAttr = tooltipText
-                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
+                            const tooltipSafe = tooltipText.replace(/"/g, '&quot;');
+                            const tooltipAttr = tooltipSafe
+                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipSafe}" title="${tooltipSafe}"`
                                 : '';
 
                             // 🔥 NUEVO: Mostrar punto pulsante si es un registro nuevo (sin ID_REGISTRO)
@@ -2041,8 +2029,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     return;
                 }
 
-                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
 
                 let lineaLabel = null;
 
@@ -2074,7 +2061,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     dataActualizada.TotalScrap = parseFloat(item.ScrapTotal) || 0; // 🆕 era TotalScrapKg
                     dataActualizada.PorcentajeTotalScrap = 0;                             // 🆕 era PorcentajeScrap
                     dataActualizada.Linea = lineaLabel;
-                    dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+                    dataActualizada.Mes = this.obtenerNombreMes(fecha);
                     dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     dataActualizada.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     dataActualizada.KgHrProducto = parseFloat(item.KgsDia) || 0;
@@ -2083,6 +2070,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     dataActualizada._rowClass = 'row-producto-terminado';
 
                     this.recalcularFila(dataActualizada);
+                    nodoExistente.setData(dataActualizada);
                     filasActualizadas.push({ rowNode: nodoExistente, data: dataActualizada });
                 } else {
 
@@ -2098,7 +2086,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                     nuevaFila.TotalScrap = parseFloat(item.ScrapTotal) || 0;
                     nuevaFila.PorcentajeTotalScrap = 0; // se recalcula abajo con recalcularFila()
                     nuevaFila.Linea = lineaLabel;
-                    nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+                    nuevaFila.Mes = this.obtenerNombreMes(fecha);
                     nuevaFila.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     nuevaFila.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     nuevaFila.KgHrProducto = parseFloat(item.KgsDia) || 0;
@@ -2115,8 +2103,6 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             });
 
             if (filasActualizadas.length > 0) {
-                this.gridApi.applyTransaction({ update: filasActualizadas.map(f => f.data) });
-
                 AlertManager.mostrar(
                     `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno == "0" ? "Reporte del dia" : filtroTurno || 'de acuerdo a la hora actual'} con información reciente en el grid`,
                     "info"
@@ -2207,6 +2193,25 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             console.error("Error al calcular fecha operativa del turno:", error);
             return null;
         }
+    }
+
+    obtenerNombreMes(fechaStr) {
+        if (!fechaStr) return null;
+        const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+        let soloFecha;
+        if (fechaStr instanceof Date) {
+            const y = fechaStr.getFullYear();
+            const m = String(fechaStr.getMonth() + 1).padStart(2, '0');
+            const d = String(fechaStr.getDate()).padStart(2, '0');
+            soloFecha = `${y}-${m}-${d}`;
+        } else {
+            soloFecha = String(fechaStr).split('T')[0];
+        }
+
+        const mes = parseInt(soloFecha.split('-')[1], 10);
+        return meses[mes - 1] || null;
     }
 
     // 🔥 Template de fila vacía, ajustado a los campos de Pead Liso
@@ -2338,25 +2343,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         // ========================================
 
         if (row.Fecha) {
-
-            const fecha = new Date(row.Fecha);
-
-            const meses = [
-                'ENERO',
-                'FEBRERO',
-                'MARZO',
-                'ABRIL',
-                'MAYO',
-                'JUNIO',
-                'JULIO',
-                'AGOSTO',
-                'SEPTIEMBRE',
-                'OCTUBRE',
-                'NOVIEMBRE',
-                'DICIEMBRE'
-            ];
-
-            row.Mes = meses[fecha.getMonth()];
+            row.Mes = this.obtenerNombreMes(row.Fecha);
         }
 
         // ========================================
@@ -2842,7 +2829,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, 'PPEADLISO');
                 const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
 
-                // ✅ Siempre borrar fila vacía ANTES de agregar productos
+                // ✅ Siempre borrar fila vacía DESPUÉS de agregar productos
                 const filasVacias = [];
                 this.gridApi.forEachNode(node => {
                     if (node.data &&
@@ -3104,7 +3091,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             console.error(error);
 
             AlertManager.mostrar(
-                "Error al guardar",
+                error?.responseJSON?.Message || error?.responseText || 'Error al guardar',
                 "danger"
             );
 
@@ -3281,9 +3268,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         nuevaFila._esNuevo = null;
 
         if (nuevaFila.Fecha) {
-            const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-                'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-            nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+            nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
         }
 
         this.recalcularFila(nuevaFila);
@@ -3606,10 +3591,19 @@ class ExcelExporterPeadLiso extends ExcelExporterBase {
         worksheet.addRow(headers);
     }
 
-    agregarFilasDatos(worksheet, estructura) {
-        const camposTexto = ['Mes', 'Fecha', 'Linea', 'Producto', 'Turno', 'Grupo'];
+    obtenerNombreMes(fechaStr) {
+        if (!fechaStr) return null;
         const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
             'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+        const soloFecha = fechaStr instanceof Date
+            ? `${fechaStr.getFullYear()}-${String(fechaStr.getMonth() + 1).padStart(2, '0')}-${String(fechaStr.getDate()).padStart(2, '0')}`
+            : String(fechaStr).split('T')[0];
+        const mes = parseInt(soloFecha.split('-')[1], 10);
+        return meses[mes - 1] || null;
+    }
+
+    agregarFilasDatos(worksheet, estructura) {
+        const camposTexto = ['Mes', 'Fecha', 'Linea', 'Producto', 'Turno', 'Grupo'];
 
         // ========================================
         // FILAS DE DATOS (solo las filtradas/ordenadas)
@@ -3626,7 +3620,7 @@ class ExcelExporterPeadLiso extends ExcelExporterBase {
 
                     // Calcular Mes si viene vacío
                     if (col.field === 'Mes' && (!valor || valor === '') && node.data.Fecha) {
-                        valor = meses[new Date(node.data.Fecha).getMonth()];
+                        valor = this.obtenerNombreMes(node.data.Fecha);
                     }
 
                     if (valor !== null && valor !== undefined && valor !== '' &&

@@ -1818,8 +1818,9 @@ class GestionProduccionPVC extends GestionProduccionBase {
                             };
 
                             const tooltipText = tooltipTexts[origen] || '';
-                            const tooltipAttr = tooltipText
-                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
+                            const tooltipSafe = tooltipText.replace(/"/g, '&quot;');
+                            const tooltipAttr = tooltipSafe
+                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipSafe}" title="${tooltipSafe}"`
                                 : '';
 
                             // 🔥 NUEVO: Mostrar punto pulsante si es un registro nuevo (sin ID_REGISTRO)
@@ -2403,14 +2404,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 return params.value;
             },
 
-            // ✅ Renderer personalizado para el Mes
-            cellRenderer: {
-                'mesRenderer': function (params) {
-                    if (!params.value) return '';
-                    const emoji = params.data?._marcador || '';
-                    return emoji ? `<span style="font-size: 14px; margin-right: 4px;">${emoji}</span><span>${params.value}</span>` : params.value;
-                }
-            }
         };
 
         new agGrid.Grid(gridDiv, gridOptions);
@@ -2649,7 +2642,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
                 const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
 
-                // ✅ Siempre borrar fila vacía ANTES de agregar productos
+                // ✅ Siempre borrar fila vacía DESPUÉS de agregar productos
                 const filasVacias = [];
                 this.gridApi.forEachNode(node => {
                     if (node.data &&
@@ -3670,11 +3663,20 @@ class ExcelExporterPVC extends ExcelExporterBase {
         worksheet.addRow(headers);
     }
 
+    obtenerNombreMes(fechaStr) {
+        if (!fechaStr) return null;
+        const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+        const soloFecha = fechaStr instanceof Date
+            ? `${fechaStr.getFullYear()}-${String(fechaStr.getMonth() + 1).padStart(2, '0')}-${String(fechaStr.getDate()).padStart(2, '0')}`
+            : String(fechaStr).split('T')[0];
+        const mes = parseInt(soloFecha.split('-')[1], 10);
+        return meses[mes - 1] || null;
+    }
+
     agregarFilasDatos(worksheet, estructura) {
 
         const camposTexto = ['Mes', 'Fecha', 'Producto', 'TRIP', 'Linea', 'Turno'];
-        const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
         // ========================================
         // FILAS DE DATOS (solo las filtradas/ordenadas)
@@ -3691,7 +3693,7 @@ class ExcelExporterPVC extends ExcelExporterBase {
 
                     // Calcular Mes si viene vacío
                     if (col.field === 'Mes' && (!valor || valor === '') && node.data.Fecha) {
-                        valor = meses[new Date(node.data.Fecha).getMonth()];
+                        valor = this.obtenerNombreMes(node.data.Fecha);
                     }
 
                     if (valor !== null && valor !== undefined && valor !== '' &&

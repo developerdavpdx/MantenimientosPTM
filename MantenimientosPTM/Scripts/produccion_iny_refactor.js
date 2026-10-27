@@ -1112,11 +1112,23 @@ class GestionProduccionINY extends GestionProduccionBase {
     // ========================================
     // 🔥 NUEVO: Obtener nombre del mes a partir de una fecha
     // ========================================
-    obtenerNombreMes(fecha) {
-        if (!fecha) return null;
-        const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO',
-            'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-        return meses[new Date(fecha).getMonth()];
+    obtenerNombreMes(fechaStr) {
+        if (!fechaStr) return null;
+        const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+        let soloFecha;
+        if (fechaStr instanceof Date) {
+            const y = fechaStr.getFullYear();
+            const m = String(fechaStr.getMonth() + 1).padStart(2, '0');
+            const d = String(fechaStr.getDate()).padStart(2, '0');
+            soloFecha = `${y}-${m}-${d}`;
+        } else {
+            soloFecha = String(fechaStr).split('T')[0];
+        }
+
+        const mes = parseInt(soloFecha.split('-')[1], 10);
+        return meses[mes - 1] || null;
     }
 
     // ========================================
@@ -1233,8 +1245,6 @@ class GestionProduccionINY extends GestionProduccionBase {
                     return;
                 }
 
-                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
                 let lineaLabel = null;
 
@@ -1265,7 +1275,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     dataActualizada.ScrapSinColada = parseFloat(item.ScrapTotal) || 0;
                     dataActualizada.ScrapColada = 0;
                     dataActualizada.Linea = lineaLabel;
-                    dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+                    dataActualizada.Mes = this.obtenerNombreMes(fecha);
                     dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     dataActualizada.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     dataActualizada.KgHrProducto = parseFloat(item.KgsDia) || 0;
@@ -1274,7 +1284,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     dataActualizada._rowClass = 'row-producto-terminado';
 
                     this.recalcularFila(dataActualizada);
-
+                    nodoExistente.setData(dataActualizada);
                     filasActualizadas.push({ rowNode: nodoExistente, data: dataActualizada });
 
                 } else {
@@ -1291,7 +1301,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                     nuevaFila.ScrapSinColada = parseFloat(item.ScrapTotal) || 0;
                     nuevaFila.ScrapColada = 0;
                     nuevaFila.Linea = lineaLabel;
-                    nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+                    nuevaFila.Mes = this.obtenerNombreMes(fecha);
                     nuevaFila.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     nuevaFila.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     nuevaFila.KgHrProducto = parseFloat(item.KgsDia) || 0;
@@ -1308,8 +1318,6 @@ class GestionProduccionINY extends GestionProduccionBase {
             });
 
             if (filasActualizadas.length > 0) {
-                this.gridApi.applyTransaction({ update: filasActualizadas.map(f => f.data) });
-
                 AlertManager.mostrar(
                     `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno == "0" ? "Reporte del dia" : filtroTurno || 'de acuerdo a la hora actual'} con información reciente en el grid`,
                     "info"
@@ -1491,8 +1499,9 @@ class GestionProduccionINY extends GestionProduccionBase {
                             };
 
                             const tooltipText = tooltipTexts[origen] || '';
-                            const tooltipAttr = tooltipText
-                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipText}" title="${tooltipText}"`
+                            const tooltipSafe = tooltipText.replace(/"/g, '&quot;');
+                            const tooltipAttr = tooltipSafe
+                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipSafe}" title="${tooltipSafe}"`
                                 : '';
 
                             // 🔥 NUEVO: Mostrar punto pulsante si es un registro nuevo (sin ID_REGISTRO)
@@ -2552,7 +2561,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                 const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, 'INY');
                 const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
 
-                // ✅ Siempre borrar fila vacía ANTES de agregar productos
+                // ✅ Siempre borrar fila vacía DESPUÉS de agregar productos
                 const filasVacias = [];
                 this.gridApi.forEachNode(node => {
                     if (node.data &&
