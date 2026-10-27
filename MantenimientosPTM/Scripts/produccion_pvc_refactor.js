@@ -405,11 +405,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 Calentamiento: item.CALENTAMIENTO_HR,
                 ParoArranqueNoProgramado: item.PARO_ARRANQUE_NO_PROGRAMADO,
                 ArranqueEstabilizacion: item.ARRANQUE_ESTABILIZACION_HR,
-                Mes: item.MES || (
-                    item.FECHA
-                        ? ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'][new Date(item.FECHA).getMonth()]
-                        : null
-                ),
+                Mes: item.MES || this.obtenerNombreMes(item.FECHA),
                 PesoMinimo: item.PESO_MINIMO || 0,
                 TRFabricados: item.TR_FABRICADOS,
                 ProduccionNetaReal: item.PRODUCCION_NETA_REAL,
@@ -794,8 +790,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 nuevaFila.Linea = nombreLinea;
 
                 if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+                    nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
                 }
 
                 // ✅ Recalcular antes de agregar
@@ -1035,8 +1030,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 nuevaFila.Linea = nombreLinea;
 
                 if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+                    nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
                 }
 
                 // ✅ Recalcular antes de agregar
@@ -1210,9 +1204,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     return;
                 }
 
-                const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-
                 let lineaLabel = null;
 
                 if (this.datos_usuario[0].PLANTA == 1) {
@@ -1242,7 +1233,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     dataActualizada.PorcentajeScrap = 0;
                     dataActualizada.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
                     dataActualizada.Linea = lineaLabel;
-                    dataActualizada.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+                    dataActualizada.Mes = this.obtenerNombreMes(fecha);
                     dataActualizada.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     dataActualizada.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     dataActualizada.KgHrProducto = parseFloat(item.KgsDia) || 0;
@@ -1251,7 +1242,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     dataActualizada._rowClass = 'row-producto-terminado';
 
                     this.recalcularFila(dataActualizada);
-
+                    nodoExistente.setData(dataActualizada);
                     filasActualizadas.push({ rowNode: nodoExistente, data: dataActualizada });
 
                 } else {
@@ -1268,7 +1259,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     nuevaFila.PorcentajeScrap = 0;
                     nuevaFila.TotalScrapKg = parseFloat(item.ScrapTotal) || 0;
                     nuevaFila.Linea = lineaLabel;
-                    nuevaFila.Mes = meses[new Date(fecha + 'T00:00:00').getMonth()];
+                    nuevaFila.Mes = this.obtenerNombreMes(fecha);
                     nuevaFila.PesoMinimo = parseFloat(item.PesoMinimo) || 0;
                     nuevaFila.KgHrLinea = parseFloat(item.KgsDia) || 0;
                     nuevaFila.KgHrProducto = parseFloat(item.KgsDia) || 0;
@@ -1285,8 +1276,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
             });
 
             if (filasActualizadas.length > 0) {
-                this.gridApi.applyTransaction({ update: filasActualizadas.map(f => f.data) });
-
                 AlertManager.mostrar(
                     `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno == "0" ? "Reporte del dia" : filtroTurno || 'de acuerdo a la hora actual'} con información reciente en el grid`,
                     "info"
@@ -1537,8 +1526,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 }
 
                 if (nuevaFila.Fecha) {
-                    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-                    nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+                    nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
                 }
 
                 this.recalcularFila(nuevaFila);
@@ -1673,6 +1661,25 @@ class GestionProduccionPVC extends GestionProduccionBase {
         return ProductosTerminadosHelper.formatearFechaCreacion(fechaCreacion);
     }
 
+
+    obtenerNombreMes(fechaStr) {
+        if (!fechaStr) return null;
+        const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+        let soloFecha;
+        if (fechaStr instanceof Date) {
+            const y = fechaStr.getFullYear();
+            const m = String(fechaStr.getMonth() + 1).padStart(2, '0');
+            const d = String(fechaStr.getDate()).padStart(2, '0');
+            soloFecha = `${y}-${m}-${d}`;
+        } else {
+            soloFecha = String(fechaStr).split('T')[0];
+        }
+
+        const mes = parseInt(soloFecha.split('-')[1], 10);
+        return meses[mes - 1] || null;
+    }
     // 🔥 Helper para no repetir el template de fila vacía
     // (extraje el objeto de agregarFila() para reutilizarlo aquí también)
     crearFilaVacia() {
@@ -2433,6 +2440,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
         const totales = this.obtenerTotalesGrid();
         this.gridApi.setPinnedBottomRowData([totales]);
     }
+
     //agregarFilaTotales() {
 
     //    if (!this.gridApi) return;
@@ -2473,25 +2481,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
         const row = event.data;
 
         if (row.Fecha) {
-
-            const fecha = new Date(row.Fecha);
-
-            const meses = [
-                'ENERO',
-                'FEBRERO',
-                'MARZO',
-                'ABRIL',
-                'MAYO',
-                'JUNIO',
-                'JULIO',
-                'AGOSTO',
-                'SEPTIEMBRE',
-                'OCTUBRE',
-                'NOVIEMBRE',
-                'DICIEMBRE'
-            ];
-
-            row.Mes = meses[fecha.getMonth()];
+            row.Mes = this.obtenerNombreMes(row.Fecha);
         }
 
         // 🔥 UNA SOLA LLAMADA
@@ -3028,8 +3018,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
         nuevaFila._esNuevo = null;
 
         if (nuevaFila.Fecha) {
-            const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-            nuevaFila.Mes = meses[new Date(nuevaFila.Fecha).getMonth()];
+            nuevaFila.Mes = this.obtenerNombreMes(nuevaFila.Fecha);
         }
 
         this.recalcularFila(nuevaFila);
