@@ -160,6 +160,11 @@ class SolicitudCompraApp {
 
             $('#bodyRequisicionArticulos').empty();
             $('#formGenerarRequisicion')[0].reset();
+            const d = new Date();
+            const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            $('#SolFechaRequerida')
+                .attr('min', hoy)
+                .removeClass('is-invalid');
             $('#formGenerarRequisicion').removeClass('was-validated');
 
             try {
@@ -329,6 +334,23 @@ class SolicitudCompraApp {
                 return;
             }
 
+
+            // ─── Validar fecha requerida ───────────────────────────────────────────
+            const fechaRequerida = $('#SolFechaRequerida').val();
+            if (!fechaRequerida) {
+                $('#SolFechaRequerida').addClass('is-invalid');
+                AlertManager.mostrar('Ingresa la fecha requerida.', 'warning');
+                return;
+            }
+
+            const hoy = new Date().toISOString().split('T')[0];
+            if (fechaRequerida < hoy) {
+                $('#SolFechaRequerida').addClass('is-invalid');
+                AlertManager.mostrar('La fecha requerida no puede ser anterior a hoy.', 'warning');
+                return;
+            }
+            $('#SolFechaRequerida').removeClass('is-invalid');
+
             // ─── Recolectar centros de costo ───────────────────────────────────────
             const contabilizacion = {
                 Departamento: this.centrosCosto.departamento.obtenerDatosFormulario().codigo,
@@ -341,7 +363,8 @@ class SolicitudCompraApp {
             const payload = {
                 IdSolicitudCompra: this.IdSolicitudCompra,
                 Articulos: articulos,
-                Contabilizacion: contabilizacion
+                Contabilizacion: contabilizacion,
+                FechaRequerida: fechaRequerida   // 👈 nuevo (formato yyyy-MM-dd)
             };
 
             console.log('✅ Payload listo:', payload);

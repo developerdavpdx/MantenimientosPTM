@@ -666,7 +666,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_CENTRO_COSTO_1",  ((object)null,    ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_2",  ((object)null,    ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_3",  ((object)null,    ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_4",  ((object)null,    ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_CENTRO_COSTO_4",  ((object)null,    ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_FECHA_REQUERIDA", (DBNull.Value, ParameterDirection.Input, HanaDbType.Date) }
                 };
 
                 var resultEncabezado = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -788,7 +789,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_CENTRO_COSTO_1",  (RequestData.Requisicion.Contabilizacion.Departamento,ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_2",  (RequestData.Requisicion.Contabilizacion.Proceso,ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_3",  (RequestData.Requisicion.Contabilizacion.Gastos,ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CENTRO_COSTO_4",  (RequestData.Requisicion.Contabilizacion.Cedis,ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_CENTRO_COSTO_4",  (RequestData.Requisicion.Contabilizacion.Cedis,ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_FECHA_REQUERIDA", ((object)RequestData.Requisicion.FechaRequerida ?? DBNull.Value, ParameterDirection.Input, HanaDbType.Date) }
                 };
 
                 var resultEncabezado = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
@@ -844,7 +846,8 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 //Enviar notificacion de autorizacion
-                var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString(), codigoEmpleado);
+                var fechaRequerida = RequestData.Requisicion.FechaRequerida;
+                var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString(), codigoEmpleado, fechaRequerida);
                 if (notificacionEmail == null || notificacionEmail.Status != "OK")
                 {
                     log.Warn($"Notificación de autorización no enviada o con error: {notificacionEmail?.Message ?? "Sin respuesta"}");
@@ -884,6 +887,7 @@ namespace MantenimientosPTM.Controllers
 
                 var idSolicitudCompra = RequestData.Requisicion.IdSolicitudCompra;
                 var Planta = RequestData.Planta;
+                var requisicion = RequestData.Requisicion;
                 var contabilizacion = RequestData.Requisicion.Contabilizacion;
                 var articulos = RequestData.Requisicion.Articulos ?? new List<ArticuloRequisicionModel>();
 
@@ -897,6 +901,7 @@ namespace MantenimientosPTM.Controllers
                     { "P_CENTRO_COSTO_2", ((object)contabilizacion?.Proceso ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_3", ((object)contabilizacion?.Gastos ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_CENTRO_COSTO_4", ((object)contabilizacion?.Cedis ?? DBNull.Value, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_FECHA_REQUERIDA", ((object)requisicion?.FechaRequerida ?? DBNull.Value, ParameterDirection.Input, HanaDbType.Date) },
                     { "P_ESTATUS", ("Espera Autorizacion", ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_DOC_NUM", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_DOC_ENTRY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
@@ -946,7 +951,8 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 //Enviar notificacion de autorizacion
-                var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString(), codigoEmpleado);
+                var fechaRequerida = RequestData.Requisicion.FechaRequerida;
+                var notificacionEmail = await EnviarSolicitudCompraAutorizacion(idSolicitudCompra, FolioCompra, articulos, Planta.ToString(), codigoEmpleado, fechaRequerida);
                 if (notificacionEmail == null || notificacionEmail.Status != "OK")
                 {
                     log.Warn($"Notificación de autorización no enviada o con error: {notificacionEmail?.Message ?? "Sin respuesta"}");
@@ -1067,7 +1073,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpPost]
-        public async Task<GlobalCommands.JsonResponseMtto> EnviarSolicitudCompraAutorizacion(int idSolicitudCompra, string folio, List<ArticuloRequisicionModel> articulos, string Planta, int? codigoEmpleado)
+        public async Task<GlobalCommands.JsonResponseMtto> EnviarSolicitudCompraAutorizacion(int idSolicitudCompra, string folio, List<ArticuloRequisicionModel> articulos, string Planta, int? codigoEmpleado, DateTime? FechaRequerida)
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
             try
@@ -1129,6 +1135,10 @@ namespace MantenimientosPTM.Controllers
                             <th style='padding: 10px; border: 1px solid {colorSecundario}; text-align: left; color: {colorPrimario}; font-family: Arial, sans-serif; font-size: 13px;'>Proveedor</th>
                         </tr>";
 
+                string fechaRequeridaTexto = FechaRequerida.HasValue
+                ? FechaRequerida.Value.ToString("dd/MM/yyyy")
+                : "No especificada";
+
                 bool alterno = false;
                 foreach (var articulo in articulos)
                 {
@@ -1158,8 +1168,12 @@ namespace MantenimientosPTM.Controllers
                 <tr><td>
                     <table cellpadding='0' cellspacing='0' border='0' width='100%' style='border-collapse: collapse; margin: 10px 0 20px 0;'>
                         <tr>
-                            <td style='padding: 10px; border: 1px solid {colorSecundario}; background-color: {colorFondoHead}; font-family: Arial, sans-serif; font-size: 13px; color: {colorPrimario}; font-weight: bold; width: 100px;'>Folio</td>
+                            <td style='padding: 10px; border: 1px solid {colorSecundario}; background-color: {colorFondoHead}; font-family: Arial, sans-serif; font-size: 13px; color: {colorPrimario}; font-weight: bold; width: 130px;'>Folio</td>
                             <td style='padding: 10px; border: 1px solid {colorSecundario}; font-family: Arial, sans-serif; font-size: 13px; color: #444;'>{folio}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding: 10px; border: 1px solid {colorSecundario}; background-color: {colorFondoHead}; font-family: Arial, sans-serif; font-size: 13px; color: {colorPrimario}; font-weight: bold; width: 130px;'>Fecha requerida</td>
+                            <td style='padding: 10px; border: 1px solid {colorSecundario}; font-family: Arial, sans-serif; font-size: 13px; color: #444;'>{fechaRequeridaTexto}</td>
                         </tr>
                     </table>
                 </td></tr>
@@ -1169,6 +1183,7 @@ namespace MantenimientosPTM.Controllers
                 <tr><td>{tablaArticulos}</td></tr>
                 <tr><td style='font-family: Arial, sans-serif; font-size: 14px; color: #444; padding: 20px 0 10px 0;'>
                     Por favor seleccione una opción:
+                </td></tr>
                 <tr><td>
                         <table cellpadding='0' cellspacing='0' border='0' width='100%'>
                         <tr>
@@ -1279,6 +1294,8 @@ namespace MantenimientosPTM.Controllers
                    ? estadoActual["DOCNUM"].ToString()
                    : string.Empty;
 
+                string fechaRequeridaTexto = ObtenerFechaGuardada(estadoActual)?.ToString("dd/MM/yyyy") ?? string.Empty;
+
                 // Si ya fue procesada, mostrar vista con estado actual
                 if (currentStatus == "Aprobado" || currentStatus == "No Aprobado")
                 {
@@ -1286,6 +1303,7 @@ namespace MantenimientosPTM.Controllers
                     ViewBag.Folio = folio;
                     ViewBag.DocEntry = docentry;
                     ViewBag.DocNum = docnum;
+                    ViewBag.FechaRequerida = fechaRequeridaTexto;
                     ViewBag.Mensaje = currentStatus == "Aprobado"
                         ? "Esta solicitud ya fue autorizada anteriormente."
                         : "Esta solicitud ya fue rechazada anteriormente.";
@@ -1296,14 +1314,29 @@ namespace MantenimientosPTM.Controllers
                 // ✅ 3. Procesar según acción
                 if (accion == "Autorizar")
                 {
-                    // Pedir fecha requerida antes de crear la solicitud en SAP
-                    ViewBag.RequiereFecha = true;
+                    DateTime? fechaGuardada = ObtenerFechaGuardada(estadoActual);
+
                     ViewBag.EncodedId = id;
                     ViewBag.EncodedToken = token;
                     ViewBag.Folio = folio;
                     ViewBag.Estado = currentStatus;
-                    ViewBag.FechaMinima = DateTime.Today.ToString("yyyy-MM-dd");
-                    ViewBag.Mensaje = "Selecciona la fecha requerida para la solicitud de compra:";
+
+                    if (fechaGuardada.HasValue && fechaGuardada.Value >= DateTime.Today)
+                    {
+                        // ✅ Solo confirmar, NO se crea nada en el GET
+                        ViewBag.RequiereConfirmacion = true;
+                        ViewBag.FechaRequeridaTexto = fechaGuardada.Value.ToString("dd/MM/yyyy");
+                        ViewBag.Mensaje = "Confirma la autorización de la solicitud de compra:";
+                    }
+                    else
+                    {
+                        // Respaldo: solicitudes viejas sin fecha, o con fecha vencida
+                        ViewBag.RequiereFecha = true;
+                        ViewBag.FechaMinima = DateTime.Today.ToString("yyyy-MM-dd");
+                        ViewBag.Mensaje = fechaGuardada.HasValue
+                            ? "La fecha requerida original ya venció. Selecciona una nueva fecha:"
+                            : "Selecciona la fecha requerida para la solicitud de compra:";
+                    }
                     return View("AprobacionSolicitud");
                 }
                 else if (accion == "NoAutorizar")
@@ -1330,7 +1363,8 @@ namespace MantenimientosPTM.Controllers
                 return View("AprobacionSolicitud");
             }
         }
-        //SE UTILIZA UTILIZA PARA APROBAR LA SOLICITUD CON LA FECHA DE ENTREGA
+
+        //SE UTILIZA UTILIZA PARA APROBAR O RECHAZAR LA SOLICITUD CON LA FECHA DE ENTREGA
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> AprobarSolicitudCompra(string id, string token, string comentario, string fechaRequerida)
@@ -1379,6 +1413,7 @@ namespace MantenimientosPTM.Controllers
                 string planta = estadoActual != null && estadoActual.ContainsKey("PLANTA") ? estadoActual["PLANTA"].ToString() : string.Empty;
                 string docentry = estadoActual != null && estadoActual.ContainsKey("DOCENTRY") ? estadoActual["DOCENTRY"].ToString() : string.Empty;
                 string docnum = estadoActual != null && estadoActual.ContainsKey("DOCNUM") ? estadoActual["DOCNUM"].ToString() : string.Empty;
+                DateTime? fechaGuardada = ObtenerFechaGuardada(estadoActual);
 
                 // Si ya fue procesada, mostrar estado actual
                 if (currentStatus == "Aprobado" || currentStatus == "No Aprobado")
@@ -1396,66 +1431,83 @@ namespace MantenimientosPTM.Controllers
                 // 4A. AUTORIZAR: validar fecha y crear en SAP
                 if (accion == "Autorizar")
                 {
+                    // ✅ Fecha guardada y vigente → directo a SAP
+                    if (fechaGuardada.HasValue && fechaGuardada.Value >= DateTime.Today)
+                        return await EjecutarAutorizacion(idSolicitudCompra, folio, planta, fechaGuardada.Value);
+
+                    // ⚠️ Respaldo: usar la fecha capturada en el formulario
                     if (!DateTime.TryParseExact(fechaRequerida, "yyyy-MM-dd", CultureInfo.InvariantCulture,
                             DateTimeStyles.None, out DateTime fechaReq) || fechaReq.Date < DateTime.Today)
                     {
-                        // Volver a mostrar el formulario con el error
                         ViewBag.RequiereFecha = true;
                         ViewBag.EncodedId = id;
                         ViewBag.EncodedToken = token;
                         ViewBag.Folio = folio;
                         ViewBag.Estado = currentStatus;
                         ViewBag.FechaMinima = DateTime.Today.ToString("yyyy-MM-dd");
-                        ViewBag.ErrorFecha = "Selecciona una fecha válida (hoy o posterior).";
+                        ViewBag.ErrorFecha = string.IsNullOrEmpty(fechaRequerida)
+                            ? null
+                            : "Selecciona una fecha válida (hoy o posterior).";
                         ViewBag.Mensaje = "Selecciona la fecha requerida para la solicitud de compra:";
                         return View("AprobacionSolicitud");
                     }
 
-                    var sapResp = await GenerarSolicitudCompra(idSolicitudCompra, folio, int.Parse(planta), fechaReq);
-
-                    if (sapResp != null && !sapResp.IsError)
-                    {
-                        var paramsAprobar = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                {
-                    { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_ESTATUS", ("Aprobado", ParameterDirection.Input, HanaDbType.NVarChar) }
-                };
-                        var resultAprobar = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCUpdateEstatusAuthSC, paramsAprobar);
-
-                        if (resultAprobar.JsonResult.Contains("ERROR"))
-                            throw new Exception("Error al actualizar el estatus de la solicitud.");
-
-                        ViewBag.Estado = "Aprobado";
-                        ViewBag.Folio = folio;
-                        ViewBag.Mensaje = "La solicitud de compra ha sido autorizada correctamente," + Environment.NewLine
-                                          + " Folio de solicitud de compra generado en SAP: " + sapResp.DocNum;
-
-                        var ctx = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
-                        ctx.Clients.All.actualizarTablaSolicitudCompra(planta);
-                    }
-                    else
-                    {
-                        ViewBag.Estado = "Error";
-                        ViewBag.Folio = folio;
-                        ViewBag.Mensaje = "No fue posible actualizar solicitud de compra: " + Environment.NewLine + sapResp?.Message;
-                    }
-
-                    return View("AprobacionSolicitud");
+                    return await EjecutarAutorizacion(idSolicitudCompra, folio, planta, fechaReq);
                 }
 
                 // 4B. NO AUTORIZAR: tu lógica actual de rechazo
                 if (accion == "NoAutorizar")
                 {
                     var paramsUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-            {
-                { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
-                { "P_ESTATUS", ("No Aprobado", ParameterDirection.Input, HanaDbType.NVarChar) },
-                { "P_COMENTARIO_RECHAZO", (comentario, ParameterDirection.Input, HanaDbType.NVarChar) }
-            };
+                    {
+                        { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
+                        { "P_ESTATUS", ("No Aprobado", ParameterDirection.Input, HanaDbType.NVarChar) },
+                        { "P_COMENTARIO_RECHAZO", (comentario, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    };
                     var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCUpdateEstatusCommAuthSC, paramsUpdate);
 
                     if (resultUpdate.JsonResult.Contains("ERROR"))
                         throw new Exception("Error al actualizar el estatus de la solicitud.");
+
+                    // ✅ Parameters
+                    var parametersDetails = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                    {
+                        { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) }
+                    };
+
+                    var resultHanaDetails = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCGetDetallesSolicitudCompraMP,
+                        parametersDetails
+                    );
+
+                    // ✅ Deserializar resultado
+                    List<SolicitudCompraDetalle> SolicitudCompraDetalle = new List<SolicitudCompraDetalle>();
+
+                    if (!string.IsNullOrEmpty(resultHanaDetails.JsonResult) && resultHanaDetails.JsonResult != "[]")
+                    {
+                        SolicitudCompraDetalle = JsonConvert.DeserializeObject<List<SolicitudCompraDetalle>>(resultHanaDetails.JsonResult);
+                    }
+                    //Retornar el estatus de las refaccciones
+                    foreach (var item in SolicitudCompraDetalle)
+                    {
+                        //Actualizar las solicitudes de refaccion a Pendiente de nuevo
+                        var paramsRefaccion = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                        {
+                            { "P_IDSOLICITUD",(item.IdSolicitudRefaccion,ParameterDirection.Input, HanaDbType.Integer)  },
+                            { "P_ORDENTRABAJO",(null, ParameterDirection.Input, HanaDbType.NVarChar) },
+                            { "P_REFACCIONSOLICITADA",(null,ParameterDirection.Input, HanaDbType.NVarChar) },
+                            { "P_CANTIDAD",(null,ParameterDirection.Input, HanaDbType.NVarChar) },
+                            { "P_ESTATUS",("Pendiente",ParameterDirection.Input, HanaDbType.NVarChar) },
+                            { "P_USUARIOATIENDE",(null,ParameterDirection.Input, HanaDbType.NVarChar) },
+                            { "P_ACEPTADAMANTENIMIENTO",(null,ParameterDirection.Input, HanaDbType.NVarChar) },
+                        };
+
+                        if (item.IdSolicitudRefaccion != null)
+                            Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                               Logic.AD.GCActualizaSolicitudRefaccion,
+                               paramsRefaccion
+                           );
+                    }
 
                     var contextSC = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
                     contextSC.Clients.All.actualizarTablaSolicitudCompra(planta);
@@ -1478,104 +1530,51 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
-        ////SE UTILIZA UTILIZA PARA RECHAZAR LA SOLICITUD
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //public ActionResult AprobarSolicitudCompra(string id, string token, string comentario)
-        //{
-        //    try
-        //    {
-        //        // ✅ 1. Decodificar parámetros
-        //        string idDecoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(HttpUtility.UrlDecode(id)));
-        //        string accionDecoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(HttpUtility.UrlDecode(token)));
+        private async Task<ActionResult> EjecutarAutorizacion(int idSolicitudCompra, string folio, string planta, DateTime fechaReq)
+        {
+            var sapResp = await GenerarSolicitudCompra(idSolicitudCompra, folio, int.Parse(planta), fechaReq);
 
-        //        int idSolicitudCompra = int.Parse(idDecoded);
-        //        string accion = accionDecoded;
+            if (sapResp != null && !sapResp.IsError)
+            {
+                var paramsAprobar = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+            {
+                { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
+                { "P_ESTATUS", ("Aprobado", ParameterDirection.Input, HanaDbType.NVarChar) }
+            };
+                var resultAprobar = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCUpdateEstatusAuthSC, paramsAprobar);
 
-        //        // ✅ 2. Validar comentario para rechazo
-        //        if (accion == "NoAutorizar")
-        //        {
-        //            if (string.IsNullOrWhiteSpace(comentario))
-        //                throw new Exception("El comentario de rechazo es obligatorio.");
+                if (resultAprobar.JsonResult.Contains("ERROR"))
+                    throw new Exception("Error al actualizar el estatus de la solicitud.");
 
-        //            comentario = comentario.Trim();
-        //            if (comentario.Length > 100)
-        //                comentario = comentario.Substring(0, 100);
-        //        }
+                ViewBag.Estado = "Aprobado";
+                ViewBag.Folio = folio;
+                ViewBag.Mensaje = "La solicitud de compra ha sido autorizada correctamente," + Environment.NewLine
+                                  + " Folio de solicitud de compra generado en SAP: " + sapResp.DocNum;
 
-        //        // ✅ 3. Verificar estado actual
-        //        var paramsEstatus = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-        //        {
-        //            { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) }
-        //        };
-        //        var resultEstatus = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-        //            Logic.AD.GCGetEstatusAuthSC, paramsEstatus
-        //        );
+                var ctx = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
+                ctx.Clients.All.actualizarTablaSolicitudCompra(planta);
+            }
+            else
+            {
+                ViewBag.Estado = "Error";
+                ViewBag.Folio = folio;
+                ViewBag.Mensaje = "No fue posible actualizar solicitud de compra: " + Environment.NewLine + sapResp?.Message;
+            }
 
-        //        if (resultEstatus.JsonResult.ToString().Contains("ERROR"))
-        //            throw new Exception("Error al verificar el estado de la solicitud.");
+            return View("AprobacionSolicitud");
+        }
 
-        //        var estadoData = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultEstatus.JsonResult.ToString());
-        //        var estadoActual = estadoData.FirstOrDefault();
+        private DateTime? ObtenerFechaGuardada(Dictionary<string, object> estado)
+        {
+            if (estado == null || !estado.TryGetValue("FECHA_REQUERIDA", out var obj) || obj == null)
+                return null;
 
-        //        string currentStatus = estadoActual != null && estadoActual.ContainsKey("ESTATUS")
-        //            ? estadoActual["ESTATUS"].ToString()
-        //            : "";
-        //        string folio = estadoActual != null && estadoActual.ContainsKey("FOLIO_COMPRA")
-        //            ? estadoActual["FOLIO_COMPRA"].ToString()
-        //            : idSolicitudCompra.ToString();
+            if (obj is DateTime dt) return dt.Date;
 
-        //        string planta = estadoActual != null && estadoActual.ContainsKey("PLANTA")
-        //            ? estadoActual["PLANTA"].ToString()
-        //            : string.Empty;
-
-        //        // Si ya fue procesada, mostrar vista con estado actual
-        //        if (currentStatus == "Aprobado" || currentStatus == "No Aprobado")
-        //        {
-        //            ViewBag.Estado = currentStatus;
-        //            ViewBag.Folio = folio;
-        //            ViewBag.Mensaje = currentStatus == "Aprobado"
-        //                ? "Esta solicitud ya fue autorizada anteriormente."
-        //                : "Esta solicitud ya fue rechazada anteriormente.";
-        //            return View("AprobacionSolicitud");
-        //        }
-
-        //        // ✅ 4. Actualizar estatus a No Aprobado con comentario
-        //        var paramsUpdate = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-        //        {
-        //            { "P_ID_SOLICITUD_COMPRA", (idSolicitudCompra, ParameterDirection.Input, HanaDbType.Integer) },
-        //            { "P_ESTATUS", ("No Aprobado", ParameterDirection.Input, HanaDbType.NVarChar) },
-        //            { "P_COMENTARIO_RECHAZO", (comentario, ParameterDirection.Input, HanaDbType.NVarChar) }
-        //        };
-
-        //        var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-        //            Logic.AD.GCUpdateEstatusCommAuthSC, paramsUpdate
-        //        );
-
-        //        if (resultUpdate.JsonResult.Contains("ERROR"))
-        //            throw new Exception("Error al actualizar el estatus de la solicitud.");
-
-
-        //        // ✅ NOTIFICAR A TODOS LOS CLIENTES
-        //        var contextSC = GlobalHost.ConnectionManager.GetHubContext<MantenimientoHub>();
-        //        contextSC.Clients.All.actualizarTablaSolicitudCompra(planta);
-
-        //        // ✅ 5. Mostrar vista con resultado
-        //        ViewBag.Estado = "No Aprobado";
-        //        ViewBag.Folio = folio;
-        //        ViewBag.Mensaje = "La solicitud de compra ha sido rechazada correctamente.";
-        //        log.Info($"Solicitud {idSolicitudCompra} rechazada con comentario: {comentario}");
-
-        //        return View("AprobacionSolicitud");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        log.Error($"Error al procesar rechazo: {ex.Message}");
-        //        ViewBag.Estado = "Error";
-        //        ViewBag.Mensaje = "Error al procesar el rechazo: " + ex.Message;
-        //        return View("AprobacionSolicitud");
-        //    }
-        //}
+            return DateTime.TryParse(obj.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var f)
+                ? f.Date
+                : (DateTime?)null;
+        }
 
         [HttpGet]
         public JsonResult ObtenerEstadoSolicitud(string id)
@@ -1671,7 +1670,7 @@ namespace MantenimientosPTM.Controllers
         //}
 
         [HttpPost]
-        public async Task<GlobalCommands.SapResponse> GenerarSolicitudCompra(int IdSolicitudCompra, string Folio,int Planta, DateTime? fechaRequerida = null)
+        public async Task<GlobalCommands.SapResponse> GenerarSolicitudCompra(int IdSolicitudCompra, string Folio, int Planta, DateTime? fechaRequerida = null)
         {
             try
             {
@@ -3111,15 +3110,15 @@ namespace MantenimientosPTM.Controllers
             try
             {
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-            {
-                { "P_IDSOLICITUD",            (idSolicitud,            ParameterDirection.Input, HanaDbType.Integer)  },
-                { "P_ORDENTRABAJO",           (null,           ParameterDirection.Input, HanaDbType.NVarChar) },
-                { "P_REFACCIONSOLICITADA",    (null,                     ParameterDirection.Input, HanaDbType.NVarChar) },
-                { "P_CANTIDAD",               (null,                      ParameterDirection.Input, HanaDbType.Integer)  },
-                { "P_ESTATUS",                (null,                     ParameterDirection.Input, HanaDbType.NVarChar) },
-                { "P_USUARIOATIENDE",         (null,                     ParameterDirection.Input, HanaDbType.NVarChar) },
-                { "P_ACEPTADAMANTENIMIENTO",  (aceptadaMantenimiento,  ParameterDirection.Input, HanaDbType.Boolean)  }
-            };
+                {
+                    { "P_IDSOLICITUD",            (idSolicitud,            ParameterDirection.Input, HanaDbType.Integer)  },
+                    { "P_ORDENTRABAJO",           (null,           ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_REFACCIONSOLICITADA",    (null,                     ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CANTIDAD",               (null,                      ParameterDirection.Input, HanaDbType.Integer)  },
+                    { "P_ESTATUS",                (null,                     ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_USUARIOATIENDE",         (null,                     ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_ACEPTADAMANTENIMIENTO",  (aceptadaMantenimiento,  ParameterDirection.Input, HanaDbType.Boolean)  }
+                };
 
                 var result = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                     Logic.AD.GCActualizaSolicitudRefaccion,

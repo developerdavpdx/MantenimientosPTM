@@ -50,7 +50,7 @@
             }
 
             .aprobacion-header.warning {
-                background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+                background: linear-gradient(135deg, #0b4a8a 0%, #0b4a8a 100%);
             }
 
             .aprobacion-header.error {
@@ -295,6 +295,12 @@
                     string iconClass = "";
                     string badgeClass = "";
 
+                    if (ViewBag.RequiereConfirmacion == true)
+                    {
+                        headerClass = "success";
+                        iconClass = "bi-shield-check";
+                    }
+
                     if (ViewBag.RequiereFecha == true)
                     {
                         headerClass = "success";
@@ -352,8 +358,38 @@
                             <span class="folio-chip"><strong>Folio SAP:</strong> @ViewBag.DocNum</span>
                         </p>
                     }
+                    @if (!string.IsNullOrEmpty(ViewBag.FechaRequerida))
+                    {
+                        <p class="mb-3">
+                            <span class="folio-chip"><strong>Fecha requerida:</strong> @ViewBag.FechaRequerida</span>
+                        </p>
+                    }
 
-                    @if (ViewBag.RequiereFecha == true)
+                    @if (ViewBag.RequiereConfirmacion == true)
+                    {
+                        <form id="formConfirmar" class="comentario-form text-center" method="post"
+                              action="@Url.Action("AprobarSolicitudCompra", "Almacen")">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@ViewBag.EncodedId" />
+                            <input type="hidden" name="token" value="@ViewBag.EncodedToken" />
+
+                            <p class="mb-3">
+                                <span class="folio-chip">
+                                    <i class="bi bi-calendar-event me-1"></i>
+                                    <strong>Fecha requerida:</strong> @ViewBag.FechaRequeridaTexto
+                                </span>
+                            </p>
+
+                            <div class="comentario-acciones">
+                                <a href="@Url.Action("SolicitudOC", "Almacen")" class="btn-cancelar">Cancelar</a>
+                                <button type="submit" id="btnConfirmarAutorizacion" class="btn-aprobar-confirmar">
+                                    <i class="bi bi-check-circle me-2"></i>Confirmar autorización
+                                </button>
+                            </div>
+                        </form>
+                    }
+
+                    else if (ViewBag.RequiereFecha == true)
                     {
                         <form id="formAprobar" class="comentario-form text-center" method="post" action="@Url.Action("AprobarSolicitudCompra", "Almacen")" novalidate>
                             @Html.AntiForgeryToken()
@@ -408,8 +444,8 @@
                         </span>
 
                         <div>
-                            <a href="@Url.Action("SolicitudOC", "Almacen")" class="btn-ptm">
-                                <i class="bi bi-arrow-left me-2"></i>Ir a Solicitudes de Compra
+                            <a href="@Url.Action("Login", "Login")" class="btn-ptm">
+                                <i class="bi bi-arrow-left me-2"></i>Ir al portal
                             </a>
                         </div>
                     }
@@ -420,6 +456,17 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    @if (ViewBag.RequiereConfirmacion == true)
+    {
+        <script>
+            document.getElementById('formConfirmar').addEventListener('submit', function () {
+                var btn = document.getElementById('btnConfirmarAutorizacion');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Creando solicitud en SAP...';
+            });
+        </script>
+    }
 
     @if (ViewBag.RequiereFecha == true)
     {

@@ -107,6 +107,11 @@ class ReporteStockApp {
                 // Renderizar tabla de requisición
                 $('#bodyRequisicionArticulos').empty();
                 $('#formGenerarRequisicion')[0].reset();
+                const d = new Date();
+                const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                $('#SolFechaRequerida')
+                    .attr('min', hoy)
+                    .removeClass('is-invalid');
                 $('#formGenerarRequisicion').removeClass('was-validated');
                 $('#subtitleRequisicion').html(
                     `<i class="bi bi-box-seam me-1"></i> <strong>${seleccionadas.length}</strong> artículo(s) seleccionado(s)`

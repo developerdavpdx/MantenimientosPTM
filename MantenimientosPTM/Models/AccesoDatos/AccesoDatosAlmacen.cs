@@ -631,6 +631,9 @@ namespace MantenimientosPTM
 
             [JsonProperty("Contabilizacion")]
             public ContabilizacionModel Contabilizacion { get; set; }
+
+            [JsonProperty("FechaRequerida")]
+            public DateTime? FechaRequerida { get; set; }   // 👈 nuevo
         }
 
         public class ArticuloRequisicionModel
