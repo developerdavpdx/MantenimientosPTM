@@ -215,6 +215,8 @@
     <Content Include="Content\Images\alerta.gif" />
     <Content Include="Content\Images\ok.gif" />
     <Content Include="Content\Images\PAC.png" />
+    <Content Include="Content\Images\SelloProduccion.png" />
+    <Content Include="Content\Images\SelloPruebas.png" />
     <Content Include="Content\Images\user.png" />
     <Content Include="Content\onboarding-tour.css" />
     <Content Include="Content\ParosProduccion.css" />
