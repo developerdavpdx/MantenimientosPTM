@@ -2,19 +2,24 @@
  PENDIENTES PARA PRODUCCION - CAMBIOS EN BASE DE DATOS
  Proyecto: MantenimientosPTM
  Fecha: 05/11/2026 (actualizado)
+ Estado: APLICADO Y VALIDADO en TEST_JUNIO_2026 y PTM_2022_FINAL
  Ambiente donde YA se aplicaron: HANA Cloud / schema DBADMIN (desarrollo)
  Ambiente destino (produccion): HANA 10.161.60.152 / schema PTM_2022_FINAL
 ================================================================================
 
 IMPORTANTE
+- ESTADO ACTUAL (05/11/2026): los scripts de migracion YA se ejecutaron en
+  TEST_JUNIO_2026 y en PTM_2022_FINAL. El usuario confirmo la validacion de
+  los 11 stored procedures y de la columna TIEMPO_MUERTO_HERRAMENTALES.
+  Lo unico pendiente es el despliegue de la app y el cambio de Web.config.
 - En produccion el schema se toma del appSetting "Database" del Web.config
   (actualmente en el repo esta apuntando a DBADMIN; regresarlo a PTM_2022_FINAL).
 - El schema de produccion es: PTM_2022_FINAL
 - Los procedimientos listados abajo ya estan corregidos en DBADMIN y sirven
   de referencia para comparar/aplicar en produccion.
-- Scripts listos para ejecutar (incluyen columna + los 11 SPs + validacion):
-      SQL_MIGRACION/MIGRACION_TEST_JUNIO_2026.sql
-      SQL_MIGRACION/MIGRACION_PTM_2022_FINAL.sql
+- Scripts ejecutados (incluyen columna + los 11 SPs + validacion):
+      SQL_MIGRACION/MIGRACION_TEST_JUNIO_2026.sql   [APLICADO]
+      SQL_MIGRACION/MIGRACION_PTM_2022_FINAL.sql    [APLICADO]
   Instrucciones en SQL_MIGRACION/README.txt
   IMPORTANTE: los scripts usan ALTER PROCEDURE, por lo que los 11 SPs deben
   existir previamente en el schema destino. Estan en UTF-8 con BOM, sin emojis,
@@ -24,7 +29,7 @@ IMPORTANTE
  1) STORED PROCEDURES MODIFICADOS (hay que actualizarlos en produccion)
 --------------------------------------------------------------------------------
 
-[ ] 1.1  SpPdxMTTOConsultaEquipos
+[x] 1.1  SpPdxMTTOConsultaEquipos
          Motivo: que la busqueda de equipos filtre por CLASIFICACION segun el
                  Area Tecnica (Mantenimiento / Herramentales).
          Cambio:
@@ -34,7 +39,7 @@ IMPORTANTE
          Nota: este cambio lo aplicaste tu directamente en DBADMIN.
          Valores que recibe: 'MANTENIMIENTO' | 'HERRAMENTALES' | NULL
 
-[ ] 1.2  SpPdxMTTOInsertaEquipo
+[x] 1.2  SpPdxMTTOInsertaEquipo
          Motivo: guardar la CLASIFICACION al dar de alta un equipo nuevo.
          Cambios:
            - Nuevo parametro (al final de la lista):
@@ -45,7 +50,7 @@ IMPORTANTE
                  :P_CLASIFICACION
          Tabla afectada: PdxMTTOGestionEquipos (columna CLASIFICACION)
 
-[ ] 1.3  SpPdxMTTOActualizaEquipo
+[x] 1.3  SpPdxMTTOActualizaEquipo
          Motivo: poder editar/corregir la CLASIFICACION de un equipo existente.
          Cambios:
            - Nuevo parametro (al final de la lista):
@@ -54,7 +59,7 @@ IMPORTANTE
                  "CLASIFICACION" = :P_CLASIFICACION,
          Tabla afectada: PdxMTTOGestionEquipos (columna CLASIFICACION)
 
-[ ] 1.4  SpPdxMTTOObtenerMantenimientosPorRango
+[x] 1.4  SpPdxMTTOObtenerMantenimientosPorRango
          Motivo: filtros nuevos en Mantenimientos Preventivos:
                  - Filtro por CLASIFICACION del equipo
                  - Filtro por NOMBRE/DESCRIPCION de equipo
@@ -110,7 +115,7 @@ IMPORTANTE
                      )
                  )
 
-[ ] 1.5  SpPdxMTTOObtenerMantenimientosCorrectivos
+[x] 1.5  SpPdxMTTOObtenerMantenimientosCorrectivos
          Motivo: filtros nuevos en Mantenimientos Correctivos (mismos que preventivos):
                  - Filtro por CLASIFICACION del equipo
                  - Filtro por NOMBRE de equipo
@@ -125,7 +130,7 @@ IMPORTANTE
                       OR UPPER(E."NOMBRE_EQUIPO") LIKE '%' || UPPER(:P_FILTRO_EQUIPO) || '%')
          IMPORTANTE: mismo criterio que el 1.4; parametros al final (posiciones 18 y 19).
 
-[ ] 1.6  SpPdxMTTOMetricasOEE_PVC / _PeadLiso / _Corrugado / _INY
+[x] 1.6  SpPdxMTTOMetricasOEE_PVC / _PeadLiso / _Corrugado / _INY
          Motivo: filtro por CLASIFICACION de equipos en Metricas.
          IMPORTANTE (modelo de datos): MTTR / MTBF / DT y la OEE salen de las
          bitacoras de produccion (PdxMTTOTiemposMuertosProduccion*), que son POR
@@ -169,7 +174,7 @@ IMPORTANTE
            - MTTR_TOTAL / MTBF_TOTAL / DT_TOTAL quedan igual (sobre BITACORA_FILTRADA).
          Los 4 SP quedan con 5 parametros (P_CLASIFICACION en la posicion 5).
 
-[ ] 1.7  Corrugado: columna de HERRAMENTAL (para que quede igual que PEAD LISO/INY)
+[x] 1.7  Corrugado: columna de HERRAMENTAL (para que quede igual que PEAD LISO/INY)
          a) ALTER TABLE (agregar columna):
                 ALTER TABLE "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionCorrugado"
                 ADD ("TIEMPO_MUERTO_HERRAMENTALES" DECIMAL(10,2) DEFAULT 0);
@@ -213,6 +218,10 @@ Tablas que solo tuvieron MOVIMIENTOS DE DATOS DE PRUEBA (sin cambios de estructu
  3) VALIDACION DESPUES DE APLICAR EN PRODUCCION
 --------------------------------------------------------------------------------
 
+Estado: YA VALIDADO por el usuario el 05/11/2026 en TEST_JUNIO_2026 y
+PTM_2022_FINAL. Las consultas siguientes se conservan como referencia para
+re-verificar en cualquier momento.
+
 Ejecutar en PTM_2022_FINAL:
 
     -- 3.1 Confirmar que los 3 SP tienen el parametro
@@ -241,6 +250,8 @@ Ejecutar en PTM_2022_FINAL:
  4) ARCHIVOS DE LA APP RELACIONADOS (para el despliegue)
 --------------------------------------------------------------------------------
 
+    PENDIENTE DE DESPLIEGUE (la BD ya esta migrada)
+
     Controllers/EquiposController.cs          (parametro Clasificacion en BuscarEquipo)
     Models/AccesoDatos/AccesoDatosEquipos.cs  (propiedad Clasificacion en EquipoMTTO)
     Scripts/Global.js                          (buscarEquipos envia Clasificacion)
@@ -267,6 +278,23 @@ Ejecutar en PTM_2022_FINAL:
     Views/Metricas/MetricasMtto.cshtml                  (control de filtro)
 
     Web.config                                 (Database = PTM_2022_FINAL)
+
+--------------------------------------------------------------------------------
+ 5) DESPLIEGUE DE LA APP (PENDIENTE)
+--------------------------------------------------------------------------------
+
+    La base de datos ya esta migrada. Falta publicar el sitio:
+
+    [ ] 1. Respaldo/snapshot de PTM_2022_FINAL antes de publicar.
+    [ ] 2. Publicar los commits d42347a + 20f1dfe (rama david_reyes).
+    [ ] 3. Web.config:
+             Database     = PTM_2022_FINAL
+             SapDatabase  = PTM_2022_FINAL
+             HANAConnection -> Server=10.161.60.152:30015
+             SQLConnection  -> Data Source=SAP-PLASTIC-INT\MSSQLPTM
+    [ ] 4. Login con sello SelloProduccion.png (productivo).
+    [ ] 5. NO publicar FirmasOTCorrectivo/ (firmas de prueba).
+    [ ] 6. Probar login, preventivos, correctivos, bitacora y metricas.
 
 ================================================================================
  FIN DEL DOCUMENTO

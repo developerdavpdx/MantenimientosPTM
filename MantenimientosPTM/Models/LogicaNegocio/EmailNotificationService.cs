@@ -25,26 +25,32 @@ namespace MantenimientosPTM
 
         public static class EmailConfig
         {
+            // Configuracion unica de correo (Web.config -> SMTP_*)
             public static string Host =>
-                ConfigurationManager.AppSettings["Email.Host"];
+                ConfigurationManager.AppSettings["SMTP_HOST"];
 
-            public static int Port =>
-                int.Parse(ConfigurationManager.AppSettings["Email.Port"]);
-
-            public static bool EnableSSL =>
-                bool.Parse(ConfigurationManager.AppSettings["Email.EnableSSL"]);
+            public static int Port
+            {
+                get
+                {
+                    int port;
+                    return int.TryParse(ConfigurationManager.AppSettings["SMTP_PORT"], out port)
+                        ? port
+                        : 587;
+                }
+            }
 
             public static string User =>
-                ConfigurationManager.AppSettings["Email.User"];
+                ConfigurationManager.AppSettings["SMTP_USER"];
 
             public static string Password =>
-                ConfigurationManager.AppSettings["Email.Password"];
+                ConfigurationManager.AppSettings["SMTP_PASSWORD"];
 
             public static string FromName =>
-                ConfigurationManager.AppSettings["Email.FromName"];
+                ConfigurationManager.AppSettings["SMTP_FROM_NAME"] ?? "Sistema Producción";
 
             public static string LogoPath =>
-                ConfigurationManager.AppSettings["Email.LogoPath"];
+                ConfigurationManager.AppSettings["SMTP_LOGO_PATH"] ?? "~/Content/Images/LogoPTM.png";
         }
 
         public static bool Send(EmailRequest request, out string error)
@@ -57,7 +63,7 @@ namespace MantenimientosPTM
                 {
                     Host = EmailConfig.Host,
                     Port = EmailConfig.Port,
-                    EnableSsl = EmailConfig.EnableSSL,
+                    EnableSsl = true, // Office365 (smtp.office365.com) requiere TLS
                     DeliveryMethod = SmtpDeliveryMethod.Network,
                     UseDefaultCredentials = false,
                     Credentials = new NetworkCredential(

@@ -9,6 +9,7 @@
 
 - **Desarrollo:** HANA Cloud, schema `DBADMIN`. El `Web.config` activo apunta a `DBADMIN`.
 - **Producción/Test destino:** `TEST_JUNIO_2026` y `PTM_2022_FINAL`.
+- **Migración BD aplicada (05/11/2026):** los scripts `MIGRACION_TEST_JUNIO_2026.sql` y `MIGRACION_PTM_2022_FINAL.sql` ya se ejecutaron en ambos schemas. Los 11 SPs y la columna `TIEMPO_MUERTO_HERRAMENTALES` de Corrugado quedaron validados por el usuario.
 - **Datos de prueba:** se quedan en `DBADMIN` (NO migrar).
 - **Firmas de prueba:** fuera del índice de Git (`git rm --cached`), siguen en disco y `.gitignore` las excluye.
 - **Equipo BCP03:** restaurado a `FECHA_INICIO_MANT = 2026-01-01`.
@@ -60,24 +61,34 @@
 
 ### Scripts de migración
 
-- `SQL_MIGRACION/MIGRACION_TEST_JUNIO_2026.sql`
-- `SQL_MIGRACION/MIGRACION_PTM_2022_FINAL.sql`
+- `SQL_MIGRACION/MIGRACION_TEST_JUNIO_2026.sql` — **aplicado en `TEST_JUNIO_2026`**.
+- `SQL_MIGRACION/MIGRACION_PTM_2022_FINAL.sql` — **aplicado en `PTM_2022_FINAL`**.
 - Usan **`ALTER PROCEDURE`** (los 11 SPs deben existir previamente).
 - Incluyen `ALTER TABLE` condicional para la columna de Corrugado.
 - UTF-8 con BOM, sin emojis, con acentos en comentarios.
 - El filtro de INY usa `LIKE 'INYECCI%'` para evitar depender del acento de `INYECCIÓN`.
 
-## 4. Pendiente para productivo
+## 4. Estado de la migración y pendientes
 
-1. Respaldo/snapshot de `TEST_JUNIO_2026` y `PTM_2022_FINAL`.
-2. Ejecutar `MIGRACION_TEST_JUNIO_2026.sql` y validar.
-3. Ejecutar `MIGRACION_PTM_2022_FINAL.sql`.
-4. Publicar la app (commits `d42347a` + `20f1dfe`).
-5. Cambiar `Web.config`: `Database = PTM_2022_FINAL`.
-6. **No publicar** `FirmasOTCorrectivo/` con las firmas de prueba.
-7. Validar login, preventivos, correctivos, bitácora y métricas.
+**Hecho (05/11/2026):**
 
-**Orden:** primero BD, después app. La app nueva espera los parámetros/columna nuevos.
+- [x] Migración ejecutada en `TEST_JUNIO_2026`.
+- [x] Migración ejecutada en `PTM_2022_FINAL`.
+- [x] Validación de los 11 SPs y de la columna `TIEMPO_MUERTO_HERRAMENTALES` (confirmada por el usuario).
+
+**Pendiente para productivo (solo app / despliegue):**
+
+1. Respaldo/snapshot de `PTM_2022_FINAL` antes de publicar (recomendado).
+2. Publicar la app (commits `d42347a` + `20f1dfe` + docs).
+3. Cambiar `Web.config`:
+   - `Database` y `SapDatabase` = `PTM_2022_FINAL`.
+   - `HANAConnection` → `10.161.60.152:30015`.
+   - `SQLConnection` → `SAP-PLASTIC-INT\MSSQLPTM`.
+4. Verificar el sello de ambiente en Login: `SelloProduccion.png` para productivo.
+5. **No publicar** `FirmasOTCorrectivo/` con las firmas de prueba.
+6. Validar login, preventivos, correctivos, bitácora y métricas.
+
+**Orden:** la BD ya está migrada; solo falta el despliegue de la app. La app nueva espera los parámetros/columna nuevos.
 
 ## 5. Archivos clave
 
@@ -94,4 +105,4 @@
 2. Leer este archivo y `PENDIENTES_PRODUCTIVO_BD.txt`.
 3. Usar CodeGraph (`codegraph_explore` o `codegraph explore`) para mapear código antes de editar.
 4. No truncar tablas ni tocar producción sin confirmar.
-5. Recordar: datos de prueba en DBADMIN, migración pendiente a TEST/PRODUCCIÓN.
+5. Recordar: datos de prueba en DBADMIN; la migración a TEST/PRODUCCIÓN ya está aplicada y solo falta el despliegue de la app.
