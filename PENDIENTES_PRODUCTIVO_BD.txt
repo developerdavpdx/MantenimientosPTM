@@ -1,7 +1,7 @@
 ================================================================================
  PENDIENTES PARA PRODUCCION - CAMBIOS EN BASE DE DATOS
  Proyecto: MantenimientosPTM
- Fecha: 04/11/2026
+ Fecha: 05/11/2026 (actualizado)
  Ambiente donde YA se aplicaron: HANA Cloud / schema DBADMIN (desarrollo)
  Ambiente destino (produccion): HANA 10.161.60.152 / schema PTM_2022_FINAL
 ================================================================================
@@ -10,8 +10,15 @@ IMPORTANTE
 - En produccion el schema se toma del appSetting "Database" del Web.config
   (actualmente en el repo esta apuntando a DBADMIN; regresarlo a PTM_2022_FINAL).
 - El schema de produccion es: PTM_2022_FINAL
-- Los 3 procedimientos ya estan corregidos en DBADMIN, sirven de referencia
-  para comparar en produccion.
+- Los procedimientos listados abajo ya estan corregidos en DBADMIN y sirven
+  de referencia para comparar/aplicar en produccion.
+- Scripts listos para ejecutar (incluyen columna + los 11 SPs + validacion):
+      SQL_MIGRACION/MIGRACION_TEST_JUNIO_2026.sql
+      SQL_MIGRACION/MIGRACION_PTM_2022_FINAL.sql
+  Instrucciones en SQL_MIGRACION/README.txt
+  IMPORTANTE: los scripts usan ALTER PROCEDURE, por lo que los 11 SPs deben
+  existir previamente en el schema destino. Estan en UTF-8 con BOM, sin emojis,
+  conservando acentos en comentarios.
 
 --------------------------------------------------------------------------------
  1) STORED PROCEDURES MODIFICADOS (hay que actualizarlos en produccion)
@@ -67,6 +74,41 @@ IMPORTANTE
                (que tienen la descripcion "DADO").
          IMPORTANTE: los parametros deben quedar en ese orden (19 y 20), porque el
          proveedor de .NET los envia por posicion; el controlador ya los manda al final.
+         CAMBIO ADICIONAL (05/11/2026) - filtro por POSICION del tecnico:
+           Antes el SP restringia por el NOMBRE del equipo:
+             - TEC HERR (posiciones 8,95,101): solo nombres con 'EXTRUSI' o 'INYECCI'
+             - TEC MTTO (posiciones 44,3,82,100): todo lo demas
+           Eso ocultaba equipos HERRAMENTALES como BCP03 A 1-4 (BUSHING CONDUIT).
+           Ahora se usa la CLASIFICACION del equipo:
+             - TEC HERR -> CLASIFICACION = 'HERRAMENTALES'
+             - TEC MTTO -> CLASIFICACION = 'MANTENIMIENTO'
+             - Otras posiciones -> sin restriccion
+           En el WHERE del SELECT final, reemplazar el bloque de posicion por:
+                 AND (
+                     :P_FILTRO_POSICION_ID IS NULL
+                     OR :P_IDS_HERR IS NULL
+                     OR :P_IDS_MTTO IS NULL
+                     OR (
+                         LOCATE(',' || :P_IDS_HERR || ',', ',' || CAST(:P_FILTRO_POSICION_ID AS NVARCHAR) || ',') > 0
+                         AND EXISTS (
+                             SELECT 1 FROM "PdxMTTOGestionEquipos" EQ
+                             WHERE EQ."ID_EQUIPO" = M.ID_EQUIPO
+                               AND UPPER(COALESCE(EQ."CLASIFICACION", '')) = 'HERRAMENTALES'
+                         )
+                     )
+                     OR (
+                         LOCATE(',' || :P_IDS_MTTO || ',', ',' || CAST(:P_FILTRO_POSICION_ID AS NVARCHAR) || ',') > 0
+                         AND EXISTS (
+                             SELECT 1 FROM "PdxMTTOGestionEquipos" EQ
+                             WHERE EQ."ID_EQUIPO" = M.ID_EQUIPO
+                               AND UPPER(COALESCE(EQ."CLASIFICACION", '')) = 'MANTENIMIENTO'
+                         )
+                     )
+                     OR (
+                         LOCATE(',' || :P_IDS_HERR || ',', ',' || CAST(:P_FILTRO_POSICION_ID AS NVARCHAR) || ',') = 0
+                         AND LOCATE(',' || :P_IDS_MTTO || ',', ',' || CAST(:P_FILTRO_POSICION_ID AS NVARCHAR) || ',') = 0
+                     )
+                 )
 
 [ ] 1.5  SpPdxMTTOObtenerMantenimientosCorrectivos
          Motivo: filtros nuevos en Mantenimientos Correctivos (mismos que preventivos):
@@ -97,8 +139,13 @@ IMPORTANTE
              PEAD LISO  : TIEMPO_MUERTO_CORRECTIVOS / TIEMPO_MUERTO_HERRAMENTALES
              INY        : TIEMPO_MUERTO_CORRECTIVOS / TIEMPO_MUERTO_HERRAMENTALES
              CORRUGADO  : TIEMPO_MUERTO_CORRECTIVOS / (no existe columna -> 0)
-         El conteo de paradas (N_OTMC) es el mismo: OCCURRENCES_REGEXPR('OTMC-' ...)
-         de la columna OTMC de la bitacora.
+         El conteo de paradas (N_OTMC) TAMBIEN debe filtrarse por clasificacion:
+         solo cuenta las OTMC de la fila cuya columna de la clasificacion
+         seleccionada sea > 0. Sin clasificacion, cuenta todas.
+         (Antes se contaban todas las OTMC de la fila aunque las horas ya
+          estuvieran filtradas; eso descuadraba MTTR/MTBF. Ejemplo real:
+          L1 PVC 05/11/2026 -> Todas MTTR 1.40 (2.80/2); MANTENIMIENTO 1.28
+          (1.28/1); HERRAMENTALES 1.52 (1.52/1).)
          Cumplimiento PM si se filtra por equipo (PdxMTTOMPGenerados +
          PdxMTTOGestionEquipos).
          Cambios en cada SP (mismo patron en los 4):
@@ -108,6 +155,17 @@ IMPORTANTE
                  AND (:P_CLASIFICACION IS NULL OR E."CLASIFICACION" = :P_CLASIFICACION)
            - En BITACORA_FILTRADA, reemplazar la expresion de HORAS_PARO por un
              CASE que elige la columna segun :P_CLASIFICACION (ver tabla de arriba).
+           - En BITACORA_FILTRADA, reemplazar N_OTMC por un CASE que devuelva 0
+             cuando la columna de la clasificacion elegida sea 0:
+                 CASE
+                     WHEN :P_CLASIFICACION = 'MANTENIMIENTO'
+                          AND IFNULL(<col_correctivos>, 0) = 0 THEN 0
+                     WHEN :P_CLASIFICACION = 'HERRAMENTALES'
+                          AND IFNULL(<col_herramentales>, 0) = 0 THEN 0
+                     ELSE IFNULL(OCCURRENCES_REGEXPR('OTMC-' IN TO_NVARCHAR("OTMC")), 0)
+                 END AS N_OTMC,
+             Donde <col_correctivos>/<col_herramentales> son las mismas columnas
+             de la tabla de arriba para cada proceso.
            - MTTR_TOTAL / MTBF_TOTAL / DT_TOTAL quedan igual (sobre BITACORA_FILTRADA).
          Los 4 SP quedan con 5 parametros (P_CLASIFICACION en la posicion 5).
 

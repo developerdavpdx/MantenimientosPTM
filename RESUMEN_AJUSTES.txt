@@ -30,6 +30,13 @@
         * CLASIFICACION (MANTENIMIENTO / HERRAMENTALES)
         * NOMBRE DE EQUIPO (busca solo en el nombre; con Enter para buscar)
    - El boton Limpiar los reinicia y el cambio de clasificacion recarga solo.
+   - El filtro por posicion del tecnico ahora usa la CLASIFICACION del equipo:
+        TEC HERR -> equipos HERRAMENTALES
+        TEC MTTO -> equipos MANTENIMIENTO
+     Antes se basaba en que el NOMBRE del equipo contuviera "Extrusi" o
+     "Inyecci", lo que ocultaba equipos HERRAMENTALES como BCP03 A 1-4.
+     Validado con Mario (posicion 95): ahora ve los 204 equipos HERRAMENTALES
+     del periodo y OTMP-001; Victor (TEC MTTO) sigue viendo sus MANTENIMIENTO.
 
 5) MANTENIMIENTOS CORRECTIVOS
    - Mismos dos filtros nuevos: CLASIFICACION y NOMBRE DE EQUIPO.
@@ -43,7 +50,11 @@
         * MANTENIMIENTO -> columna de correctivos (ej. MTTO_CORRECTIVOS)
         * HERRAMENTALES -> columna de herramentales (ej. HERRAMENTAL)
         * TODAS         -> suma de ambas (comportamiento anterior)
-     El numero de paradas se toma de la columna OTMC de la misma fila.
+     El numero de paradas tambien se filtra por clasificacion: solo cuenta
+     las OTMC de la fila cuando su columna de clasificacion tiene tiempo > 0.
+     Sin clasificacion, cuenta todas las OTMC de la fila. (Antes el divisor
+     contaba todas las OTMC aunque las horas ya estuvieran filtradas, lo que
+     descuadraba MTTR/MTBF.)
    - Corrugado ahora tambien tiene la columna TIEMPO_MUERTO_HERRAMENTALES
      (antes no existia) para que se comporte igual que PEAD LISO e INY.
      El sync de correctivos llena Correctivos o Herramental segun la
