@@ -182,6 +182,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             ArranqueEstabilizacion: 0,
             TiempoMttoCorrectivosArranque: 0,
             TiempoMuertoCorrectivos: 0,
+            TiempoMuertoHerramentales: 0,
             CambioMoldeSetupExcesos: 0,
             TiempoMuertoArrancar: 0,
             TiempoMuertoProceso: 0,
@@ -236,6 +237,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 ArranqueEstabilizacion: null,
                 TiempoMttoCorrectivosArranque: null,
                 TiempoMuertoCorrectivos: null,
+                TiempoMuertoHerramentales: null,
                 CambioMoldeSetupExcesos: null,
                 TiempoMuertoArrancar: null,
                 TiempoMuertoProceso: null,
@@ -302,6 +304,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 Carbonato: item.CARBONATO,
                 TiempoMttoCorrectivosArranque: item.TIEMPO_MTTO_CORRECTIVOS_ARRANQUE,
                 TiempoMuertoCorrectivos: item.TIEMPO_MUERTO_CORRECTIVOS,
+                TiempoMuertoHerramentales: item.TIEMPO_MUERTO_HERRAMENTALES,
                 CambioMoldeSetupExcesos: item.CAMBIO_MOLDE_SETUP_EXCESOS,
                 TiempoMuertoArrancar: item.TIEMPO_MUERTO_ARRANCAR,
                 TiempoMuertoProceso: item.TIEMPO_MUERTO_PROCESO,
@@ -644,7 +647,10 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             const fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
 
             // 🆕 Corrugado no tiene Herramental separado — todo va a TiempoMuertoCorrectivos
-            const tipoTiempo = 'TiempoMuertoCorrectivos';
+            // Si el equipo de la OT es HERRAMENTALES va a la columna Herramental
+            const tipoTiempo = (item.Clasificacion === 'HERRAMENTALES')
+                ? 'TiempoMuertoHerramentales'
+                : 'TiempoMuertoCorrectivos';
 
             const lineaEncontrada = this.listaLineas.find(
                 l => String(l.value) === String(item.IdLineaProduccion)
@@ -1124,6 +1130,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             // MTTO CORRECTIVOS
             'MTTO CORRECTIVOS': 'TiempoMuertoCorrectivos',
             'MTTO. CORRECTIVOS': 'TiempoMuertoCorrectivos',
+            'HERRAMENTAL': 'TiempoMuertoHerramentales',
+            'TIEMPO MUERTO HERRAMENTAL': 'TiempoMuertoHerramentales',
             'TIEMPO MUERTO POR CORRECTIVOS': 'TiempoMuertoCorrectivos', // 🔥 AGREGADO (id 22)
 
             // CAMBIO DE MOLDE (SETUP) EXCESOS
@@ -1653,6 +1661,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             PreparacionCambio: null, ArranqueEstabilizacion: null,
             TiempoMttoCorrectivosArranque: null,
             TiempoMuertoCorrectivos: null,
+            TiempoMuertoHerramentales: null,
             CambioMoldeSetupExcesos: null,
             TiempoMuertoArrancar: null,
             TiempoMuertoProceso: null,
@@ -1899,6 +1908,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 headerClass: 'header-grupo-verde-claro',
                 children: [
                     { field: 'TiempoMuertoCorrectivos', headerName: 'TIEMPO MUERTO POR CORRECTIVOS', width: 110, ...this.getColumnaNumerica('celda-verde-claro'), editable: false },
+                    { field: 'TiempoMuertoHerramentales', headerName: 'TIEMPO MUERTO HERRAMENTAL', width: 140, ...this.getColumnaNumerica('celda-verde-claro'), editable: false },
                     { field: 'CambioMoldeSetupExcesos', headerName: 'CAMBIO DE MOLDE (SETUP) EXCESOS', width: 170, ...this.getColumnaNumerica('celda-verde-claro') },
                     { field: 'TiempoMuertoArrancar', headerName: 'TIEMPO MUERTO POR ARRANCAR', width: 110, ...this.getColumnaNumerica('celda-verde-claro') },
                     { field: 'TiempoMuertoProceso', headerName: 'TIEMPO MUERTO PROCESO', width: 110, ...this.getColumnaNumerica('celda-verde-claro') }
@@ -2192,6 +2202,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         const disponible = parseFloat(row.TiempoDisponible) || 0;
         const tiempoNoProductivo =
             (parseFloat(row.TiempoMuertoCorrectivos) || 0) +
+            (parseFloat(row.TiempoMuertoHerramentales) || 0) +
             (parseFloat(row.CambioMoldeSetupExcesos) || 0) +
             (parseFloat(row.TiempoMuertoArrancar) || 0) +
             (parseFloat(row.TiempoMuertoProceso) || 0);
@@ -2264,7 +2275,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             FaltaEnergia: 0, FaltaMateriaPrima: 0,
             PreparacionCambio: 0, ArranqueEstabilizacion: 0,
             TiempoMttoCorrectivosArranque: 0,
-            TiempoMuertoCorrectivos: 0, CambioMoldeSetupExcesos: 0,
+            TiempoMuertoCorrectivos: 0, TiempoMuertoHerramentales: 0, CambioMoldeSetupExcesos: 0,
             TiempoMuertoArrancar: 0, TiempoMuertoProceso: 0,
             TiempoDisponible: 0, TiempoProductivo: 0,
             DisponibilidadPorcentaje: null,
@@ -2303,6 +2314,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             totales.ArranqueEstabilizacion += Number(node.data.ArranqueEstabilizacion || 0);
             totales.TiempoMttoCorrectivosArranque += Number(node.data.TiempoMttoCorrectivosArranque || 0);
             totales.TiempoMuertoCorrectivos += Number(node.data.TiempoMuertoCorrectivos || 0);
+            totales.TiempoMuertoHerramentales += Number(node.data.TiempoMuertoHerramentales || 0);
             totales.CambioMoldeSetupExcesos += Number(node.data.CambioMoldeSetupExcesos || 0);
             totales.TiempoMuertoArrancar += Number(node.data.TiempoMuertoArrancar || 0);
             totales.TiempoMuertoProceso += Number(node.data.TiempoMuertoProceso || 0);
@@ -2478,6 +2490,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     ARRANQUE_ESTABILIZACION: redondear(node.data.ArranqueEstabilizacion, 2),
                     TIEMPO_MTTO_CORRECTIVOS_ARRANQUE: redondear(node.data.TiempoMttoCorrectivosArranque, 2),
                     TIEMPO_MUERTO_CORRECTIVOS: redondear(node.data.TiempoMuertoCorrectivos, 2),
+                    TIEMPO_MUERTO_HERRAMENTALES: redondear(node.data.TiempoMuertoHerramentales, 2),
                     CAMBIO_MOLDE_SETUP_EXCESOS: redondear(node.data.CambioMoldeSetupExcesos, 2),
                     TIEMPO_MUERTO_ARRANCAR: redondear(node.data.TiempoMuertoArrancar, 2),
                     TIEMPO_MUERTO_PROCESO: redondear(node.data.TiempoMuertoProceso, 2),

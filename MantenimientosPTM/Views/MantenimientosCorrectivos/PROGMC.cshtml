@@ -529,4 +529,4 @@
 
 <!-- Container para alerts de Bootstrap -->
 <div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; margin-top: 70px;"></div>
-<script src="~/Scripts/solicitud_mantenimiento_correctivo_refactor.js"></script>
+<script src="~/Scripts/solicitud_mantenimiento_correctivo_refactor.js?v=@System.IO.File.GetLastWriteTime(HttpContext.Current.Server.MapPath("~/Scripts/solicitud_mantenimiento_correctivo_refactor.js")).Ticks"></script>

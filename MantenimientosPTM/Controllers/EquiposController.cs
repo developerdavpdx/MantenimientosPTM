@@ -1657,7 +1657,7 @@ namespace MantenimientosPTM.Controllers
         }
         //LISTADO DE EQUIPOS AUTOCOMPLETE
         [HttpGet]
-        public JsonResult BuscarEquipo(string query, string Usuario, string Planta)
+        public JsonResult BuscarEquipo(string query, string Usuario, string Planta, string Clasificacion)
         {
             try
             {
@@ -1666,6 +1666,17 @@ namespace MantenimientosPTM.Controllers
                 if (string.IsNullOrEmpty(query))
                 {
                     return Json(new List<object>(), JsonRequestBehavior.AllowGet);
+                }
+
+                // ✅ Normalizar la clasificación recibida (MANTENIMIENTO / HERRAMENTALES)
+                string FiltroClasificacion = null;
+                if (!string.IsNullOrWhiteSpace(Clasificacion))
+                {
+                    FiltroClasificacion = Clasificacion.Trim().ToUpper();
+                    if (FiltroClasificacion == "MANTENIMIENTO HERRAMENTALES")
+                    {
+                        FiltroClasificacion = "HERRAMENTALES";
+                    }
                 }
 
                 // ✅ Preparar parámetros para el SP
@@ -1686,7 +1697,7 @@ namespace MantenimientosPTM.Controllers
                     { "P_TOP", (20, ParameterDirection.Input, HanaDbType.Integer) },
                     { "P_MODO", ("SEARCH", ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_ESTATUS", (string.IsNullOrEmpty(FiltroEstatus) ? (object)null : FiltroEstatus, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_CLASIFICACION", (null, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_CLASIFICACION", (string.IsNullOrEmpty(FiltroClasificacion) ? (object)null : FiltroClasificacion, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure

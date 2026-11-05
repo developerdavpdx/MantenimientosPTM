@@ -388,7 +388,9 @@ class UIManager {
             placeholder: 'Seleccionar periodicidades',
             width: '100%',
             closeOnSelect: false,
-            dropdownParent: $('#equipoModal')
+            // El modal (.modal) hace scroll: usar el .modal-content evita que
+            // el desplegable se desfase cuando la ventana se desplaza.
+            dropdownParent: $('#equipoModal .modal-content')
         });
 
         // Ocultar campos inicialmente
@@ -949,7 +951,8 @@ class EquipoManager {
                         numeroDocPm: data.NumeroDocPmCalidad || '',
                         estatus: data.Estatus || '1',
                         comentarios: data.Comentarios || '',
-                        fechaPausa: data.FechaPausa || ''
+                        fechaPausa: data.FechaPausa || '',
+                        clasificacion: data.Clasificacion || ''
                     });
 
                     $(row).data('periodicidad', {
@@ -1169,6 +1172,7 @@ class EquipoManager {
             $('#NombreEquipo').val(equipoData.nombreEquipo);
             $('#DescripcionEquipo').val(equipoData.descripcion);
             $('#TipoEquipo').val(equipoData.tipoEquipo);
+            $('#Clasificacion').val(equipoData.clasificacion);
             $('#CentroCostos').val(equipoData.centroCostos);
             $('#NumeroDocPmCalidad').val(equipoData.numeroDocPm);
             $('#Estatus').val(equipoData.estatus);

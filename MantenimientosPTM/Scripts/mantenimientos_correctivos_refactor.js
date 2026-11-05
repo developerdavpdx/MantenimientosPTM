@@ -35,7 +35,7 @@ class UIManager {
         $("#MantenimientosCorrectivosContainer").addClass("selected");
         $("#MantenimientosCorrectivosContainer a").addClass("whiteText");
         $("#manntocorrectivo-collapse").addClass("show");
-        $("#MCProgramadoURL").addClass("selected-item");
+        $("#MCProgramadoOTURL").addClass("selected-item");
 
         if (datos_usuario[0].TIPOUSUARIO == "TecnicoMtto") {
             $("#btnGenerarOrdenes").addClass("d-none");
@@ -196,7 +196,7 @@ class MantenimientosCorrectivosApp {
         // ❌ Ya no necesitas esto con arrow functions
         // const self = this;
         // ✅ Arrow function - mantiene el contexto de this automáticamente
-        $('#FiltroFechaInicio, #FiltroFechaFin, #FiltroArea, #FiltroLinea, #FiltroPeriodicidad').on('change', () => {
+        $('#FiltroFechaInicio, #FiltroFechaFin, #FiltroArea, #FiltroLinea, #FiltroPeriodicidad, #FiltroClasificacion').on('change', () => {
             const fechaInicio = $('#FiltroFechaInicio').val();
             const fechaFin = $('#FiltroFechaFin').val();
 
@@ -244,10 +244,20 @@ class MantenimientosCorrectivosApp {
         });
 
         // ✅ Arrow function
+        // Buscar equipo al presionar Enter en el filtro de nombre
+        $('#FiltroNombreEquipo').on('keypress', (e) => {
+            if (e.which === 13) {
+                e.preventDefault();
+                $('#btnAplicarFiltros').click();
+            }
+        });
+
         $('#btnLimpiarFiltros').on('click', () => {
             $('#FiltroOrdenTrabajo').val('');
             $('#FiltroFechaInicio').val('');
             $('#FiltroFechaFin').val('');
+            $('#FiltroClasificacion').val('');
+            $('#FiltroNombreEquipo').val('');
 
             // Si pasa la validación, recargar la tabla
             if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
@@ -1124,6 +1134,8 @@ class MantenimientoManager {
                             "FiltroArea": $("#FiltroArea").val() || null,
                             "FiltroLinea": $("#FiltroLinea").val() || null,
                             "FiltroOrdenTrabajo": $("#FiltroOrdenTrabajo").val() || null,
+                            "FiltroClasificacion": $("#FiltroClasificacion").val() || null,
+                            "FiltroNombreEquipo": $("#FiltroNombreEquipo").val() || null,
                             "FiltroPlanta": this.datos_usuario[0].PLANTA || null,
                             "FiltroEstatusOT": FiltroEstatusOT,
                             "FiltroPosicionId": posicionId

@@ -219,7 +219,7 @@ class MantenimientosPreventivoApp {
         // ❌ Ya no necesitas esto con arrow functions
         // const self = this;
         // ✅ Arrow function - mantiene el contexto de this automáticamente
-        $('#FiltroFechaInicio, #FiltroFechaFin, #FiltroLinea, #FiltroPeriodicidad').on('change', () => {
+        $('#FiltroFechaInicio, #FiltroFechaFin, #FiltroLinea, #FiltroPeriodicidad, #FiltroClasificacion').on('change', () => {
             const fechaInicio = $('#FiltroFechaInicio').val();
             const fechaFin = $('#FiltroFechaFin').val();
 
@@ -267,10 +267,20 @@ class MantenimientosPreventivoApp {
         });
 
         // ✅ Arrow function
+        // Buscar equipo al presionar Enter en el filtro de nombre
+        $('#FiltroNombreEquipo').on('keypress', (e) => {
+            if (e.which === 13) {
+                e.preventDefault();
+                $('#btnAplicarFiltros').click();
+            }
+        });
+
         $('#btnLimpiarFiltros').on('click', () => {
             $('#FiltroOrdenTrabajo').val('');
             $('#FiltroFechaInicio').val('');
             $('#FiltroFechaFin').val('');
+            $('#FiltroClasificacion').val('');
+            $('#FiltroNombreEquipo').val('');
 
             // Si pasa la validación, recargar la tabla
             if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
@@ -1699,6 +1709,8 @@ class MantenimientoManager {
                             "FiltroLinea": $("#FiltroLinea").val() || null,
                             "FiltroOrdenTrabajo": $("#FiltroOrdenTrabajo").val() || null,
                             "FiltroPeriodicidad": $("#FiltroPeriodicidad").val() || null,
+                            "FiltroClasificacion": $("#FiltroClasificacion").val() || null,
+                            "FiltroNombreEquipo": $("#FiltroNombreEquipo").val() || null,
                             "FiltroPlanta": this.datos_usuario[0].PLANTA || null,
                             "FiltroEstatusOT": FiltroEstatusOT,
                             "FiltroUsuario": this.datos_usuario[0].EMAIL || null,

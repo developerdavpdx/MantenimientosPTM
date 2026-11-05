@@ -4,3 +4,21 @@
     color: #1774ce;
     padding:0;
 }
+
+/* Periodicidades de mantenimiento (Select2): es un catalogo fijo, no se escribe */
+#equipoModal .select2-search--inline,
+#equipoModal .select2-search--dropdown {
+    display: none !important;
+}
+
+/* Ajuste del contenedor multiple para que mantenga la altura del control */
+#equipoModal .select2-container--default .select2-selection--multiple {
+    min-height: 38px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+}
+
+#equipoModal .select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: #0ea5d8;
+    box-shadow: 0 0 0 0.2rem rgba(13, 202, 240, 0.15);
+}

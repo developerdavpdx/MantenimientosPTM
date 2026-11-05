@@ -64,9 +64,20 @@ class MantenimientosCorrectivosApp {
         $('#BuscarEquipo').on('input', (e) => {
             const query = $(e.target).val().trim();
             if (query.length >= 2) {
-                this.gestionEquipos.buscarEquipos(query,this.datos_usuario[0].EMAIL);
+                this.gestionEquipos.buscarEquipos(query, this.datos_usuario[0].EMAIL, this.obtenerClasificacionPorArea());
             } else {
                 this.gestionEquipos.ocultarSugerencias();
+            }
+        });
+
+        // ✅ Al cambiar el Área Técnica solo se buscan equipos de su clasificación:
+        //    Mantenimiento Herramentales -> HERRAMENTALES | Mantenimiento -> MANTENIMIENTO
+        $('#AreaTecnicaR').on('change', () => {
+            const query = $('#BuscarEquipo').val().trim();
+            this.gestionEquipos.limpiar();
+            $('#BuscarEquipo').val(query);
+            if (query.length >= 2) {
+                this.gestionEquipos.buscarEquipos(query, this.datos_usuario[0].EMAIL, this.obtenerClasificacionPorArea());
             }
         });
 
@@ -84,6 +95,14 @@ class MantenimientosCorrectivosApp {
                 this.gestionEquipos.ocultarSugerencias();
             }
         });
+    }
+
+    // ─── Clasificación de equipos según el Área Técnica ───
+    obtenerClasificacionPorArea() {
+        const area = ($('#AreaTecnicaR').val() || '').trim().toUpperCase();
+        if (area === 'MANTENIMIENTO HERRAMENTALES') return 'HERRAMENTALES';
+        if (area === 'MANTENIMIENTO') return 'MANTENIMIENTO';
+        return null;
     }
 
     configurarEventosMantenimientosManager() {

@@ -21,7 +21,7 @@
     <link href="https://cdn.datatables.net/fixedheader/4.0.5/css/fixedHeader.dataTables.min.css" rel="stylesheet" integrity="sha384-MdjfIsy9elm9qOpK/KXJfYR9PmcQ47vcI0vij5V7nLUOBFvZqPwz0wKJ3q+Sg1RG" crossorigin="anonymous">
     <link href="https://cdn.datatables.net/responsive/3.0.8/css/responsive.dataTables.min.css" rel="stylesheet" integrity="sha384-kz9bozrCHP/y+wTJV8P+n/dMBOh00rqNmmIAgHckzFWpoSB49V5ornW1aY+uYTyA" crossorigin="anonymous">
 
-    <link href="~/Content/Custom.css" rel="stylesheet" />
+    <link href="~/Content/Custom.css?v=@System.IO.File.GetLastWriteTime(HttpContext.Current.Server.MapPath("~/Content/Custom.css")).Ticks" rel="stylesheet" />
     <link href="~/Content/ptm-custom-styles.css" rel="stylesheet" />
     <link href="~/Content/UploadFile.css" rel="stylesheet" />
 
@@ -51,8 +51,12 @@
 
         aside {
             position: fixed;
-            overflow: auto;
-            height: calc(100vh - 68px);
+            top: 50px; /* alto real de la barra superior */
+            left: 0;
+            height: calc(100vh - 50px);
+            height: calc(100dvh - 50px);
+            overflow-y: auto;
+            overflow-x: hidden;
             justify-content: flex-start;
             align-self: flex-start;
         }
@@ -90,7 +94,7 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <script src="~/Scripts/Global.js"></script>
+    <script src="~/Scripts/Global.js?v=@System.IO.File.GetLastWriteTime(HttpContext.Current.Server.MapPath("~/Scripts/Global.js")).Ticks"></script>
     <script src="~/Scripts/bootstrap.bundle.min.js"></script>
     <script src="~/Scripts/popper.min.js"></script>
     <script src="~/Scripts/color-modes.js"></script>
@@ -215,7 +219,7 @@
                                                 <i class="bi bi-save me-2"></i> Solicitud Mtto. Correctivo
                                             </a>
                                         </li>
-                                        <li id="MCProgramadoURL">
+                                        <li id="MCProgramadoOTURL">
                                             <a href="@Url.Action("MantenimientoCorrectivo","MantenimientosCorrectivos")" class="nav-link link-body-emphasis d-inline-flex text-decoration-none rounded ps-5">
                                                 <i class="bi bi-list-check me-2"></i> OT Pendientes Correctivo
                                             </a>

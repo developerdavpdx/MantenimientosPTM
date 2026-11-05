@@ -1,0 +1,88 @@
+================================================================================
+ RESUMEN DE AJUSTES - PROYECTO MantenimientosPTM
+ Fecha: 04/11/2026
+================================================================================
+
+1) LOGIN
+   - La vista ahora cabe completa en pantalla (sin scroll) en cualquier
+     resolucion; el sello de ambiente (Pruebas / Produccion) siempre es visible.
+   - Se aumento el tamano de letras, logo y sello.
+   - El sello se movio al lado derecho de los campos Usuario / Contrasena.
+   - Se agrego cache-busting al CSS (Login.css).
+
+2) PROGRAMAR MANTENIMIENTO CORRECTIVO (PROGMC)
+   - Al elegir el Area Tecnica, la busqueda de equipos se filtra por la
+     CLASIFICACION del equipo:
+        Mantenimiento              -> equipos MANTENIMIENTO
+        Mantenimiento Herramentales -> equipos HERRAMENTALES
+   - Al cambiar el Area Tecnica se limpia el equipo ya seleccionado.
+
+3) GESTION DE EQUIPOS
+   - Nuevo campo obligatorio CLASIFICACION (MANTENIMIENTO / HERRAMENTALES)
+     en el modal de Agregar / Editar Equipo; se guarda y se precarga al editar.
+   - Selector de PERIODICIDADES DE MANTENIMIENTO:
+        * Ya no aparece desfasado (el listado abre pegado al campo).
+        * Ya no permite escribir (es un catalogo fijo).
+        * Se pueden elegir varias periodicidades de corrido.
+
+4) MANTENIMIENTOS PREVENTIVOS
+   - Nuevos filtros en el panel de busqueda:
+        * CLASIFICACION (MANTENIMIENTO / HERRAMENTALES)
+        * NOMBRE DE EQUIPO (busca solo en el nombre; con Enter para buscar)
+   - El boton Limpiar los reinicia y el cambio de clasificacion recarga solo.
+
+5) MANTENIMIENTOS CORRECTIVOS
+   - Mismos dos filtros nuevos: CLASIFICACION y NOMBRE DE EQUIPO.
+   - Mismo comportamiento (recarga al cambiar clasificacion, Enter, Limpiar).
+
+5.1) METRICAS - FILTRO POR CLASIFICACION
+   - Nuevo filtro CLASIFICACION (MANTENIMIENTO / HERRAMENTALES) en la vista de
+     Metricas; recarga automaticamente al cambiarlo.
+   - MTTR / MTBF / DT se calculan desde la bitacora usando la columna que
+     corresponde a la clasificacion:
+        * MANTENIMIENTO -> columna de correctivos (ej. MTTO_CORRECTIVOS)
+        * HERRAMENTALES -> columna de herramentales (ej. HERRAMENTAL)
+        * TODAS         -> suma de ambas (comportamiento anterior)
+     El numero de paradas se toma de la columna OTMC de la misma fila.
+   - Corrugado ahora tambien tiene la columna TIEMPO_MUERTO_HERRAMENTALES
+     (antes no existia) para que se comporte igual que PEAD LISO e INY.
+     El sync de correctivos llena Correctivos o Herramental segun la
+     CLASIFICACION del equipo de la OT.
+   - Cumplimiento PM se filtra por la clasificacion del equipo.
+   - OEE, disponibilidad, rendimiento, calidad y tiempos siguen por LINEA, porque
+     las bitacoras de produccion son por linea/turno y no tienen equipo.
+   - SPs ajustados: SpPdxMTTOMetricasOEE_PVC / _PeadLiso / _Corrugado / _INY.
+
+6) BASE DE DATOS (HANA)
+   - Stored procedures modificados (detalle completo en
+     PENDIENTES_PRODUCTIVO_BD.txt):
+        SpPdxMTTOConsultaEquipos                (filtro por clasificacion)
+        SpPdxMTTOInsertaEquipo                  (guarda clasificacion)
+        SpPdxMTTOActualizaEquipo                (actualiza clasificacion)
+        SpPdxMTTOObtenerMantenimientosPorRango  (filtros preventivos)
+        SpPdxMTTOObtenerMantenimientosCorrectivos (filtros correctivos)
+   - Los cambios ya estan aplicados en el ambiente de desarrollo (DBADMIN).
+   - Para produccion (PTM_2022_FINAL) revisar la lista de pendientes.
+
+7) NAVEGACION (MENU LATERAL)
+   - Corregida la flecha de "elemento seleccionado": en el listado de
+     Mantenimientos Correctivos se veia junto a "Solicitud Mtto. Correctivo"
+     porque el id MCProgramadoURL estaba duplicado en el layout (grupo y opcion).
+     Ahora se marca unicamente "OT Pendientes Correctivo".
+   - Corregido el corte del menu al hacer scroll:
+        * En pantallas menores a 1200px el menu era "position: absolute" y se
+          iba con la pagina; ahora es "position: fixed".
+        * El alto usaba 100vh - 68px pero la barra superior mide 50px; ahora es
+          calc(100dvh - 50px), por lo que siempre llega hasta el fondo.
+        * El menu hace scroll interno y el boton para abrir/cerrar queda visible.
+        * z-index 1040 para no quedar por encima de los modales.
+
+8) VARIOS
+   - Se agrego versionado por fecha (cache-busting) a los JS/CSS modificados
+     para que los usuarios no se queden con archivos viejos.
+   - Se mejoro el mensaje de error cuando HANA devuelve un error en texto
+     (antes se perdia el detalle).
+
+================================================================================
+ FIN DEL RESUMEN
+================================================================================

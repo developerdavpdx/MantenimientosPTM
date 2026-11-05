@@ -3216,7 +3216,7 @@ class GestionEquipos {
     }
 
     // ─── Búsqueda con debounce ─────────────────────────────
-    buscarEquipos(query, Usuario) {
+    buscarEquipos(query, Usuario, Clasificacion = null) {
         clearTimeout(this._debounceTimer);
 
         this._debounceTimer = setTimeout(async () => {
@@ -3232,7 +3232,8 @@ class GestionEquipos {
                     data: {
                         query,
                         Usuario,
-                        Planta: this._datosUsuario?.[0]?.PLANTA || null
+                        Planta: this._datosUsuario?.[0]?.PLANTA || null,
+                        Clasificacion: Clasificacion || null
                     },
                     dataType: 'json'
                 });

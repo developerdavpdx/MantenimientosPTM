@@ -686,6 +686,11 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
             public string COMENTARIOS { get; set; }
+
+            // Tiempo muerto de equipos HERRAMENTALES (igual que PeadLiso/INY)
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(0)]
+            public decimal TIEMPO_MUERTO_HERRAMENTALES { get; set; }
         }
 
         public class TiemposMuertosProduccionPeadLiso

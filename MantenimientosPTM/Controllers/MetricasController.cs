@@ -39,7 +39,8 @@ namespace MantenimientosPTM.Controllers
             DateTime? FiltroFechaFin,
             string FiltroLinea,
             string FiltroPlanta,
-            string FiltroProceso)
+            string FiltroProceso,
+            string FiltroClasificacion)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -64,7 +65,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
                     { "P_FECHA_FIN",    (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date) },
                     { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)  ? (object)null : FiltroLinea,  ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CLASIFICACION", (string.IsNullOrEmpty(FiltroClasificacion) ? (object)null : FiltroClasificacion, ParameterDirection.Input, HanaDbType.NVarChar) }
                     //{ "P_AREA",       (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
@@ -91,7 +93,8 @@ namespace MantenimientosPTM.Controllers
             DateTime? FiltroFechaFin,
             string FiltroLinea,
             string FiltroPlanta,
-            string FiltroProceso)
+            string FiltroProceso,
+            string FiltroClasificacion)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -116,7 +119,8 @@ namespace MantenimientosPTM.Controllers
             { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
             { "P_FECHA_FIN",    (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date) },
             { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)  ? (object)null : FiltroLinea,  ParameterDirection.Input, HanaDbType.NVarChar) },
-            { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+            { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CLASIFICACION", (string.IsNullOrEmpty(FiltroClasificacion) ? (object)null : FiltroClasificacion, ParameterDirection.Input, HanaDbType.NVarChar) }
             //{ "P_AREA",         (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
         };
 
@@ -143,7 +147,8 @@ namespace MantenimientosPTM.Controllers
             DateTime? FiltroFechaFin,
             string FiltroLinea,
             int? FiltroPlanta,   // 🔥 INT porque PLANTA en Corrugado es INT
-            string FiltroProceso)
+            string FiltroProceso,
+            string FiltroClasificacion)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -168,7 +173,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_FECHA_INICIO", (dtFechaInicio,                ParameterDirection.Input, HanaDbType.Date) },
                     { "P_FECHA_FIN",    (dtFechaFin,                   ParameterDirection.Input, HanaDbType.Date) },
                     { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA",       (FiltroPlanta ?? (object)null,  ParameterDirection.Input, HanaDbType.Integer) }
+                    { "P_PLANTA",       (FiltroPlanta ?? (object)null,  ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_CLASIFICACION", (string.IsNullOrEmpty(FiltroClasificacion) ? (object)null : FiltroClasificacion, ParameterDirection.Input, HanaDbType.NVarChar) }
                     //{ "P_AREA",         (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
@@ -195,7 +201,8 @@ namespace MantenimientosPTM.Controllers
             DateTime? FiltroFechaFin,
             string FiltroLinea,
             string FiltroPlanta,
-            string FiltroProceso)
+            string FiltroProceso,
+            string FiltroClasificacion)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -221,6 +228,7 @@ namespace MantenimientosPTM.Controllers
                     { "P_FECHA_FIN",    (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date) },
                     { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)  ? (object)null : FiltroLinea,  ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CLASIFICACION", (string.IsNullOrEmpty(FiltroClasificacion) ? (object)null : FiltroClasificacion, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_AREA",         (string.IsNullOrEmpty(FiltroProceso) ? (object)null : FiltroProceso, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
@@ -247,7 +255,8 @@ namespace MantenimientosPTM.Controllers
             DateTime? FiltroFechaFin,
             string FiltroPlanta,
             string FiltroProceso,
-            string FiltroLinea = null)
+            string FiltroLinea = null,
+            string FiltroClasificacion = null)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
 
@@ -272,7 +281,8 @@ namespace MantenimientosPTM.Controllers
                     { "P_FECHA_INICIO", (dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
                     { "P_FECHA_FIN",    (dtFechaFin,    ParameterDirection.Input, HanaDbType.Date) },
                     { "P_LINEA",        (string.IsNullOrEmpty(FiltroLinea)  ? (object)null : FiltroLinea,  ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_PLANTA",       (string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_CLASIFICACION", (string.IsNullOrEmpty(FiltroClasificacion) ? (object)null : FiltroClasificacion, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var procesos = new Dictionary<string, MetricasOEEDto>();

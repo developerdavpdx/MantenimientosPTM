@@ -102,6 +102,30 @@
                             </div>
                         </div>
 
+                        <!-- Clasificación -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroClasificacion">
+                                <i class="bi bi-tag-fill"></i> Clasificación
+                            </label>
+                            <div class="select-wrapper">
+                                <select class="filtro-input" id="FiltroClasificacion" name="FiltroClasificacion">
+                                    <option value="">Todas las clasificaciones...</option>
+                                    <option value="MANTENIMIENTO">MANTENIMIENTO</option>
+                                    <option value="HERRAMENTALES">HERRAMENTALES</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Nombre de Equipo -->
+                        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                            <label class="filtro-label" for="FiltroNombreEquipo">
+                                <i class="bi bi-gear-fill"></i> Nombre de Equipo
+                            </label>
+                            <input type="text" class="filtro-input"
+                                   id="FiltroNombreEquipo" name="FiltroNombreEquipo"
+                                   placeholder="Buscar equipo...">
+                        </div>
+
                         <!-- Botones -->
                         <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
                             <button type="button" class="btn-filtro-aplicar"
@@ -1090,5 +1114,5 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-<script src="~/Scripts/mantenimientos_preventivos_refactor.js"></script>
+<script src="~/Scripts/mantenimientos_preventivos_refactor.js?v=@System.IO.File.GetLastWriteTime(HttpContext.Current.Server.MapPath("~/Scripts/mantenimientos_preventivos_refactor.js")).Ticks"></script>
 <script src="~/Scripts/FileUpload.js"></script>

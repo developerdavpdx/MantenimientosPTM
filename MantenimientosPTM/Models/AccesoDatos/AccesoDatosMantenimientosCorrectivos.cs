@@ -157,6 +157,9 @@ namespace MantenimientosPTM
             [JsonProperty("AREA_TECNICA")]
             public string AreaTecnica { get; set; }
 
+            [JsonProperty("CLASIFICACION")]
+            public string Clasificacion { get; set; }
+
             [JsonProperty("ID_LINEA_PRODUCCION")]
             public string IdLineaProduccion { get; set; }
 

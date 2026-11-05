@@ -25,6 +25,11 @@ class MetricasApp {
             this.metricasManager.cargarMetricasPorProceso(true);
         });
 
+        // Filtro por clasificación de equipos: recarga automáticamente
+        $('#FiltroClasificacion').off('change').on('change', () => {
+            this.metricasManager.cargarMetricasPorProceso(true);
+        });
+
         $("#FiltroProceso")
             .off('change')
             .on('change', (e) => {
@@ -147,7 +152,8 @@ class FiltrosManager {
             fechaFin: $('#FiltroFechaFin').val() || null,
             linea: $('#FiltroLinea').val() != '' ? $('#FiltroLinea option:selected').text() : null,
             proceso: $('#FiltroProceso').val() || null,
-            planta: this.datos_usuario[0].PLANTA || null
+            planta: this.datos_usuario[0].PLANTA || null,
+            clasificacion: $('#FiltroClasificacion').val() || null
         };
     }
 }
@@ -523,7 +529,8 @@ class MetricasManager {
                 FiltroFechaFin: filtros.fechaFin,
                 FiltroLinea: filtros.linea,
                 FiltroPlanta: filtros.planta,
-                FiltroProceso: filtros.proceso
+                FiltroProceso: filtros.proceso,
+                FiltroClasificacion: filtros.clasificacion
             },
             dataType: 'json',
 

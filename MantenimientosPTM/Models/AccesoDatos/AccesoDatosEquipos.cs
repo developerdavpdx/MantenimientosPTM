@@ -398,6 +398,11 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue(null)]
             public DateTime? FechaBaja { get; set; }
+
+            // Clasificación (MANTENIMIENTO / HERRAMENTALES)
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue("")]
+            public string Clasificacion { get; set; }
         }
         public class PeriodicidadEquipoMTTO
         {

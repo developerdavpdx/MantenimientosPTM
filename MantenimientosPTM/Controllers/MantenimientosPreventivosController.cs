@@ -81,6 +81,8 @@ namespace MantenimientosPTM.Controllers
                 string FiltroExcluirSincronizadosPEADCORR = Request.Form["FiltroExcluirSincronizadosPEADCORR"];
                 string FiltroExcluirSincronizadosINY = Request.Form["FiltroExcluirSincronizadosINY"];
                 string FiltroPosicionId = Request.Form["FiltroPosicionId"];
+                string FiltroClasificacion = Request.Form["FiltroClasificacion"];
+                string FiltroNombreEquipo = Request.Form["FiltroNombreEquipo"];
 
                 // Leer desde config las restricciones a las posiciones que se le aplicara
                 string IdsHerr = System.Configuration.ConfigurationManager.AppSettings["PosicionesHerr"];
@@ -150,13 +152,23 @@ namespace MantenimientosPTM.Controllers
                     { "P_IDS_HERR", (string.IsNullOrEmpty(IdsHerr) ? (object)null : IdsHerr, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_IDS_MTTO", (string.IsNullOrEmpty(IdsMtto) ? (object)null : IdsMtto, ParameterDirection.Input, HanaDbType.NVarChar) },
                     // ✅ Solo se manda 1 si viene de Bitácora, null en caso contrario
-                    { "P_LINEA_PROD", (esDesdeBitacora ? (object)1 : null, ParameterDirection.Input, HanaDbType.Integer) }
+                    { "P_LINEA_PROD", (esDesdeBitacora ? (object)1 : null, ParameterDirection.Input, HanaDbType.Integer) },
+                    // Filtros nuevos (deben ir al final para respetar el orden de parametros del SP)
+                    { "P_FILTRO_CLASIFICACION", (string.IsNullOrEmpty(FiltroClasificacion) ? (object)null : FiltroClasificacion, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_FILTRO_EQUIPO", (string.IsNullOrEmpty(FiltroNombreEquipo) ? (object)null : FiltroNombreEquipo, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
                     Logic.AD.GCObtenerMantenimientosPorRango,
                     parameters
                 );
+
+                // Si HANA devolvio un error en texto plano, propagarlo con su mensaje real
+                if (!string.IsNullOrEmpty(resultHana.JsonResult) &&
+                    resultHana.JsonResult.TrimStart().StartsWith("Error", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new Exception(resultHana.JsonResult);
+                }
 
                 // ✅ Obtener los datos YA FILTRADOS desde HANA
                 List<AccesoDatosMantenimientosPreventivos.MantenimientoRangoLIST> mantenimientos = new List<AccesoDatosMantenimientosPreventivos.MantenimientoRangoLIST>();

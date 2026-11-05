@@ -2,7 +2,7 @@
     ViewBag.Title = "Gestión de Equipos";
 }
 
-<link href="~/Content/GestionEquipos.css" rel="stylesheet" />
+<link href="~/Content/GestionEquipos.css?v=@System.IO.File.GetLastWriteTime(HttpContext.Current.Server.MapPath("~/Content/GestionEquipos.css")).Ticks" rel="stylesheet" />
 
 <!-- Tabla de equipos -->
 <div class="row m-0 ps-3 pt-4 pe-3 main-container position-relative header-custom">
@@ -211,5 +211,5 @@
     </div>
 </div>
 <!-- Container para alerts de Bootstrap -->
-<script src="~/Scripts/gestion_equipos_refactor.js?v1.0.0"></script>
+<script src="~/Scripts/gestion_equipos_refactor.js?v=@System.IO.File.GetLastWriteTime(HttpContext.Current.Server.MapPath("~/Scripts/gestion_equipos_refactor.js")).Ticks"></script>
 <script src="~/Scripts/FileUpload.js"></script>

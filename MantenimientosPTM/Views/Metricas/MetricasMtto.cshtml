@@ -116,6 +116,20 @@
                                     </div>
                                 </div>*@
 
+                            <!-- Clasificación -->
+                            <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                <label class="filtro-label" for="FiltroClasificacion">
+                                    <i class="bi bi-tag-fill"></i> Clasificación
+                                </label>
+                                <div class="select-wrapper">
+                                    <select class="filtro-input" id="FiltroClasificacion" name="FiltroClasificacion">
+                                        <option value="">Todas las clasificaciones...</option>
+                                        <option value="MANTENIMIENTO">MANTENIMIENTO</option>
+                                        <option value="HERRAMENTALES">HERRAMENTALES</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <!-- Botones -->
                             <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
                                 <button type="button"
@@ -426,4 +440,4 @@
 
 <!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="~/Scripts/metricas_mannto_refactor.js"></script>
+<script src="~/Scripts/metricas_mannto_refactor.js?v=@System.IO.File.GetLastWriteTime(HttpContext.Current.Server.MapPath("~/Scripts/metricas_mannto_refactor.js")).Ticks"></script>

@@ -1,0 +1,215 @@
+================================================================================
+ PENDIENTES PARA PRODUCCION - CAMBIOS EN BASE DE DATOS
+ Proyecto: MantenimientosPTM
+ Fecha: 04/11/2026
+ Ambiente donde YA se aplicaron: HANA Cloud / schema DBADMIN (desarrollo)
+ Ambiente destino (produccion): HANA 10.161.60.152 / schema PTM_2022_FINAL
+================================================================================
+
+IMPORTANTE
+- En produccion el schema se toma del appSetting "Database" del Web.config
+  (actualmente en el repo esta apuntando a DBADMIN; regresarlo a PTM_2022_FINAL).
+- El schema de produccion es: PTM_2022_FINAL
+- Los 3 procedimientos ya estan corregidos en DBADMIN, sirven de referencia
+  para comparar en produccion.
+
+--------------------------------------------------------------------------------
+ 1) STORED PROCEDURES MODIFICADOS (hay que actualizarlos en produccion)
+--------------------------------------------------------------------------------
+
+[ ] 1.1  SpPdxMTTOConsultaEquipos
+         Motivo: que la busqueda de equipos filtre por CLASIFICACION segun el
+                 Area Tecnica (Mantenimiento / Herramentales).
+         Cambio:
+           - Ya existia el parametro:  IN P_CLASIFICACION NVARCHAR(20)
+           - Solo se agrego la condicion al WHERE (sobre la tabla de equipos):
+                 AND (:P_CLASIFICACION IS NULL OR "CLASIFICACION" = :P_CLASIFICACION)
+         Nota: este cambio lo aplicaste tu directamente en DBADMIN.
+         Valores que recibe: 'MANTENIMIENTO' | 'HERRAMENTALES' | NULL
+
+[ ] 1.2  SpPdxMTTOInsertaEquipo
+         Motivo: guardar la CLASIFICACION al dar de alta un equipo nuevo.
+         Cambios:
+           - Nuevo parametro (al final de la lista):
+                 IN P_CLASIFICACION NVARCHAR(50)
+           - En el INSERT agregar la columna:
+                 "CLASIFICACION"
+           - En el VALUES agregar el valor:
+                 :P_CLASIFICACION
+         Tabla afectada: PdxMTTOGestionEquipos (columna CLASIFICACION)
+
+[ ] 1.3  SpPdxMTTOActualizaEquipo
+         Motivo: poder editar/corregir la CLASIFICACION de un equipo existente.
+         Cambios:
+           - Nuevo parametro (al final de la lista):
+                 IN P_CLASIFICACION NVARCHAR(50)
+           - En el UPDATE agregar (en el SET):
+                 "CLASIFICACION" = :P_CLASIFICACION,
+         Tabla afectada: PdxMTTOGestionEquipos (columna CLASIFICACION)
+
+[ ] 1.4  SpPdxMTTOObtenerMantenimientosPorRango
+         Motivo: filtros nuevos en Mantenimientos Preventivos:
+                 - Filtro por CLASIFICACION del equipo
+                 - Filtro por NOMBRE/DESCRIPCION de equipo
+         Cambios:
+           - Dos parametros nuevos AL FINAL de la lista (con DEFAULT NULL):
+                 IN P_FILTRO_CLASIFICACION NVARCHAR(50) DEFAULT NULL,
+                 IN P_FILTRO_EQUIPO        NVARCHAR(100) DEFAULT NULL
+           - En el WHERE del CTE EQUIPOS_CONFIG agregar:
+                 AND (:P_FILTRO_CLASIFICACION IS NULL
+                      OR UPPER(COALESCE(E.CLASIFICACION,'')) = UPPER(:P_FILTRO_CLASIFICACION))
+                 AND (
+                     :P_FILTRO_EQUIPO IS NULL
+                     OR UPPER(E.NOMBRE_EQUIPO) LIKE '%' || UPPER(:P_FILTRO_EQUIPO) || '%'
+                 )
+         NOTA: el filtro por equipo busca SOLO en NOMBRE_EQUIPO (no en descripcion),
+               para que al buscar "DADO" no aparezcan por ejemplo los "FORMADORES"
+               (que tienen la descripcion "DADO").
+         IMPORTANTE: los parametros deben quedar en ese orden (19 y 20), porque el
+         proveedor de .NET los envia por posicion; el controlador ya los manda al final.
+
+[ ] 1.5  SpPdxMTTOObtenerMantenimientosCorrectivos
+         Motivo: filtros nuevos en Mantenimientos Correctivos (mismos que preventivos):
+                 - Filtro por CLASIFICACION del equipo
+                 - Filtro por NOMBRE de equipo
+         Cambios:
+           - Dos parametros nuevos AL FINAL de la lista (con DEFAULT NULL):
+                 IN P_FILTRO_CLASIFICACION NVARCHAR(50) DEFAULT NULL,
+                 IN P_FILTRO_EQUIPO        NVARCHAR(100) DEFAULT NULL
+           - En el WHERE principal agregar (la tabla de equipos usa el alias E):
+                 AND (:P_FILTRO_CLASIFICACION IS NULL
+                      OR UPPER(COALESCE(E."CLASIFICACION",'')) = UPPER(:P_FILTRO_CLASIFICACION))
+                 AND (:P_FILTRO_EQUIPO IS NULL
+                      OR UPPER(E."NOMBRE_EQUIPO") LIKE '%' || UPPER(:P_FILTRO_EQUIPO) || '%')
+         IMPORTANTE: mismo criterio que el 1.4; parametros al final (posiciones 18 y 19).
+
+[ ] 1.6  SpPdxMTTOMetricasOEE_PVC / _PeadLiso / _Corrugado / _INY
+         Motivo: filtro por CLASIFICACION de equipos en Metricas.
+         IMPORTANTE (modelo de datos): MTTR / MTBF / DT y la OEE salen de las
+         bitacoras de produccion (PdxMTTOTiemposMuertosProduccion*), que son POR
+         LINEA/TURNO. El tiempo de paro se toma de la columna de la bitacora segun
+         la clasificacion elegida, y el numero de paradas de la columna OTMC:
+             - MANTENIMIENTO  -> horas = columna de correctivos de la bitacora
+             - HERRAMENTALES  -> horas = columna de herramentales de la bitacora
+             - TODAS (NULL)   -> horas = correctivos + herramentales (actual)
+         Columnas por proceso:
+             PVC        : MTTO_CORRECTIVOS        / HERRAMENTAL
+             PEAD LISO  : TIEMPO_MUERTO_CORRECTIVOS / TIEMPO_MUERTO_HERRAMENTALES
+             INY        : TIEMPO_MUERTO_CORRECTIVOS / TIEMPO_MUERTO_HERRAMENTALES
+             CORRUGADO  : TIEMPO_MUERTO_CORRECTIVOS / (no existe columna -> 0)
+         El conteo de paradas (N_OTMC) es el mismo: OCCURRENCES_REGEXPR('OTMC-' ...)
+         de la columna OTMC de la bitacora.
+         Cumplimiento PM si se filtra por equipo (PdxMTTOMPGenerados +
+         PdxMTTOGestionEquipos).
+         Cambios en cada SP (mismo patron en los 4):
+           - Nuevo parametro AL FINAL:
+                 IN P_CLASIFICACION NVARCHAR(50) DEFAULT NULL
+           - En CUMPLIMIENTO_PM_FILTRADO agregar:
+                 AND (:P_CLASIFICACION IS NULL OR E."CLASIFICACION" = :P_CLASIFICACION)
+           - En BITACORA_FILTRADA, reemplazar la expresion de HORAS_PARO por un
+             CASE que elige la columna segun :P_CLASIFICACION (ver tabla de arriba).
+           - MTTR_TOTAL / MTBF_TOTAL / DT_TOTAL quedan igual (sobre BITACORA_FILTRADA).
+         Los 4 SP quedan con 5 parametros (P_CLASIFICACION en la posicion 5).
+
+[ ] 1.7  Corrugado: columna de HERRAMENTAL (para que quede igual que PEAD LISO/INY)
+         a) ALTER TABLE (agregar columna):
+                ALTER TABLE "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionCorrugado"
+                ADD ("TIEMPO_MUERTO_HERRAMENTALES" DECIMAL(10,2) DEFAULT 0);
+         b) SpPdxMTTOGuardarTiemposMuertosCorrugado:
+                + parametro al final: IN P_TIEMPO_MUERTO_HERRAMENTALES DECIMAL(10,2)
+                + en el UPDATE: "TIEMPO_MUERTO_HERRAMENTALES" = :P_TIEMPO_MUERTO_HERRAMENTALES,
+                + en el INSERT: columna "TIEMPO_MUERTO_HERRAMENTALES" y valor :P_TIEMPO_MUERTO_HERRAMENTALES
+         c) SpPdxMTTOConsultarTiemposMuertosCorrugado:
+                + columna "TIEMPO_MUERTO_HERRAMENTALES" en el SELECT
+         d) SpPdxMTTOObtenerMantenimientosCorrectivos:
+                + columna CLASIFICACION en el DECLARE lt_result TABLE
+                + E."CLASIFICACION" en el SELECT (para que el front sepa a que
+                  columna de la bitacora va el tiempo: Correctivos o Herramental)
+         e) SpPdxMTTOMetricasOEE_Corrugado:
+                ahora usa TIEMPO_MUERTO_HERRAMENTALES para HERRAMENTALES
+                (antes daba 0 porque no existia la columna)
+         Archivos app: Models/AccesoDatos/AccesoDatosProduccion.cs,
+         Models/AccesoDatos/AccesoDatosMantenimientosCorrectivos.cs,
+         Scripts/produccion_corrugado_refactor.js
+
+--------------------------------------------------------------------------------
+ 2) TABLAS / COLUMNAS INVOLUCRADAS
+--------------------------------------------------------------------------------
+
+PdxMTTOGestionEquipos
+    - Columna: CLASIFICACION  (NVARCHAR(50))
+      * NO se modifico la estructura: la columna YA existia en produccion.
+      * Solo se empezo a llenar/actualizar desde la app (antes se quedaba vacia
+        al dar de alta un equipo desde "Agregar Equipo").
+      * Valores esperados: 'MANTENIMIENTO' | 'HERRAMENTALES'
+
+Tablas que solo tuvieron MOVIMIENTOS DE DATOS DE PRUEBA (sin cambios de estructura):
+    - PdxMTTOSolicitudMC          (solicitudes de prueba OTMC-004 / OTMC-005)
+    - PdxMTTOMCGenerados          (OT generadas de prueba)
+    - PdxMTTOOrdenesTrabajoMC     (registro de trabajo / firma del tecnico)
+    - PdxMTTOEquiposPeriodicidad  (periodicidad del equipo de prueba)
+    - PdxMTTOGestionEquipos       (equipo de prueba ID 1608, ya eliminado)
+    NO requieren ningun cambio en produccion.
+
+--------------------------------------------------------------------------------
+ 3) VALIDACION DESPUES DE APLICAR EN PRODUCCION
+--------------------------------------------------------------------------------
+
+Ejecutar en PTM_2022_FINAL:
+
+    -- 3.1 Confirmar que los 3 SP tienen el parametro
+    SELECT PROCEDURE_NAME, PARAMETER_NAME, DATA_TYPE_NAME, LENGTH
+    FROM SYS.PROCEDURE_PARAMETERS
+    WHERE SCHEMA_NAME = 'PTM_2022_FINAL'
+      AND PROCEDURE_NAME IN ('SpPdxMTTOConsultaEquipos',
+                             'SpPdxMTTOInsertaEquipo',
+                             'SpPdxMTTOActualizaEquipo')
+      AND PARAMETER_NAME = 'P_CLASIFICACION';
+
+    -- 3.2 Ver equipos sin clasificar (para irlos clasificando)
+    SELECT COUNT(*) FROM "PTM_2022_FINAL"."PdxMTTOGestionEquipos"
+    WHERE CLASIFICACION IS NULL OR TRIM(CLASIFICACION) = '';
+
+    -- 3.3 Prueba funcional
+    --     a) Programar Mantenimiento Correctivo: elegir Area Tecnica y buscar
+    --        equipo; solo debe traer equipos de esa clasificacion.
+    --     b) Gestion de Equipos > Agregar Equipo: debe pedir Clasificacion
+    --        y guardarla. Editar un equipo debe precargar la clasificacion.
+    --     c) Mantenimientos Preventivos: en el panel de filtros usar
+    --        "Clasificacion" y "Nombre de Equipo"; el listado del periodo debe
+    --        mostrar solo los equipos que coincidan.
+
+--------------------------------------------------------------------------------
+ 4) ARCHIVOS DE LA APP RELACIONADOS (para el despliegue)
+--------------------------------------------------------------------------------
+
+    Controllers/EquiposController.cs          (parametro Clasificacion en BuscarEquipo)
+    Models/AccesoDatos/AccesoDatosEquipos.cs  (propiedad Clasificacion en EquipoMTTO)
+    Scripts/Global.js                          (buscarEquipos envia Clasificacion)
+    Scripts/solicitud_mantenimiento_correctivo_refactor.js  (filtro por Area Tecnica)
+    Scripts/gestion_equipos_refactor.js        (carga clasificacion al editar)
+    Views/MantenimientosCorrectivos/PROGMC.cshtml
+    Views/Equipos/GestionEquipos.cshtml
+    Views/Equipos/_ModalAgregarEditarEquipos.cshtml  (nuevo select Clasificacion)
+    Views/Shared/_Layout.cshtml
+
+    -- Mantenimientos Preventivos (filtros nuevos) --
+    Controllers/MantenimientosPreventivosController.cs  (FiltroClasificacion / FiltroNombreEquipo)
+    Scripts/mantenimientos_preventivos_refactor.js      (envia los 2 filtros nuevos)
+    Views/MantenimientosPreventivos/MantenimientoPreventivo.cshtml (controles de filtro)
+
+    -- Mantenimientos Correctivos (filtros nuevos) --
+    Controllers/MantenimientosCorrectivosController.cs  (FiltroClasificacion / FiltroNombreEquipo)
+    Scripts/mantenimientos_correctivos_refactor.js      (envia los 2 filtros nuevos)
+    Views/MantenimientosCorrectivos/MantenimientoCorrectivo.cshtml (controles de filtro)
+
+    -- Metricas (filtro por clasificacion) --
+    Controllers/MetricasController.cs                   (FiltroClasificacion en los 5 endpoints)
+    Scripts/metricas_mannto_refactor.js                 (envia FiltroClasificacion)
+    Views/Metricas/MetricasMtto.cshtml                  (control de filtro)
+
+    Web.config                                 (Database = PTM_2022_FINAL)
+
+================================================================================
+ FIN DEL DOCUMENTO
+================================================================================

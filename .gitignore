@@ -40,6 +40,7 @@ Desktop.ini
 # Datos dinámicos generados por usuario
 FirmasOTPreventivo/
 EvidenciaRutinas/
+FirmasOTCorrectivo/
 
 # Archivos de publishing
 *.publishsettings
@@ -56,3 +57,8 @@ node_modules/
 
 # Excel temporal
 ~$*.xls*
+
+# CodeGraph (índice local del agente)
+.codegraph/
+# Graphify (grafo de conocimiento local)
+graphify-out/
