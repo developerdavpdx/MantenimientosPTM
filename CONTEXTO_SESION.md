@@ -80,13 +80,15 @@
 
 1. Respaldo/snapshot de `PTM_2022_FINAL` antes de publicar (recomendado).
 2. Publicar la app (commits `d42347a` + `20f1dfe` + docs).
-3. Cambiar `Web.config`:
+3. Aplicar la migración incremental del Calendario en TEST/PTM (`SQL_MIGRACION/MIGRACION_CALENDARIO_FILTROS_*.sql`).
+4. Aplicar la migración incremental de reprogramación de preventivos (`SQL_MIGRACION/MIGRACION_PREVENTIVOS_REPROGRAMACION_*.sql`).
+5. Cambiar `Web.config`:
    - `Database` y `SapDatabase` = `PTM_2022_FINAL`.
    - `HANAConnection` → `10.161.60.152:30015`.
    - `SQLConnection` → `SAP-PLASTIC-INT\MSSQLPTM`.
-4. Verificar el sello de ambiente en Login: `SelloProduccion.png` para productivo.
-5. **No publicar** `FirmasOTCorrectivo/` con las firmas de prueba.
-6. Validar login, preventivos, correctivos, bitácora y métricas.
+6. Verificar el sello de ambiente en Login: `SelloProduccion.png` para productivo.
+7. **No publicar** `FirmasOTCorrectivo/` con las firmas de prueba.
+8. Validar login, preventivos, correctivos, calendario, bitácora y métricas.
 
 **Orden:** la BD ya está migrada; solo falta el despliegue de la app. La app nueva espera los parámetros/columna nuevos.
 

@@ -7,6 +7,21 @@ ARCHIVOS
   MIGRACION_TEST_JUNIO_2026.sql   -> para el schema TEST_JUNIO_2026
   MIGRACION_PTM_2022_FINAL.sql    -> para el schema PTM_2022_FINAL
 
+  MIGRACION_CALENDARIO_FILTROS_TEST_JUNIO_2026.sql
+  MIGRACION_CALENDARIO_FILTROS_PTM_2022_FINAL.sql
+      -> Incrementales (05/11/2026): actualizan
+         SpPdxMTTOObtenerMantenimientosCompletados con los filtros nuevos
+         del Calendario (Orden de Trabajo, Clasificacion y Nombre de Equipo)
+         y FUE_REPROGRAMADO = 'SI' tambien para estatus NA.
+         Ejecutar despues de la migracion principal.
+
+  MIGRACION_PREVENTIVOS_REPROGRAMACION_TEST_JUNIO_2026.sql
+  MIGRACION_PREVENTIVOS_REPROGRAMACION_PTM_2022_FINAL.sql
+      -> Incrementales (05/11/2026): actualizan
+         SpPdxMTTOObtenerMantenimientosPorRango para que use las fechas
+         reales de reprogramacion (NA / Aceptada) en el filtro y periodo,
+         y FUE_REPROGRAMADO = 'SI' tambien para estatus NA.
+
 QUE HACE CADA SCRIPT
   1) Agrega la columna TIEMPO_MUERTO_HERRAMENTALES a la bitacora de Corrugado
      (solo si no existe).

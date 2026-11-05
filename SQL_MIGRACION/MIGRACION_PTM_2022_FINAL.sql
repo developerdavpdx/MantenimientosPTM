@@ -608,15 +608,32 @@ BEGIN
     MANTENIMIENTOS_AJUSTADOS AS (
         SELECT
             MC.*,
-            CASE WHEN RA.TIENE_ACEPTADA  = 1 THEN 'SI' ELSE 'NO' END AS FUE_REPROGRAMADO,
+            CASE
+                WHEN RA.TIENE_ACEPTADA = 1 OR RA."ESTATUS" = 'NA' THEN 'SI'
+                ELSE 'NO'
+            END AS FUE_REPROGRAMADO,
             CASE WHEN RA.TIENE_PENDIENTE = 1 THEN 'SI' ELSE 'NO' END AS TIENE_SOLICITUD_PENDIENTE,
             RA.ID_SOLICITUD_PENDIENTE AS ID_SOLICITUD_PENDIENTE,   -- v4
             CASE
+                -- Reprogramacion con fechas reales (NA o Aceptada, sin "siguiente mes")
+                WHEN RA."ESTATUS" IN ('NA', 'Aceptada')
+                     AND RA."FECHA_REAL_INICIO" IS NOT NULL
+                     AND RA."FECHA_REAL_FIN"     IS NOT NULL
+                     AND IFNULL(RA."ENVIAR_SIGUIENTE_MES", FALSE) = FALSE
+                THEN CAST(RA."FECHA_REAL_INICIO" AS DATE)
+                -- Reprogramacion "enviar al siguiente mes"
                 WHEN RA.TIENE_ACEPTADA = 1
                 THEN ADD_MONTHS(MC.FECHA_INICIO_MANTENIMIENTO_DATE, 1)
                 ELSE MC.FECHA_INICIO_MANTENIMIENTO_DATE
             END AS FECHA_INICIO_FINAL,
             CASE
+                -- Reprogramacion con fechas reales (NA o Aceptada, sin "siguiente mes")
+                WHEN RA."ESTATUS" IN ('NA', 'Aceptada')
+                     AND RA."FECHA_REAL_INICIO" IS NOT NULL
+                     AND RA."FECHA_REAL_FIN"     IS NOT NULL
+                     AND IFNULL(RA."ENVIAR_SIGUIENTE_MES", FALSE) = FALSE
+                THEN CAST(RA."FECHA_REAL_FIN" AS DATE)
+                -- Reprogramacion "enviar al siguiente mes"
                 WHEN RA.TIENE_ACEPTADA = 1
                 THEN ADD_MONTHS(MC.FECHA_FIN_MANTENIMIENTO_DATE, 1)
                 ELSE MC.FECHA_FIN_MANTENIMIENTO_DATE

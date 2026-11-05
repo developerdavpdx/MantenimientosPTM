@@ -25,10 +25,20 @@ class GestionEventosApp {
         // Botón limpiar filtros
         $('#btnLimpiarFiltros').on('click', () => this.calendarManager.limpiarFiltros());
 
-        $('#FiltroLineaProduccion, #FiltroTipoMantenimiento, #FiltroFechaInicio, #FiltroFechaFin')
+        $('#FiltroLineaProduccion, #FiltroTipoMantenimiento, #FiltroFechaInicio, #FiltroFechaFin, #FiltroClasificacion')
             .off('change')
             .on('change', () => {
                 this.calendarManager.aplicarFiltros();
+            });
+
+        // Enter en los filtros de texto (Orden de Trabajo / Nombre de Equipo)
+        $('#FiltroOrdenTrabajo, #FiltroNombreEquipo')
+            .off('keydown')
+            .on('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.calendarManager.aplicarFiltros();
+                }
             });
 
         $("#FiltroArea")
@@ -333,7 +343,7 @@ class CalendarManager {
     }
 
     // ✅ Función para obtener mantenimientos completados del SP
-    obtenerMantenimientosAnuales(tipoMant = null, proceso = null, lineaProd = null, Planta, fechaInicio = null, fechaFin = null) {
+    obtenerMantenimientosAnuales(tipoMant = null, proceso = null, lineaProd = null, Planta, fechaInicio = null, fechaFin = null, ordenTrabajo = null, clasificacion = null, equipo = null) {
        
         return new Promise((resolve, reject) => {
             // Si no se proporcionan fechas, usar el año actual
@@ -352,7 +362,10 @@ class CalendarManager {
                     lineaProd: lineaProd,
                     planta: Planta,
                     fechaInicio: fechaInicio,
-                    fechaFin: fechaFin
+                    fechaFin: fechaFin,
+                    ordenTrabajo: ordenTrabajo,
+                    clasificacion: clasificacion,
+                    equipo: equipo
                 },
                 headers: {
                     'Content-Type': 'application/json'
@@ -495,12 +508,12 @@ class CalendarManager {
     }
 
     // ✅ Cargar eventos reales desde HANA
-    async cargarEventosReales(tipoMant = null, proceso = null, lineaProd = null, fechaInicio = null, fechaFin = null) {
+    async cargarEventosReales(tipoMant = null, proceso = null, lineaProd = null, fechaInicio = null, fechaFin = null, ordenTrabajo = null, clasificacion = null, equipo = null) {
         // ✅ Mostrar loader
         GlobalUtil.mostrarLoader(true);
 
         try { 
-            const datosHana = await this.obtenerMantenimientosAnuales(tipoMant, proceso, lineaProd, this.datos_usuario[0].PLANTA,fechaInicio, fechaFin);
+            const datosHana = await this.obtenerMantenimientosAnuales(tipoMant, proceso, lineaProd, this.datos_usuario[0].PLANTA, fechaInicio, fechaFin, ordenTrabajo, clasificacion, equipo);
 
             if (datosHana && datosHana.length > 0) {
                 const eventosCalendario = this.transformarEventosCalendario(datosHana);
@@ -545,49 +558,21 @@ class CalendarManager {
         const lineaProd = $('#FiltroLineaProduccion').val();
         const fechaInicio = $('#FiltroFechaInicio').val();
         const fechaFin = $('#FiltroFechaFin').val();
+        const ordenTrabajo = $('#FiltroOrdenTrabajo').val();
+        const clasificacion = $('#FiltroClasificacion').val();
+        const equipo = $('#FiltroNombreEquipo').val();
 
-        //this.cargarEventosReales(tipoMant, proceso, lineaProd, fechaInicio, fechaFin);
-
-        // Si hay filtros de fecha, recargar desde el servidor
-        if (fechaInicio && fechaFin) {
-            this.cargarEventosReales(tipoMant, proceso, lineaProd, fechaInicio, fechaFin);
-            return;
-        }
-
-        // Si hay otros filtros sin fecha, igual recargar desde servidor
-        if (tipoMant || proceso || lineaProd) {
-            this.cargarEventosReales(tipoMant, proceso, lineaProd, null, null);
-            return;
-        }
-
-        // Filtrar eventos localmente
-        // let eventosFiltrados = [...this.todosLosEventos];
-
-        // if (tipoMant) {
-        //     eventosFiltrados = eventosFiltrados.filter(e =>
-        //         e.extendedProps.tipo === tipoMant
-        //     );
-        // }
-
-        // if (lineaProd) {
-        //     eventosFiltrados = eventosFiltrados.filter(e =>
-        //         e.extendedProps.line === lineaProd
-        //     );
-        // }
-
-        // Si no hay ningún filtro, cargar todo (año actual por default)
-        this.cargarEventosReales(null, null, null, null, null);
-
-        // Actualizar calendario
-        // this.calendar.removeAllEvents();
-        // eventosFiltrados.forEach(evento => {
-        //     this.calendar.addEvent(evento);
-        // });
-
-        // AlertManager.mostrar(
-        //     `Filtros aplicados: ${eventosFiltrados.length} mantenimientos encontrados`,
-        //     'info'
-        // );
+        // Siempre recargar desde el servidor; si no hay fechas, el endpoint usa el año actual
+        this.cargarEventosReales(
+            tipoMant,
+            proceso,
+            lineaProd,
+            fechaInicio,
+            fechaFin,
+            ordenTrabajo,
+            clasificacion,
+            equipo
+        );
     }
 
     // ✅ Limpiar filtros
@@ -597,6 +582,9 @@ class CalendarManager {
         $('#FiltroLineaProduccion').val('');
         $('#FiltroFechaInicio').val('');
         $('#FiltroFechaFin').val('');
+        $('#FiltroOrdenTrabajo').val('');
+        $('#FiltroClasificacion').val('');
+        $('#FiltroNombreEquipo').val('');
 
         // Recargar eventos del año actual
         this.cargarEventosReales();

@@ -26,7 +26,10 @@ namespace MantenimientosPTM.Controllers
             int? lineaProd = null,
             int? Planta = null, 
             string fechaInicio = null, 
-            string fechaFin = null)
+            string fechaFin = null,
+            string ordenTrabajo = null,
+            string clasificacion = null,
+            string equipo = null)
         {
             GlobalCommands.JsonResponseMtto jsonResponse;
             try
@@ -65,6 +68,9 @@ namespace MantenimientosPTM.Controllers
                     { "p_FECHA_INICIO", (dtFechaInicio.HasValue ? (object)dtFechaInicio.Value : null, ParameterDirection.Input, HanaDbType.Date) },
                     { "p_FECHA_FIN", (dtFechaFin.HasValue ? (object)dtFechaFin.Value : null, ParameterDirection.Input, HanaDbType.Date) },
                     { "p_PLANTA", (Planta != null ? (object)Planta : null, ParameterDirection.Input, HanaDbType.Integer) },
+                    { "p_ORDEN_TRABAJO", (string.IsNullOrWhiteSpace(ordenTrabajo) ? null : (object)ordenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "p_CLASIFICACION", (string.IsNullOrWhiteSpace(clasificacion) ? null : (object)clasificacion, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "p_EQUIPO", (string.IsNullOrWhiteSpace(equipo) ? null : (object)equipo, ParameterDirection.Input, HanaDbType.NVarChar) },
 
                 };
 

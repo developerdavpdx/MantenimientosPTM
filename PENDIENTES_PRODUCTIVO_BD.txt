@@ -296,6 +296,55 @@ Ejecutar en PTM_2022_FINAL:
     [ ] 5. NO publicar FirmasOTCorrectivo/ (firmas de prueba).
     [ ] 6. Probar login, preventivos, correctivos, bitacora y metricas.
 
+--------------------------------------------------------------------------------
+ 6) CAMBIO NUEVO (05/11/2026) - FILTROS DEL CALENDARIO
+--------------------------------------------------------------------------------
+
+    Objeto: SpPdxMTTOObtenerMantenimientosCompletados
+    Cambios:
+      + p_ORDEN_TRABAJO NVARCHAR(100)  -> LIKE sobre NUMERO_ORDEN
+      + p_CLASIFICACION NVARCHAR(50)   -> MANTENIMIENTO | HERRAMENTALES
+      + p_EQUIPO NVARCHAR(100)         -> LIKE sobre NOMBRE_EQUIPO
+      + FUE_REPROGRAMADO = 'SI' tambien cuando la solicitud esta en estatus NA
+
+    App:
+      Controllers/CalendarioController.cs
+      Scripts/calendario_mantenimientos_refactor.js
+      Views/Calendario/CalendarioMantenimientos.cshtml
+
+    Estado:
+      [x] Aplicado y probado en DBADMIN
+      [ ] Pendiente en TEST_JUNIO_2026
+      [ ] Pendiente en PTM_2022_FINAL
+
+    Scripts incrementales:
+      SQL_MIGRACION/MIGRACION_CALENDARIO_FILTROS_TEST_JUNIO_2026.sql
+      SQL_MIGRACION/MIGRACION_CALENDARIO_FILTROS_PTM_2022_FINAL.sql
+
+--------------------------------------------------------------------------------
+ 7) CAMBIO NUEVO (05/11/2026) - FECHAS REALES DE REPROGRAMACION
+--------------------------------------------------------------------------------
+
+    Objeto: SpPdxMTTOObtenerMantenimientosPorRango
+    Cambio:
+      FECHA_INICIO_FINAL / FECHA_FIN_FINAL ahora usan FECHA_REAL_INICIO /
+      FECHA_REAL_FIN cuando existe reprogramacion con estatus NA o Aceptada
+      y NO es "enviar al siguiente mes". Sin reprogramacion se conserva la
+      fecha calculada por periodicidad.
+      FUE_REPROGRAMADO = 'SI' tambien cuando la solicitud esta en estatus NA.
+
+    App:
+      No requiere cambios de codigo (el front ya mostraba las fechas reales).
+
+    Estado:
+      [x] Aplicado y probado en DBADMIN
+      [ ] Pendiente en TEST_JUNIO_2026
+      [ ] Pendiente en PTM_2022_FINAL
+
+    Scripts incrementales:
+      SQL_MIGRACION/MIGRACION_PREVENTIVOS_REPROGRAMACION_TEST_JUNIO_2026.sql
+      SQL_MIGRACION/MIGRACION_PREVENTIVOS_REPROGRAMACION_PTM_2022_FINAL.sql
+
 ================================================================================
  FIN DEL DOCUMENTO
 ================================================================================

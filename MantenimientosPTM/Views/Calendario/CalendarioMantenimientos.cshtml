@@ -74,6 +74,40 @@
                                     </div>
                                 </div>
 
+                                <!-- Clasificación -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroClasificacion">
+                                        <i class="bi bi-tag-fill"></i> Clasificación
+                                    </label>
+                                    <div class="select-wrapper">
+                                        <select class="filtro-input" id="FiltroClasificacion" name="FiltroClasificacion">
+                                            <option value="">Todas las clasificaciones...</option>
+                                            <option value="MANTENIMIENTO">MANTENIMIENTO</option>
+                                            <option value="HERRAMENTALES">HERRAMENTALES</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Orden de Trabajo -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroOrdenTrabajo">
+                                        <i class="bi bi-file-earmark-text-fill"></i> Orden de Trabajo
+                                    </label>
+                                    <input type="text" class="filtro-input"
+                                           id="FiltroOrdenTrabajo" name="FiltroOrdenTrabajo"
+                                           placeholder="Buscar orden...">
+                                </div>
+
+                                <!-- Nombre de Equipo -->
+                                <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                    <label class="filtro-label" for="FiltroNombreEquipo">
+                                        <i class="bi bi-gear-fill"></i> Nombre de Equipo
+                                    </label>
+                                    <input type="text" class="filtro-input"
+                                           id="FiltroNombreEquipo" name="FiltroNombreEquipo"
+                                           placeholder="Buscar equipo...">
+                                </div>
+
                                 <!-- Fecha Inicio -->
                                 <div class="col-12 col-sm-6 col-md-4 col-xl-2">
                                     <label class="filtro-label" for="FiltroFechaInicio">
@@ -461,4 +495,4 @@
     }
 </script>
 
-<script src="~/Scripts/calendario_mantenimientos_refactor.js"></script>
+<script src="~/Scripts/calendario_mantenimientos_refactor.js?v=@System.IO.File.GetLastWriteTime(HttpContext.Current.Server.MapPath("~/Scripts/calendario_mantenimientos_refactor.js")).Ticks"></script>
