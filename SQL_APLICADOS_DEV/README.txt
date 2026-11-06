@@ -3,12 +3,23 @@
  Fecha: 05/11/2026
 ================================================================================
 
+ESTADO:
+  - Migraciones anteriores: aplicadas y validadas en DBADMIN, TEST_JUNIO_2026 y PTM_2022_FINAL.
+  - Nuevos cambios de tiempos muertos (05/11/2026): aplicados en DBADMIN.
+    Pendientes de aplicar en TEST_JUNIO_2026 y PTM_2022_FINAL.
+
 ARCHIVOS INCLUIDOS
   SpPdxMTTOMetricasOEE_PVC.sql
   SpPdxMTTOMetricasOEE_PeadLiso.sql
   SpPdxMTTOMetricasOEE_Corrugado.sql
   SpPdxMTTOMetricasOEE_INY.sql
   SpPdxMTTOObtenerMantenimientosPorRango.sql
+  SpPdxMTTOObtenerMantenimientosCompletados.sql
+  SpPdxMTTOConsultarTiemposMuertosCorrugado.sql
+  SpPdxMTTOEliminarTiemposMuertosPVC.sql
+  SpPdxMTTOEliminarTiemposMuertosPeadLiso.sql
+  SpPdxMTTOEliminarTiemposMuertosINY.sql
+  SpPdxMTTOEliminarTiemposMuertosCorrugado.sql
 
 QUE CAMBIO EN LOS 4 SPs DE METRICAS
   - Se agrego el parametro P_CLASIFICACION.
@@ -27,8 +38,18 @@ QUE CAMBIO EN SpPdxMTTOObtenerMantenimientosPorRango (PREVENTIVOS)
   - Validado con Mario (posicion 95): ahora ve los equipos HERRAMENTALES
     del periodo y OTMP-001 (BCP03 A 1-4). Antes veia 0.
 
-DETALLE COMPLETO Y PENDIENTES PARA PRODUCCION
-  PENDIENTES_PRODUCTIVO_BD.txt  (secciones 1.4 y 1.6)
+QUE CAMBIO EN SpPdxMTTOConsultarTiemposMuertosCorrugado (CORRUGADO)
+  - Ahora devuelve la columna COMENTARIOS en el SELECT.
+  - Antes el comentario se guardaba pero no se mostraba al recargar.
+
+SPs NUEVOS DE ELIMINACION (4 PROCESOS)
+  SpPdxMTTOEliminarTiemposMuertosPVC / PeadLiso / INY / Corrugado
+  - Reciben P_ID_REGISTRO INTEGER.
+  - Validan que el registro exista y lo eliminan.
+  - Devuelven ESTATUS = 'OK' / 'ERROR' y MENSAJE.
+
+DETALLE COMPLETO
+  CONTEXTO_SESION.md  (secciones 3 y 4)
 
 PRUEBA FUNCIONAL (05/11/2026, L1 PVC, bitacora guardada)
   Todas          -> 2 correctivos, 2.80 hr, MTTR 1.40, PM 2/2 (100%)

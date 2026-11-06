@@ -3,6 +3,22 @@
  Fecha: 05/11/2026
 ================================================================================
 
+ESTADO: APLICADO Y VALIDADO (05/11/2026)
+  [x] MIGRACION_TEST_JUNIO_2026.sql                -> APLICADO
+  [x] MIGRACION_PTM_2022_FINAL.sql                 -> APLICADO
+  [x] MIGRACION_CALENDARIO_FILTROS_*.sql           -> APLICADO
+  [x] MIGRACION_PREVENTIVOS_REPROGRAMACION_*.sql   -> APLICADO
+  Base y migraciones anteriores: aplicadas y validadas.
+
+NUEVOS CAMBIOS (05/11/2026 - REGISTRO DE TIEMPOS MUERTOS)
+  [x] Aplicado en DBADMIN (desarrollo)
+  [ ] Pendiente en TEST_JUNIO_2026
+  [ ] Pendiente en PTM_2022_FINAL
+  Scripts:
+    MIGRACION_COMENTARIOS_CORRUGADO_*.sql
+    MIGRACION_ELIMINAR_TIEMPOS_MUERTOS_*.sql
+    MIGRACION_NORMALIZAR_OT_TIEMPOS_MUERTOS_*.sql
+
 ARCHIVOS
   MIGRACION_TEST_JUNIO_2026.sql   -> para el schema TEST_JUNIO_2026
   MIGRACION_PTM_2022_FINAL.sql    -> para el schema PTM_2022_FINAL
@@ -21,6 +37,25 @@ ARCHIVOS
          SpPdxMTTOObtenerMantenimientosPorRango para que use las fechas
          reales de reprogramacion (NA / Aceptada) en el filtro y periodo,
          y FUE_REPROGRAMADO = 'SI' tambien para estatus NA.
+
+  MIGRACION_COMENTARIOS_CORRUGADO_TEST_JUNIO_2026.sql
+  MIGRACION_COMENTARIOS_CORRUGADO_PTM_2022_FINAL.sql
+      -> Incrementales (05/11/2026): actualizan
+         SpPdxMTTOConsultarTiemposMuertosCorrugado para devolver COMENTARIOS
+         (antes se guardaban pero no se mostraban al recargar).
+
+  MIGRACION_ELIMINAR_TIEMPOS_MUERTOS_TEST_JUNIO_2026.sql
+  MIGRACION_ELIMINAR_TIEMPOS_MUERTOS_PTM_2022_FINAL.sql
+      -> Incrementales (05/11/2026): crean los SPs de eliminacion
+         SpPdxMTTOEliminarTiemposMuertosPVC / PeadLiso / INY / Corrugado.
+         Reciben P_ID_REGISTRO y eliminan el registro de la tabla.
+
+  MIGRACION_NORMALIZAR_OT_TIEMPOS_MUERTOS_TEST_JUNIO_2026.sql
+  MIGRACION_NORMALIZAR_OT_TIEMPOS_MUERTOS_PTM_2022_FINAL.sql
+      -> Incrementales (05/11/2026): normalizan OTMC / OTMP / ID_PARO
+         en las 4 tablas de tiempos muertos. Corrige valores JSON
+         anidados/doblemente escapados que provocaban duplicados al
+         editar la Fecha y guardar. Es idempotente.
 
 QUE HACE CADA SCRIPT
   1) Agrega la columna TIEMPO_MUERTO_HERRAMENTALES a la bitacora de Corrugado
@@ -94,8 +129,8 @@ CODIFICACION Y CARACTERES
   - El codigo SQL es ASCII; los acentos solo estan en comentarios.
 
 ORDEN DE DESPLIEGUE
-  1) Base de datos (este script).
-  2) Sitio web (commit d42347a + los cambios pendientes de docs/SQL).
+  1) Base de datos (este script).            [COMPLETADO 05/11/2026]
+  2) Sitio web (commit d42347a + docs).
   3) Cambiar Web.config: Database = schema destino.
   4) Probar login, preventivos, correctivos, bitacora y metricas.
 

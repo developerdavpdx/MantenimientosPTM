@@ -659,6 +659,70 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        [HttpPost]
+        public JsonResult EliminarTiempoMuertoPVC(int idRegistro)
+        {
+            return EliminarTiempoMuerto(Logic.AD.GCEliminarTiemposMuertosPVC, idRegistro);
+        }
+
+        [HttpPost]
+        public JsonResult EliminarTiempoMuertoPeadLiso(int idRegistro)
+        {
+            return EliminarTiempoMuerto(Logic.AD.GCEliminarTiemposMuertosPeadLiso, idRegistro);
+        }
+
+        [HttpPost]
+        public JsonResult EliminarTiempoMuertoINY(int idRegistro)
+        {
+            return EliminarTiempoMuerto(Logic.AD.GCEliminarTiemposMuertosINY, idRegistro);
+        }
+
+        [HttpPost]
+        public JsonResult EliminarTiempoMuertoCorrugado(int idRegistro)
+        {
+            return EliminarTiempoMuerto(Logic.AD.GCEliminarTiemposMuertosCorrugado, idRegistro);
+        }
+
+        private JsonResult EliminarTiempoMuerto(string procedimiento, int idRegistro)
+        {
+            var jsonResponse = new GlobalCommands.JsonResponseMtto();
+
+            try
+            {
+                if (idRegistro <= 0)
+                {
+                    jsonResponse.Status = "NO";
+                    jsonResponse.Message = "No se recibió un identificador de registro válido.";
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse);
+                }
+
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_ID_REGISTRO", (idRegistro, ParameterDirection.Input, HanaDbType.Integer) }
+                };
+
+                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(procedimiento, parameters);
+
+                var resultado = JArray.Parse(resultHana.JsonResult);
+                string estatus = (string)resultado[0]["ESTATUS"];
+                string mensaje = (string)resultado[0]["MENSAJE"];
+
+                jsonResponse.Status = estatus == "OK" ? "SI" : "NO";
+                jsonResponse.Message = mensaje;
+                jsonResponse.Data = resultHana.JsonResult;
+
+                return Json(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                jsonResponse.Status = "ERROR";
+                jsonResponse.Message = "No fue posible eliminar el registro: " + ex.Message;
+                jsonResponse.Data = string.Empty;
+                return Json(jsonResponse);
+            }
+        }
+
         [HttpGet]
         public JsonResult GetTiemposMuertosPVC(
             string FiltroFechaInicio,

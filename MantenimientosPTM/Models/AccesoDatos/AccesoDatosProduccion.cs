@@ -50,6 +50,13 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGuardarTiemposMuertosPVC\"";
             }
         }
+        public string GCEliminarTiemposMuertosPVC
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarTiemposMuertosPVC\"";
+            }
+        }
         public string GCConsultarTiemposMuertosPVC
         {
             get
@@ -62,6 +69,13 @@ namespace MantenimientosPTM
             get
             {
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGuardarTiemposMuertosCorrugado\"";
+            }
+        }
+        public string GCEliminarTiemposMuertosCorrugado
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarTiemposMuertosCorrugado\"";
             }
         }
         public string GCConsultarTiemposMuertosCorrugado
@@ -85,6 +99,13 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGuardarTiemposMuertosPeadLiso\"";
             }
         }
+        public string GCEliminarTiemposMuertosPeadLiso
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarTiemposMuertosPeadLiso\"";
+            }
+        }
         public string GCEliminarParoProduccion
         {
             get
@@ -103,6 +124,13 @@ namespace MantenimientosPTM
             get
             {
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGuardarTiemposMuertosINY\"";
+            }
+        }
+        public string GCEliminarTiemposMuertosINY
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOEliminarTiemposMuertosINY\"";
             }
         }
         public string GCValidarProductosTerminadosExistentes

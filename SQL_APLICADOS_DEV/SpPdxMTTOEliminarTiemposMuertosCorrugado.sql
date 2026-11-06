@@ -1,0 +1,32 @@
+﻿CREATE OR REPLACE PROCEDURE "DBADMIN"."SpPdxMTTOEliminarTiemposMuertosCorrugado" (
+    IN P_ID_REGISTRO INTEGER
+)
+LANGUAGE SQLSCRIPT
+SQL SECURITY INVOKER
+AS
+BEGIN
+    DECLARE V_EXISTE INTEGER;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SELECT 'ERROR' AS "ESTATUS", ::SQL_ERROR_MESSAGE AS "MENSAJE" FROM DUMMY;
+    END;
+
+    SELECT COUNT(*) INTO V_EXISTE
+    FROM "PdxMTTOTiemposMuertosProduccionCorrugado"
+    WHERE "ID_REGISTRO" = :P_ID_REGISTRO;
+
+    IF :V_EXISTE = 0 THEN
+        SELECT 'ERROR' AS "ESTATUS",
+               'No existe el registro con ID ' || :P_ID_REGISTRO AS "MENSAJE"
+        FROM DUMMY;
+        RETURN;
+    END IF;
+
+    DELETE FROM "PdxMTTOTiemposMuertosProduccionCorrugado"
+    WHERE "ID_REGISTRO" = :P_ID_REGISTRO;
+
+    SELECT 'OK' AS "ESTATUS",
+           'Registro eliminado correctamente.' AS "MENSAJE"
+    FROM DUMMY;
+END;

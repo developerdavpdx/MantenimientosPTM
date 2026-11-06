@@ -4620,6 +4620,80 @@ class GestionProduccionBase {
         return v.toLocaleString('es-MX', { maximumFractionDigits: 2 }) + '%';
     }
 
+    // ========================================
+    // NORMALIZACIÓN DE LISTAS DE OT / PAROS
+    // Acepta: null, string simple, pipes, JSON array,
+    // JSON anidado o doblemente escapado.
+    // Devuelve siempre un array de strings únicos.
+    // ========================================
+    normalizarListaOT(valor) {
+        const resultado = [];
+
+        const agregar = (v) => {
+            if (v === null || v === undefined) return;
+
+            if (Array.isArray(v)) {
+                v.forEach(agregar);
+                return;
+            }
+
+            if (typeof v === 'object') {
+                Object.values(v).forEach(agregar);
+                return;
+            }
+
+            if (typeof v === 'number') {
+                resultado.push(String(v));
+                return;
+            }
+
+            let texto = String(v).trim();
+            if (!texto) return;
+
+            // Si parece JSON (array u objeto), parsearlo recursivamente
+            if ((texto.startsWith('[') && texto.endsWith(']')) ||
+                (texto.startsWith('{') && texto.endsWith('}'))) {
+                try {
+                    agregar(JSON.parse(texto));
+                    return;
+                } catch (e) {
+                    // Si no es JSON válido, continuar con la limpieza manual
+                }
+            }
+
+            // Limpiar backslashes, comillas y corchetes residuales
+            texto = texto
+                .replace(/\\/g, '')
+                .replace(/^["'\s\[\]]+|["'\s\[\]]+$/g, '')
+                .trim();
+
+            if (!texto) return;
+
+            // Separar por pipes o comas
+            texto.split(/[|,]/).forEach(parte => {
+                const limpio = parte
+                    .replace(/^["'\s\[\]]+|["'\s\[\]]+$/g, '')
+                    .trim();
+
+                if (limpio) resultado.push(limpio);
+            });
+        };
+
+        agregar(valor);
+
+        // Deduplicar conservando el orden
+        return [...new Set(resultado)];
+    }
+
+    normalizarListaOTTexto(valor) {
+        return this.normalizarListaOT(valor).join('|');
+    }
+
+    serializarListaOT(valor) {
+        const lista = this.normalizarListaOT(valor);
+        return lista.length > 0 ? JSON.stringify(lista) : null;
+    }
+
     // Devuelve configuración base para columnas numéricas editables
     getColumnaNumerica(cellClass = 'celda-blanca') {
         return {

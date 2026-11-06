@@ -1,6 +1,6 @@
 ================================================================================
  RESUMEN DE AJUSTES - PROYECTO MantenimientosPTM
- Fecha: 04/11/2026
+ Fecha: 05/11/2026
 ================================================================================
 
 1) LOGIN
@@ -65,15 +65,13 @@
    - SPs ajustados: SpPdxMTTOMetricasOEE_PVC / _PeadLiso / _Corrugado / _INY.
 
 6) BASE DE DATOS (HANA)
-   - Stored procedures modificados (detalle completo en
-     PENDIENTES_PRODUCTIVO_BD.txt):
+   - Stored procedures modificados (detalle en CONTEXTO_SESION.md):
         SpPdxMTTOConsultaEquipos                (filtro por clasificacion)
         SpPdxMTTOInsertaEquipo                  (guarda clasificacion)
         SpPdxMTTOActualizaEquipo                (actualiza clasificacion)
         SpPdxMTTOObtenerMantenimientosPorRango  (filtros preventivos)
         SpPdxMTTOObtenerMantenimientosCorrectivos (filtros correctivos)
-   - Los cambios ya estan aplicados en el ambiente de desarrollo (DBADMIN).
-   - Para produccion (PTM_2022_FINAL) revisar la lista de pendientes.
+   - Los cambios ya estan aplicados en DBADMIN, TEST_JUNIO_2026 y PTM_2022_FINAL.
 
 7) NAVEGACION (MENU LATERAL)
    - Corregida la flecha de "elemento seleccionado": en el listado de
@@ -93,6 +91,33 @@
      para que los usuarios no se queden con archivos viejos.
    - Se mejoro el mensaje de error cuando HANA devuelve un error en texto
      (antes se perdia el detalle).
+
+9) REGISTRO DE TIEMPOS MUERTOS (PVC / PEAD LISO / INY / CORRUGADO)
+   - La columna Fecha ahora es editable en los 4 procesos, incluso para
+     registros ya guardados; al cambiarla se actualiza el Mes y se persiste.
+   - Se valido guardar y actualizar COMENTARIOS en los 4 procesos.
+   - Corrugado: el SP de consulta ahora devuelve COMENTARIOS (antes se
+     guardaban pero no se mostraban al recargar).
+   - Menu contextual "Eliminar fila":
+        * Si la fila es nueva (aun no guardada) se elimina al instante.
+        * Si el registro ya existe en BD, se pide confirmacion y se elimina
+          de la base de datos.
+   - Nuevos endpoints en ProduccionController:
+        EliminarTiempoMuertoPVC / PeadLiso / INY / Corrugado.
+   - Nuevos SPs:
+        SpPdxMTTOEliminarTiemposMuertosPVC / PeadLiso / INY / Corrugado.
+   - CORREGIDA la duplicacion de registros al editar la Fecha y guardar:
+        * OTMC / OTMP / ID_PARO se normalizan al cargar y al guardar
+          (se eliminan JSON anidados/doblemente escapados).
+        * La unificacion de OT ahora reconoce las ordenes ya presentes
+          aunque la fila haya cambiado de fecha, por lo que no vuelve a
+          crear la fila automatica.
+        * Se agrego un script de limpieza de datos ya corrompidos.
+   - Aplicado y probado en DBADMIN. Scripts incrementales en SQL_MIGRACION
+     para TEST_JUNIO_2026 y PTM_2022_FINAL:
+        MIGRACION_COMENTARIOS_CORRUGADO_*.sql
+        MIGRACION_ELIMINAR_TIEMPOS_MUERTOS_*.sql
+        MIGRACION_NORMALIZAR_OT_TIEMPOS_MUERTOS_*.sql
 
 ================================================================================
  FIN DEL RESUMEN

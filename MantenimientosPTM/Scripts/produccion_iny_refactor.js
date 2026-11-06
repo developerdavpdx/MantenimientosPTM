@@ -346,12 +346,12 @@ class GestionProduccionINY extends GestionProduccionBase {
             const fila = {
                 id: item.ID_REGISTRO || Date.now(),
                 ID_REGISTRO: item.ID_REGISTRO,
-                OTMC: item.OTMC,
-                OTMP: item.OTMP,
+                OTMC: this.normalizarListaOTTexto(item.OTMC),
+                OTMP: this.normalizarListaOTTexto(item.OTMP),
                 ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
-                ID_PARO: item.ID_PARO,
+                ID_PARO: this.normalizarListaOTTexto(item.ID_PARO),
                 Mes: item.MES || this.obtenerNombreMes(item.FECHA),
-                Fecha: item.FECHA,
+                Fecha: item.FECHA ? String(item.FECHA).split('T')[0] : null,
                 Linea: item.LINEA,
                 Inyectora: item.INYECTORA,
                 Producto: item.PRODUCTO,
@@ -592,9 +592,7 @@ class GestionProduccionINY extends GestionProduccionBase {
 
         const otmcYaEnDatos = new Set();
         datosFormateados.forEach(fila => {
-            if (fila.OTMC) {
-                String(fila.OTMC).split('|').filter(o => o.trim()).forEach(o => otmcYaEnDatos.add(String(o).trim()));
-            }
+            this.normalizarListaOT(fila.OTMC).forEach(o => otmcYaEnDatos.add(o));
         });
 
         const correctivosNuevos = correctivos.filter(item => !otmcYaEnDatos.has(String(item.NumeroOrden).trim()));
@@ -623,22 +621,15 @@ class GestionProduccionINY extends GestionProduccionBase {
             if (filaExistente) {
                 filaExistente[tipoTiempo] = (filaExistente[tipoTiempo] || 0) + tiempoTotal;
 
-                let otmcActual = filaExistente.OTMC || '';
-                if (typeof otmcActual === 'string' && otmcActual.startsWith('[')) {
-                    try {
-                        const parsed = JSON.parse(otmcActual);
-                        otmcActual = Array.isArray(parsed) ? parsed.join('|') : otmcActual;
-                    } catch (e) { /* mantener */ }
-                }
-
-                const ordenesGrupo = otmcList.join('|');
-                filaExistente.OTMC = otmcActual ? `${otmcActual}|${ordenesGrupo}` : ordenesGrupo;
+                const otmcActual = this.normalizarListaOT(filaExistente.OTMC);
+                const ordenesGrupo = this.normalizarListaOT(otmcList);
+                filaExistente.OTMC = [...new Set([...otmcActual, ...ordenesGrupo])].join('|');
 
                 this.recalcularFila(filaExistente);
             } else {
                 const nuevaFila = this.crearFilaVacia();
                 nuevaFila.id = this.generarIdTemporal();
-                nuevaFila.OTMC = otmcList.join('|');
+                nuevaFila.OTMC = this.normalizarListaOTTexto(otmcList);
                 nuevaFila.Fecha = fecha;
                 nuevaFila[tipoTiempo] = tiempoTotal;
                 nuevaFila._origen = 'CORRECTIVO';
@@ -736,9 +727,7 @@ class GestionProduccionINY extends GestionProduccionBase {
 
         const otmpYaEnDatos = new Set();
         datosFormateados.forEach(fila => {
-            if (fila.OTMP) {
-                String(fila.OTMP).split('|').filter(o => o.trim()).forEach(o => otmpYaEnDatos.add(String(o).trim()));
-            }
+            this.normalizarListaOT(fila.OTMP).forEach(o => otmpYaEnDatos.add(o));
         });
 
         const preventivosNuevos = preventivos.filter(item => !otmpYaEnDatos.has(String(item.NumeroOrden).trim()));
@@ -767,22 +756,15 @@ class GestionProduccionINY extends GestionProduccionBase {
             if (filaExistente) {
                 filaExistente.Preventivo = (filaExistente.Preventivo || 0) + tiempoTotal;
 
-                let otmpActual = filaExistente.OTMP || '';
-                if (typeof otmpActual === 'string' && otmpActual.startsWith('[')) {
-                    try {
-                        const parsed = JSON.parse(otmpActual);
-                        otmpActual = Array.isArray(parsed) ? parsed.join('|') : otmpActual;
-                    } catch (e) { /* mantener */ }
-                }
-
-                const ordenesGrupo = otmpList.join('|');
-                filaExistente.OTMP = otmpActual ? `${otmpActual}|${ordenesGrupo}` : ordenesGrupo;
+                const otmpActual = this.normalizarListaOT(filaExistente.OTMP);
+                const ordenesGrupo = this.normalizarListaOT(otmpList);
+                filaExistente.OTMP = [...new Set([...otmpActual, ...ordenesGrupo])].join('|');
 
                 this.recalcularFila(filaExistente);
             } else {
                 const nuevaFila = this.crearFilaVacia();
                 nuevaFila.id = this.generarIdTemporal();
-                nuevaFila.OTMP = otmpList.join('|');
+                nuevaFila.OTMP = this.normalizarListaOTTexto(otmpList);
                 nuevaFila.Fecha = fecha;
                 nuevaFila.Preventivo = tiempoTotal;
                 nuevaFila._origen = 'PREVENTIVO';
@@ -925,10 +907,7 @@ class GestionProduccionINY extends GestionProduccionBase {
 
         const idParoYaEnDatos = new Set();
         datosFormateados.forEach(fila => {
-            if (fila.ID_PARO) {
-                String(fila.ID_PARO).split('|').filter(o => o.trim())
-                    .forEach(o => idParoYaEnDatos.add(String(o).trim()));
-            }
+            this.normalizarListaOT(fila.ID_PARO).forEach(o => idParoYaEnDatos.add(o));
         });
 
         const parosNuevos = paros.filter(
@@ -964,15 +943,15 @@ class GestionProduccionINY extends GestionProduccionBase {
                     filaExistente[col] = (filaExistente[col] || 0) + categorias[col];
                 });
 
-                let idParoActual = filaExistente.ID_PARO || '';
-                const idsGrupo = idParoList.join('|');
-                filaExistente.ID_PARO = idParoActual ? `${idParoActual}|${idsGrupo}` : idsGrupo;
+                const idParoActual = this.normalizarListaOT(filaExistente.ID_PARO);
+                const idsGrupo = this.normalizarListaOT(idParoList);
+                filaExistente.ID_PARO = [...new Set([...idParoActual, ...idsGrupo])].join('|');
 
                 this.recalcularFila(filaExistente);
             } else if (categoriasKeys.length > 0) {
                 const nuevaFila = this.crearFilaVacia();
                 nuevaFila.id = this.generarIdTemporal();
-                nuevaFila.ID_PARO = idParoList.join('|');
+                nuevaFila.ID_PARO = this.normalizarListaOTTexto(idParoList);
                 nuevaFila.Fecha = fecha;
                 nuevaFila._origen = 'PARO_MANUAL';
                 nuevaFila._marcador = '🚫';
@@ -1468,34 +1447,15 @@ class GestionProduccionINY extends GestionProduccionBase {
                             const origen = params.data?._origen;
                             const idRegistro = params.data?.ID_REGISTRO;
 
-                            // ✅ Normalizar OTMC/OTMP para tooltip (puede venir en JSON o pipes)
-                            const normalizarOrdenes = (ordenesStr) => {
-                                if (!ordenesStr) return '';
-                                if (typeof ordenesStr === 'string' && ordenesStr.startsWith('[')) {
-                                    try {
-                                        const parsed = JSON.parse(ordenesStr);
-                                        return Array.isArray(parsed) ? parsed.join(', ') : ordenesStr;
-                                    } catch (e) {
-                                        return ordenesStr;
-                                    }
-                                }
-                                return ordenesStr.split('|').join(', ');
-                            };
+                            // ✅ Normalizar OTMC/OTMP e ID_PARO para tooltip
+                            const normalizarOrdenes = (ordenesStr) =>
+                                this.normalizarListaOT(ordenesStr).join(', ');
 
-                            // ✅ Normalizar ID_PARO con prefijo PAR- o COR- para tooltip
                             const normalizarParos = (parosStr, esPARO_CORRECTIVO = false) => {
-                                if (!parosStr) return '';
                                 const prefijo = esPARO_CORRECTIVO ? 'COR' : 'PAR';
-
-                                if (typeof parosStr === 'string' && parosStr.startsWith('[')) {
-                                    try {
-                                        const parsed = JSON.parse(parosStr);
-                                        return Array.isArray(parsed) ? parsed.map(p => `${prefijo}-${p}`).join(', ') : parosStr;
-                                    } catch (e) {
-                                        return parosStr;
-                                    }
-                                }
-                                return parosStr.split('|').map(p => `${prefijo}-${p.trim()}`).join(', ');
+                                return this.normalizarListaOT(parosStr)
+                                    .map(p => `${prefijo}-${p}`)
+                                    .join(', ');
                             };
 
                             // 🔥 Mapa de tooltips según origen
@@ -1525,14 +1485,11 @@ class GestionProduccionINY extends GestionProduccionBase {
                     {
                         field: 'Fecha',
                         headerName: 'Fecha',
-                        editable: (params) => {
-                            // Habilitar edición solo si la fila NO tiene ID_REGISTRO (es una fila nueva)
-                            return !params.data?.ID_REGISTRO;
-                        },
+                        editable: true,
                         width: 120,
                         cellClass: 'celda-azul',
                         pinned: 'left',
-                        cellEditor: 'agDateCellEditor',
+                        cellEditor: 'agDateStringCellEditor',
                         cellEditorParams: {
                             browserDatePicker: true,
                             min: '2020-01-01',
@@ -2370,34 +2327,17 @@ class GestionProduccionINY extends GestionProduccionBase {
         this.gridApi.forEachNode(node => {
             if (node.data.id !== 'TOTALES') {
 
-                // 🆕 Convertir OTMC a JSON array (igual que PVC/Corrugado)
-                let otmcFinal = null;
-                if (node.data.OTMC) {
-                    if (String(node.data.OTMC).includes('|')) {
-                        const otmcs = String(node.data.OTMC).split('|').map(x => x.trim()).filter(x => x);
-                        otmcFinal = JSON.stringify(otmcs);
-                    } else {
-                        otmcFinal = JSON.stringify([String(node.data.OTMC).trim()]);
-                    }
-                }
-
-                // 🆕 Convertir OTMP a JSON array
-                let otmpFinal = null;
-                if (node.data.OTMP) {
-                    if (String(node.data.OTMP).includes('|')) {
-                        const otmps = String(node.data.OTMP).split('|').map(x => x.trim()).filter(x => x);
-                        otmpFinal = JSON.stringify(otmps);
-                    } else {
-                        otmpFinal = JSON.stringify([String(node.data.OTMP).trim()]);
-                    }
-                }
+                // 🆕 Normalizar OTMC/OTMP a JSON array y ID_PARO a pipe string
+                const otmcFinal = this.serializarListaOT(node.data.OTMC);
+                const otmpFinal = this.serializarListaOT(node.data.OTMP);
+                const idParoFinal = this.normalizarListaOTTexto(node.data.ID_PARO);
 
                 datos.push({
                     ID_REGISTRO: node.data.ID_REGISTRO || null,
-                    OTMC: otmcFinal,   // antes: node.data.OTMC || null
-                    OTMP: otmpFinal,   // antes: node.data.OTMP || null
+                    OTMC: otmcFinal,
+                    OTMP: otmpFinal,
                     ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null,
-                    ID_PARO: node.data.ID_PARO || null, // 🟦 NUEVO: Identificador del paro manual
+                    ID_PARO: idParoFinal || null,
                     MES: node.data.Mes,
                     FECHA: node.data.Fecha,
                     LINEA: node.data.Linea,
@@ -2676,16 +2616,62 @@ class GestionProduccionINY extends GestionProduccionBase {
         this.recalcularTotales();
     }
 
-    eliminarFila(params) {
-        if (params.node.data.id === 'TOTALES') return;
+    async eliminarFila(params) {
 
-        if (params.node.data.ID_REGISTRO) {
-            AlertManager.mostrar("No se puede eliminar un registro guardado", "warning");
+        const fila = params?.node?.data || params?.data;
+
+        if (!fila || fila.id === 'TOTALES') return;
+
+        // Fila manual aún no guardada: se elimina al instante
+        if (!fila.ID_REGISTRO) {
+            this._quitarFilaDelGrid(fila);
             return;
         }
 
-        this.gridApi.applyTransaction({ remove: [params.node.data] });
+        // Registro ya guardado en BD: pedir confirmación
+        ConfirmManager.mostrar({
+            titulo: 'Eliminar registro guardado',
+            mensaje: `
+                <div style="text-align:left;color:#e6f0ff;line-height:1.6;">
+                    ¿Está seguro de eliminar este registro?
+                    <div style="margin-top:8px;">
+                        <strong>Fecha:</strong> ${fila.Fecha || ''}<br>
+                        <strong>Línea:</strong> ${fila.Linea || ''}<br>
+                        <strong>Turno:</strong> ${fila.Turno || ''}
+                    </div>
+                    <div style="margin-top:10px;color:#fff7d6;">
+                        Esta acción eliminará el registro de la base de datos y no se puede deshacer.
+                    </div>
+                </div>`,
+            onConfirm: () => {
+                GlobalUtil.mostrarLoader(true, 'Eliminando registro...');
+                $.ajax({
+                    url: `/${this.URLBase}/EliminarTiempoMuertoINY`,
+                    type: 'POST',
+                    data: { idRegistro: fila.ID_REGISTRO },
+                    success: (response) => {
+                        GlobalUtil.mostrarLoader(false);
+                        if (response.Status === 'SI') {
+                            this._quitarFilaDelGrid(fila);
+                            AlertManager.mostrar('Registro eliminado correctamente.', 'success');
+                        } else {
+                            AlertManager.mostrar(response.Message || 'No fue posible eliminar el registro.', 'warning');
+                        }
+                    },
+                    error: () => {
+                        GlobalUtil.mostrarLoader(false);
+                        AlertManager.mostrar('Error al conectar con el servidor.', 'warning');
+                    }
+                });
+            }
+        });
+    }
+
+    _quitarFilaDelGrid(fila) {
+        this.gridApi.applyTransaction({ remove: [fila] });
         this.recalcularTotales();
+        this.gridApi.refreshCells({ force: true });
+        this.gridApi.redrawRows();
     }
 
     // ========================================
@@ -2724,8 +2710,8 @@ class GestionProduccionINY extends GestionProduccionBase {
                 eliminar.style.display = "none";
                 copiar.style.display = "none";
             } else {
-                // Para filas normales
-                eliminar.style.display = this.filaSeleccionada?.data?.ID_REGISTRO ? "none" : "block";
+                // Para filas normales (los registros guardados piden confirmación)
+                eliminar.style.display = "block";
                 copiar.style.display = "block";
             }
         });
