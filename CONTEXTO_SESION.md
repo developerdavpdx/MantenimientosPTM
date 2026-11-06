@@ -134,7 +134,14 @@ Periodicidad: **4 (cuatrimestral)**, fecha inicio mantenimiento `2026-02-01`.
   - `MIGRACION_COMENTARIOS_CORRUGADO_*.sql`
   - `MIGRACION_ELIMINAR_TIEMPOS_MUERTOS_*.sql`
   - `MIGRACION_NORMALIZAR_OT_TIEMPOS_MUERTOS_*.sql`
-- **Estado:** aplicado y probado end-to-end en `DBADMIN`. Pendiente aplicar los incrementales en `TEST_JUNIO_2026` y `PTM_2022_FINAL`.
+- **Estado:** aplicado y probado end-to-end en `DBADMIN`; incrementales aplicados en `TEST_JUNIO_2026` y `PTM_2022_FINAL`; app desplegada (confirmado por el usuario, 05/11/2026).
+
+**Datos de prueba de Tiempos Muertos (DBADMIN, 05/11/2026):**
+
+- PVC: `ID_REGISTRO` 9 (`OTMC-001`) y 10 (`OTMP-002`).
+- PEAD LISO / INY / CORRUGADO: `ID_REGISTRO` 2 cada uno (`OTMC-001`).
+- Comentarios `PRUEBA-VALIDACION-...`; se dejaron para validación visual.
+- La columna `LINEA` se corrigió con `NCHAR(205)` porque la inserción por script había perdido el acento (`U+FFFD`).
 
 ## 4. Estado de la migración y pendientes
 
@@ -165,16 +172,16 @@ Periodicidad: **4 (cuatrimestral)**, fecha inicio mantenimiento `2026-02-01`.
 **Nuevos cambios de Tiempos Muertos (05/11/2026, segunda parte):**
 
 - [x] Aplicado y probado end-to-end en `DBADMIN`.
-- [ ] Aplicar `MIGRACION_COMENTARIOS_CORRUGADO_*.sql` en `TEST_JUNIO_2026` y `PTM_2022_FINAL`.
-- [ ] Aplicar `MIGRACION_ELIMINAR_TIEMPOS_MUERTOS_*.sql` en `TEST_JUNIO_2026` y `PTM_2022_FINAL`.
-- [ ] Aplicar `MIGRACION_NORMALIZAR_OT_TIEMPOS_MUERTOS_*.sql` en `TEST_JUNIO_2026` y `PTM_2022_FINAL`.
+- [x] `MIGRACION_COMENTARIOS_CORRUGADO_*.sql` — aplicado en TEST/PTM.
+- [x] `MIGRACION_ELIMINAR_TIEMPOS_MUERTOS_*.sql` — aplicado en TEST/PTM.
+- [x] `MIGRACION_NORMALIZAR_OT_TIEMPOS_MUERTOS_*.sql` — aplicado en TEST/PTM.
+- [x] App desplegada con los cambios de Tiempos Muertos (confirmado por el usuario).
 
-**Pendiente (no es migración):**
+**Pendiente (solo documentación):**
 
-- [ ] Publicar la siguiente versión de la app con estos cambios de Tiempos Muertos.
-- [ ] Commit/push de la actualización de esta documentación.
+- [ ] Commit/push de la actualización final de esta documentación (incluye la mejora de regex de los scripts de normalización).
 
-> Las migraciones anteriores quedaron completadas y validadas en `TEST_JUNIO_2026` y `PTM_2022_FINAL` el 05/11/2026. Los cambios nuevos de Tiempos Muertos están aplicados en `DBADMIN` y pendientes en TEST/PTM.
+> Las migraciones anteriores quedaron completadas y validadas en `TEST_JUNIO_2026` y `PTM_2022_FINAL` el 05/11/2026. Los cambios de Tiempos Muertos quedaron aplicados en `DBADMIN`, `TEST_JUNIO_2026` y `PTM_2022_FINAL`, y la app fue desplegada.
 
 ## 5. Archivos clave
 

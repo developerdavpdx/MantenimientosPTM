@@ -5,8 +5,8 @@
 
 ESTADO:
   - Migraciones anteriores: aplicadas y validadas en DBADMIN, TEST_JUNIO_2026 y PTM_2022_FINAL.
-  - Nuevos cambios de tiempos muertos (05/11/2026): aplicados en DBADMIN.
-    Pendientes de aplicar en TEST_JUNIO_2026 y PTM_2022_FINAL.
+  - Nuevos cambios de tiempos muertos (05/11/2026): aplicados en DBADMIN,
+    TEST_JUNIO_2026 y PTM_2022_FINAL. App desplegada.
 
 ARCHIVOS INCLUIDOS
   SpPdxMTTOMetricasOEE_PVC.sql

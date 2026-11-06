@@ -113,8 +113,8 @@
           aunque la fila haya cambiado de fecha, por lo que no vuelve a
           crear la fila automatica.
         * Se agrego un script de limpieza de datos ya corrompidos.
-   - Aplicado y probado en DBADMIN. Scripts incrementales en SQL_MIGRACION
-     para TEST_JUNIO_2026 y PTM_2022_FINAL:
+   - Aplicado y probado en DBADMIN. Scripts incrementales aplicados en
+     TEST_JUNIO_2026 y PTM_2022_FINAL; app desplegada (05/11/2026):
         MIGRACION_COMENTARIOS_CORRUGADO_*.sql
         MIGRACION_ELIMINAR_TIEMPOS_MUERTOS_*.sql
         MIGRACION_NORMALIZAR_OT_TIEMPOS_MUERTOS_*.sql
