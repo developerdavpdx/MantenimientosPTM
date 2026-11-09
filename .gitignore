@@ -62,3 +62,5 @@ node_modules/
 .codegraph/
 # Graphify (grafo de conocimiento local)
 graphify-out/
+# Freebuff (archivos temporales local del agente)
+.freebuff/
