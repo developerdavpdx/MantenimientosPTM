@@ -2099,7 +2099,18 @@ class MantenimientoManager {
                     {
                         data: null,
                         render: (data, type, row) => {
-                            return "";
+                            const texto = (row.ComentariosRutina || '').toString().trim();
+                            if (!texto) {
+                                return '<span class="text-muted">—</span>';
+                            }
+                            const escapado = texto
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;')
+                                .replace(/"/g, '&quot;')
+                                .replace(/'/g, '&#39;');
+                            const corto = escapado.length > 80 ? escapado.substring(0, 80) + '…' : escapado;
+                            return `<span title="${escapado}"><i class="bi bi-chat-left-text me-1 text-muted"></i>${corto}</span>`;
                         }
                     }
                 ],

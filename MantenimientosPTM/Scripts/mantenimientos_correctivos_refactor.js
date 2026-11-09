@@ -1397,10 +1397,23 @@ class MantenimientoManager {
                         className: "text-center",
                         render: (data) => `<i class="bi bi-person-circle me-1 text-muted"></i>${data || ''}`
                     },
-                    // ✅ Col 14: Comentarios
+                    // ✅ Col 14: Comentarios / Actividad realizada
                     {
                         data: null,
-                        render: () => `<i class="bi bi-chat-left-text me-1 text-muted"></i>`
+                        render: (data, type, row) => {
+                            const texto = (row.TextoSecuencia || '').toString().trim();
+                            if (!texto) {
+                                return '<span class="text-muted">—</span>';
+                            }
+                            const escapado = texto
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;')
+                                .replace(/"/g, '&quot;')
+                                .replace(/'/g, '&#39;');
+                            const corto = escapado.length > 80 ? escapado.substring(0, 80) + '…' : escapado;
+                            return `<span title="${escapado}"><i class="bi bi-chat-left-text me-1 text-muted"></i>${corto}</span>`;
+                        }
                     },
                     // ✅ Col 15: Tipo Mantenimiento
                     {
