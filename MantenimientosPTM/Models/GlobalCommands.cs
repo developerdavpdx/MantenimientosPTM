@@ -284,6 +284,181 @@ namespace MantenimientosPTM
             return result;
         }
 
+        #region Transacciones HANA
+
+        /// <summary>
+        /// Ejecuta varios stored procedures dentro de una sola transacción HANA.
+        /// Si no se llama a Commit(), Dispose hace Rollback automático.
+        /// </summary>
+        public class HanaTransactionScope : IDisposable
+        {
+            private readonly HanaConnection _connection;
+            private readonly HanaTransaction _transaction;
+            private bool _completed;
+
+            public HanaTransactionScope()
+            {
+                string connectionString = ConfigurationManager.ConnectionStrings["HANAConnection"].ConnectionString;
+                _connection = new HanaConnection(connectionString);
+                _connection.Open();
+                _transaction = _connection.BeginTransaction();
+            }
+
+            public HanaProcedureResult Execute(
+                string commandText,
+                Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)> parameters)
+            {
+                var result = new HanaProcedureResult();
+
+                using (var cmd = new HanaCommand(commandText, _connection, _transaction))
+                {
+                    cmd.CommandTimeout = 60;
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    AddHanaParameters(cmd, parameters);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        result.JsonResult = ReadResultJson(reader);
+                    }
+                }
+
+                return result;
+            }
+
+            public void Commit()
+            {
+                if (_completed) return;
+                _transaction.Commit();
+                _completed = true;
+            }
+
+            public void Rollback()
+            {
+                if (_completed) return;
+
+                try
+                {
+                    _transaction.Rollback();
+                }
+                catch
+                {
+                    // Si la transacción ya fue abortada por HANA, no hay nada que hacer.
+                }
+
+                _completed = true;
+            }
+
+            public void Dispose()
+            {
+                if (!_completed)
+                {
+                    try { _transaction.Rollback(); } catch { }
+                }
+
+                try { _transaction.Dispose(); } catch { }
+                try { _connection.Dispose(); } catch { }
+            }
+        }
+
+        private static void AddHanaParameters(
+            HanaCommand cmd,
+            Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)> parameters)
+        {
+            if (parameters == null) return;
+
+            foreach (var param in parameters)
+            {
+                HanaDbType type;
+
+                if (param.Value.value == null)
+                {
+                    type = param.Value.type;
+                }
+                else if (param.Value.value is int || param.Value.value is int?)
+                {
+                    type = HanaDbType.Integer;
+                }
+                else if (param.Value.value is decimal || param.Value.value is decimal?)
+                {
+                    type = HanaDbType.Decimal;
+                }
+                else if (param.Value.value is DateTime || param.Value.value is DateTime?)
+                {
+                    type = HanaDbType.TimeStamp;
+                }
+                else
+                {
+                    type = HanaDbType.NVarChar;
+                }
+
+                var hanaParam = new HanaParameter(param.Key, type)
+                {
+                    Direction = param.Value.direction,
+                    Value = param.Value.value ?? DBNull.Value
+                };
+
+                if (type == HanaDbType.NVarChar && param.Value.value is string strVal)
+                {
+                    hanaParam.Size = Math.Max(strVal.Length, 1);
+                }
+
+                cmd.Parameters.Add(hanaParam);
+            }
+        }
+
+        private static string ReadResultJson(HanaDataReader reader)
+        {
+            var rows = new List<Dictionary<string, object>>();
+
+            while (reader.Read())
+            {
+                var row = new Dictionary<string, object>();
+
+                for (int i = 0; i < reader.FieldCount; i++)
+                {
+                    string name = reader.GetName(i);
+                    object raw = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    object value = raw;
+
+                    if (raw != null)
+                    {
+                        string typeName = raw.GetType().FullName ?? string.Empty;
+
+                        if (typeName == "Sap.Data.Hana.HanaDecimal")
+                        {
+                            if (decimal.TryParse(raw.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dec))
+                                value = dec;
+                            else
+                                value = raw.ToString();
+                        }
+                        else if (typeName == "Sap.Data.Hana.HanaDateTime" || typeName == "Sap.Data.Hana.HanaTimeStamp" || typeName == "Sap.Data.Hana.HanaTime")
+                        {
+                            if (DateTime.TryParse(raw.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt))
+                                value = dt;
+                            else
+                                value = raw.ToString();
+                        }
+                    }
+
+                    row.Add(name, value);
+                }
+
+                rows.Add(row);
+            }
+
+            return JsonConvert.SerializeObject(
+                rows,
+                Formatting.None,
+                new JsonSerializerSettings
+                {
+                    DateFormatString = "yyyy-MM-ddTHH:mm:ss.fff",
+                    NullValueHandling = NullValueHandling.Include
+                });
+        }
+
+        #endregion
+
         public string ExecuteProcedure(string commandText, Dictionary<string, string> parameters)
         {
             string result = string.Empty;

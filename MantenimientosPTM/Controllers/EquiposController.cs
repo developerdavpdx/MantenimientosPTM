@@ -15,6 +15,60 @@ namespace MantenimientosPTM.Controllers
     public class EquiposController : Controller
     {
         readonly LogicaEquipos Logic = new LogicaEquipos();
+        private const int MaxUploadSize = 5 * 1024 * 1024; // 5 MB
+
+        #region Helpers
+
+        /// <summary>
+        /// Detecta errores devueltos por los SPs sin depender de mayúsculas/minúsculas
+        /// (algunos devuelven "Error: ..." y otros una fila con Estatus "ERROR").
+        /// </summary>
+        private static bool EsErrorHana(string jsonResult)
+        {
+            return !string.IsNullOrEmpty(jsonResult) &&
+                   jsonResult.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool EsDuplicadoHana(string jsonResult)
+        {
+            return !string.IsNullOrEmpty(jsonResult) &&
+                   jsonResult.IndexOf("DUPLICADO", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static GlobalCommands.JsonResponseMtto ErrorResponse(string message)
+        {
+            return new GlobalCommands.JsonResponseMtto
+            {
+                Status = "ERROR",
+                Message = message,
+                Data = string.Empty
+            };
+        }
+
+        /// <summary>
+        /// Elimina únicamente los archivos que se subieron en la solicitud actual
+        /// (nunca los de solicitudes anteriores del mismo equipo).
+        /// </summary>
+        private void EliminarArchivosNuevos(List<string> rutas)
+        {
+            if (rutas == null) return;
+
+            foreach (var ruta in rutas)
+            {
+                try
+                {
+                    string rutaFisica = Server.MapPath(ruta);
+                    if (System.IO.File.Exists(rutaFisica))
+                        System.IO.File.Delete(rutaFisica);
+                }
+                catch
+                {
+                    // No interrumpir el flujo principal por un archivo que no se pudo borrar.
+                }
+            }
+        }
+
+        #endregion
 
         #region Views
         public ActionResult GestionEquipos()
@@ -58,8 +112,9 @@ namespace MantenimientosPTM.Controllers
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertarLinea, allparameters);
 
                 // Construir respuesta JSON
-                jsonResponse.Status = resultHana.JsonResult.Contains("ERROR") ? "NO" : "SI";
-                jsonResponse.Message = resultHana.JsonResult.Contains("ERROR") ? "No fue posible insertar la nueva línea de producción." : "Nueva Línea insertada correctamente.";
+                bool errorLinea = EsErrorHana(resultHana.JsonResult);
+                jsonResponse.Status = errorLinea ? "NO" : "SI";
+                jsonResponse.Message = errorLinea ? "No fue posible insertar la nueva línea de producción." : "Nueva Línea insertada correctamente.";
                 jsonResponse.Data = resultHana.JsonResult;
 
                 return Json(jsonResponse);
@@ -428,16 +483,15 @@ namespace MantenimientosPTM.Controllers
                 );
 
                 // Respuesta
-                jsonResponse.Status =
-                    resultHana.JsonResult.Contains("ERROR") ||
-                    resultHana.JsonResult.Contains("DUPLICADO")
-                        ? "NO"
-                        : "SI";
+                bool errorArea = EsErrorHana(resultHana.JsonResult);
+                bool duplicadoArea = EsDuplicadoHana(resultHana.JsonResult);
+
+                jsonResponse.Status = (errorArea || duplicadoArea) ? "NO" : "SI";
 
                 jsonResponse.Message =
-                    resultHana.JsonResult.Contains("ERROR")
+                    errorArea
                         ? "No fue posible insertar el área."
-                        : resultHana.JsonResult.Contains("DUPLICADO")
+                        : duplicadoArea
                             ? "El área ya existe."
                             : "Área insertada correctamente.";
 
@@ -694,8 +748,8 @@ namespace MantenimientosPTM.Controllers
                 );
 
                 // Respuesta
-                bool hasError = resultHana.JsonResult.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0;
-                bool hasDuplicate = resultHana.JsonResult.IndexOf("DUPLICADO", StringComparison.OrdinalIgnoreCase) >= 0;
+                bool hasError = EsErrorHana(resultHana.JsonResult);
+                bool hasDuplicate = EsDuplicadoHana(resultHana.JsonResult);
 
                 jsonResponse.Status = (hasError || hasDuplicate) ? "NO" : "SI";
                 jsonResponse.Message = hasDuplicate
@@ -739,6 +793,19 @@ namespace MantenimientosPTM.Controllers
                     RequestData = JsonConvert.DeserializeObject<AccesoDatosEquipos.EquipoMTTO>(jsonData);
                 }
 
+                if (RequestData == null)
+                    return Json(ErrorResponse("No se recibió información del equipo."));
+
+                if (RequestData.PeriodicidadesMantenimiento == null || RequestData.PeriodicidadesMantenimiento.Count == 0)
+                {
+                    return Json(new GlobalCommands.JsonResponseMtto
+                    {
+                        Status = "NO",
+                        Message = "Debe seleccionar al menos una periodicidad de mantenimiento.",
+                        Data = string.Empty
+                    });
+                }
+
                 // Convertir modelo a parámetros HANA
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null); // true para que agregue P_
                 var excludedParams = new[] { "P_IDEQUIPO", "P_PERIODICIDADESMANTENIMIENTO" }; // Cambié a mayúsculas
@@ -746,78 +813,76 @@ namespace MantenimientosPTM.Controllers
                     .Where(p => !excludedParams.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value);
 
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertaEquipo, parameters);
-
-                if (resultHana.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
+                // El alta del equipo y sus periodicidades se ejecuta en una sola transacción:
+                // si algo falla, HANA revierte también el equipo (evita equipos huérfanos/duplicados).
+                using (var scope = new GlobalCommands.HanaTransactionScope())
                 {
-                    jsonResponse = new GlobalCommands.JsonResponseMtto()
+                    var resultHana = scope.Execute(Logic.AD.GCInsertaEquipo, parameters);
+
+                    if (EsErrorHana(resultHana.JsonResult))
                     {
-                        Status = "ERROR",
-                        Message = "No fue posible insertar el equipo: " + resultHana.JsonResult,
-                        Data = string.Empty
-                    };
-                    return Json(jsonResponse);
-                }
+                        scope.Rollback();
+                        return Json(new GlobalCommands.JsonResponseMtto
+                        {
+                            Status = "ERROR",
+                            Message = "No fue posible insertar el equipo: " + resultHana.JsonResult,
+                            Data = string.Empty
+                        });
+                    }
 
-                // Ejecutar stored procedure para insertar equipo
+                    // Obtener ID generado
+                    var nuevoId = resultHana.JsonResult;
+                    int IdEquipo = int.Parse(JArray.Parse(nuevoId)[0]["ID_EQUIPO"].ToString());
 
-                // Obtener ID generado si existe
-                var nuevoId = resultHana.JsonResult;
-                int IdEquipo = int.Parse(JArray.Parse(nuevoId)[0]["ID_EQUIPO"].ToString());
-                bool errorPeriodicidad = false;
-                foreach (var periodicidad in RequestData.PeriodicidadesMantenimiento)
-                {
-                    try
+                    foreach (var periodicidad in RequestData.PeriodicidadesMantenimiento.Distinct())
                     {
-                        var paramPeriodicidad = Logic.GlobalCommands.ConvertToHanaParameters(new AccesoDatosEquipos.PeriodicidadEquipoMTTO { Id_Periodicidad = periodicidad, Id_Equipo = IdEquipo, Usuario = RequestData.Usuario }, true, null);
+                        var paramPeriodicidad = Logic.GlobalCommands.ConvertToHanaParameters(
+                            new AccesoDatosEquipos.PeriodicidadEquipoMTTO
+                            {
+                                Id_Periodicidad = periodicidad,
+                                Id_Equipo = IdEquipo,
+                                Usuario = RequestData.Usuario
+                            },
+                            true,
+                            null);
 
-                        excludedParams = new[] {
-                                    "P_ID_EQUIPO_PERIODICIDAD",
-                                    "P_DESCRIPCION_PERIODICIDAD",
-                                    "P_ESTATUS",
-                                    "P_FECHA_CREACION"
-                                };
+                        var excludedParamsPeriodicidad = new[] {
+                            "P_ID_EQUIPO_PERIODICIDAD",
+                            "P_DESCRIPCION_PERIODICIDAD",
+                            "P_ESTATUS",
+                            "P_FECHA_CREACION"
+                        };
 
                         var parametersPeriodicidad = paramPeriodicidad
-                        .Where(p => !excludedParams.Contains(p.Key))
-                        .ToDictionary(p => p.Key, p => p.Value);
+                            .Where(p => !excludedParamsPeriodicidad.Contains(p.Key))
+                            .ToDictionary(p => p.Key, p => p.Value);
 
-                        var resultHanaPeriodicidad = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        var resultHanaPeriodicidad = scope.Execute(
                             Logic.AD.GCInsertaPeriodicidadesEquipo,
                             parametersPeriodicidad
                         );
 
-                        if (resultHanaPeriodicidad.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
+                        if (EsErrorHana(resultHanaPeriodicidad.JsonResult))
                         {
-                            errorPeriodicidad = true;
-                            break;
+                            scope.Rollback();
+                            return Json(new GlobalCommands.JsonResponseMtto
+                            {
+                                Status = "ERROR",
+                                Message = "No fue posible guardar las periodicidades del equipo. No se registró ningún cambio: " + resultHanaPeriodicidad.JsonResult,
+                                Data = string.Empty
+                            });
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        errorPeriodicidad = true;
-                        break;
-                    }
-                }
 
-                if (errorPeriodicidad)
-                {
-                    jsonResponse = new GlobalCommands.JsonResponseMtto()
-                    {
-                        Status = "ERROR",
-                        Message = "El equipo fue insertado pero no fue posible guardar su periodicidad:",
-                        Data = string.Empty
-                    };
+                    scope.Commit();
+
+                    // Construir respuesta JSON
+                    jsonResponse.Status = "SI";
+                    jsonResponse.Message = "Equipo insertado correctamente.";
+                    jsonResponse.Data = nuevoId;
+
                     return Json(jsonResponse);
                 }
-
-
-                // Construir respuesta JSON
-                jsonResponse.Status = nuevoId != null ? "SI" : "NO";
-                jsonResponse.Message = nuevoId != null ? "Equipo insertado correctamente." : "No se pudo insertar el equipo.";
-                jsonResponse.Data = nuevoId;
-
-                return Json(jsonResponse);
             }
             catch (Exception ex)
             {
@@ -850,6 +915,9 @@ namespace MantenimientosPTM.Controllers
                 }
 
 
+                if (RequestData == null || RequestData.IdEquipo == null || RequestData.IdEquipo.Value <= 0)
+                    return Json(ErrorResponse("No se recibió el identificador del equipo a actualizar."));
+
                 // Consultar periodicidades actuales
                 var parametrosConsulta = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
@@ -861,33 +929,59 @@ namespace MantenimientosPTM.Controllers
                     parametrosConsulta
                 );
 
+                if (EsErrorHana(resultConsulta.JsonResult))
+                {
+                    return Json(ErrorResponse("No fue posible consultar las periodicidades actuales del equipo: " + resultConsulta.JsonResult));
+                }
+
                 List<AccesoDatosEquipos.PeriodicidadEquipoMTTO> periodicidadesActuales =
                     new List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>();
 
                 if (!string.IsNullOrEmpty(resultConsulta.JsonResult) &&
-                    resultConsulta.JsonResult != "[]")
+                    resultConsulta.JsonResult != "[]" &&
+                    !EsErrorHana(resultConsulta.JsonResult))
                 {
-                    periodicidadesActuales =
-                        JsonConvert.DeserializeObject<List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>>
-                        (
-                            resultConsulta.JsonResult
-                        );
+                    try
+                    {
+                        periodicidadesActuales =
+                            JsonConvert.DeserializeObject<List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>>
+                            (
+                                resultConsulta.JsonResult
+                            ) ?? new List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>();
+                    }
+                    catch
+                    {
+                        // Si el SP devolvió algo que no es una lista válida, seguimos sin periodicidades actuales.
+                        periodicidadesActuales = new List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>();
+                    }
                 }
 
                 var actuales = periodicidadesActuales
+                    .Where(x => x.Id_Periodicidad.HasValue && x.Id_Periodicidad.Value > 0)
                     .Select(x => x.Id_Periodicidad.Value)
+                    .Distinct()
                     .ToList();
 
-                var nuevas = RequestData.PeriodicidadesMantenimiento;
+                var nuevas = (RequestData.PeriodicidadesMantenimiento ?? new List<int>())
+                    .Where(x => x > 0)
+                    .Distinct()
+                    .ToList();
+
+                if (nuevas.Count == 0)
+                {
+                    return Json(new GlobalCommands.JsonResponseMtto
+                    {
+                        Status = "NO",
+                        Message = "Debe seleccionar al menos una periodicidad de mantenimiento.",
+                        Data = string.Empty
+                    });
+                }
 
                 // Periodicidades a insertar (no existen actualmente)
                 var agregar = nuevas.Except(actuales).ToList();
 
                 // Periodicidades a desactivar (ya no vienen en la solicitud)
                 var desactivar = actuales.Except(nuevas).ToList();
-
-                // Periodicidades que permanecen iguales
-                var mantener = actuales.Intersect(nuevas).ToList();
 
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, true, null);
                 var excludedParams = new[]
@@ -902,111 +996,101 @@ namespace MantenimientosPTM.Controllers
                     .Where(p => !excludedParams.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value);
 
-                // Ejecutar stored procedure para insertar equipo
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaEquipo, parameters);
-
-                if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                // La actualización del equipo y sus periodicidades se ejecuta en una sola
+                // transacción: si algo falla, HANA revierte todo el cambio.
+                using (var scope = new GlobalCommands.HanaTransactionScope())
                 {
-                    // Construir respuesta JSON
-                    jsonResponse.Status = "NO";
-                    jsonResponse.Message = $"No fue posible actualizar el equipo: {resultHana.JsonResult}";
+                    var resultHana = scope.Execute(Logic.AD.GCActualizaEquipo, parameters);
+
+                    if (EsErrorHana(resultHana.JsonResult))
+                    {
+                        scope.Rollback();
+                        return Json(new GlobalCommands.JsonResponseMtto
+                        {
+                            Status = "NO",
+                            Message = $"No fue posible actualizar el equipo: {resultHana.JsonResult}",
+                            Data = string.Empty
+                        });
+                    }
+
+                    // Insertar únicamente las periodicidades nuevas
+                    foreach (var periodicidad in agregar)
+                    {
+                        var paramPeriodicidad =
+                            Logic.GlobalCommands.ConvertToHanaParameters(
+                                new AccesoDatosEquipos.PeriodicidadEquipoMTTO
+                                {
+                                    Id_Periodicidad = periodicidad,
+                                    Id_Equipo = RequestData.IdEquipo,
+                                    Usuario = RequestData.Usuario
+                                },
+                                true,
+                                null
+                            );
+
+                        var excludedParamsPeriodicidad = new[] {
+                            "P_ID_EQUIPO_PERIODICIDAD",
+                            "P_DESCRIPCION_PERIODICIDAD",
+                            "P_ESTATUS",
+                            "P_FECHA_CREACION"
+                        };
+
+                        var parametersperiodicidad = paramPeriodicidad
+                            .Where(p => !excludedParamsPeriodicidad.Contains(p.Key))
+                            .ToDictionary(p => p.Key, p => p.Value);
+
+                        var resultPeriodicidad = scope.Execute(
+                            Logic.AD.GCInsertaPeriodicidadesEquipo,
+                            parametersperiodicidad
+                        );
+
+                        if (EsErrorHana(resultPeriodicidad.JsonResult))
+                        {
+                            scope.Rollback();
+                            return Json(new GlobalCommands.JsonResponseMtto
+                            {
+                                Status = "ERROR",
+                                Message = "No fue posible actualizar las periodicidades. No se registró ningún cambio: " + resultPeriodicidad.JsonResult,
+                                Data = string.Empty
+                            });
+                        }
+                    }
+
+                    // Desactivar periodicidades eliminadas
+                    foreach (var periodicidad in desactivar)
+                    {
+                        var parametrosDesactivar = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
+                        {
+                            { "P_ID_EQUIPO", (RequestData.IdEquipo, ParameterDirection.Input, HanaDbType.Integer) },
+                            { "P_ID_PERIODICIDAD", (periodicidad, ParameterDirection.Input, HanaDbType.Integer) },
+                            { "P_USUARIO", (RequestData.Usuario, ParameterDirection.Input, HanaDbType.NVarChar) }
+                        };
+
+                        var resultDesactivar = scope.Execute(
+                            Logic.AD.GCDesactivarPeriodicidadEquipo,
+                            parametrosDesactivar
+                        );
+
+                        if (EsErrorHana(resultDesactivar.JsonResult))
+                        {
+                            scope.Rollback();
+                            return Json(new GlobalCommands.JsonResponseMtto
+                            {
+                                Status = "ERROR",
+                                Message = "No fue posible actualizar las periodicidades. No se registró ningún cambio: " + resultDesactivar.JsonResult,
+                                Data = string.Empty
+                            });
+                        }
+                    }
+
+                    scope.Commit();
+
+                    jsonResponse.Status = "SI";
+                    jsonResponse.Message = "Equipo actualizado correctamente";
                     jsonResponse.Data = string.Empty;
+
+                    return Json(jsonResponse);
                 }
-
-                else
-                {
-                    bool errorPeriodicidad = false;
-
-                    try
-                    {
-                        // Insertar únicamente las periodicidades nuevas
-                        if (!errorPeriodicidad)
-                        {
-                            foreach (var periodicidad in agregar)
-                            {
-                                var paramPeriodicidad =
-                                    Logic.GlobalCommands.ConvertToHanaParameters(
-                                        new AccesoDatosEquipos.PeriodicidadEquipoMTTO
-                                        {
-                                            Id_Periodicidad = periodicidad,
-                                            Id_Equipo = RequestData.IdEquipo,
-                                            Usuario = RequestData.Usuario
-                                        },
-                                        true,
-                                        null
-                                    );
-
-                                excludedParams = new[] {
-                                    "P_ID_EQUIPO_PERIODICIDAD",
-                                    "P_DESCRIPCION_PERIODICIDAD",
-                                    "P_ESTATUS",
-                                    "P_FECHA_CREACION"
-                                };
-
-                                var parametersperiodicidad = paramPeriodicidad
-                                .Where(p => !excludedParams.Contains(p.Key))
-                                .ToDictionary(p => p.Key, p => p.Value);
-
-                                var resultPeriodicidad =
-                                    Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                                        Logic.AD.GCInsertaPeriodicidadesEquipo,
-                                        parametersperiodicidad
-                                    );
-
-                                if (resultPeriodicidad.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
-                                {
-                                    errorPeriodicidad = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        // Desactivar periodicidades eliminadas
-                        if (!errorPeriodicidad)
-                        {
-                            foreach (var periodicidad in desactivar)
-                            {
-                                var parametrosDesactivar = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
-                            {
-                                { "P_ID_EQUIPO", (RequestData.IdEquipo, ParameterDirection.Input, HanaDbType.Integer) },
-                                { "P_ID_PERIODICIDAD", (periodicidad, ParameterDirection.Input, HanaDbType.Integer) },
-                                { "P_USUARIO", (RequestData.Usuario, ParameterDirection.Input, HanaDbType.NVarChar) }
-                            };
-
-                                var resultDesactivar = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                                    Logic.AD.GCDesactivarPeriodicidadEquipo,
-                                    parametrosDesactivar
-                                );
-
-                                if (resultDesactivar.JsonResult.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
-                                {
-                                    errorPeriodicidad = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        errorPeriodicidad = true;
-                    }
-
-                    if (errorPeriodicidad)
-                    {
-                        jsonResponse.Status = "ERROR";
-                        jsonResponse.Message =
-                            "El equipo fue actualizado, pero ocurrió un problema al actualizar las periodicidades.";
-                        jsonResponse.Data = string.Empty;
-                    }
-                    else
-                    {
-                        jsonResponse.Status = "SI";
-                        jsonResponse.Message = "Equipo actualizado correctamente";
-                        jsonResponse.Data = string.Empty;
-                    }
-                }
-
-                return Json(jsonResponse);
             }
             catch (Exception ex)
             {
@@ -1038,12 +1122,15 @@ namespace MantenimientosPTM.Controllers
                     RequestData = JsonConvert.DeserializeObject<AccesoDatosEquipos.PausaEquipo>(jsonData);
                 }
 
+                if (RequestData == null || string.IsNullOrWhiteSpace(RequestData.ID_EQUIPO))
+                    return Json(ErrorResponse("No se recibió el identificador del equipo."));
+
                 // Convertir modelo a parámetros HANAs
                 var parameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, false, null);
-                // Ejecutar stored procedure para insertar equipo
+                // Ejecutar stored procedure para actualizar estatus del equipo
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaEstatusEquipo, parameters);
 
-                if (resultHana.JsonResult.Contains("Error"))
+                if (EsErrorHana(resultHana.JsonResult))
                 {
                     jsonResponse.Status = "ERROR";
                     jsonResponse.Message = "No fue posible pausar el equipo: " + resultHana.JsonResult;
@@ -1054,7 +1141,9 @@ namespace MantenimientosPTM.Controllers
                 {
                     // Construir respuesta JSON
                     jsonResponse.Status = "SI";
-                    jsonResponse.Message = "Equipo pausado correctamente.";
+                    jsonResponse.Message = RequestData.ESTATUS == "1"
+                        ? "Equipo reanudado correctamente."
+                        : "Equipo pausado correctamente.";
                     jsonResponse.Data = string.Empty;
                 }
 
@@ -1076,7 +1165,8 @@ namespace MantenimientosPTM.Controllers
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
             AccesoDatosEquipos.SolicitudBajaEquipo RequestData;
             AccesoDatosEquipos.PausaEquipo ChangeStatus;
-            List<string> rutasArchivos = new List<string>();
+            List<string> rutasArchivos = new List<string>();   // archivos nuevos (se borran si falla el guardado)
+            List<string> adjuntosEmail = new List<string>();   // archivos a adjuntar en el correo
 
             try
             {
@@ -1095,12 +1185,7 @@ namespace MantenimientosPTM.Controllers
                 if (Request.Files.Count > 0)
                 {
                     string carpetaBase = Server.MapPath("~/SolicitudesBaja");
-                    if (!Directory.Exists(carpetaBase))
-                        Directory.CreateDirectory(carpetaBase);
-
                     string subcarpeta = Path.Combine(carpetaBase, RequestData.IdEquipo.ToString());
-                    if (!Directory.Exists(subcarpeta))
-                        Directory.CreateDirectory(subcarpeta);
 
                     string[] extensionesPermitidas = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp" };
                     string[] tiposPermitidos = { "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp" };
@@ -1121,9 +1206,22 @@ namespace MantenimientosPTM.Controllers
                             if (!tiposPermitidos.Contains(archivo.ContentType.ToLower()))
                                 throw new Exception("Solo se permiten archivos de imagen.");
 
+                            if (archivo.ContentLength > MaxUploadSize)
+                                throw new Exception("Las imágenes no deben superar los 5 MB.");
+
+                            // La carpeta se crea solo cuando realmente hay una imagen que guardar.
+                            if (!Directory.Exists(carpetaBase))
+                                Directory.CreateDirectory(carpetaBase);
+                            if (!Directory.Exists(subcarpeta))
+                                Directory.CreateDirectory(subcarpeta);
+
                             string nombreArchivo = $"{DateTime.Now:yyyyMMddHHmmss}_{i}_{Path.GetFileName(archivo.FileName)}";
                             string rutaCompleta = Path.Combine(subcarpeta, nombreArchivo);
                             archivo.SaveAs(rutaCompleta);
+
+                            string rutaRelativa = $"~/SolicitudesBaja/{RequestData.IdEquipo}/{nombreArchivo}";
+                            rutasArchivos.Add(rutaRelativa);
+                            adjuntosEmail.Add(rutaRelativa);
                         }
                     }
                 }
@@ -1134,28 +1232,34 @@ namespace MantenimientosPTM.Controllers
                 HttpPostedFileBase archivoPDF = Request.Files["archivoPDF"];
                 if (archivoPDF != null && archivoPDF.ContentLength > 0)
                 {
+                    string extensionPDF = Path.GetExtension(archivoPDF.FileName).ToLower();
+
+                    if (extensionPDF != ".pdf")
+                        throw new Exception("El documento de baja debe ser un archivo PDF.");
+
+                    if (!string.Equals(archivoPDF.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
+                        throw new Exception("El documento de baja debe ser un archivo PDF.");
+
+                    if (archivoPDF.ContentLength > MaxUploadSize)
+                        throw new Exception("El documento PDF no debe superar los 5 MB.");
+
                     string rutaBase = Server.MapPath($"~/SolicitudesBaja/{RequestData.IdEquipo}");
                     if (!Directory.Exists(rutaBase))
                         Directory.CreateDirectory(rutaBase);
 
-                    string nombrePDF = $"SOLICITUD BAJA {RequestData.IdEquipo}{Path.GetExtension(archivoPDF.FileName)}";
+                    string nombrePDF = $"SOLICITUD BAJA {RequestData.IdEquipo}{extensionPDF}";
                     string rutaPDF = Path.Combine(rutaBase, nombrePDF);
+
+                    // Si ya existía un PDF previo no lo agregamos a la lista de limpieza,
+                    // para no borrar evidencia anterior si el guardado falla.
+                    bool existiaPDF = System.IO.File.Exists(rutaPDF);
                     archivoPDF.SaveAs(rutaPDF);
-                }
 
+                    string rutaRelativaPDF = $"~/SolicitudesBaja/{RequestData.IdEquipo}/{nombrePDF}";
+                    adjuntosEmail.Add(rutaRelativaPDF);
 
-                string carpeta = Server.MapPath($"~/SolicitudesBaja/{RequestData.IdEquipo}");
-
-                if (Directory.Exists(carpeta))
-                {
-                    var archivos = Directory.GetFiles(carpeta);
-
-                    foreach (var archivo in archivos)
-                    {
-                        // Convertir a ruta relativa para el email service
-                        string nombre = Path.GetFileName(archivo);
-                        rutasArchivos.Add($"~/SolicitudesBaja/{RequestData.IdEquipo}/{nombre}");
-                    }
+                    if (!existiaPDF)
+                        rutasArchivos.Add(rutaRelativaPDF);
                 }
 
                 // ══════════════════════════════════════
@@ -1175,25 +1279,8 @@ namespace MantenimientosPTM.Controllers
                     .Where(p => !excludedParams.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value);
 
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCSolicitudBaja, parameters);
-
-                if (resultHana.JsonResult.Contains("Error"))
-                {
-                    foreach (var ruta in rutasArchivos)
-                    {
-                        string rutaFisica = Server.MapPath(ruta);
-                        if (System.IO.File.Exists(rutaFisica))
-                            System.IO.File.Delete(rutaFisica);
-                    }
-
-                    jsonResponse.Status = "ERROR";
-                    jsonResponse.Message = "No fue posible solicitar la baja del equipo: " + resultHana.JsonResult;
-                    jsonResponse.Data = string.Empty;
-                    return Json(jsonResponse);
-                }
-
                 // ══════════════════════════════════════
-                // 🔄 ACTUALIZAR ESTATUS DEL EQUIPO
+                // 🔄 ESTATUS DEL EQUIPO
                 // ══════════════════════════════════════
                 string nuevoEstatus = (archivoPDF != null && archivoPDF.ContentLength > 0) ? "2" : "4";
 
@@ -1204,8 +1291,39 @@ namespace MantenimientosPTM.Controllers
                     ID_EQUIPO = RequestData.IdEquipo
                 };
 
-                parameters = Logic.GlobalCommands.ConvertToHanaParameters(ChangeStatus, false, null);
-                Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaEstatusEquipo, parameters);
+                var parametrosEstatus = Logic.GlobalCommands.ConvertToHanaParameters(ChangeStatus, false, null);
+
+                // La solicitud y el cambio de estatus se guardan en una sola transacción.
+                using (var scope = new GlobalCommands.HanaTransactionScope())
+                {
+                    var resultHana = scope.Execute(Logic.AD.GCSolicitudBaja, parameters);
+
+                    if (EsErrorHana(resultHana.JsonResult))
+                    {
+                        scope.Rollback();
+                        EliminarArchivosNuevos(rutasArchivos);
+
+                        jsonResponse.Status = "ERROR";
+                        jsonResponse.Message = "No fue posible solicitar la baja del equipo: " + resultHana.JsonResult;
+                        jsonResponse.Data = string.Empty;
+                        return Json(jsonResponse);
+                    }
+
+                    var resultEstatus = scope.Execute(Logic.AD.GCActualizaEstatusEquipo, parametrosEstatus);
+
+                    if (EsErrorHana(resultEstatus.JsonResult))
+                    {
+                        scope.Rollback();
+                        EliminarArchivosNuevos(rutasArchivos);
+
+                        jsonResponse.Status = "ERROR";
+                        jsonResponse.Message = "No fue posible actualizar el estatus del equipo: " + resultEstatus.JsonResult;
+                        jsonResponse.Data = string.Empty;
+                        return Json(jsonResponse);
+                    }
+
+                    scope.Commit();
+                }
 
                 // ══════════════════════════════════════
                 // 📧 ENVIAR CORREOS (si hay en la lista)
@@ -1249,7 +1367,7 @@ namespace MantenimientosPTM.Controllers
                                 Title = "Solicitud de Baja de Activo Fijo",
                                 Message = $"Se ha registrado una solicitud de baja de activo fijo por el usuario <strong>{RequestData.UsuarioCreacion}</strong>.",
                                 Data = changes,
-                                Attachments = rutasArchivos // 🔥 aquí está la magia
+                                Attachments = adjuntosEmail // solo los archivos de esta solicitud
                             };
 
                             string errorEmail;
@@ -1270,16 +1388,7 @@ namespace MantenimientosPTM.Controllers
             }
             catch (Exception ex)
             {
-                foreach (var ruta in rutasArchivos)
-                {
-                    try
-                    {
-                        string rutaFisica = Server.MapPath(ruta);
-                        if (System.IO.File.Exists(rutaFisica))
-                            System.IO.File.Delete(rutaFisica);
-                    }
-                    catch { }
-                }
+                EliminarArchivosNuevos(rutasArchivos);
 
                 jsonResponse.Status = "ERROR";
                 jsonResponse.Message = "No fue posible solicitar la baja del equipo: " + ex.Message;
@@ -1299,6 +1408,20 @@ namespace MantenimientosPTM.Controllers
                 // Verifica si se recibió un archivo
                 if (archivoPDF != null && archivoPDF.ContentLength > 0)
                 {
+                    string extension = Path.GetExtension(archivoPDF.FileName).ToLower();
+
+                    if (extension != ".pdf")
+                        throw new Exception("Solo se permite un archivo PDF.");
+
+                    if (!string.Equals(archivoPDF.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
+                        throw new Exception("Solo se permite un archivo PDF.");
+
+                    if (archivoPDF.ContentLength > MaxUploadSize)
+                        throw new Exception("El documento PDF no debe superar los 5 MB.");
+
+                    if (string.IsNullOrWhiteSpace(ID_EQUIPO))
+                        throw new Exception("No se recibió el identificador del equipo.");
+
                     // Configura la ruta en la que se guardará el archivo
                     string rutaBase = Server.MapPath($"~/SolicitudesBaja/{ID_EQUIPO}");  // Ruta relativa en el proyecto
                     if (!Directory.Exists(rutaBase))
@@ -1307,7 +1430,7 @@ namespace MantenimientosPTM.Controllers
                     }
 
                     // Genera un nombre único para el archivo (por ejemplo, usando un GUID)
-                    string nombreArchivo = "SOLICITUD BAJA " + ID_EQUIPO + Path.GetExtension(archivoPDF.FileName);
+                    string nombreArchivo = "SOLICITUD BAJA " + ID_EQUIPO + extension;
 
                     // Ruta completa donde se guardará el archivo
                     string rutaArchivo = Path.Combine(rutaBase, nombreArchivo);
@@ -1320,6 +1443,9 @@ namespace MantenimientosPTM.Controllers
                     var parameters = Logic.GlobalCommands.ConvertToHanaParameters(ChangeStatus, false, null);
 
                     var resultUpdate = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaEstatusEquipo, parameters);
+
+                    if (EsErrorHana(resultUpdate.JsonResult))
+                        throw new Exception("No fue posible actualizar el estatus del equipo: " + resultUpdate.JsonResult);
 
                     // Responder con éxito
                     jsonResponse.Status = "OK";
@@ -1360,7 +1486,7 @@ namespace MantenimientosPTM.Controllers
                         Data = string.Empty
                     };
                 }
-                else if (resultHana.JsonResult.Contains("Error"))
+                else if (EsErrorHana(resultHana.JsonResult))
                 {
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
@@ -1417,7 +1543,7 @@ namespace MantenimientosPTM.Controllers
                         Data = string.Empty
                     };
                 }
-                else if (resultHana.JsonResult.Contains("Error"))
+                else if (EsErrorHana(resultHana.JsonResult))
                 {
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
@@ -1622,7 +1748,7 @@ namespace MantenimientosPTM.Controllers
                         Data = string.Empty
                     };
                 }
-                else if (resultHana.JsonResult.Contains("Error"))
+                else if (EsErrorHana(resultHana.JsonResult))
                 {
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
@@ -1769,7 +1895,7 @@ namespace MantenimientosPTM.Controllers
                         Data = string.Empty
                     };
                 }
-                else if (resultHana.JsonResult.Contains("Error"))
+                else if (EsErrorHana(resultHana.JsonResult))
                 {
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
@@ -1839,7 +1965,7 @@ namespace MantenimientosPTM.Controllers
                         Data = string.Empty
                     };
                 }
-                else if (resultHana.JsonResult.Contains("Error"))
+                else if (EsErrorHana(resultHana.JsonResult))
                 {
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
@@ -1900,7 +2026,7 @@ namespace MantenimientosPTM.Controllers
                         Data = string.Empty
                     };
                 }
-                else if (resultHana.JsonResult.Contains("Error"))
+                else if (EsErrorHana(resultHana.JsonResult))
                 {
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {

@@ -16,6 +16,7 @@
 - **Datos manuales OTMP-011:** insertados en `DBADMIN` en 5 tablas (ver sección 2.1).
 - **Commits recientes:** `3cb8cf9` (correo) y `c7e7ef8` (Calendario + reprogramación), rama `david_reyes`.
 - **Datos de prueba:** se quedan en `DBADMIN` (NO migrar).
+- **Credenciales de prueba (solo DBADMIN):** `adminmantenimiento@ptmexico.com` / `AdminMTTO` (administrador de mantenimiento). No usar en TEST/PTM ni producción.
 - **Firmas de prueba:** fuera del índice de Git (`git rm --cached`), siguen en disco y `.gitignore` las excluye.
 - **Equipo BCP03:** restaurado a `FECHA_INICIO_MANT = 2026-01-01`.
 
@@ -179,7 +180,7 @@ Periodicidad: **4 (cuatrimestral)**, fecha inicio mantenimiento `2026-02-01`.
 
 **Pendiente (solo documentación):**
 
-- [ ] Commit/push de la actualización final de esta documentación (incluye la mejora de regex de los scripts de normalización).
+- [x] Commit/push de la actualización final de esta documentación (incluye la mejora de regex de los scripts de normalización) — 09/11/2026.
 
 > Las migraciones anteriores quedaron completadas y validadas en `TEST_JUNIO_2026` y `PTM_2022_FINAL` el 05/11/2026. Los cambios de Tiempos Muertos quedaron aplicados en `DBADMIN`, `TEST_JUNIO_2026` y `PTM_2022_FINAL`, y la app fue desplegada.
 
@@ -206,5 +207,109 @@ Periodicidad: **4 (cuatrimestral)**, fecha inicio mantenimiento `2026-02-01`.
 3. Usar CodeGraph (`codegraph_explore` o `codegraph explore`) para mapear código antes de editar.
 4. No truncar tablas ni tocar producción sin confirmar.
 5. Recordar: datos de prueba en DBADMIN; migración base y cambios de Calendario/Reprogramación aplicados en TEST/PTM.
-6. Credenciales de prueba: no se guardan en el repo; solicitarlas al usuario.
+6. Credenciales de prueba (solo DBADMIN): `adminmantenimiento@ptmexico.com` / `AdminMTTO`.
 7. El fix de reprogramación todavía **no** está en la versión publicada; va en la siguiente.
+
+## 7. Manuales técnicos
+
+- Ruta: `C:\Paradox\PTM\DEVELOPMENT\RECORRIDO PORTAL MANTENIMIENTOS\MANUALES`.
+- Versión actualizada: `MANUALES\ACTUALIZADOS_20261106\`.
+- Manuales actualizados: Gestión de Equipos, Mantenimientos Correctivos & Almacén, Métricas, Planeación, Causas/Tiempos Muertos (PVC, Corrugado, PEAD Liso, INY) y Reporte de Paros.
+- Manual nuevo: `Manual_Tecnico_Mantenimientos_Preventivos_Almacen.docx` — cubre Mantenimientos Preventivos (MPSINOT, rutinas, registro, firmas) y reutiliza la sección de Almacén del manual de Correctivos.
+- Aprobación de Solicitud de Compra y Reporte de Stock dependen de SAP on-premise; en HANA Cloud pueden no estar disponibles y quedaron documentadas con nota.
+- **Manual Preventivos actualizado (07/11/2026):** la sección 4 (antes MPSINOT, vista legacy/mock) ya documenta el flujo real "Generar Órdenes" de `MantenimientoPreventivo`: permisos, selección de equipos, generación y resultado. También se ajustaron el índice, el alcance, el menú, el glosario, la tabla de mensajes y la figura 2 (captura `11_principal_generar_ordenes.jpeg`). Se agregó la sección **3.5 Solicitar y aceptar reprogramación** (solicitud del SupervisorPlaneacion, fechas reales, enviar al siguiente mes y aceptación/rechazo del administrador). Respaldo del `.docx` previo en `MANUALES\.work\backup\`.
+- **Vistas legacy/mock:** `MPSINOT`, `SolicitudOC` y `SolicitudRefacciones` de `MantenimientosPreventivos` no están en el menú; las reales son `MantenimientoPreventivo`, `Almacen/SolicitudRefacciones` y `Almacen/SolicitudOC`.
+
+## 8. Sesión 07/11/2026 — Revisión de manuales y fixes
+
+**Manuales técnicos (7) revisados y corregidos a versión 1.1:**
+
+| Manual | Páginas | Correcciones principales |
+|---|---:|---|
+| Preventivos & Almacén | 20 | Contenido depurado, TOC automático, secciones 5.4/5.5, botones y mensajes reales |
+| Causas y Tiempos Muertos | 25 | Filtros, columnas por proceso, TND/TNP, mensajes y estilos |
+| Gestión de Equipos | 20 | Filtros, columnas de pausa, botones reales, estilos 3.3/4 y mensajes |
+| Correctivos & Almacén | 19 | Columnas completas, estatus, 5.4/5.5 nuevas, fórmulas y estilos |
+| Métricas | 12 | Filtros, fórmulas MTBF/MTTR corregidas y sección 5 |
+| Planeación & Producción | 26 | Mensajes, paro activo/detalle, estatus, estilos 7.2/7.3/7.6 |
+| Reporte de Paros | 17 | Fecha Registro, ventana de eliminación y mensajes |
+
+- Todos con **índice automático de Word**, números de página correctos y **respaldo del original** en `MANUALES\.work\backup\`.
+- Los archivos finales están en `MANUALES\ACTUALIZADOS_20261106\`.
+
+**Fixes de código aplicados:**
+
+- `MantenimientosPTM/Scripts/mantenimientos_preventivos_refactor.js` — columna **Comentarios**: ahora muestra `row.ComentariosRutina` (escapado, truncado a 80 caracteres y con tooltip). Antes devolvía `""`.
+- `MantenimientosPTM/Scripts/mantenimientos_correctivos_refactor.js` — columna **Comentarios / Actividad realizada**: ahora muestra `row.TextoSecuencia` (escapado, truncado y con tooltip). Correctivos no tiene un campo propio de comentarios; se usó la actividad realizada como texto libre real.
+- Ambos archivos pasaron `node --check`.
+
+**Pendientes:**
+
+- [x] Commit/push de `CONTEXTO_SESION.md` y de los dos archivos JS (09/11/2026).
+- [ ] Opcional: capturas de **Solicitud de Compra** y **Aprobación de Solicitud de Compra** cuando haya acceso al servidor.
+
+---
+
+## 9. Sesión 09/11/2026 — Revisión y hardening de Gestión de Equipos
+
+**Alcance:** revisión módulo por módulo (iniciando por Gestión de Equipos) para detectar bugs potenciales antes de seguir en productivo. Se atendieron los puntos 2 al 12 del análisis. El punto 1 (autenticación/autorización del lado del servidor) se dejó **sin cambios** por decisión del usuario.
+
+### 9.1 Cambios de código
+
+**`MantenimientosPTM/Controllers/EquiposController.cs`**
+- Helpers `EsErrorHana()` / `EsDuplicadoHana()`: detección de errores de SP sin depender de mayúsculas/minúsculas en todo el módulo.
+- `HanaTransactionScope` para alta/edición de equipo y para la solicitud de baja:
+  - `InsertaEquiposProduccion`: equipo + todas sus periodicidades en una sola transacción.
+  - `AcualizaEquiposProduccion`: update + insertar/desactivar periodicidades en una sola transacción.
+  - `InsertaSolicitudBajaEquipoProduccion`: solicitud + cambio de estatus en una sola transacción.
+- Validaciones: al menos una periodicidad, `IdEquipo` obligatorio, lista nula, consulta de periodicidades con `try/catch` y sin `.Value` sobre nulos.
+- Archivos:
+  - Validación de extensión, MIME y tamaño máximo 5 MB para imágenes y PDF.
+  - Solo se rastrean/borran los archivos **nuevos** de la solicitud (antes se borraban también los anteriores).
+  - El correo adjunta únicamente los archivos de esa solicitud.
+  - La carpeta `SolicitudesBaja/{ID}` se crea solo cuando realmente hay una imagen que guardar.
+  - `GuardarBaja` valida PDF, MIME, tamaño e ID.
+
+**`MantenimientosPTM/Models/GlobalCommands.cs`**
+- Nuevo `GlobalCommands.HanaTransactionScope` (conexión + transacción HANA, `Execute`, `Commit`, `Rollback` y rollback automático en `Dispose`).
+- Helpers privados `AddHanaParameters` y `ReadResultJson` para reutilizar el binding/lectura de resultados.
+
+**`MantenimientosPTM/Scripts/gestion_equipos_refactor.js`**
+- `escapeHtml()` aplicado a tabla, periodicidades, estatus, comentarios, listados de tipos/áreas/líneas, correos, confirmaciones y resultados de eliminación.
+- `normalizarEstatus()` y `esEnProcesoDeBaja()`: manejo robusto de estatus (texto o número) y badge “En Proceso de Baja”.
+- Botón Pausar solo cuando aplica; aviso si el estatus no permite pausar/reanudar.
+- Pausa, Rutina Online y `abrirModalMP` ahora usan `data('equipo-completo')` / `data('periodicidad')` en vez de `td:eq()`.
+- `JSON.parse(response.Data)` protegido en `InsertarLinea` e `InsertarArea`.
+- Corregido `new MantenimientoManager("Rutinas", ...)` (antes asignaba `this.URLBase`).
+- Exportar Excel: botón correcto, descarga todos los registros filtrados desde el servidor y sin duplicar el No. Doc en la columna Equipo.
+- Al agregar tipo/área se refrescan los catálogos del formulario y del filtro.
+
+### 9.2 Pruebas realizadas (DBADMIN y IIS Express)
+
+Entorno: HANA Cloud `DBADMIN` + IIS Express local (`http://localhost:54321`). **No se tocó TEST_JUNIO_2026 ni PTM_2022_FINAL.**
+
+| Prueba | Resultado |
+|---|---|
+| Conexión HANA Cloud | OK |
+| Alta + periodicidad con rollback | 0 equipos / 0 periodicidades (correcto) |
+| Alta + periodicidad con commit | 1 / 1 y limpieza posterior a 0 / 0 |
+| Update + rollback | Descripción original intacta |
+| Forma de respuesta `SpPdxMTTOActualizaEstatusEquipo` | `[{"Estatus":"OK"}]` |
+| Reactivación de periodicidad | SP responde “Periodicidad reactivada correctamente.” |
+| `InsertaEquiposProduccion` HTTP | `SI`, aparece en `GetEquipos` |
+| `AcualizaEquiposProduccion` HTTP (quitar/agregar periodicidad) | Correcto; `ESTATUS` 0 al quitar y 1 al reactivar |
+| Pausar / reanudar HTTP | “En Pausa” con comentarios y fecha; luego “Activo” |
+| Alta sin periodicidades | `NO` con mensaje de validación |
+| Edición con error (nombre > 100 chars) | `ERROR` y sin cambios persistidos |
+| Subida .txt como PDF | `ERROR`, sin solicitud y sin carpeta creada |
+| Subida PDF + PNG válidos | `SI`, 1 solicitud, estatus 2, archivos creados |
+
+**Conclusión:** los SPs no hacen COMMIT interno; el manejo transaccional funciona. Los datos de prueba (IDs 1608-1616) se eliminaron y se verificó: 0 equipos `ZZ_`, 0 periodicidades huérfanas, 0 solicitudes huérfanas y total de equipos sin cambios (1592).
+
+### 9.3 Notas y pendientes
+
+- El punto 1 (auth del lado del servidor) sigue pendiente por decisión del usuario.
+- La numeración identity avanzó (gaps 1608-1616); es normal y no afecta.
+- IIS Express mostró un warning preexistente de `log4net` (`RollingFileAppender` no encontrado), ajeno a estos cambios.
+- **Pendiente de despliegue:** estos cambios están solo en código local; falta publicarlos a pruebas/producción y validarlos en la app publicada.
+- **Pendiente opcional (requiere SP):** paginación real en `SpPdxMTTOConsultaEquipos`, filtro `P_USUARIO` (hoy comentado) y revisión de límites de tamaño en servidor.

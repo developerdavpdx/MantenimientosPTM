@@ -119,6 +119,37 @@
         MIGRACION_ELIMINAR_TIEMPOS_MUERTOS_*.sql
         MIGRACION_NORMALIZAR_OT_TIEMPOS_MUERTOS_*.sql
 
+10) GESTION DE EQUIPOS - REVISION Y HARDENING (09/11/2026)
+   - Revision del modulo para detectar bugs potenciales. Se atendieron los
+     puntos 2 al 12 del analisis; el punto 1 (auth del lado del servidor) se
+     dejo sin cambios por decision del usuario.
+   - Manejo de errores de SP homogeneo (sin depender de mayusculas/minusculas).
+   - Alta y edicion de equipo ahora son transaccionales (equipo + periodicidades);
+     si algo falla, HANA revierte todo. Igual para la solicitud de baja
+     (solicitud + cambio de estatus).
+   - Validaciones: al menos una periodicidad, IdEquipo obligatorio, listas nulas
+     y respuestas no JSON controladas.
+   - Archivos de baja: validacion de extension/MIME/tamano (5 MB), limpieza solo
+     de archivos nuevos, correo solo con archivos de la solicitud actual y
+     carpeta creada solo si hay imagen que guardar.
+   - Seguridad: escape de HTML en la tabla y catalogos (tipos, areas, lineas,
+     comentarios, correos y confirmaciones).
+   - UI: indices de fila corregidos en Pausa/Rutina/Programar, badge y manejo de
+     estatus 4 ("En Proceso de Baja"), boton Pausar solo cuando aplica y aviso
+     cuando no.
+   - Exportar a Excel: boton correcto, exporta todos los registros filtrados
+     (no solo la pagina) y sin duplicar el No. Doc.
+   - Corregido bug latente del constructor (this.URLBase = "Rutinas").
+   - JSON.parse protegido en alta de lineas/areas.
+   - Catalogos de tipos/areas se refrescan al agregarlos.
+   - Pruebas: HANA Cloud DBADMIN + IIS Express; alta, edicion, reactivacion de
+     periodicidades, pausa/reanudacion, validaciones y archivos. Todo OK y sin
+     datos de prueba residuales (0 equipos ZZ_, 0 huerfanos).
+   - Pendiente: publicar a pruebas/produccion y validar en la app publicada.
+   - Archivos: EquiposController.cs, GlobalCommands.cs,
+     gestion_equipos_refactor.js, CONTEXTO_SESION.md.
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================

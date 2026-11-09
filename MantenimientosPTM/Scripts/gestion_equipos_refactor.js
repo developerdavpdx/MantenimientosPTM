@@ -1,4 +1,27 @@
 // ========================================
+// UTILIDADES
+// ========================================
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function normalizarEstatus(estatus) {
+    if (estatus === null || estatus === undefined) return '';
+    return String(estatus).trim().toLowerCase();
+}
+
+function esEnProcesoDeBaja(estatus) {
+    const valor = normalizarEstatus(estatus);
+    return valor === '4' || valor === 'en proceso de baja';
+}
+
+// ========================================
 // INICIALIZACIÓN
 // ========================================
 $(document).ready(function () {
@@ -35,7 +58,7 @@ class GestionEquiposApp {
         this.ArchivosManager = new ArchivosManager(this.URLBase);
         this.equipoManager = new EquipoManager(this.ArchivosManager, this.URLBase, this.datos_usuario);
         this.PDFManager = new PrintSolicitudBaja();
-        this.mantenimientoManager = new MantenimientoManager(this.URLBase = "Rutinas", this.datos_usuario);
+        this.mantenimientoManager = new MantenimientoManager("Rutinas", this.datos_usuario);
         this.checklistManager = new ChecklistManager();
     }
 
@@ -495,7 +518,7 @@ class EquipoManager {
                       style="background: var(--modal-primary-soft); color: var(--modal-primary); 
                              border: 1px solid var(--modal-primary-mid); border-radius: 20px; font-size:0.82rem;">
                     <i class="bi bi-envelope"></i>
-                    ${correo}
+                    ${escapeHtml(correo)}
                     <button type="button" class="btn-remove-correo" data-index="${index}"
                             style="background:none; border:none; padding:0; cursor:pointer; 
                                    color: var(--modal-primary); line-height:1;">
@@ -685,25 +708,29 @@ class EquipoManager {
                         orderable: false,
                         className: 'all',
                         render: function (data, type, row) {
-                            var iconpause = "";
-                            var iconpausedesign = "";
-                            var iconpausetitle = "";
+                            const estatusNorm = normalizarEstatus(row.Estatus);
+                            const inactivo = estatusNorm === '2' || estatusNorm === 'inactivo';
 
-                            if (row.Estatus == "En Pausa") {
-                                iconpause = "bi bi-play";
-                                iconpausedesign = "btn-ptm-edit";
-                                iconpausetitle = "Reanudar";
-                            }
-                            else {
-                                iconpause = "bi bi-pause";
-                                iconpausedesign = "btn-ptm-pausar";
-                                iconpausetitle = "Pausar";
-                            }
+                            if (inactivo)
+                                return ``;
 
-                            if (row.Estatus != "Inactivo")
-                                return `<button class="btn btn-sm ${iconpausedesign} btn-pausar" data-id="${row.IdEquipo}" title="${iconpausetitle}">
+                            const enPausa = estatusNorm === '3' ||
+                                estatusNorm === 'pausado' ||
+                                estatusNorm === 'en pausa';
+                            const activo = estatusNorm === '1' || estatusNorm === 'activo';
+
+                            const iconpause = enPausa ? 'bi bi-play' : 'bi bi-pause';
+                            const iconpausedesign = enPausa ? 'btn-ptm-edit' : 'btn-ptm-pausar';
+                            const iconpausetitle = enPausa ? 'Reanudar' : 'Pausar';
+
+                            // Solo se puede pausar/reanudar cuando el estatus lo permite
+                            const botonPausa = (activo || enPausa)
+                                ? `<button class="btn btn-sm ${iconpausedesign} btn-pausar" data-id="${row.IdEquipo}" title="${iconpausetitle}">
                             <i class="${iconpause}"></i>
-                            </button>
+                            </button>`
+                                : '';
+
+                            return `${botonPausa}
                             <button class="btn btn-sm btn-ptm-edit btn-editar" data-id="${row.IdEquipo}" title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
@@ -713,8 +740,6 @@ class EquipoManager {
                             <button class="btn btn-sm btn-ptm-rutina btn-rutina-online" data-id="${row.IdEquipo}" title="Rutina Online">
                                 <i class="bi bi-file-text"></i>
                             </button>`;
-                            else
-                                return ``;
                         }
                     },
 
@@ -722,7 +747,7 @@ class EquipoManager {
                     {
                         data: "Planta",
                         render: function (data) {
-                            return `<i class="bi bi-building me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-building me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
 
@@ -730,7 +755,7 @@ class EquipoManager {
                     {
                         data: "Area",
                         render: function (data) {
-                            return `<i class="bi bi-diagram-3 me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-diagram-3 me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
 
@@ -738,7 +763,7 @@ class EquipoManager {
                     {
                         data: "LineaProduccion",
                         render: function (data) {
-                            return `<i class="bi bi-arrow-repeat me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-arrow-repeat me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
 
@@ -746,7 +771,7 @@ class EquipoManager {
                     {
                         data: "NombreEquipo",
                         render: function (data) {
-                            return `<i class="bi bi-gear-fill me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-gear-fill me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
 
@@ -754,7 +779,7 @@ class EquipoManager {
                     {
                         data: "DescripcionEquipo",
                         render: function (data) {
-                            return `<i class="bi bi-card-text me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-card-text me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
 
@@ -762,7 +787,7 @@ class EquipoManager {
                     {
                         data: "Clasificacion",
                         render: function (data) {
-                            return `<i class="bi bi-tag-fill me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-tag-fill me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
 
@@ -770,7 +795,7 @@ class EquipoManager {
                     {
                         data: "CentroCostos",
                         render: function (data) {
-                            return `<i class="bi bi-cash-stack me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-cash-stack me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
 
@@ -778,7 +803,7 @@ class EquipoManager {
                     {
                         data: "NumeroDocPmCalidad",
                         render: function (data) {
-                            return `<i class="bi bi-file-earmark-text me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-file-earmark-text me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
 
@@ -786,7 +811,7 @@ class EquipoManager {
                     {
                         data: "FechaInicioMant",
                         render: function (data) {
-                            return `<i class="bi bi-calendar-event me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-calendar-event me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
 
@@ -804,17 +829,11 @@ class EquipoManager {
                                 .map(x => x.trim())
                                 .filter(x => x);
 
-                            if (periodicidades.includes("anual"))
-                            {
-                                console.log("anual");
-                            }
-
-
                             let html = `<div class="d-flex flex-wrap justify-content-center gap-1">
                                 ${periodicidades.map(p => `
                                     <span class="badge bg-blue-ptm badge-custom">
                                     <i class="bi bi-calendar-week me-1 text-white"></i>
-                                        ${p} (${row.DiaInicioMant}-${row.DiaFinMant})
+                                        ${escapeHtml(p)} (${escapeHtml(row.DiaInicioMant)}-${escapeHtml(row.DiaFinMant)})
                                     </span>
                                 `).join('')}
                             </div>`;
@@ -827,38 +846,35 @@ class EquipoManager {
                     {
                         data: "Estatus",
                         render: function (data, type, row) {
-                            let badge = '';
+                            const estatusNorm = normalizarEstatus(data);
 
-                            switch (data) {
-                                case '1':
-                                case 'Activo':
-                                    badge = `<span class="badge bg-blue-ptm badge-custom">
+                            if (estatusNorm === '1' || estatusNorm === 'activo') {
+                                return `<span class="badge bg-blue-ptm badge-custom">
                             <i class="bi bi-check-circle me-1"></i>Activo
-                         </span>`;
-                                    break;
-
-                                case '2':
-                                case 'Inactivo':
-                                    badge = `<span class="badge bg-danger badge-custom">
-                            <i class="bi bi-x-circle me-1"></i>Inactivo
-                         </span>`;
-                                    break;
-
-                                case '3':
-                                case 'Pausado':
-                                case 'En Pausa':
-                                    badge = `<span class="badge bg-warning text-dark badge-custom">
-                            <i class="bi bi-pause-circle me-1"></i>Pausado
-                         </span>`;
-                                    break;
-
-                                default:
-                                    badge = `<span class="badge bg-danger text-white badge-custom">
-                            <i class="bi bi-info-circle me-1"></i>${data}
                          </span>`;
                             }
 
-                            return badge;
+                            if (estatusNorm === '2' || estatusNorm === 'inactivo') {
+                                return `<span class="badge bg-danger badge-custom">
+                            <i class="bi bi-x-circle me-1"></i>Inactivo
+                         </span>`;
+                            }
+
+                            if (estatusNorm === '3' || estatusNorm === 'pausado' || estatusNorm === 'en pausa') {
+                                return `<span class="badge bg-warning text-dark badge-custom">
+                            <i class="bi bi-pause-circle me-1"></i>Pausado
+                         </span>`;
+                            }
+
+                            if (esEnProcesoDeBaja(data)) {
+                                return `<span class="badge bg-secondary badge-custom">
+                            <i class="bi bi-hourglass-split me-1"></i>En Proceso de Baja
+                         </span>`;
+                            }
+
+                            return `<span class="badge bg-danger text-white badge-custom">
+                            <i class="bi bi-info-circle me-1"></i>${escapeHtml(data)}
+                         </span>`;
                         }
                     },
 
@@ -867,8 +883,12 @@ class EquipoManager {
                         data: null,
                         orderable: false,
                         render: function (data, type, row) {
-                            return (row.Estatus == "En Pausa")
-                                ? `<i class="bi bi-chat-left-text me-1 text-muted"></i>${row.Comentarios || ''}`
+                            const enPausa = normalizarEstatus(row.Estatus) === '3' ||
+                                normalizarEstatus(row.Estatus) === 'pausado' ||
+                                normalizarEstatus(row.Estatus) === 'en pausa';
+
+                            return enPausa
+                                ? `<i class="bi bi-chat-left-text me-1 text-muted"></i>${escapeHtml(row.Comentarios || '')}`
                                 : "";
                         }
                     },
@@ -878,8 +898,12 @@ class EquipoManager {
                         data: null,
                         orderable: false,
                         render: function (data, type, row) {
-                            return (row.Estatus == "En Pausa")
-                                ? `<i class="bi bi-calendar-x me-1 text-muted"></i>${row.FechaPausa || ''}`
+                            const enPausa = normalizarEstatus(row.Estatus) === '3' ||
+                                normalizarEstatus(row.Estatus) === 'pausado' ||
+                                normalizarEstatus(row.Estatus) === 'en pausa';
+
+                            return enPausa
+                                ? `<i class="bi bi-calendar-x me-1 text-muted"></i>${escapeHtml(row.FechaPausa || '')}`
                                 : "";
                         }
                     }
@@ -1231,7 +1255,7 @@ class EquipoManager {
         //Guardar estatus de equipo a eliminar
         this.equipoAEliminarEstatus = equipoData.estatus;
 
-        if (equipoData.estatus == "En Proceso De Baja") {
+        if (esEnProcesoDeBaja(equipoData.estatus)) {
 
             $("#formBajaActivo")[0].reset();
 
@@ -1570,11 +1594,11 @@ class EquipoManager {
                 return `
                     <div class="d-flex align-items-center justify-content-between py-2 border-bottom tipo-item" style="display:none;">
                         <div class="d-flex align-items-center gap-3">
-                            <input class="form-check-input tipo-checkbox" type="checkbox" value="${item.value}" id="chk_tipo_${item.value}">
-                            <label for="chk_tipo_${item.value}" style="margin-bottom:0;"><strong class="nombre-tipo">${item.label}</strong></label>
+                            <input class="form-check-input tipo-checkbox" type="checkbox" value="${escapeHtml(item.value)}" id="chk_tipo_${escapeHtml(item.value)}">
+                            <label for="chk_tipo_${escapeHtml(item.value)}" style="margin-bottom:0;"><strong class="nombre-tipo">${escapeHtml(item.label)}</strong></label>
                         </div>
                         <div>
-                            <button type="button" class="btn btn-sm btn-ptm-eliminar btn-eliminar-tipo" data-bs-toggle="tooltip" title="Eliminar" data-id="${item.value}" data-nombre="${item.label}">
+                            <button type="button" class="btn btn-sm btn-ptm-eliminar btn-eliminar-tipo" data-bs-toggle="tooltip" title="Eliminar" data-id="${escapeHtml(item.value)}" data-nombre="${escapeHtml(item.label)}">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -1603,7 +1627,7 @@ class EquipoManager {
             this.configurarEventosListarTipos(container);
 
         } catch (err) {
-            container.html(`<div class="text-danger">Error al cargar tipos: ${err}</div>`);
+            container.html(`<div class="text-danger">Error al cargar tipos: ${escapeHtml(err)}</div>`);
         }
     }
 
@@ -1732,11 +1756,11 @@ class EquipoManager {
                 return `
                     <div class="d-flex align-items-center justify-content-between py-2 border-bottom area-item" style="display:none;">
                         <div class="d-flex align-items-center gap-3">
-                            <input class="form-check-input area-checkbox" type="checkbox" value="${item.value}" id="chk_area_${item.value}">
-                            <label for="chk_area_${item.value}" style="margin-bottom:0;"><strong class="nombre-area">${item.label}</strong></label>
+                            <input class="form-check-input area-checkbox" type="checkbox" value="${escapeHtml(item.value)}" id="chk_area_${escapeHtml(item.value)}">
+                            <label for="chk_area_${escapeHtml(item.value)}" style="margin-bottom:0;"><strong class="nombre-area">${escapeHtml(item.label)}</strong></label>
                         </div>
                         <div>
-                            <button type="button" class="btn btn-sm btn-ptm-eliminar btn-eliminar-area" data-bs-toggle="tooltip" title="Eliminar" data-id="${item.value}" data-nombre="${item.label}">
+                            <button type="button" class="btn btn-sm btn-ptm-eliminar btn-eliminar-area" data-bs-toggle="tooltip" title="Eliminar" data-id="${escapeHtml(item.value)}" data-nombre="${escapeHtml(item.label)}">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -1765,7 +1789,7 @@ class EquipoManager {
             this.configurarEventosListarAreas(container);
 
         } catch (err) {
-            container.html(`<div class="text-danger">Error al cargar áreas: ${err}</div>`);
+            container.html(`<div class="text-danger">Error al cargar áreas: ${escapeHtml(err)}</div>`);
         }
     }
 
@@ -1838,8 +1862,8 @@ class EquipoManager {
         const nombre = $(e.currentTarget).data('nombre') || $(e.currentTarget).closest('tr').find('.nombre-tipo').text() || '';
 
         ConfirmManager.mostrar({
-            titulo: `¿Eliminar tipo ${nombre || id}?`,
-            mensaje: `<div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;"><div>Se eliminará el tipo <strong>${nombre || id}</strong>. Esta operación será verificada por el servidor y puede fallar si hay dependencias.</div><hr style="margin:10px 0;"><div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irreversible.</div></div>`,
+            titulo: `¿Eliminar tipo ${escapeHtml(nombre || id)}?`,
+            mensaje: `<div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;"><div>Se eliminará el tipo <strong>${escapeHtml(nombre || id)}</strong>. Esta operación será verificada por el servidor y puede fallar si hay dependencias.</div><hr style="margin:10px 0;"><div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irreversible.</div></div>`,
             onConfirm: () => {
                 const datos = { Tipos: [id], Permanente: false, PLANTA: this.PLANTA, USUARIO: this.datos_usuario[0].EMAIL };
                 $.ajax({
@@ -1932,8 +1956,8 @@ class EquipoManager {
         const nombre = $(e.currentTarget).data('nombre') || $(e.currentTarget).closest('tr').find('.nombre-area').text() || '';
 
         ConfirmManager.mostrar({
-            titulo: `¿Eliminar área ${nombre || id}?`,
-            mensaje: `<div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;"><div>Se eliminará el área <strong>${nombre || id}</strong>. Esta operación será verificada por el servidor y puede fallar si hay dependencias.</div><hr style="margin:10px 0;"><div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irreversible.</div></div>`,
+            titulo: `¿Eliminar área ${escapeHtml(nombre || id)}?`,
+            mensaje: `<div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;"><div>Se eliminará el área <strong>${escapeHtml(nombre || id)}</strong>. Esta operación será verificada por el servidor y puede fallar si hay dependencias.</div><hr style="margin:10px 0;"><div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irreversible.</div></div>`,
             onConfirm: () => {
                 const datos = { Areas: [id], Permanente: false, PLANTA: this.PLANTA, USUARIO: this.datos_usuario[0].EMAIL };
                 $.ajax({
@@ -1974,22 +1998,27 @@ class EquipoManager {
     abrirModalPausarEquipo(e) {
         const id = $(e.currentTarget).data('id');
         const fila = $(`tr[data-id="${id}"]`);
-        const nombreEquipo = fila.find('td:eq(1)').text();
-        const estatus = fila.data('estatus') || 'Activo';
-        const btn = $(e.currentTarget);
+        const equipoData = fila.data('equipo-completo') || {};
+        const nombreEquipo = equipoData.nombreEquipo || '';
+        const estatusNorm = normalizarEstatus(equipoData.estatus || fila.attr('data-estatus') || 'Activo');
 
         this.equipoAPausar = id;
 
-        if (estatus === 'Activo') {
+        const esActivo = estatusNorm === '1' || estatusNorm === 'activo';
+        const esPausa = estatusNorm === '3' || estatusNorm === 'pausado' || estatusNorm === 'en pausa';
+
+        if (esActivo) {
             $('#modalPausarEquipoLabel').text('Pausar Equipo');
             $('#nombreEquipoPausar').text(nombreEquipo);
-            $('#razonPausa').val('');
+            $('#ComentariosPausa').val('');
             $('#btnConfirmarPausa').html('<i class="bi bi-pause"></i> Pausar Equipo');
             $("#formPausaEquipo")[0].reset();
             ValidationManager.limpiarValidacion('#formPausaEquipo'); // AGREGAR ESTA LÍNEA
             $('#modalPausarEquipo').modal('show');
-        } else if (estatus === 'En Pausa') {
+        } else if (esPausa) {
             this.PausarEquipo(e, "1");
+        } else {
+            AlertManager.mostrar('El equipo no se puede pausar/reanudar en su estatus actual.', 'warning');
         }
     }
 
@@ -2300,11 +2329,18 @@ class EquipoManager {
                     }, 3000);
 
                 } else {
-                    let customMessage = JSON.parse(response.Data);
-                    let FinalMessage = response.Message + " " + customMessage[0].Message;
+                    let FinalMessage = response.Message || 'Error al insertar nueva línea';
+                    try {
+                        const customMessage = JSON.parse(response.Data);
+                        if (customMessage && customMessage.length > 0 && customMessage[0].Message) {
+                            FinalMessage = response.Message + " " + customMessage[0].Message;
+                        }
+                    } catch (err) {
+                        // response.Data no es JSON: se conserva el mensaje del servidor
+                    }
                     $("#btnGuardarLinea").html('<i class="bi bi-save me-1"></i>Guardar');
                     $("#btnGuardarLinea").prop("disabled", false);
-                    AlertManager.mostrar(FinalMessage + "." || 'Error al insertar nueva línea', 'warning', "alertLineaContainer");
+                    AlertManager.mostrar(FinalMessage + ".", 'warning', "alertLineaContainer");
                 }
             },
             error: (xhr, status, error) => {
@@ -2349,14 +2385,12 @@ class EquipoManager {
                     $("#formAgregarTipoEquipo")[0].reset();
                     $("#formAgregarTipoEquipo").removeClass("was-validated");
 
-                    //PENDIENTE LLENAR TIPOS DE EQUIPO
-                    EquiposUtil.llenarLineas(this.PLANTA, null, null, "LineaProduccion", "FiltroLinea");
+                    // Refrescar el catálogo de tipos para que aparezca de inmediato
+                    EquiposUtil.llenarTipoEquipos();
 
                     setTimeout(function () {
                         $("#btnGuardarTipoEquipo").html('<i class="bi bi-save me-1"></i>Guardar');
                     }, 3000);
-
-                    EquiposUtil.llenarTipoEquipos();
 
                 } else {
                     $("#btnGuardarTipoEquipo").html('<i class="bi bi-save me-1"></i>Guardar');
@@ -2422,14 +2456,26 @@ class EquipoManager {
                         $("#btnGuardarArea").html('<i class="bi bi-save me-1"></i>Guardar');
                     }, 3000);
 
-                    EquiposUtil.llenarProcesos(this.PLANTA,1, 'GestionArea', 'AreaLine');
+                    // Refrescar el catálogo de áreas (formulario principal y filtro)
+                    EquiposUtil.llenarProcesos(this.PLANTA, null, "Area", "FiltroProceso");
+                    EquiposUtil.llenarProcesos(this.PLANTA, 1, 'GestionArea', 'AreaLine');
+
+                    // Refrescar la lista del modal de gestión
+                    this.renderListarAreas();
 
                 } else {
-                    let customMessage = JSON.parse(response.Data);
-                    let FinalMessage = response.Message + " " + customMessage[0].Message;
+                    let FinalMessage = response.Message || 'Error al insertar nueva área';
+                    try {
+                        const customMessage = JSON.parse(response.Data);
+                        if (customMessage && customMessage.length > 0 && customMessage[0].Message) {
+                            FinalMessage = response.Message + " " + customMessage[0].Message;
+                        }
+                    } catch (err) {
+                        // response.Data no es JSON: se conserva el mensaje del servidor
+                    }
                     $("#btnGuardarArea").html('<i class="bi bi-save me-1"></i>Guardar');
                     $("#btnGuardarArea").prop("disabled", false);
-                    AlertManager.mostrar(FinalMessage + "." || 'Error al insertar nueva área', 'warning', "alertAreaContainer");
+                    AlertManager.mostrar(FinalMessage + ".", 'warning', "alertAreaContainer");
                 }
             },
             error: (xhr, status, error) => {
@@ -2449,10 +2495,43 @@ class EquipoManager {
                 return;
             }
 
-            $('#btnExportarExcelEquipos').html('<span class="spinner-border spinner-border-sm me-2"></span>Exportando...').prop('disabled', true);
+            $('#btnExportarExcel').html('<span class="spinner-border spinner-border-sm me-2"></span>Exportando...').prop('disabled', true);
 
-            // Obtener todos los datos de la tabla
-            const data = table.rows({ search: 'applied' }).data().toArray();
+            // Con server-side la tabla solo tiene la página actual. Pedimos al servidor
+            // todos los registros que cumplen los filtros activos.
+            const params = {
+                draw: 1,
+                start: 0,
+                length: 100000,
+                "search[value]": '',
+                "FiltroUsuario": this.Email || null,
+                "FiltroPlanta": this.PLANTA || null,
+                "FiltroLinea": $("#FiltroLinea").val() || null,
+                "FiltroArea": $("#FiltroProceso").val() || null,
+                "FiltroOrdenTrabajo": $("#FiltroOrdenTrabajo").val() || null,
+                "FiltroNombreEquipo": $("#FiltroNombreEquipo").val() || null,
+                "FiltroFechaInicioMantenimiento": $("#FiltroFechaInicioMantenimiento").val() || null,
+                "FiltroClasificacion": $("#FiltroClasificacion").val() || null,
+                "FiltroEstatus": $("#FiltroEstatus").val()
+            };
+
+            let data = [];
+            try {
+                const response = await $.ajax({
+                    url: `/${this.URLBase}/GetEquipos`,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: params
+                });
+                data = (response && Array.isArray(response.data)) ? response.data : [];
+            } catch (e) {
+                console.warn('No se pudo obtener el listado completo para exportar:', e);
+            }
+
+            // Respaldo: usar lo cargado en la tabla si el servidor no respondió
+            if (!data.length) {
+                data = table.rows({ search: 'applied' }).data().toArray();
+            }
 
             // Crear workbook y worksheet
             const workbook = new ExcelJS.Workbook();
@@ -2567,19 +2646,25 @@ class EquipoManager {
 
                 // Estatus en texto limpio
                 let estatusTexto = '';
-                switch (row.Estatus) {
-                    case '1': case 'Activo': estatusTexto = '✅ Activo'; break;
-                    case '2': case 'Inactivo': estatusTexto = '❌ Inactivo'; break;
-                    case '3': case 'En Pausa':
-                    case 'Pausado': estatusTexto = '⏸️ Pausado'; break;
-                    default: estatusTexto = row.Estatus || 'N/A';
+                if (normalizarEstatus(row.Estatus) === '1' || normalizarEstatus(row.Estatus) === 'activo') {
+                    estatusTexto = '✅ Activo';
+                } else if (normalizarEstatus(row.Estatus) === '2' || normalizarEstatus(row.Estatus) === 'inactivo') {
+                    estatusTexto = '❌ Inactivo';
+                } else if (normalizarEstatus(row.Estatus) === '3' ||
+                    normalizarEstatus(row.Estatus) === 'en pausa' ||
+                    normalizarEstatus(row.Estatus) === 'pausado') {
+                    estatusTexto = '⏸️ Pausado';
+                } else if (esEnProcesoDeBaja(row.Estatus)) {
+                    estatusTexto = '⏳ En Proceso de Baja';
+                } else {
+                    estatusTexto = row.Estatus || 'N/A';
                 }
 
                 const rowData = [
                     row.Planta || 'N/A',
                     row.Area || 'N/A',
                     row.LineaProduccion || 'N/A',
-                    `${row.NombreEquipo || ''} ${row.NumeroDocPmCalidad || ''}`.trim() || 'N/A',
+                    row.NombreEquipo || 'N/A',
                     row.DescripcionEquipo || 'N/A',
                     row.CentroCostos || 'N/A',
                     row.NumeroDocPmCalidad || 'N/A',
@@ -2680,8 +2765,8 @@ class EquipoManager {
             console.error('Error al exportar:', error);
             AlertManager.mostrar('Error al exportar: ' + error.message, 'warning');
         } finally {
-            $('#btnExportarExcelEquipos')
-                .html('<i class="bi bi-file-earmark-excel-fill me-1"></i>Exportar')
+            $('#btnExportarExcel')
+                .html('<i class="bi bi-file-earmark-excel-fill me-1"></i>Exportar Equipos')
                 .prop('disabled', false);
         }
     }
@@ -2754,13 +2839,13 @@ class EquipoManager {
                 return `
                     <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
                         <div class="d-flex align-items-center gap-3">
-                            <input class="form-check-input linea-checkbox" type="checkbox" value="${item.value}" id="chk_linea_${item.value}">
-                            <label for="chk_linea_${item.value}" style="margin-bottom:0;">
-                                <strong class="nombre-linea">${item.label}</strong>
+                            <input class="form-check-input linea-checkbox" type="checkbox" value="${escapeHtml(item.value)}" id="chk_linea_${escapeHtml(item.value)}">
+                            <label for="chk_linea_${escapeHtml(item.value)}" style="margin-bottom:0;">
+                                <strong class="nombre-linea">${escapeHtml(item.label)}</strong>
                             </label>
                         </div>
                         <div>
-                            <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-linea" data-id="${item.value}" data-nombre="${item.label}">
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-linea" data-id="${escapeHtml(item.value)}" data-nombre="${escapeHtml(item.label)}">
                                 <i class="bi bi-trash"></i> Eliminar
                             </button>
                         </div>
@@ -2776,13 +2861,13 @@ class EquipoManager {
                 const row = `
                     <div class="d-flex align-items-center justify-content-between py-2 border-bottom linea-item" style="display:none;">
                         <div class="d-flex align-items-center gap-3">
-                            <input class="form-check-input linea-checkbox" type="checkbox" value="${item.value}" id="chk_linea_${item.value}">
-                            <label for="chk_linea_${item.value}" style="margin-bottom:0;">
-                                <strong class="nombre-linea">${item.label}</strong>
+                            <input class="form-check-input linea-checkbox" type="checkbox" value="${escapeHtml(item.value)}" id="chk_linea_${escapeHtml(item.value)}">
+                            <label for="chk_linea_${escapeHtml(item.value)}" style="margin-bottom:0;">
+                                <strong class="nombre-linea">${escapeHtml(item.label)}</strong>
                             </label>
                         </div>
                         <div>
-                            <button type="button" class="btn btn-sm btn-ptm-eliminar btn-eliminar-linea" data-bs-toggle="tooltip" title="Eliminar" data-id="${item.value}" data-nombre="${item.label}">
+                            <button type="button" class="btn btn-sm btn-ptm-eliminar btn-eliminar-linea" data-bs-toggle="tooltip" title="Eliminar" data-id="${escapeHtml(item.value)}" data-nombre="${escapeHtml(item.label)}">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -2812,7 +2897,7 @@ class EquipoManager {
             this.configurarEventosListarLineas(container);
 
         } catch (err) {
-            container.html(`<div class="text-danger">Error al cargar líneas: ${err}</div>`);
+            container.html(`<div class="text-danger">Error al cargar líneas: ${escapeHtml(err)}</div>`);
         }
         finally {
             $("#delAllLineasContainer").removeClass("d-none");
@@ -2907,10 +2992,10 @@ class EquipoManager {
         const nombre = $(e.currentTarget).data('nombre') || $(e.currentTarget).closest('tr').find('.nombre-linea').text() || '';
 
         ConfirmManager.mostrar({
-            titulo: `¿Eliminar línea ${nombre || id}?`,
+            titulo: `¿Eliminar línea ${escapeHtml(nombre || id)}?`,
             mensaje: `
                 <div style="text-align:left; font-size:0.95rem; line-height:1.6; color:#ffffff;">
-                    <div>Se eliminará la línea <strong>${nombre || id}</strong>. Esta operación será verificada por el servidor y puede fallar si hay dependencias.</div>
+                    <div>Se eliminará la línea <strong>${escapeHtml(nombre || id)}</strong>. Esta operación será verificada por el servidor y puede fallar si hay dependencias.</div>
                     <hr style="margin:10px 0;">
                     <div style="font-size:0.9rem;color:#fff7d6;">Importante: La eliminación es irreversible.</div>
                 </div>
@@ -2996,7 +3081,7 @@ class EquipoManager {
                 }
 
                 const badge = (status === 'SI' || status === 'OK' || status === 'SUCCESS') ? '<span class="text-success">✔</span>' : '<span class="text-danger">✖</span>';
-                tableHtml += `<tr><td>${id}</td><td>${badge} ${status}</td><td>${msg}</td></tr>`;
+                tableHtml += `<tr><td>${escapeHtml(id)}</td><td>${badge} ${escapeHtml(status)}</td><td>${escapeHtml(msg)}</td></tr>`;
             });
 
             tableHtml += '</tbody></table></div>';
@@ -3069,15 +3154,17 @@ class MantenimientoManager {
     abrirModalMP(e) {
         const id = $(e.currentTarget).data('id');
         const fila = $(`tr[data-id="${id}"]`);
+        const equipoData = fila.data('equipo-completo') || {};
+        const periodicidadData = fila.data('periodicidad') || {};
 
         $('#mpEquipoId').val(id);
-        $('#mpPlanta').val(fila.find('td:eq(0)').text());
-        $('#mpNombreEquipo').val(fila.find('td:eq(1)').text());
-        $('#mpDescripcion').val(fila.find('td:eq(2)').text());
-        $('#mpTipoEquipo').val(fila.find('td:eq(3)').text());
-        $('#mpLinea').val(fila.find('td:eq(4)').text());
-        $('#mpProceso').val(fila.find('td:eq(7)').text());
-        $('#mpPeriodicidad').val(fila.find('td:eq(8)').text());
+        $('#mpPlanta').val(equipoData.planta || '');
+        $('#mpNombreEquipo').val(equipoData.nombreEquipo || '');
+        $('#mpDescripcion').val(equipoData.descripcion || '');
+        $('#mpTipoEquipo').val(equipoData.tipoEquipo || '');
+        $('#mpLinea').val(equipoData.linea || '');
+        $('#mpProceso').val(equipoData.area || '');
+        $('#mpPeriodicidad').val(periodicidadData.tipo || '');
 
         const hoy = new Date();
         $('#mpFechaMantenimiento').val(hoy.toISOString().split('T')[0]);
@@ -3100,28 +3187,20 @@ class MantenimientoManager {
         AlertManager.mostrar(`Mantenimiento correctivo programado para ${nombreEquipo} el ${fechaMantenimiento}`, 'success');
 
         $('#programarMantenimientoModal').modal('hide');
-
-        // Actualizar fecha de próximo mantenimiento en la tabla
-        const fila = $(`tr[data-id="${equipoId}"]`);
-        const fechaFormateada = new Date(fechaMantenimiento).toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
-        fila.find('td:eq(6)').text(fechaFormateada);
     }
 
     abrirModalRutina(e) {
         const id = $(e.currentTarget).data('id');
         const fila = $(`tr[data-id="${id}"]`);
+        const equipoData = fila.data('equipo-completo') || {};
 
         // Guardar los datos del equipo
         this.EquipoAasignarRutina = id;
         // Limpia selección previa de periodicidad
         this.EquipoPeriodicidadSeleccionada = null;
         this.EquipoPeriodicidadSeleccionadaDescripcion = null;
-        $('#rutinaNombreEquipo').text(fila.find('td:eq(3)').text() + ' ' + fila.find('td:eq(6)').text());
-        $('#rutinaProceso').text(fila.find('td:eq(1)').text());
+        $('#rutinaNombreEquipo').text(equipoData.nombreEquipo || '');
+        $('#rutinaProceso').text(equipoData.area || '');
 
         // Limpiar variable global de imágenes
         window.imagenesRutina = [];
