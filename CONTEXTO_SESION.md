@@ -313,3 +313,66 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local (`http://localhost:54321`). **
 - IIS Express mostró un warning preexistente de `log4net` (`RollingFileAppender` no encontrado), ajeno a estos cambios.
 - **Pendiente de despliegue:** estos cambios están solo en código local; falta publicarlos a pruebas/producción y validarlos en la app publicada.
 - **Pendiente opcional (requiere SP):** paginación real en `SpPdxMTTOConsultaEquipos`, filtro `P_USUARIO` (hoy comentado) y revisión de límites de tamaño en servidor.
+
+---
+
+## 10. Sesión 09/11/2026 — Revisión y hardening de Mantenimientos Preventivos
+
+**Alcance:** revisión del módulo de Mantenimientos Preventivos y de `RutinasController` (usado por Preventivos para rutinas, evidencias y PDFs). El punto 1 de auth del lado del servidor sigue **sin cambios** por decisión del usuario.
+
+### 10.1 Hallazgos críticos corregidos (confirmados con pruebas)
+
+- **Borrado arbitrario en `GuardarRutinaBorrador`:** `imagenesEliminadas` se usaba directo en `Server.MapPath` + `File.Delete`; se confirmó borrando un archivo del app root. Ahora solo acepta rutas dentro de `~/EvidenciaRutinas` (contención canónica) y borra **después** de guardar correctamente.
+- **Escritura arbitraria / path traversal en `GuardarRutina` y `GuardarRutinaBorrador`:** `Planta` y `OrdenTrabajo` se usaban sin sanitizar; se confirmó escribiendo un archivo en el app root con `Planta=".."`. Ahora se sanitizan, se valida la contención en `EvidenciaRutinas`, se usan nombres únicos y se validan extensión/MIME/tamaño (5 MB). La carpeta se crea solo cuando hay una imagen válida.
+- **Borrado arbitrario en `RutinasController.EliminarImagen`:** `nombreArchivo` se concatenaba sin sanitizar; se confirmó borrando un archivo del app root. Ahora se usa `Path.GetFileName` y se valida que el archivo esté dentro de `~/ImagenesRutinas/{planta}/Rutina_{id}`.
+- **XSS almacenado en plantillas de rutina:** `Rutinas/GuardarRutina` guardaba `ContenidoHTML` tal cual y `ObtenerRutinaCompleta`/`Default` lo devolvían crudo; el front lo inyecta con `.html()`. Se agregó `SanitizarHtmlRutina` (elimina scripts, iframes, objects, embeds, forms, base/link/meta/svg/math, `on*`, `javascript:`/`vbscript:`/`data:text/html`) y se aplica al guardar y al leer. `Views/web.config` bloquea el acceso directo a `.cshtml`, así que el riesgo era XSS almacenado, no RCE directo.
+- **Uploads sin validación:** `GuardarRutina` aceptaba cualquier extensión. Ahora solo imágenes JPG/JPEG/PNG/GIF/WEBP/BMP con MIME y tamaño; `GuardarImagenes` y `GuardarPdfRutina` también validan tamaño/MIME.
+
+### 10.2 Firmas (sin romper el flujo de borrador)
+
+- OT **definitiva**: se exige la firma del rol, igual que el front: TecnicoMtto → Realizó, SupervisorProduccion → Supervisó, AdminMtto/Administrador → Mantenimiento.
+- OT **borrador** (`TipoOperacion = "BORRADOR"`): **no exige firma**, conservando la lógica actual.
+- `GuardarFirmaDigital` ahora escribe de forma atómica (no borra la firma anterior antes de escribir) y sanitiza el nombre de la carpeta de la orden.
+
+### 10.3 Manejo de errores y limpieza
+
+- `EsErrorHana` (case-insensitive) en los endpoints de Preventivos.
+- `InsertarMP`: `try/catch` por equipo; un equipo inválido no tumba el lote completo.
+- `InsertarSolicitudRefaccion`: solo actualiza el estatus si al menos un artículo se insertó; reporta si la actualización de estatus falla.
+- `GuardarRutina`: si la validación posterior de finalización falla, la rutina ya guardada se reporta como éxito con advertencia.
+- `ObtenerPeriodicidadesEquipo`: manejo de error del SP y deserialización segura.
+- Evidencias nuevas se eliminan si el SP falla; las imágenes marcadas para borrar no se eliminan si el guardado falla.
+- JS: `guardarRutina` respeta `response.Status`; el borrador sigue siendo best-effort; los comentarios ya no se envían como `"undefined"`; `escapeHtml` en listado, detalles, confirmaciones y data-attributes.
+
+### 10.4 Pruebas realizadas
+
+Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026` ni `PTM_2022_FINAL`.
+
+| Prueba | Resultado |
+|---|---|
+| Borrado traversal en `GuardarRutinaBorrador` | Bloqueado; archivo intacto |
+| Borrado traversal en `Rutinas/EliminarImagen` | Bloqueado |
+| Escritura con `Planta`/`Orden` manipulados | No escribió en app root; usó carpeta segura |
+| Subida `.aspx` | Rechazada, sin carpeta |
+| Sanitización HTML (`<script>`, `onerror`) | Eliminados; HTML legítimo conservado |
+| OT definitiva sin firma | Rechazada con mensaje |
+| **OT borrador sin firma** | Guardada correctamente |
+| Borrado válido en `ImagenesRutinas` | Funciona |
+| Build Debug + `node --check` | OK |
+
+- Datos de prueba eliminados: rutina ID 7, OT `ZZ_DRAFT_TEST`, 0 actividades huérfanas, 0 archivos `__opencode*` y carpetas de prueba.
+
+### 10.5 Notas y pendientes
+
+- Auth del lado del servidor (#1) sigue pendiente por decisión del usuario.
+- No se envolvieron los flujos multi-paso en una sola transacción: se priorizó no perder el trabajo ya capturado (rutina, artículos, OT) y reportar advertencias. Si se requiere atomicidad estricta, se puede agregar.
+- El saneador HTML es una mitigación por lista negra; para endurecimiento adicional conviene una librería de sanitización/CSP.
+- `InsertarSolicitudRefaccion` y `SolicitarReprogramacion` funcionan por binding posicional de HANA (incluido el typo `p_ID_SOLIICTUD`); es frágil si cambia el orden de parámetros.
+- `GCAceptarReprogramacion` apunta a un SP que no existe (constante muerta); `AceptarReprogramacion` usa correctamente `GCSolicitarReprogramacion`.
+- Pendiente de despliegue: publicar a pruebas/producción y validar en la app publicada.
+
+### 10.6 Archivos modificados
+
+- `MantenimientosPTM/Controllers/MantenimientosPreventivosController.cs`
+- `MantenimientosPTM/Controllers/RutinasController.cs`
+- `MantenimientosPTM/Scripts/mantenimientos_preventivos_refactor.js`

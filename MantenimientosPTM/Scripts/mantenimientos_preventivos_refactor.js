@@ -1,4 +1,17 @@
 // ========================================
+// UTILIDADES
+// ========================================
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// ========================================
 // INICIALIZACIÓN
 // ========================================
 $(document).ready(function () {
@@ -1426,11 +1439,11 @@ class MantenimientoManager {
         this.guardarDatosDelBoton(btn);
 
         // Obtener info de la fila
-        const nombreEquipo = `${this.datosBotón.nombreEquipo} ${this.datosBotón.numeroDocPmCalidad}`;
-        const numeroOrden = this.datosBotón.numeroOrden || 'S/N';
-        const area = this.datosBotón.area || '';
-        const linea = this.datosBotón.lineaProduccion || '';
-        const periodo = this.datosBotón.periodicidadMantenimiento || '';
+        const nombreEquipo = `${escapeHtml(this.datosBotón.nombreEquipo)} ${escapeHtml(this.datosBotón.numeroDocPmCalidad)}`;
+        const numeroOrden = escapeHtml(this.datosBotón.numeroOrden || 'S/N');
+        const area = escapeHtml(this.datosBotón.area || '');
+        const linea = escapeHtml(this.datosBotón.lineaProduccion || '');
+        const periodo = escapeHtml(this.datosBotón.periodicidadMantenimiento || '');
 
         // Mostrar confirmación con opciones de Aceptar/Rechazar
         ReprogramacionConfirmManager.mostrar({
@@ -1908,14 +1921,14 @@ class MantenimientoManager {
                         render: (data, type, row) => {
                             const esNueva = row.DescEstatusOrden === 'Liberado';
                             const punto = esNueva ? `<span class="punto-pulso"></span>` : '';
-                            return `${punto}<span class="badge bg-primary badge-custom"><i class="bi bi-clipboard-data me-1"></i>${data || ''}</span>`;
+                            return `${punto}<span class="badge bg-primary badge-custom"><i class="bi bi-clipboard-data me-1"></i>${escapeHtml(data || '')}</span>`;
                         }
                     },
                     // ✅ Col 4: Equipo
                     {
                         data: null,
                         render: (data, type, row) => {
-                            let equipo = (row.NombreEquipo || 'N/A') + ' ' + (row.NumeroDocPmCalidad || '');
+                            let equipo = escapeHtml(row.NombreEquipo || 'N/A') + ' ' + escapeHtml(row.NumeroDocPmCalidad || '');
                             return `<i class="bi bi-gear-fill me-1 text-muted"></i>${equipo}`;
                         }
                     },
@@ -1923,14 +1936,14 @@ class MantenimientoManager {
                     {
                         data: "Area",
                         render: (data, type, row) => {
-                            return `<i class="bi bi-diagram-3 me-1 text-muted"></i>${data || 'N/A'}`;
+                            return `<i class="bi bi-diagram-3 me-1 text-muted"></i>${escapeHtml(data || 'N/A')}`;
                         }
                     },
                     // ✅ Col 6: Línea
                     {
                         data: "LineaProduccion",
                         render: (data, type, row) => {
-                            return `<i class="bi bi-arrow-repeat me-1 text-muted"></i>${data || 'N/A'}`;
+                            return `<i class="bi bi-arrow-repeat me-1 text-muted"></i>${escapeHtml(data || 'N/A')}`;
                         }
                     },
                     // ✅ Col 7: Estatus Orden
@@ -1977,7 +1990,7 @@ class MantenimientoManager {
                             }
 
                             return `<span class="badge ${badgeClass} badge-custom">
-                            ${badgeIcon}${status}
+                            ${badgeIcon}${escapeHtml(status)}
                         </span>`;
                         }
                     },
@@ -1986,7 +1999,7 @@ class MantenimientoManager {
                         data: "FechaReferencia",
                         className: "text-center",
                         render: (data, type, row) => {
-                            return `<i class="bi bi-calendar-event me-1 text-muted"></i>${data || 'N/A'}`;
+                            return `<i class="bi bi-calendar-event me-1 text-muted"></i>${escapeHtml(data || 'N/A')}`;
                         }
                     },
                     // ✅ Col 9: Mantenimiento Programado (Mes Mantenimiento)
@@ -2010,8 +2023,8 @@ class MantenimientoManager {
                             const tieneFechaRealFin = row.FechaRealFin !== null && row.FechaRealFin !== undefined && row.FechaRealFin !== '';
 
                             if (tieneFechaRealInicio && tieneFechaRealFin) {
-                                const inicio = row.FechaRealInicio.substring(0, 10);
-                                const fin = row.FechaRealFin.substring(0, 10);
+                                const inicio = escapeHtml(row.FechaRealInicio.substring(0, 10));
+                                const fin = escapeHtml(row.FechaRealFin.substring(0, 10));
                                 return `Del <span class="badge btn-ptm-light badge-custom"><i class="bi bi-calendar3 me-1"></i>${inicio} </span> Al
                                         <span class="badge btn-ptm-light badge-custom"><i class="bi bi-calendar3 me-1"></i>${fin}</span>`;
                             }
@@ -2022,7 +2035,7 @@ class MantenimientoManager {
                                         </span>`;
                             }
 
-                            return data.replace(
+                            return escapeHtml(data).replace(
                                 /(\d{2}\/\d{2}\/\d{4})/g,
                                 '<span class="badge btn-ptm-light badge-custom"><i class="bi bi-calendar3 me-1"></i>$1</span>'
                             );
@@ -2033,12 +2046,12 @@ class MantenimientoManager {
                         data: null,
                         render: (data, type, row) => {
                             return `<i class="bi bi-calendar-week me-1 text-muted"></i>
-                        ${DateUtils.formatearPeriodicidad(
+                        ${escapeHtml(DateUtils.formatearPeriodicidad(
                                 row.PeriodicidadMantenimiento,
                                 row.DiaInicioMant,
                                 row.DiaFinMant,
                                 row.FechaInicioMantenimiento
-                            )}`;
+                            ))}`;
                         }
                     },
                     // ✅ Col 11: Hora Apertura
@@ -2046,7 +2059,7 @@ class MantenimientoManager {
                         data: "HoraApertura",
                         className: "text-center",
                         render: (data, type, row) => {
-                            return `<i class="bi bi-clock me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-clock me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
                     // ✅ Col 12: Hora Cierre
@@ -2054,7 +2067,7 @@ class MantenimientoManager {
                         data: "HoraCierre",
                         className: "text-center",
                         render: (data, type, row) => {
-                            return `<i class="bi bi-clock-history me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-clock-history me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
                     // ✅ Col 13: Tiempo Invertido (Hrs)
@@ -2063,14 +2076,14 @@ class MantenimientoManager {
                         className: "text-center",
                         render: (data, type, row) => {
                             return `<i class="bi bi-stopwatch me-1 text-muted"></i>
-                        ${data ? `${data} HRS` : ''}`;
+                        ${data ? `${escapeHtml(data)} HRS` : ''}`;
                         }
                     },
                     // ✅ Col 14: Usuario Generó
                     {
                         data: "UsuarioGenero",
                         render: (data, type, row) => {
-                            let user = data || '';
+                            let user = escapeHtml(data || '');
                             return `<span class="badge btn-ptm-mid badge-custom">
                                 <i class="bi bi-person-circle me-1"></i>${user}
                             </span>`;
@@ -2092,7 +2105,7 @@ class MantenimientoManager {
                         data: "DescripcionEquipo",
                         className: "text-center",
                         render: (data, type, row) => {
-                            return `<i class="bi bi-card-text me-1 text-muted"></i>${data || ''}`;
+                            return `<i class="bi bi-card-text me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
                     // ✅ Col 17: Comentarios
@@ -2385,7 +2398,7 @@ class MantenimientoManager {
 
         return Object.entries(map)
             .map(([key, value]) =>
-                `data-${key}="${(value ?? '').toString().replace(/"/g, '&quot;')}"`
+                `data-${key}="${escapeHtml(value ?? '')}"`
             )
             .join(' ');
     }
@@ -4441,7 +4454,7 @@ class MantenimientoManager {
             }
 
             const respuestas = this.obtenerRespuestasRutina();
-            const comentarios = $('#ComentariosRutina').val() || $('#Comentarios').val();
+            const comentarios = ($('#ComentariosRutina').val() || $('#Comentarios').val() || '').toString();
 
             // Validar que todas las actividades estén respondidas
             const sinResponder = respuestas.filter(r => r.estado === null);
@@ -4482,18 +4495,29 @@ class MantenimientoManager {
                     $("#btnGuardarRutina").prop("disabled", true);
                 },
                 success: function (response) {
-                    $("#btnGuardarRutina").html('<i class="bi bi-check-circle-fill me-2 text-success"></i>Rutina guardada correctamente.');
-                    $("#btnGuardarRutina").prop("disabled", false);
+                    if (response && response.Status === 'SI') {
+                        $("#btnGuardarRutina").html('<i class="bi bi-check-circle-fill me-2 text-success"></i>Rutina guardada correctamente.');
+                        $("#btnGuardarRutina").prop("disabled", false);
 
-                    // 🔥 RECARGAR LA TABLA DATATABLE
-                    /*$('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);*/
+                        // 🔥 RECARGAR LA TABLA DATATABLE
+                        /*$('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);*/
 
-                    setTimeout(function () {
+                        setTimeout(function () {
+                            $("#btnGuardarRutina").html('<i class="bi bi-check2-circle me-1"></i>Guardar Rutina');
+                            $('#modalRutinaOnline').modal('hide');
+                        }, 3000);
+
+                        resolve(true); // ✅ TODO SALIÓ BIEN
+                    } else {
+                        AlertManager.mostrar(
+                            (response && response.Message) || 'No se pudo guardar la rutina',
+                            'warning',
+                            'alertOrdenContainer'
+                        );
                         $("#btnGuardarRutina").html('<i class="bi bi-check2-circle me-1"></i>Guardar Rutina');
-                        $('#modalRutinaOnline').modal('hide');
-                    }, 3000);
-
-                    resolve(true); // ✅ TODO SALIÓ BIEN
+                        $("#btnGuardarRutina").prop("disabled", false);
+                        resolve(false);
+                    }
                 },
                 error: function (xhr, status, error) {
                     AlertManager.mostrar('No se pudo guardar la rutina: ' + error, 'warning');
@@ -4526,7 +4550,7 @@ class MantenimientoManager {
             }
 
             const respuestas = this.obtenerRespuestasRutina();
-            const comentarios = $('#ComentariosRutina').val() || $('#Comentarios').val();
+            const comentarios = ($('#ComentariosRutina').val() || $('#Comentarios').val() || '').toString();
 
             // 🔥 VALIDACIÓN RELAJADA: Al menos UNA actividad debe estar respondida
             const conRespuesta = respuestas.filter(r => r.estado !== null);
@@ -4577,6 +4601,14 @@ class MantenimientoManager {
                     // No mostramos loading aquí porque se guarda en background
                 },
                 success: function (response) {
+                    if (!response || response.Status !== 'SI') {
+                        AlertManager.mostrar(
+                            (response && response.Message) || 'No se pudo guardar el borrador de la rutina',
+                            'warning',
+                            'alertOrdenContainer'
+                        );
+                    }
+                    // El borrador es best-effort: no bloqueamos el flujo si falla.
                     resolve(true);
                 },
                 error: function (xhr, status, error) {

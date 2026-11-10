@@ -150,6 +150,37 @@
      gestion_equipos_refactor.js, CONTEXTO_SESION.md.
 
 
+11) MANTENIMIENTOS PREVENTIVOS - HARDENING (09/11/2026)
+   - Revision del modulo y de RutinasController. Auth del lado del servidor
+     sigue pendiente por decision del usuario.
+   - Corregido borrado arbitrario de archivos en GuardarRutinaBorrador y en
+     Rutinas/EliminarImagen (path traversal). Ahora solo se permite dentro de
+     EvidenciaRutinas / ImagenesRutinas.
+   - Corregida escritura arbitraria en GuardarRutina/Borrador: Planta y
+     OrdenTrabajo se sanitizan, se valida contencion, nombres unicos,
+     extension/MIME/tamano (5 MB) y limpieza de archivos nuevos si falla el SP.
+   - Uploads: GuardarRutina solo imagenes; GuardarImagenes y GuardarPdfRutina
+     validan tamano/MIME.
+   - XSS almacenado en plantillas: SanitizarHtmlRutina elimina scripts,
+     iframes, objects, embeds, forms, on*, javascript:, etc. al guardar y leer.
+   - Firmas: OT definitiva exige la firma del rol (TecnicoMtto=Realizo,
+     SupervisorProduccion=Superviso, Admin=Mantenimiento); BORRADOR no exige
+     firma. GuardarFirmaDigital ahora escribe de forma atomica.
+   - Errores: EsErrorHana case-insensitive; InsertarMP con try/catch por equipo;
+     SolicitudRefaccion solo actualiza estatus si inserto al menos un articulo;
+     GuardarRutina reporta advertencia si falla la validacion de finalizacion.
+   - JS: guardarRutina revisa response.Status; borrador sigue best-effort;
+     comentarios ya no se guardan como "undefined"; escapeHtml en listado,
+     detalles, confirmaciones y data-attributes.
+   - Pruebas: HANA Cloud DBADMIN + IIS Express; traversal de borrado/escritura
+     bloqueado, .aspx rechazado, sanitizacion HTML OK, OT definitiva sin firma
+     rechazada, OT borrador sin firma OK, borrado valido OK. Sin datos residuales.
+   - Pendiente: publicar a pruebas/produccion. No se usaron transacciones en
+     flujos multi-paso para no perder trabajo ya capturado.
+   - Archivos: MantenimientosPreventivosController.cs, RutinasController.cs,
+     mantenimientos_preventivos_refactor.js, CONTEXTO_SESION.md.
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================

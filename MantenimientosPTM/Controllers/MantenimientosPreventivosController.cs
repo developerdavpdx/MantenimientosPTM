@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Web;
 using System.Web.Mvc;
 
 namespace MantenimientosPTM.Controllers
@@ -18,6 +19,122 @@ namespace MantenimientosPTM.Controllers
     public class MantenimientosPreventivosController : Controller
     {
         readonly LogicaMantenimientosPreventivos Logic = new LogicaMantenimientosPreventivos();
+
+        private const int MaxEvidenciaSize = 5 * 1024 * 1024; // 5 MB
+        private static readonly string[] ExtensionesImagen = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp" };
+        private static readonly string[] MimesImagen = { "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp" };
+
+        #region Helpers
+
+        /// <summary>
+        /// Detecta errores devueltos por los SPs sin depender de mayúsculas/minúsculas.
+        /// </summary>
+        private static bool EsErrorHana(string jsonResult)
+        {
+            return !string.IsNullOrEmpty(jsonResult) &&
+                   jsonResult.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        /// <summary>
+        /// Limpia un valor para usarlo como segmento de ruta (planta, orden, carpeta).
+        /// Evita path traversal y caracteres inválidos.
+        /// </summary>
+        private static string SanitizarSegmentoRuta(string valor, string fallback)
+        {
+            if (string.IsNullOrWhiteSpace(valor))
+                return fallback;
+
+            var sb = new StringBuilder();
+            foreach (char c in valor.Trim())
+            {
+                if (char.IsLetterOrDigit(c) || c == '-' || c == '_' || c == '.')
+                    sb.Append(c);
+                else
+                    sb.Append('_');
+            }
+
+            string limpio = sb.ToString().Replace("..", "_").Trim('.', '_', '-');
+            if (string.IsNullOrWhiteSpace(limpio))
+                return fallback;
+
+            return limpio.Length > 50 ? limpio.Substring(0, 50) : limpio;
+        }
+
+        /// <summary>
+        /// Devuelve la carpeta física de evidencia validando que quede dentro de ~/EvidenciaRutinas.
+        /// </summary>
+        private string ObtenerCarpetaEvidencia(string planta, string orden)
+        {
+            string baseEvidencia = Path.GetFullPath(Server.MapPath("~/EvidenciaRutinas"));
+            string plantaSegura = SanitizarSegmentoRuta(planta, "SIN_PLANTA");
+            string ordenSegura = SanitizarSegmentoRuta(orden, "SIN_ORDEN");
+            string carpeta = Path.GetFullPath(Path.Combine(baseEvidencia, plantaSegura, ordenSegura));
+
+            if (!carpeta.StartsWith(baseEvidencia + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                throw new Exception("La ruta de evidencia no es válida.");
+
+            return carpeta;
+        }
+
+        /// <summary>
+        /// Valida que una URL de evidencia apunte a un archivo dentro de ~/EvidenciaRutinas.
+        /// </summary>
+        private bool EsRutaEvidenciaValida(string url, out string rutaFisica)
+        {
+            rutaFisica = null;
+
+            if (string.IsNullOrWhiteSpace(url))
+                return false;
+
+            string normalizada = url.Replace("\\", "/");
+            if (!normalizada.StartsWith("/EvidenciaRutinas/", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            try
+            {
+                string baseEvidencia = Path.GetFullPath(Server.MapPath("~/EvidenciaRutinas"));
+                string candidata = Path.GetFullPath(Server.MapPath("~" + normalizada));
+
+                if (!candidata.StartsWith(baseEvidencia + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                rutaFisica = candidata;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static void EliminarArchivosFisicos(IEnumerable<string> rutasFisicas)
+        {
+            if (rutasFisicas == null) return;
+
+            foreach (var ruta in rutasFisicas)
+            {
+                try
+                {
+                    if (!string.IsNullOrEmpty(ruta) && System.IO.File.Exists(ruta))
+                        System.IO.File.Delete(ruta);
+                }
+                catch
+                {
+                    // No interrumpir el flujo por un archivo que no se pudo borrar.
+                }
+            }
+        }
+
+        private static bool EsImagenValida(HttpPostedFileBase archivo, out string extension)
+        {
+            extension = Path.GetExtension(archivo.FileName ?? string.Empty).ToLower();
+            if (!ExtensionesImagen.Contains(extension)) return false;
+            if (!MimesImagen.Contains((archivo.ContentType ?? string.Empty).ToLower())) return false;
+            if (archivo.ContentLength > MaxEvidenciaSize) return false;
+            return true;
+        }
+
+        #endregion
 
         #region Views
         public ActionResult MantenimientoPreventivo()
@@ -249,45 +366,52 @@ namespace MantenimientosPTM.Controllers
                 // Ahora sí puedes iterar sobre los equipos
                 foreach (var equipo in Equipos)
                 {
-
-                    // ✅ Convertir fechas de string a DateTime
-                    DateTime fechaInicio = DateTime.ParseExact(
-                        equipo.FechaInicioMantenimiento,
-                        "dd/MM/yyyy",
-                        CultureInfo.InvariantCulture
-                    );
-
-                    DateTime fechaFin = DateTime.ParseExact(
-                        equipo.FechaFinMantenimiento,
-                        "dd/MM/yyyy",
-                        CultureInfo.InvariantCulture
-                    );
-                    // Crear objeto con las fechas convertidas
-                    var parametrosEquipo = new
+                    try
                     {
-                        p_ID_EQUIPO = int.Parse(equipo.IdEquipo),
-                        p_ID_PERIODICIDAD = int.Parse(equipo.IdPeriodicidad),
-                        p_FECHA_INICIO_PERIODO = fechaInicio,
-                        p_FECHA_FIN_PERIODO = fechaFin,
-                        p_USUARIO = equipo.Usuario
-                    };
+                        // ✅ Convertir fechas de string a DateTime
+                        DateTime fechaInicio = DateTime.ParseExact(
+                            equipo.FechaInicioMantenimiento,
+                            "dd/MM/yyyy",
+                            CultureInfo.InvariantCulture
+                        );
 
-                    // Convertir a parámetros HANA usando tu método existente
-                    var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosEquipo, false, null);
+                        DateTime fechaFin = DateTime.ParseExact(
+                            equipo.FechaFinMantenimiento,
+                            "dd/MM/yyyy",
+                            CultureInfo.InvariantCulture
+                        );
+                        // Crear objeto con las fechas convertidas
+                        var parametrosEquipo = new
+                        {
+                            p_ID_EQUIPO = int.Parse(equipo.IdEquipo),
+                            p_ID_PERIODICIDAD = int.Parse(equipo.IdPeriodicidad),
+                            p_FECHA_INICIO_PERIODO = fechaInicio,
+                            p_FECHA_FIN_PERIODO = fechaFin,
+                            p_USUARIO = equipo.Usuario
+                        };
 
-                    // Ejecutar stored procedure para insertar equipo
-                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertarMP, allparameters);
+                        // Convertir a parámetros HANA usando tu método existente
+                        var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosEquipo, false, null);
 
-                    // Obtener ID generado si existe
-                    OT = resultHana.JsonResult;
+                        // Ejecutar stored procedure para insertar equipo
+                        var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertarMP, allparameters);
 
-                    if (OT.Contains("ERROR"))
-                    {
-                        OTsinGenerar.AppendLine($"Equipo {equipo.IdEquipo} - {equipo.NombreEquipo}");
+                        // Obtener ID generado si existe
+                        OT = resultHana.JsonResult;
+
+                        if (EsErrorHana(OT))
+                        {
+                            OTsinGenerar.AppendLine($"Equipo {equipo.IdEquipo} - {equipo.NombreEquipo}");
+                        }
+                        else
+                        {
+                            ordenesGeneradas++;
+                        }
                     }
-                    else
+                    catch (Exception exItem)
                     {
-                        ordenesGeneradas++;
+                        // Un equipo con datos inválidos no debe tumbar el lote completo.
+                        OTsinGenerar.AppendLine($"Equipo {equipo?.IdEquipo} - {equipo?.NombreEquipo}: {exItem.Message}");
                     }
                 }
 
@@ -382,6 +506,41 @@ namespace MantenimientosPTM.Controllers
                     jsonResponse.Data = string.Empty;
 
                     return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+
+                // 🔥 VALIDACIÓN DE FIRMA REQUERIDA (solo para OT definitivas; el borrador NO exige firma)
+                if (!esBorrador)
+                {
+                    string rolActual = (Request.Headers["X-Rol-Usuario"] ?? string.Empty).Trim();
+                    string firmaRequerida = null;
+
+                    if (string.Equals(rolActual, "TecnicoMtto", StringComparison.OrdinalIgnoreCase))
+                        firmaRequerida = "Realizo";
+                    else if (string.Equals(rolActual, "SupervisorProduccion", StringComparison.OrdinalIgnoreCase))
+                        firmaRequerida = "Superviso";
+                    else if (string.Equals(rolActual, "AdminMtto", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(rolActual, "Administrador", StringComparison.OrdinalIgnoreCase))
+                        firmaRequerida = "Mantenimiento";
+
+                    bool tieneRealizo = datos.FirmaRealizo == "SI";
+                    bool tieneSuperviso = datos.FirmaSuperviso == "SI";
+                    bool tieneMantenimiento = datos.FirmaMantenimiento == "SI";
+
+                    string faltante = null;
+                    if (firmaRequerida == "Realizo" && !tieneRealizo) faltante = "Realizó";
+                    else if (firmaRequerida == "Superviso" && !tieneSuperviso) faltante = "Supervisó";
+                    else if (firmaRequerida == "Mantenimiento" && !tieneMantenimiento) faltante = "Mantenimiento";
+
+                    if (faltante != null)
+                    {
+                        jsonResponse.Status = "NO";
+                        jsonResponse.Message = $"Falta la firma de {faltante}. Capture la firma antes de guardar la orden de trabajo.";
+                        jsonResponse.Data = string.Empty;
+                        return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                    }
+
+                    // Para roles no mapeados se conserva el comportamiento actual (no se exige firma aquí;
+                    // el front ya controla qué firma corresponde a cada rol).
                 }
 
                 string[] excludedParams = null;
@@ -494,7 +653,7 @@ namespace MantenimientosPTM.Controllers
                 byte[] imageBytes = Convert.FromBase64String(base64Clean);
 
                 // Limpiar el número de orden para usarlo como nombre de carpeta
-                string ordenLimpia = numeroOrden.Replace("/", "_").Replace("\\", "_").Replace(":", "_");
+                string ordenLimpia = SanitizarSegmentoRuta(numeroOrden, "SIN_ORDEN");
 
                 // Crear nombre del archivo con fecha
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -514,14 +673,14 @@ namespace MantenimientosPTM.Controllers
                 // Ruta completa del archivo
                 string rutaCompleta = Path.Combine(carpetaOrden, nombreArchivo);
 
-                if (System.IO.File.Exists(rutaCompleta))
-                    System.IO.File.Delete(rutaCompleta);
+                // Escribir de forma atómica para no perder la firma anterior si algo falla
+                string rutaTemporal = rutaCompleta + ".tmp";
+                System.IO.File.WriteAllBytes(rutaTemporal, imageBytes);
 
-                if (!System.IO.File.Exists(rutaCompleta))
-                {
-                    // 🔥 GUARDAR EL ARCHIVO (Esta es la línea correcta)
-                    System.IO.File.WriteAllBytes(rutaCompleta, imageBytes);
-                }
+                if (System.IO.File.Exists(rutaCompleta))
+                    System.IO.File.Replace(rutaTemporal, rutaCompleta, null);
+                else
+                    System.IO.File.Move(rutaTemporal, rutaCompleta);
 
                 // Retornar ruta relativa para guardar en BD
                 string rutaRelativa = $"/FirmasOTPreventivo/{ordenLimpia}/{nombreArchivo}";
@@ -592,7 +751,7 @@ namespace MantenimientosPTM.Controllers
                     var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertarSolicitudRefaccion, parameters);
 
                     var nuevoId = resultHana.JsonResult;
-                    if (!nuevoId.Contains("ERROR"))
+                    if (!EsErrorHana(nuevoId))
                     {
                         insertados++;
                     }
@@ -602,17 +761,25 @@ namespace MantenimientosPTM.Controllers
                     }
                 }
 
-                 //✅ Actualizar estatus del mantenimiento(solo una vez) //SE QUITO DE ESTA VERSION YA QUE PUEDEN SOLICITAR MULTIPLES REFACCIONES SIN TEMA
-                var parametrosOT = new
+                // ✅ Actualizar estatus del mantenimiento SOLO si al menos un artículo se insertó.
+                // (Antes se actualizaba incluso cuando todos fallaban y no se revisaba el resultado.)
+                string advertenciaEstatus = string.Empty;
+                if (insertados > 0)
                 {
-                    P_ID_MANTENIMIENTO = RequestData.IdMantenimiento,
-                    ORDENTRABAJO = (string)null,
-                    P_ESTATUS = RequestData.Estatus,
-                    P_USUARIOACTUALIZA = RequestData.UsuarioSolicita
-                };
+                    var parametrosOT = new
+                    {
+                        P_ID_MANTENIMIENTO = RequestData.IdMantenimiento,
+                        ORDENTRABAJO = (string)null,
+                        P_ESTATUS = RequestData.Estatus,
+                        P_USUARIOACTUALIZA = RequestData.UsuarioSolicita
+                    };
 
-                var allparametersOT = Logic.GlobalCommands.ConvertToHanaParameters(parametrosOT, false, null);
-                var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparametersOT);
+                    var allparametersOT = Logic.GlobalCommands.ConvertToHanaParameters(parametrosOT, false, null);
+                    var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparametersOT);
+
+                    if (EsErrorHana(ActualizaOT.JsonResult))
+                        advertenciaEstatus = " No se pudo actualizar el estatus del mantenimiento.";
+                }
 
                 // Construir respuesta
                 if (errores.Count > 0 && insertados == 0)
@@ -624,13 +791,13 @@ namespace MantenimientosPTM.Controllers
                 else if (errores.Count > 0)
                 {
                     jsonResponse.Status = "PARCIAL";
-                    jsonResponse.Message = $"{insertados} artículo(s) insertado(s), {errores.Count} con error.";
+                    jsonResponse.Message = $"{insertados} artículo(s) insertado(s), {errores.Count} con error." + advertenciaEstatus;
                     jsonResponse.Data = string.Join(" | ", errores);
                 }
                 else
                 {
                     jsonResponse.Status = "SI";
-                    jsonResponse.Message = $"Solicitud(es) de refacción insertada(s) correctamente. ({insertados} artículo(s))";
+                    jsonResponse.Message = $"Solicitud(es) de refacción insertada(s) correctamente. ({insertados} artículo(s))" + advertenciaEstatus;
                     jsonResponse.Data = "";
 
                     //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
@@ -760,12 +927,15 @@ namespace MantenimientosPTM.Controllers
         public JsonResult GuardarRutina()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            var rutasFisicasNuevas = new List<string>();
+            bool rutinaGuardada = false;
+
             try
             {
                 // Obtener datos básicos
                 var idMantenimiento = Request.Form["idMantenimiento"];
                 var idEquipo = Request.Form["idEquipo"];
-                var comentarios = Request.Form["comentarios"];
+                var comentarios = Request.Form["comentarios"] ?? string.Empty;
                 var usuarioRegistro = Request.Form["usuarioRegistro"]; // Asegúrate de enviarlo desde el front
                 var IdOtDetalle = Request.Form["OrdenTrabajo"]; // Asegúrate de enviarlo desde el front
                 var Planta = Request.Form["Planta"]; // Asegúrate de enviarlo desde el front
@@ -777,30 +947,40 @@ namespace MantenimientosPTM.Controllers
                     throw new Exception("Faltan datos obligatorios (idMantenimiento o actividades).");
                 }
 
+                if (string.IsNullOrWhiteSpace(Planta) || string.IsNullOrWhiteSpace(IdOtDetalle))
+                {
+                    throw new Exception("Faltan datos de planta u orden de trabajo.");
+                }
+
                 // 🔥 OBTENER Y GUARDAR LAS IMÁGENES (solo en servidor, no en BD)
                 var imagenes = Request.Files;
                 List<string> rutasImagenes = new List<string>();
+                string plantaSegura = SanitizarSegmentoRuta(Planta, "SIN_PLANTA");
+                string ordenSegura = SanitizarSegmentoRuta(IdOtDetalle, "SIN_ORDEN");
 
                 if (imagenes.Count > 0)
                 {
-                    // Crear carpeta si no existe
-                    string carpetaDestino = Server.MapPath($"~/EvidenciaRutinas/{Planta}/{IdOtDetalle}");
-                    if (!Directory.Exists(carpetaDestino))
-                    {
-                        Directory.CreateDirectory(carpetaDestino);
-                    }
-
                     // Guardar cada imagen
                     for (int i = 0; i < imagenes.Count; i++)
                     {
                         var archivo = imagenes[i];
-                        if (archivo != null && archivo.ContentLength > 0)
-                        {
-                            string nombreArchivo = $"{Path.GetFileName(archivo.FileName)}";
-                            string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
-                            archivo.SaveAs(rutaCompleta);
-                            rutasImagenes.Add($"/EvidenciaRutinas/{Planta}/{IdOtDetalle}/{nombreArchivo}");
-                        }
+                        if (archivo == null || archivo.ContentLength <= 0) continue;
+
+                        if (!EsImagenValida(archivo, out string extension))
+                            throw new Exception("Solo se permiten imágenes JPG, JPEG, PNG, GIF, WEBP o BMP de máximo 5 MB.");
+
+                        // La carpeta se resuelve y valida dentro de ~/EvidenciaRutinas
+                        string carpetaDestino = ObtenerCarpetaEvidencia(Planta, IdOtDetalle);
+                        if (!Directory.Exists(carpetaDestino))
+                            Directory.CreateDirectory(carpetaDestino);
+
+                        string nombreBase = SanitizarSegmentoRuta(Path.GetFileNameWithoutExtension(archivo.FileName), "evidencia");
+                        string nombreArchivo = $"{DateTime.Now:yyyyMMddHHmmss}_{i}_{nombreBase}{extension}";
+                        string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
+                        archivo.SaveAs(rutaCompleta);
+
+                        rutasFisicasNuevas.Add(rutaCompleta);
+                        rutasImagenes.Add($"/EvidenciaRutinas/{plantaSegura}/{ordenSegura}/{nombreArchivo}");
                     }
                 }
 
@@ -824,55 +1004,82 @@ namespace MantenimientosPTM.Controllers
                     allparameters
                 );
 
-                //Validar si ya se completo la CARATULA Y LA RUTINA ONLINE
-                var parametrosMantenimeinto = new
+                if (EsErrorHana(resultHana.JsonResult))
                 {
-                    P_ID_MANTENIMIENTO = idMantenimiento
-                };
-
-                allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosMantenimeinto, false, null);
-
-                // ✅ Ejecutar stored procedure
-                var CaratulaRutinaCompleta = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCValidarOTFinalizada,
-                    allparameters
-                );
-
-
-                //Si ya esta finalizada en conjunto con la rutina online actualizar estatus de mantenimiento
-                JArray CARRUT = JArray.Parse(CaratulaRutinaCompleta.JsonResult);
-                string OT = CARRUT[0]["ORDEN_TRABAJO_FINALIZADA"].ToString();
-                string RUTINA = CARRUT[0]["RUTINA_COMPLETADA"].ToString();
-
-                if (OT == "SI" && RUTINA == "SI")
-                {
-
-                    // Crear objeto con las fechas convertidas
-                    var parametrosFinOT = new
-                    {
-                        P_ID_MANTENIMIENTO = idMantenimiento,
-                        P_ESTATUS = 4,
-                        P_USUARIO_ACTUALIZA = usuarioRegistro
-                    };
-
-                    // Convertir a parámetros HANA usando tu método existente
-                    allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, false, null);
-                    //Actualizar estatus de OT
-                    var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparameters);
+                    EliminarArchivosFisicos(rutasFisicasNuevas);
+                    jsonResponse.Status = "NO";
+                    jsonResponse.Message = "No fue posible guardar la rutina.";
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse);
                 }
 
+                rutinaGuardada = true;
+
+                // Validar si ya se completó la CARÁTULA Y LA RUTINA ONLINE.
+                // Si esta validación falla, la rutina ya quedó guardada: se devuelve éxito con advertencia.
+                string advertencia = string.Empty;
+                try
+                {
+                    var parametrosMantenimiento = new
+                    {
+                        P_ID_MANTENIMIENTO = idMantenimiento
+                    };
+
+                    var allparametersValidar = Logic.GlobalCommands.ConvertToHanaParameters(parametrosMantenimiento, false, null);
+
+                    var caratulaRutinaCompleta = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                        Logic.AD.GCValidarOTFinalizada,
+                        allparametersValidar
+                    );
+
+                    if (EsErrorHana(caratulaRutinaCompleta.JsonResult))
+                    {
+                        advertencia = " No se pudo validar si la OT quedó finalizada.";
+                    }
+                    else if (!string.IsNullOrEmpty(caratulaRutinaCompleta.JsonResult) && caratulaRutinaCompleta.JsonResult != "[]")
+                    {
+                        JArray carrut = JArray.Parse(caratulaRutinaCompleta.JsonResult);
+                        if (carrut.Count > 0)
+                        {
+                            string otFinalizada = carrut[0]["ORDEN_TRABAJO_FINALIZADA"]?.ToString();
+                            string rutinaCompletada = carrut[0]["RUTINA_COMPLETADA"]?.ToString();
+
+                            if (otFinalizada == "SI" && rutinaCompletada == "SI")
+                            {
+                                var parametrosFinOT = new
+                                {
+                                    P_ID_MANTENIMIENTO = idMantenimiento,
+                                    P_ESTATUS = 4,
+                                    P_USUARIO_ACTUALIZA = usuarioRegistro
+                                };
+
+                                var allparametersFin = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, false, null);
+                                var actualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMP, allparametersFin);
+
+                                if (EsErrorHana(actualizaOT.JsonResult))
+                                    advertencia = " No se pudo actualizar el estatus de la OT.";
+                            }
+                        }
+                    }
+                }
+                catch (Exception exValidacion)
+                {
+                    System.Diagnostics.Debug.WriteLine("No se pudo validar la finalización de la OT: " + exValidacion.Message);
+                    advertencia = " No se pudo validar si la OT quedó finalizada.";
+                }
 
                 // Construir respuesta JSON
-                jsonResponse.Status = resultHana.JsonResult.Contains("ERROR") ? "NO" : "SI";
-                jsonResponse.Message = resultHana.JsonResult.Contains("ERROR")
-                    ? "No fue posible guardar la rutina."
-                    : $"Rutina guardada correctamente. {rutasImagenes.Count} imagen(es) guardada(s).";
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = $"Rutina guardada correctamente. {rutasImagenes.Count} imagen(es) guardada(s)." + advertencia;
                 jsonResponse.Data = string.Empty;
 
                 return Json(jsonResponse);
             }
             catch (Exception ex)
             {
+                if (!rutinaGuardada)
+                    EliminarArchivosFisicos(rutasFisicasNuevas);
+
                 jsonResponse.Status = "ERROR";
                 jsonResponse.Message = "No fue posible guardar la rutina: " + ex.Message;
                 jsonResponse.Data = string.Empty;
@@ -885,12 +1092,16 @@ namespace MantenimientosPTM.Controllers
         public JsonResult GuardarRutinaBorrador()
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
+            var rutasFisicasNuevas = new List<string>();
+            var rutasEliminar = new List<string>();
+            bool rutinaGuardada = false;
+
             try
             {
                 // Obtener datos básicos
                 var idMantenimiento = Request.Form["idMantenimiento"];
                 var idEquipo = Request.Form["idEquipo"];
-                var comentarios = Request.Form["comentarios"];
+                var comentarios = Request.Form["comentarios"] ?? string.Empty;
                 var usuarioRegistro = Request.Form["usuarioRegistro"];
                 var IdOtDetalle = Request.Form["OrdenTrabajo"];
                 var Planta = Request.Form["Planta"];
@@ -904,34 +1115,35 @@ namespace MantenimientosPTM.Controllers
                     throw new Exception("Faltan datos obligatorios (idMantenimiento o actividades).");
                 }
 
-                // 🔥 PROCESAR IMÁGENES ELIMINADAS (borrar archivos físicos)
-                int imagenesEliminadasCount = 0;
+                if (string.IsNullOrWhiteSpace(Planta) || string.IsNullOrWhiteSpace(IdOtDetalle))
+                {
+                    throw new Exception("Faltan datos de planta u orden de trabajo.");
+                }
+
+                string plantaSegura = SanitizarSegmentoRuta(Planta, "SIN_PLANTA");
+                string ordenSegura = SanitizarSegmentoRuta(IdOtDetalle, "SIN_ORDEN");
+
+                // 🔥 VALIDAR IMÁGENES A ELIMINAR (no se borran hasta que el guardado sea exitoso)
                 if (!string.IsNullOrEmpty(imagenesEliminadasJson))
                 {
                     try
                     {
                         var imagenesEliminadas = JsonConvert.DeserializeObject<List<string>>(imagenesEliminadasJson);
-                        if (imagenesEliminadas != null && imagenesEliminadas.Count > 0)
+                        if (imagenesEliminadas != null)
                         {
                             foreach (var urlEliminada in imagenesEliminadas)
                             {
-                                // Convertir URL a ruta física
-                                // Ej: /EvidenciaRutinas/PLANTA/OT/imagen.jpg → C:\...\EvidenciaRutinas\PLANTA\OT\imagen.jpg
-                                string rutaFisica = Server.MapPath($"~{urlEliminada}");
-
-                                if (System.IO.File.Exists(rutaFisica))
-                                {
-                                    System.IO.File.Delete(rutaFisica);
-                                    imagenesEliminadasCount++;
-                                    System.Diagnostics.Debug.WriteLine($"✅ Imagen eliminada: {rutaFisica}");
-                                }
+                                if (EsRutaEvidenciaValida(urlEliminada, out string rutaFisica))
+                                    rutasEliminar.Add(rutaFisica);
+                                else
+                                    System.Diagnostics.Debug.WriteLine($"Ruta de evidencia rechazada: {urlEliminada}");
                             }
                         }
                     }
                     catch (Exception exDelete)
                     {
-                        // No fallar si hay error al eliminar - solo loguear
-                        System.Diagnostics.Debug.WriteLine($"⚠️ Error al eliminar imágenes: {exDelete.Message}");
+                        // No fallar si hay error al interpretar la lista - solo loguear
+                        System.Diagnostics.Debug.WriteLine($"⚠️ Error al interpretar imágenes eliminadas: {exDelete.Message}");
                     }
                 }
 
@@ -941,24 +1153,27 @@ namespace MantenimientosPTM.Controllers
 
                 if (imagenes.Count > 0)
                 {
-                    // Crear carpeta si no existe
-                    string carpetaDestino = Server.MapPath($"~/EvidenciaRutinas/{Planta}/{IdOtDetalle}");
-                    if (!Directory.Exists(carpetaDestino))
-                    {
-                        Directory.CreateDirectory(carpetaDestino);
-                    }
-
                     // Guardar cada imagen
                     for (int i = 0; i < imagenes.Count; i++)
                     {
                         var archivo = imagenes[i];
-                        if (archivo != null && archivo.ContentLength > 0)
-                        {
-                            string nombreArchivo = $"{Path.GetFileName(archivo.FileName)}";
-                            string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
-                            archivo.SaveAs(rutaCompleta);
-                            rutasImagenes.Add($"/EvidenciaRutinas/{Planta}/{IdOtDetalle}/{nombreArchivo}");
-                        }
+                        if (archivo == null || archivo.ContentLength <= 0) continue;
+
+                        if (!EsImagenValida(archivo, out string extension))
+                            throw new Exception("Solo se permiten imágenes JPG, JPEG, PNG, GIF, WEBP o BMP de máximo 5 MB.");
+
+                        // La carpeta se resuelve y valida dentro de ~/EvidenciaRutinas
+                        string carpetaDestino = ObtenerCarpetaEvidencia(Planta, IdOtDetalle);
+                        if (!Directory.Exists(carpetaDestino))
+                            Directory.CreateDirectory(carpetaDestino);
+
+                        string nombreBase = SanitizarSegmentoRuta(Path.GetFileNameWithoutExtension(archivo.FileName), "evidencia");
+                        string nombreArchivo = $"{DateTime.Now:yyyyMMddHHmmss}_{i}_{nombreBase}{extension}";
+                        string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
+                        archivo.SaveAs(rutaCompleta);
+
+                        rutasFisicasNuevas.Add(rutaCompleta);
+                        rutasImagenes.Add($"/EvidenciaRutinas/{plantaSegura}/{ordenSegura}/{nombreArchivo}");
                     }
                 }
 
@@ -976,23 +1191,53 @@ namespace MantenimientosPTM.Controllers
                 // Convertir a parámetros HANA
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosRutina, false, null);
 
-                // 🔥 EJECUTAR STORED PROCEDURE PARA BORRADOR (usamos el mismo SP existente)
+                // 🔥 EJECUTAR STORED PROCEDURE PARA BORRADOR (mismo SP existente)
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCGuardarRutinaMP, // 🔥 Mismo SP, el parámetro P_ES_BORRADOR lo maneja
+                    Logic.AD.GCGuardarRutinaMP,
                     allparameters
                 );
 
+                if (EsErrorHana(resultHana.JsonResult))
+                {
+                    EliminarArchivosFisicos(rutasFisicasNuevas);
+                    jsonResponse.Status = "NO";
+                    jsonResponse.Message = "No fue posible guardar el borrador de la rutina.";
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse);
+                }
+
+                rutinaGuardada = true;
+
+                // Solo después de guardar correctamente se eliminan las imágenes marcadas
+                int imagenesEliminadasCount = 0;
+                foreach (var rutaFisica in rutasEliminar)
+                {
+                    try
+                    {
+                        if (System.IO.File.Exists(rutaFisica))
+                        {
+                            System.IO.File.Delete(rutaFisica);
+                            imagenesEliminadasCount++;
+                        }
+                    }
+                    catch (Exception exDelete)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"⚠️ Error al eliminar imagen: {exDelete.Message}");
+                    }
+                }
+
                 // Construir respuesta JSON
-                jsonResponse.Status = resultHana.JsonResult.Contains("ERROR") ? "NO" : "SI";
-                jsonResponse.Message = resultHana.JsonResult.Contains("ERROR")
-                    ? "No fue posible guardar el borrador de la rutina."
-                    : $"Borrador de rutina guardado correctamente. {rutasImagenes.Count} imagen(es) nueva(s) guardada(s). {imagenesEliminadasCount} imagen(es) eliminada(s).";
+                jsonResponse.Status = "SI";
+                jsonResponse.Message = $"Borrador de rutina guardado correctamente. {rutasImagenes.Count} imagen(es) nueva(s) guardada(s). {imagenesEliminadasCount} imagen(es) eliminada(s).";
                 jsonResponse.Data = string.Empty;
 
                 return Json(jsonResponse);
             }
             catch (Exception ex)
             {
+                if (!rutinaGuardada)
+                    EliminarArchivosFisicos(rutasFisicasNuevas);
+
                 jsonResponse.Status = "ERROR";
                 jsonResponse.Message = "No fue posible guardar el borrador de la rutina: " + ex.Message;
                 jsonResponse.Data = string.Empty;

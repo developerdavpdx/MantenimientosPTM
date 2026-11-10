@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Web.Mvc;
 using Newtonsoft.Json;
 using System.Collections.Generic;
@@ -12,6 +13,89 @@ namespace MantenimientosPTM.Controllers
     public class RutinasController : Controller
     {
         readonly LogicaEquipos Logic = new LogicaEquipos();
+
+        private const int MaxUploadSize = 5 * 1024 * 1024; // 5 MB
+        private static readonly string[] ExtensionesImagen = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp" };
+        private static readonly string[] MimesImagen = { "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp" };
+
+        #region Helpers de seguridad
+
+        private static bool EsErrorHana(string jsonResult)
+        {
+            return !string.IsNullOrEmpty(jsonResult) &&
+                   jsonResult.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        /// <summary>
+        /// Limpia un valor para usarlo como segmento de ruta. Evita path traversal.
+        /// </summary>
+        private static string SanitizarSegmento(string valor, string fallback, int maxLen)
+        {
+            if (string.IsNullOrWhiteSpace(valor))
+                return fallback;
+
+            var chars = valor.Trim().Select(c =>
+                (char.IsLetterOrDigit(c) || c == '-' || c == '_' || c == '.') ? c : '_').ToArray();
+
+            string limpio = new string(chars).Replace("..", "_").Trim('.', '_', '-');
+            if (string.IsNullOrWhiteSpace(limpio))
+                return fallback;
+
+            return limpio.Length > maxLen ? limpio.Substring(0, maxLen) : limpio;
+        }
+
+        /// <summary>
+        /// Limpia el HTML de plantillas de rutina: elimina scripts, iframes, objetos,
+        /// formularios y manejadores de eventos, conservando el HTML/CSS/controles normales.
+        /// </summary>
+        private static string SanitizarHtmlRutina(string html)
+        {
+            if (string.IsNullOrEmpty(html))
+                return string.Empty;
+
+            string limpio = html;
+
+            // Etiquetas peligrosas (con contenido y autocerradas)
+            string[] etiquetas = { "script", "iframe", "object", "embed", "applet", "form", "base", "link", "meta", "svg", "math" };
+            foreach (var tag in etiquetas)
+            {
+                limpio = Regex.Replace(
+                    limpio,
+                    $@"<{tag}\b[^>]*>.*?</{tag}\s*>",
+                    string.Empty,
+                    RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+                limpio = Regex.Replace(
+                    limpio,
+                    $@"<{tag}\b[^>]*/?>",
+                    string.Empty,
+                    RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            }
+
+            // Manejadores de eventos (onclick, onload, onerror, etc.)
+            limpio = Regex.Replace(
+                limpio,
+                @"\s+on[a-zA-Z]+\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+)",
+                string.Empty,
+                RegexOptions.IgnoreCase);
+
+            // URLs ejecutables
+            limpio = Regex.Replace(limpio, @"(javascript|vbscript)\s*:", string.Empty, RegexOptions.IgnoreCase);
+            limpio = Regex.Replace(limpio, @"data\s*:\s*text/html", string.Empty, RegexOptions.IgnoreCase);
+
+            return limpio;
+        }
+
+        private static bool EsImagenValida(System.Web.HttpPostedFileBase archivo, out string extension)
+        {
+            extension = Path.GetExtension(archivo.FileName ?? string.Empty).ToLower();
+            if (!ExtensionesImagen.Contains(extension)) return false;
+            if (!MimesImagen.Contains((archivo.ContentType ?? string.Empty).ToLower())) return false;
+            if (archivo.ContentLength > MaxUploadSize) return false;
+            return true;
+        }
+
+        #endregion
 
         // GET: Rutinas/Default?idEquipo=123
         public ActionResult Default(int? idEquipo, string Planta)
@@ -27,13 +111,14 @@ namespace MantenimientosPTM.Controllers
                 return View("Default");
             }
 
-            string ruta = Server.MapPath($"~/Views/Rutinas/{Planta}/Rutina_{idEquipo}.cshtml");
+            string plantaSanitizada = SanitizarNombreDirectorio(Planta);
+            string ruta = Server.MapPath($"~/Views/Rutinas/{plantaSanitizada}/Rutina_{idEquipo}.cshtml");
 
             if (System.IO.File.Exists(ruta))
             {
                 string html = System.IO.File.ReadAllText(ruta);
                 html = html.Replace("@{\n    Layout = null;\n}\n\n\n\n\n<meta charset=\"utf-8\">\n\n", string.Empty);
-                return Content(html, "text/html");
+                return Content(SanitizarHtmlRutina(html), "text/html");
             }
 
             return Content("<div>No existe rutina</div>");
@@ -77,10 +162,11 @@ namespace MantenimientosPTM.Controllers
 
 
                 // Construir el contenido completo del archivo .cshtml
+                // Se limpia el HTML para evitar scripts/eventos almacenados (XSS).
                 string contenidoCompleto = $@"@{{
                     Layout = null;
                 }}
-                {modelo.ContenidoHTML}";
+                {SanitizarHtmlRutina(modelo.ContenidoHTML)}";
 
                 // ✅ VALIDACIÓN 5: Escribir el archivo con manejo de permisos
                 try
@@ -119,48 +205,12 @@ namespace MantenimientosPTM.Controllers
         // ============================================================
         private string SanitizarNombreDirectorio(string nombre)
         {
-            if (string.IsNullOrWhiteSpace(nombre))
-            {
-                return "Default";
-            }
-
-            // Eliminar caracteres no válidos para nombres de directorio
-            char[] caracteresNoValidos = Path.GetInvalidPathChars();
-            string nombreLimpio = new string(nombre.Where(c => !caracteresNoValidos.Contains(c)).ToArray());
-
-            // Eliminar "../" y "./" para evitar path traversal
-            nombreLimpio = nombreLimpio.Replace("../", "").Replace("./", "");
-
-            // Limitar longitud
-            if (nombreLimpio.Length > 50)
-            {
-                nombreLimpio = nombreLimpio.Substring(0, 50);
-            }
-
-            return nombreLimpio.Trim();
+            return SanitizarSegmento(nombre, "Default", 50);
         }
 
         private string SanitizarNombreArchivo(string nombre)
         {
-            if (string.IsNullOrWhiteSpace(nombre))
-            {
-                return "Default";
-            }
-
-            // Eliminar caracteres no válidos para nombres de archivo
-            char[] caracteresNoValidos = Path.GetInvalidFileNameChars();
-            string nombreLimpio = new string(nombre.Where(c => !caracteresNoValidos.Contains(c)).ToArray());
-
-            // Eliminar "../" y "./" para evitar path traversal
-            nombreLimpio = nombreLimpio.Replace("../", "").Replace("./", "");
-
-            // Limitar longitud
-            if (nombreLimpio.Length > 100)
-            {
-                nombreLimpio = nombreLimpio.Substring(0, 100);
-            }
-
-            return nombreLimpio.Trim();
+            return SanitizarSegmento(nombre, "Default", 100);
         }
 
         // ============================================================
@@ -173,7 +223,8 @@ namespace MantenimientosPTM.Controllers
             try
             {
                 string plantaSanitizada = SanitizarNombreDirectorio(Planta);
-                string rutaCarpeta = Server.MapPath($"~/EvidenciaRutinas/{Planta}/{NumeroOrden}");
+                string ordenSanitizado = SanitizarNombreArchivo(NumeroOrden);
+                string rutaCarpeta = Server.MapPath($"~/EvidenciaRutinas/{plantaSanitizada}/{ordenSanitizado}");
 
                 var imagenes = new System.Collections.Generic.List<string>();
 
@@ -186,7 +237,7 @@ namespace MantenimientosPTM.Controllers
                         if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" }.Contains(extension))
                         {
                             string nombreArchivo = Path.GetFileName(archivo);
-                            string url = $"/EvidenciaRutinas/{Planta}/{NumeroOrden}/{nombreArchivo}";
+                            string url = $"/EvidenciaRutinas/{plantaSanitizada}/{ordenSanitizado}/{nombreArchivo}";
                             imagenes.Add(url);
                         }
                     }
@@ -236,15 +287,19 @@ namespace MantenimientosPTM.Controllers
                         if (archivo != null && archivo.ContentLength > 0)
                         {
                             string extension = Path.GetExtension(archivo.FileName).ToLower();
-                            if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" }.Contains(extension))
-                            {
-                                string nombreArchivo = $"img_{DateTime.Now.Ticks}_{i}_{Path.GetFileName(archivo.FileName)}";
-                                string rutaCompleta = Path.Combine(rutaCarpeta, nombreArchivo);
-                                archivo.SaveAs(rutaCompleta);
 
-                                string url = $"/ImagenesRutinas/{plantaSanitizada}/Rutina_{idParaRutina}/{nombreArchivo}";
-                                imagenesGuardadas.Add(url);
-                            }
+                            // Validar extensión, tamaño y tipo MIME (si viene informado)
+                            if (!ExtensionesImagen.Contains(extension)) continue;
+                            if (archivo.ContentLength > MaxUploadSize) continue;
+                            if (!string.IsNullOrEmpty(archivo.ContentType) &&
+                                !archivo.ContentType.ToLower().StartsWith("image/")) continue;
+
+                            string nombreArchivo = $"img_{DateTime.Now.Ticks}_{i}_{Path.GetFileName(archivo.FileName)}";
+                            string rutaCompleta = Path.Combine(rutaCarpeta, nombreArchivo);
+                            archivo.SaveAs(rutaCompleta);
+
+                            string url = $"/ImagenesRutinas/{plantaSanitizada}/Rutina_{idParaRutina}/{nombreArchivo}";
+                            imagenesGuardadas.Add(url);
                         }
                     }
                 }
@@ -289,7 +344,21 @@ namespace MantenimientosPTM.Controllers
                 }
                 string plantaSanitizada = SanitizarNombreDirectorio(planta);
                 int idParaRutina = idEquipoPeriodicidad.HasValue && idEquipoPeriodicidad.Value > 0 ? idEquipoPeriodicidad.Value : idEquipo;
-                string rutaArchivo = Server.MapPath($"~/ImagenesRutinas/{plantaSanitizada}/Rutina_{idParaRutina}/{nombreArchivo}");
+
+                // Solo se permite borrar un archivo dentro de la carpeta de esa rutina
+                string nombreSeguro = Path.GetFileName(nombreArchivo ?? string.Empty);
+                if (string.IsNullOrWhiteSpace(nombreSeguro))
+                {
+                    return Json(new { Status = "ERROR", Message = "Nombre de archivo inválido" });
+                }
+
+                string baseCarpeta = Path.GetFullPath(Server.MapPath($"~/ImagenesRutinas/{plantaSanitizada}/Rutina_{idParaRutina}"));
+                string rutaArchivo = Path.GetFullPath(Path.Combine(baseCarpeta, nombreSeguro));
+
+                if (!rutaArchivo.StartsWith(baseCarpeta + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Json(new { Status = "ERROR", Message = "Ruta de archivo inválida" });
+                }
 
                 if (System.IO.File.Exists(rutaArchivo))
                 {
@@ -389,7 +458,7 @@ namespace MantenimientosPTM.Controllers
                 var responseObj = new
                 {
                     Status = "OK",
-                    Html = html,
+                    Html = SanitizarHtmlRutina(html),
                     Imagenes = imagenes,
                     Message = usedDefault ? "No se encontró rutina asignada para este equipo en la periodicidad seleccionada, se mostrará la plantilla por default" : string.Empty,
                     UsedDefault = usedDefault
@@ -424,12 +493,25 @@ namespace MantenimientosPTM.Controllers
                     parametrosConsulta
                 );
 
+                if (EsErrorHana(resultConsulta.JsonResult))
+                {
+                    return Json(new { Status = "ERROR", Message = "No fue posible consultar las periodicidades: " + resultConsulta.JsonResult }, JsonRequestBehavior.AllowGet);
+                }
+
                 List<AccesoDatosEquipos.PeriodicidadEquipoMTTO> periodicidades =
                     new List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>();
 
                 if (!string.IsNullOrEmpty(resultConsulta.JsonResult) && resultConsulta.JsonResult != "[]")
                 {
-                    periodicidades = JsonConvert.DeserializeObject<List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>>(resultConsulta.JsonResult);
+                    try
+                    {
+                        periodicidades = JsonConvert.DeserializeObject<List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>>(resultConsulta.JsonResult)
+                                          ?? new List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>();
+                    }
+                    catch
+                    {
+                        periodicidades = new List<AccesoDatosEquipos.PeriodicidadEquipoMTTO>();
+                    }
                 }
 
                 return Json(new { Status = "OK", Periodicidades = periodicidades }, JsonRequestBehavior.AllowGet);
@@ -500,6 +582,17 @@ namespace MantenimientosPTM.Controllers
                 if (extension != ".pdf")
                 {
                     return Json(new { Status = "ERROR", Message = "Solo se permiten archivos PDF" });
+                }
+
+                if (archivo.ContentLength > MaxUploadSize)
+                {
+                    return Json(new { Status = "ERROR", Message = "El PDF no debe superar los 5 MB" });
+                }
+
+                string tipoMime = (archivo.ContentType ?? string.Empty).ToLower();
+                if (!string.IsNullOrEmpty(tipoMime) && tipoMime != "application/pdf" && tipoMime != "application/octet-stream")
+                {
+                    return Json(new { Status = "ERROR", Message = "El archivo no es un PDF válido" });
                 }
 
                 string idEquipoStr = Request.Form["idEquipo"];
