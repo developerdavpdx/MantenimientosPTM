@@ -203,6 +203,25 @@
      CalendarioMantenimientos.cshtml, CONTEXTO_SESION.md.
 
 
+13) BAJA DE EQUIPOS - BORRADOR FLEXIBLE (09/11/2026)
+   - Corregido el error "cannot insert NULL ... SpPdxMTTOInsertaSolicitudBaja"
+     al guardar borrador sin motivo de baja.
+   - Causa: MOTIVO_BAJA era NOT NULL y el formulario permitia vacio.
+   - DB: ALTER TABLE para permitir NULL en MOTIVO_BAJA (DBADMIN aplicado;
+     scripts para TEST_JUNIO_2026 y PTM_2022_FINAL en SQL_MIGRACION).
+   - Borrador (sin PDF): solo requiere equipo; fecha/codigo/descripcion se
+     completan con valores minimos y el motivo puede quedar NULL.
+   - Solicitud final (con PDF): exige fecha, motivo, codigo y descripcion;
+     valida antes de escribir archivos o tocar la BD.
+   - Formulario: MotivoBaja opcional en borrador; Codigo/Descripcion readonly
+     sin required (el servidor los completa/valida).
+   - Pruebas: borrador con motivo vacio OK (NULL); final con PDF sin motivo
+     rechazado sin fila/archivos; equipo restaurado.
+   - No se alteraron stored procedures; solo 1 ALTER TABLE.
+   - Archivos: EquiposController.cs, _ModalSolicitudBajaEquipo.cshtml,
+     MIGRACION_BAJA_MOTIVO_NULL_*.sql, CONTEXTO_SESION.md.
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================

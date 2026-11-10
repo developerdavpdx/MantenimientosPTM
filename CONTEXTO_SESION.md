@@ -435,3 +435,41 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 - `MantenimientosPTM/Controllers/CalendarioController.cs`
 - `MantenimientosPTM/Scripts/calendario_mantenimientos_refactor.js`
 - `MantenimientosPTM/Views/Calendario/CalendarioMantenimientos.cshtml`
+
+---
+
+## 12. Sesión 09/11/2026 — Baja de equipos: borrador flexible
+
+**Problema reportado:** al guardar la solicitud de baja como borrador aparecía:
+`cannot insert NULL or update to NULL: "DBADMIN"."SpPdxMTTOInsertaSolicitudBaja": line 32 col 5`.
+
+**Causa:** el SP hace `MERGE` y `MOTIVO_BAJA` era `NOT NULL`. El formulario no marcaba el motivo como obligatorio; al dejarlo vacío, `ConvertToHanaParameters` lo enviaba como `DBNull` y HANA rechazaba el `INSERT/UPDATE`. Los cambios previos de la sesión de Equipos (transacción, archivos, estatus) **no** modificaron los parámetros ni el SP.
+
+### 12.1 Cambios aplicados
+
+- **BD (DBADMIN):** se aplicó
+  `ALTER TABLE "DBADMIN"."PdxMTTOSolicitudesBajaEquipos" ALTER ("MOTIVO_BAJA" NVARCHAR(500) NULL);`
+- **Scripts nuevos en `SQL_MIGRACION/`:**
+  - `MIGRACION_BAJA_MOTIVO_NULL_DBADMIN.sql`
+  - `MIGRACION_BAJA_MOTIVO_NULL_TEST_JUNIO_2026.sql`
+  - `MIGRACION_BAJA_MOTIVO_NULL_PTM_2022_FINAL.sql`
+- **`EquiposController.InsertaSolicitudBajaEquipoProduccion`:**
+  - Borrador (sin PDF): solo exige el equipo; si faltan, completa `FechaSolicitud` con hoy, `CodigoActivo` con el ID del equipo y `DescripcionActivo` con "Pendiente de capturar". `MOTIVO_BAJA` puede quedar `NULL`.
+  - Solicitud final (con PDF): exige fecha, motivo, código y descripción; valida **antes** de escribir archivos o tocar la BD.
+- **`_ModalSolicitudBajaEquipo.cshtml`:**
+  - `MotivoBaja` ya no es `required`; se indica “Opcional en borrador; obligatorio al adjuntar el PDF”.
+  - `CodigoActivo` y `DescripcionActivo` (readonly) dejaron de ser `required`; el servidor los completa en borrador y los valida en la solicitud final.
+
+### 12.2 Pruebas realizadas
+
+| Caso | Resultado |
+|---|---|
+| Borrador con motivo vacío | `SI`; `MOTIVO_BAJA = NULL`, código `6`, descripción “Pendiente de capturar”, estatus 4 |
+| Solicitud final con PDF y motivo vacío | `NO` con “complete: el motivo de baja”; sin fila, sin archivos y equipo intacto |
+| Limpieza | Solicitud de prueba eliminada y estatus del equipo restaurado (1) |
+
+### 12.3 Notas
+
+- **Stored procedures alterados en esta corrección: 0.** Solo hubo **1 `ALTER TABLE`** (DBADMIN).
+- Para TEST_JUNIO_2026 y PTM_2022_FINAL hay que ejecutar los scripts nuevos y desplegar el código.
+- Los cambios de esta corrección están en `EquiposController.cs`, `_ModalSolicitudBajaEquipo.cshtml` y los 3 scripts de migración.

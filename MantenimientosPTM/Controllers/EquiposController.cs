@@ -1179,6 +1179,66 @@ namespace MantenimientosPTM.Controllers
 
                 RequestData = JsonConvert.DeserializeObject<AccesoDatosEquipos.SolicitudBajaEquipo>(jsonData);
 
+                // Validaciones:
+                // - Borrador (sin PDF): solo se requiere el equipo; el resto puede quedar vacío.
+                // - Solicitud final (con PDF): se exigen los campos completos.
+                if (RequestData == null)
+                {
+                    return Json(new GlobalCommands.JsonResponseMtto
+                    {
+                        Status = "NO",
+                        Message = "No se recibieron los datos de la solicitud de baja.",
+                        Data = string.Empty
+                    });
+                }
+
+                var archivoPDFValidacion = Request.Files["archivoPDF"];
+                bool tienePDF = archivoPDFValidacion != null && archivoPDFValidacion.ContentLength > 0;
+
+                if (string.IsNullOrWhiteSpace(RequestData.IdEquipo) || RequestData.IdEquipo.Trim() == "0")
+                {
+                    return Json(new GlobalCommands.JsonResponseMtto
+                    {
+                        Status = "NO",
+                        Message = "Seleccione el equipo para la solicitud de baja.",
+                        Data = string.Empty
+                    });
+                }
+
+                if (tienePDF)
+                {
+                    var camposFaltantes = new List<string>();
+                    if (!RequestData.FechaSolicitud.HasValue)
+                        camposFaltantes.Add("la fecha de solicitud");
+                    if (string.IsNullOrWhiteSpace(RequestData.MotivoBaja))
+                        camposFaltantes.Add("el motivo de baja");
+                    if (string.IsNullOrWhiteSpace(RequestData.CodigoActivo))
+                        camposFaltantes.Add("el código de activo");
+                    if (string.IsNullOrWhiteSpace(RequestData.DescripcionActivo))
+                        camposFaltantes.Add("la descripción del activo");
+
+                    if (camposFaltantes.Count > 0)
+                    {
+                        return Json(new GlobalCommands.JsonResponseMtto
+                        {
+                            Status = "NO",
+                            Message = "Para guardar la solicitud con documento, complete: " + string.Join(", ", camposFaltantes) + ".",
+                            Data = string.Empty
+                        });
+                    }
+                }
+                else
+                {
+                    // Borrador: completar solo lo mínimo para respetar las columnas NOT NULL.
+                    if (!RequestData.FechaSolicitud.HasValue)
+                        RequestData.FechaSolicitud = DateTime.Today;
+                    if (string.IsNullOrWhiteSpace(RequestData.CodigoActivo))
+                        RequestData.CodigoActivo = RequestData.IdEquipo;
+                    if (string.IsNullOrWhiteSpace(RequestData.DescripcionActivo))
+                        RequestData.DescripcionActivo = "Pendiente de capturar";
+                    // MOTIVO_BAJA puede quedar NULL (la columna ya lo permite).
+                }
+
                 // ══════════════════════════════════════
                 // 📁 PROCESAR IMÁGENES (múltiples)
                 // ══════════════════════════════════════
