@@ -616,6 +616,12 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
   - **Planta 1 / COR040:** `42000000001` (29/30/60), `42000000006` (4/2/4), `42000000008` (8/5/10), `42000000010` (25/5/25), `42000000018` (212/0/0), `42000000051` (269/462/923, queda pendiente).
   - **Planta 2 / P2040:** `42000000474` (484/100/200), `45000000006` (416/208/416), `42000000465` (5591/0/0), `42000002418` (1315/0/0), `42000000472` (1113/0/0), `42000000477` (1045/0/0), `45000000001` (406/208/416).
 - **Datos:** 13 refacciones (12 atendidas + 1 pendiente), 2 solicitudes de compra (planta 1 y 2), 12 detalles, OC con 12 líneas, salida con 12 líneas, 12 movimientos SALIDA, 4 DEVOLUCIONES, 2 rechazos y 4 solicitudes de refacción de Correctivos.
-- **Pruebas (ejecutadas en HANA Cloud):** `ConsultaArticulos` devuelve 6 filas para `OTMC-001` y 7 para `OTMC-002`; solicitudes 2 (planta 1/2 filtra 1 cada una); detalles 5/7; líneas OC/PRQ/OIGE 12/12/12; salidas 5/7; devoluciones 2/2; `GetArticuloSalidaM` devuelve `CuentaContable=5-101-001-005`.
-- **Nota:** el cleanup borra solo los datos transaccionales/de prueba (`ID 900001-900099`, `ZZTEST`); no revierte el `ExpensesAc` de los 13 artículos.
+- **Catálogos `OPRC` reales (crítico para los combos):** `SpPdxMTTOGetCostCenters` lee `OPRC` por `DimCode`: `1`=Departamento, `2`=Proceso, `3`=Gastos, `4`=Cedis.
+  - Script: `SQL_MIGRACION/SEED_OPRC_REAL.sql` — **416 filas** del export on-premise `TEST_JUNIO_2026` (DimCode 1=14, 2=11, 3=9, 4=14, 5=368).
+  - Origen: `SQL_MIGRACION/ORIGEN_OPRC_TEST_JUNIO_2026.csv`.
+  - El seed de Almacén **ya no toca `OPRC`**; primero se carga el de OPRC y luego el de Almacén.
+  - Valores clave que preselecciona el front: Proceso `PPVC`, Gastos `GIF`, Cedis `CCOR` (planta 1) / `PLANTA2` (planta 2), Departamento `DMAN` (MANTENIMIENTO).
+  - Sin estas filas los combos muestran **“Sin opciones”** aunque el SP funcione.
+- **Pruebas (ejecutadas en HANA Cloud):** `ConsultaArticulos` devuelve 6 filas para `OTMC-001` y 7 para `OTMC-002`; solicitudes 2 (planta 1/2 filtra 1 cada una); detalles 5/7; líneas OC/PRQ/OIGE 12/12/12; salidas 5/7; devoluciones 2/2; `GetArticuloSalidaM` devuelve `CuentaContable=5-101-001-005`. Los 4 combos de centros de costo devuelven 14/11/9/14 filas reales.
+- **Nota:** el cleanup borra solo los datos transaccionales/de prueba (`ID 900001-900099`, `ZZTEST`); no revierte el `ExpensesAc` de los 13 artículos ni borra `OPRC`.
 - **Seed fake opcional:** `SEED_ALMACEN_PRUEBA.sql` (artículo `ZZTEST01`) ya fue limpiado; no usar si se quieren artículos reales.

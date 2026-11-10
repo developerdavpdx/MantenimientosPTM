@@ -296,7 +296,17 @@
      solicitudes 2 (filtro planta 1/2 = 1 cada una); detalles 5/7;
      lineas OC/PRQ/OIGE 12/12/12; salidas 5/7; devoluciones 2/2;
      GetArticuloSalidaM devuelve CuentaContable=5-101-001-005.
-   - Nota: el cleanup borra datos de prueba pero no revierte ExpensesAc.
+   - OPRC REAL: SQL_MIGRACION/SEED_OPRC_REAL.sql (416 filas del export
+     on-premise TEST_JUNIO_2026; dim 1=14, 2=11, 3=9, 4=14, 5=368).
+     Origen: SQL_MIGRACION/ORIGEN_OPRC_TEST_JUNIO_2026.csv.
+     SpPdxMTTOGetCostCenters lee OPRC por DimCode:
+       1=Departamento, 2=Proceso, 3=Gastos, 4=Cedis.
+     El seed de Almacen ya NO toca OPRC; cargar primero el de OPRC.
+     Combos reales: Departamento 14, Proceso 11, Gastos 9, Cedis 14.
+     Solicitante de prueba mapea a DMAN (MANTENIMIENTO).
+     Sin estas filas los combos muestran "Sin opciones".
+   - Nota: el cleanup borra datos de prueba pero no revierte ExpensesAc
+     ni borra OPRC.
    - Seed fake opcional (ZZTEST01) ya limpiado; no usar para articulos reales.
 
 

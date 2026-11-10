@@ -28,7 +28,6 @@ DELETE FROM "DBADMIN"."OWHS" WHERE "WhsCode"='ZZ';
 DELETE FROM "DBADMIN"."OHEM" WHERE "empID"=999999;
 DELETE FROM "DBADMIN"."OUSR" WHERE "USERID"=32000;
 DELETE FROM "DBADMIN"."OUBR" WHERE "Code"=999;
-DELETE FROM "DBADMIN"."OPRC" WHERE "PrcCode"='ZZ01';
 DELETE FROM "DBADMIN"."NNM1" WHERE "Series"=999;
 
 -- Cuenta contable de los articulos del seed (solo OITW de estos items)
@@ -38,7 +37,6 @@ UPDATE "DBADMIN"."OITW" SET "ExpensesAc"='5-101-001-005' WHERE "ItemCode" IN ('4
 INSERT INTO "DBADMIN"."OHEM" ("empID","firstName","middleName","lastName","dept","ExtEmpNo","email") VALUES (999999,'PRUEBA','','OPENCODE',1,'9999','prueba@test.com');
 INSERT INTO "DBADMIN"."OUSR" ("USERID","INTERNAL_K","USER_CODE","U_NAME","E_Mail","Locked") VALUES (32000,32000,'ZZTEST','Prueba ZZTEST','prueba@test.com','N');
 INSERT INTO "DBADMIN"."OUBR" ("Code","Name") VALUES (999,'Sucursal ZZTEST');
-INSERT INTO "DBADMIN"."OPRC" ("PrcCode","PrcName","DimCode") VALUES ('ZZ01','Centro ZZTEST',1);
 INSERT INTO "DBADMIN"."NNM1" ("ObjectCode","Series","SeriesName","DocSubType","SeriesType","Locked","NextNumber","InitialNum","NumSize") VALUES ('60',999,'ZZTEST','--','D','N',1,1,1);
 INSERT INTO "DBADMIN"."@PDX_NOTIFICACIONES" ("Code","Name","U_PDX_CODE","U_PDX_TIPO","U_PDX_CODE_AUTORIZADOR") VALUES ('ZZTEST01','Notificacion ZZTEST','ZZTEST01','TEST','ZZTEST');
 
