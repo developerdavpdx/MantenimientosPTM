@@ -612,9 +612,10 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 
 - **Seed principal:** `SQL_MIGRACION/SEED_ALMACEN_PRUEBA_REAL.sql`
 - **Limpieza:** `SQL_MIGRACION/CLEANUP_ALMACEN_PRUEBA.sql`
-- **No modifica** `OITM`/`OITW`/`OITB`; usa artículos reales con stock:
-  - **Planta 1 / COR040:** `42000000001` (stock 29, mín 30, máx 60), `42000000006` (4/2/4), `42000000008` (8/5/10), `42000000010` (25/5/25), `42000000051` (269/462/923, queda pendiente).
-  - **Planta 2 / P2040:** `42000000474` (484/100/200), `45000000006` (416/208/416).
-- **Datos:** 2 solicitudes de compra (planta 1 y 2), 6 detalles, OC con 6 líneas, salida con 6 líneas, 6 refacciones atendidas + 1 pendiente, 6 salidas, 3 devoluciones, 2 rechazos y 3 solicitudes de refacción de Correctivos.
-- **Pruebas:** `ConsultaArticulos` devuelve 5 filas para `OTMC-001` y 2 para `OTMC-002`; solicitudes 2/1/1; detalles 4/2; líneas OC 6; salidas 4/2; devoluciones 2/1.
+- **No inserta** en `OITM`/`OITW`/`OITB`; usa 13 artículos reales con stock. Como es ambiente de pruebas, actualiza solo el `OITW.ExpensesAc` de esos 13 artículos (almacenes `COR040`/`P2040`) a `5-101-001-005` para que `CuentaContable` salga en el portal.
+  - **Planta 1 / COR040:** `42000000001` (29/30/60), `42000000006` (4/2/4), `42000000008` (8/5/10), `42000000010` (25/5/25), `42000000018` (212/0/0), `42000000051` (269/462/923, queda pendiente).
+  - **Planta 2 / P2040:** `42000000474` (484/100/200), `45000000006` (416/208/416), `42000000465` (5591/0/0), `42000002418` (1315/0/0), `42000000472` (1113/0/0), `42000000477` (1045/0/0), `45000000001` (406/208/416).
+- **Datos:** 13 refacciones (12 atendidas + 1 pendiente), 2 solicitudes de compra (planta 1 y 2), 12 detalles, OC con 12 líneas, salida con 12 líneas, 12 movimientos SALIDA, 4 DEVOLUCIONES, 2 rechazos y 4 solicitudes de refacción de Correctivos.
+- **Pruebas (ejecutadas en HANA Cloud):** `ConsultaArticulos` devuelve 6 filas para `OTMC-001` y 7 para `OTMC-002`; solicitudes 2 (planta 1/2 filtra 1 cada una); detalles 5/7; líneas OC/PRQ/OIGE 12/12/12; salidas 5/7; devoluciones 2/2; `GetArticuloSalidaM` devuelve `CuentaContable=5-101-001-005`.
+- **Nota:** el cleanup borra solo los datos transaccionales/de prueba (`ID 900001-900099`, `ZZTEST`); no revierte el `ExpensesAc` de los 13 artículos.
 - **Seed fake opcional:** `SEED_ALMACEN_PRUEBA.sql` (artículo `ZZTEST01`) ya fue limpiado; no usar si se quieren artículos reales.

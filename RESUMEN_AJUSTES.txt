@@ -279,18 +279,24 @@
 16) SEED DE PRUEBA DE ALMACEN CON VARIOS ARTICULOS REALES (10/11/2026)
    - Script principal: SQL_MIGRACION/SEED_ALMACEN_PRUEBA_REAL.sql
    - Limpieza: SQL_MIGRACION/CLEANUP_ALMACEN_PRUEBA.sql
-   - No modifica OITM/OITW/OITB. Usa articulos reales con stock:
+   - No inserta en OITM/OITW/OITB. Usa 13 articulos reales con stock.
+     En ambiente de pruebas actualiza solo OITW.ExpensesAc de estos 13
+     articulos (COR040/P2040) a 5-101-001-005 para que salga CuentaContable.
      Planta 1 / COR040: 42000000001 (29/30/60), 42000000006 (4/2/4),
        42000000008 (8/5/10), 42000000010 (25/5/25),
-       42000000051 (269/462/923, pendiente).
+       42000000018 (212/0/0), 42000000051 (269/462/923, pendiente).
      Planta 2 / P2040: 42000000474 (484/100/200),
-       45000000006 (416/208/416).
-   - Datos: 2 solicitudes de compra, 6 detalles, OC con 6 lineas, salida
-     con 6 lineas, 6 refacciones atendidas + 1 pendiente, 6 salidas,
-     3 devoluciones, 2 rechazos y 3 solicitudes de Correctivos.
-   - Pruebas: ConsultaArticulos 5 filas OTMC-001 y 2 OTMC-002;
-     solicitudes 2/1/1; detalles 4/2; lineas OC 6; salidas 4/2;
-     devoluciones 2/1.
+       45000000006 (416/208/416), 42000000465 (5591/0/0),
+       42000002418 (1315/0/0), 42000000472 (1113/0/0),
+       42000000477 (1045/0/0), 45000000001 (406/208/416).
+   - Datos: 13 refacciones (12 atendidas + 1 pendiente), 2 solicitudes de
+     compra, 12 detalles, OC con 12 lineas, salida con 12 lineas,
+     12 salidas, 4 devoluciones, 2 rechazos y 4 solicitudes de Correctivos.
+   - Pruebas: ConsultaArticulos 6 filas OTMC-001 y 7 OTMC-002;
+     solicitudes 2 (filtro planta 1/2 = 1 cada una); detalles 5/7;
+     lineas OC/PRQ/OIGE 12/12/12; salidas 5/7; devoluciones 2/2;
+     GetArticuloSalidaM devuelve CuentaContable=5-101-001-005.
+   - Nota: el cleanup borra datos de prueba pero no revierte ExpensesAc.
    - Seed fake opcional (ZZTEST01) ya limpiado; no usar para articulos reales.
 
 
