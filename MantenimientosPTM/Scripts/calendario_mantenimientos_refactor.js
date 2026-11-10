@@ -1,4 +1,59 @@
 ﻿// ========================================
+// UTILIDADES
+// ========================================
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/** Devuelve YYYY-MM-DD sin pasar por zonas horarias. */
+function soloFecha(valor) {
+    if (!valor) return '';
+    if (valor instanceof Date && !isNaN(valor)) {
+        return `${valor.getFullYear()}-${String(valor.getMonth() + 1).padStart(2, '0')}-${String(valor.getDate()).padStart(2, '0')}`;
+    }
+    const m = String(valor).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+}
+
+/** Date a medianoche local a partir de YYYY-MM-DD. */
+function fechaLocal(valor) {
+    const iso = soloFecha(valor);
+    if (!iso) return null;
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+/** Suma días a una fecha YYYY-MM-DD y devuelve YYYY-MM-DD. */
+function sumarDiasISO(iso, dias) {
+    const f = fechaLocal(iso);
+    if (!f) return '';
+    f.setDate(f.getDate() + dias);
+    return soloFecha(f);
+}
+
+/** Estado visual unificado a partir de id_status y firma completa. */
+function obtenerEstadoEvento(props) {
+    const id = Number(props.id_status);
+    const finalizada = props.orden_trabajo_finalizada === 'SI';
+
+    if (id === 4) {
+        return finalizada
+            ? { texto: 'Terminado', clase: 'bg-success' }
+            : { texto: 'En proceso de firmas', clase: 'bg-dark' };
+    }
+    if (id === 3) return { texto: 'En espera de refacción', clase: 'bg-warning' };
+    if (id === 2) return { texto: 'Liberado', clase: 'bg-primary' };
+    if (id === 1) return { texto: 'Programado', clase: 'bg-secondary' };
+    return { texto: 'Sin estatus', clase: 'bg-secondary' };
+}
+
+// ========================================
 // GESTION DE EVENTOS
 // ========================================
 class GestionEventosApp {
@@ -246,7 +301,7 @@ class CalendarManager {
         this.calendarEl = document.getElementById('calendar');
         this.selectedDate = '';
         this.calendar = null;
-        this.todosLosEventos = []; // Guardar todos los eventos para filtrado
+        this._requestId = 0;
     }
 
     // ✅ Función para inicializar el calendario
@@ -282,18 +337,16 @@ class CalendarManager {
             // 👇 Inicializar el tooltip
             eventDidMount: (info) => {
 
-                //Se obtiene el estatus para mostrarlo en el tooltip
-                const keyTooltip = `${info.event.extendedProps.orden_trabajo_finalizada}-${info.event.extendedProps.id_status}`;
+                const props = info.event.extendedProps;
+                const estado = obtenerEstadoEvento(props);
+                const badgeReprogramado = props.fueReprogramado === 'SI'
+                    ? `<span>✅ Reprogramado</span>`
+                    : '';
 
-                const tiposMap = {
-                    'NO-2': 'Liberado',
-                    'NO-3': 'En espera de refacción',
-                    'NO-4': 'En proceso de firmas',
-                    'SI-4': 'Terminado'
+                const fmt = (f) => {
+                    const iso = soloFecha(f);
+                    return iso ? iso.split('-').reverse().join('/') : '';
                 };
-                const badgeReprogramado = info.event.extendedProps.fueReprogramado === 'SI'
-                    ? `<span>✅ Reprogramado</span>`  // badge verde
-                    : '';   
 
                 $(info.el).tooltip({
                     html: true,
@@ -305,28 +358,27 @@ class CalendarManager {
                                 ℹ️ <b>Información del mantenimiento</b>
                             </div>
 
-                            <b>Orden Trabajo:</b> ${info.event.extendedProps.numero_orden}<br>
-                            <b>Equipo:</b> ${info.event.extendedProps.equipment}<br>
-                            <b>Área:</b> ${info.event.extendedProps.areaDescripcion}<br>
-                            <b>Línea:</b> ${info.event.extendedProps.lineaDescripcion}<br>
-                            <b>Estatus:</b> ${tiposMap[keyTooltip] || 'Sin estatus'}<br>
+                            <b>Orden Trabajo:</b> ${escapeHtml(props.numero_orden)}<br>
+                            <b>Equipo:</b> ${escapeHtml(props.equipment)}<br>
+                            <b>Área:</b> ${escapeHtml(props.areaDescripcion)}<br>
+                            <b>Línea:</b> ${escapeHtml(props.lineaDescripcion)}<br>
+                            <b>Estatus:</b> ${escapeHtml(estado.texto)}<br>
 
-                            <b>${info.event.extendedProps.tipo === 'Correctivo' ? 'Fecha:' : 'Periodo:'}</b>
+                            <b>${props.tipo === 'Correctivo' ? 'Fecha:' : 'Periodo:'}</b>
                             ${(() => {
-                                const p = info.event.extendedProps;
-                                const fmt = (f) => f ? f.substring(0, 10).split('-').reverse().join('/') : '';
-                                if (p.tipo === 'Correctivo') return p.fechaInicio;
-                                if (!p.enviarSiguienteMes && p.fechaRealInicio && p.fechaRealFin &&
-                                    (p.estatusSolicitud === 'NA' || p.estatusSolicitud === 'Aceptada')) {
-                                    return `${fmt(p.fechaRealInicio)} al ${fmt(p.fechaRealFin)}`;
+                                if (props.tipo === 'Correctivo') return escapeHtml(props.fechaInicio);
+                                if (!props.enviarSiguienteMes && props.fechaRealInicio && props.fechaRealFin &&
+                                    (props.estatusSolicitud === 'NA' || props.estatusSolicitud === 'Aceptada')) {
+                                    return `${escapeHtml(fmt(props.fechaRealInicio))} al ${escapeHtml(fmt(props.fechaRealFin))}`;
                                 }
-                                if (p.enviarSiguienteMes && p.estatusSolicitud === 'Aceptada') {
-                                    const fechaInicio = new Date(p.fechaEventoCalculada + 'T00:00:00');
+                                if (props.enviarSiguienteMes && props.estatusSolicitud === 'Aceptada') {
+                                    const fechaInicio = fechaLocal(props.fechaEventoCalculada);
+                                    if (!fechaInicio) return escapeHtml(props.periodoMantenimiento);
                                     const ultimoDia = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth() + 1, 0);
                                     const fmtDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-                                    return `${fmtDate(fechaInicio)} al ${fmtDate(ultimoDia)}`;
+                                    return `${escapeHtml(fmtDate(fechaInicio))} al ${escapeHtml(fmtDate(ultimoDia))}`;
                                 }
-                                return p.periodoMantenimiento;
+                                return escapeHtml(props.periodoMantenimiento);
                              })()}<br>
 
                              ${badgeReprogramado}
@@ -419,7 +471,7 @@ class CalendarManager {
         datosHana.forEach((item) => {
             const colorEvento = colores[item.TIPO_MANTENIMIENTO] || '#6c757d';
 
-            const parseFecha = (v) => v ? new Date(v) : null;
+            const parseFecha = (v) => fechaLocal(v);
             const fechaInicio = parseFecha(item.FECHA_INICIO);
             const fechaFin = parseFecha(item.FECHA_FIN);
             const fechaCompletado = parseFecha(item.FECHA_COMPLETADO || item.HORA_APERTURA) || new Date();
@@ -434,31 +486,25 @@ class CalendarManager {
 
             if (!enviarSiguienteMes && tieneFechasReales && (estatusSolicitud === 'NA' || estatusSolicitud === 'Aceptada')) {
                 // ✅ Tiene fechas reales y no es siguiente mes → pintar desde FECHA_REAL_INICIO hasta FECHA_REAL_FIN
-                fechaEvento = new Date(item.FECHA_REAL_INICIO).toISOString().split('T')[0];
-                // 🔥 IMPORTANTE: Sumar 1 día a fechaFinEvento porque FullCalendar trata end como EXCLUSIVO
-                const fechaRealFin = new Date(item.FECHA_REAL_FIN);
-                fechaRealFin.setDate(fechaRealFin.getDate() + 1);
-                fechaFinEvento = fechaRealFin.toISOString().split('T')[0];
+                fechaEvento = soloFecha(item.FECHA_REAL_INICIO);
+                // 🔥 FullCalendar trata end como EXCLUSIVO: sumar 1 día
+                fechaFinEvento = sumarDiasISO(soloFecha(item.FECHA_REAL_FIN), 1);
             } else if (enviarSiguienteMes && estatusSolicitud === 'Aceptada') {
                 // ✅ Enviar siguiente mes y fue aceptada → pintar desde primer día hasta último día del mes siguiente
                 const hoy = fechaInicio || fechaCompletado;
                 const primerDiaSiguienteMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
                 const ultimoDiaSiguienteMes = new Date(hoy.getFullYear(), hoy.getMonth() + 2, 0);
-                // 🔥 Sumar 1 día al último día para que se incluya en FullCalendar
-                ultimoDiaSiguienteMes.setDate(ultimoDiaSiguienteMes.getDate() + 1);
-                fechaEvento = primerDiaSiguienteMes.toISOString().split('T')[0];
-                fechaFinEvento = ultimoDiaSiguienteMes.toISOString().split('T')[0];
+                fechaEvento = soloFecha(primerDiaSiguienteMes);
+                fechaFinEvento = sumarDiasISO(soloFecha(ultimoDiaSiguienteMes), 1);
             } else {
                 // ✅ null, Rechazada, Pendiente o sin solicitud → usar fecha completado (solo un día)
-                fechaEvento = fechaCompletado.toISOString().split('T')[0];
+                fechaEvento = soloFecha(fechaCompletado);
                 // Para eventos de un solo día, FullCalendar necesita que end sea el día siguiente
-                const proximoDia = new Date(fechaCompletado);
-                proximoDia.setDate(proximoDia.getDate() + 1);
-                fechaFinEvento = proximoDia.toISOString().split('T')[0];
+                fechaFinEvento = sumarDiasISO(fechaEvento, 1);
             }
 
             const evento = {
-                id: item.ID_MANTENIMIENTO,
+                id: `${item.TIPO_MANTENIMIENTO === 'Preventivo' ? 'P' : 'C'}-${item.ID_MANTENIMIENTO}`,
                 title: `${item.TIPO_MANTENIMIENTO} - ${item.NOMBRE_EQUIPO}`,
                 start: fechaEvento,
                 end: fechaFinEvento,  // ✅ Ya incluye +1 día para FullCalendar
@@ -511,15 +557,16 @@ class CalendarManager {
     async cargarEventosReales(tipoMant = null, proceso = null, lineaProd = null, fechaInicio = null, fechaFin = null, ordenTrabajo = null, clasificacion = null, equipo = null) {
         // ✅ Mostrar loader
         GlobalUtil.mostrarLoader(true);
+        const requestId = ++this._requestId;
 
         try { 
             const datosHana = await this.obtenerMantenimientosAnuales(tipoMant, proceso, lineaProd, this.datos_usuario[0].PLANTA, fechaInicio, fechaFin, ordenTrabajo, clasificacion, equipo);
 
+            // Si llegó una respuesta vieja, no pisar la más reciente
+            if (requestId !== this._requestId) return;
+
             if (datosHana && datosHana.length > 0) {
                 const eventosCalendario = this.transformarEventosCalendario(datosHana);
-
-                // Guardar todos los eventos para filtrado
-                this.todosLosEventos = eventosCalendario;
 
                 // Limpiar eventos actuales del calendario
                 this.calendar.removeAllEvents();
@@ -529,25 +576,21 @@ class CalendarManager {
                     this.calendar.addEvent(evento);
                 });
 
-                AlertManager.mostrar(
-                    `Se cargaron ${eventosCalendario.length} mantenimientos`,
-                    'success'
-                );
                 console.log('✅ Eventos cargados:', eventosCalendario.length);
             } else {
-                this.todosLosEventos = [];
                 this.calendar.removeAllEvents();
                 AlertManager.mostrar('No hay mantenimientos en el período seleccionado', 'info');
             }
 
-           
-
         } catch (error) {
+            if (requestId !== this._requestId) return;
             console.error('❌ Error al cargar mantenimientos:', error);
             AlertManager.mostrar('Error al cargar el calendario de mantenimientos', 'warning');
         } finally {
-            // ✅ Ocultar loader siempre (éxito o error)
-            GlobalUtil.mostrarLoader(false);
+            // ✅ Ocultar loader solo si esta sigue siendo la petición más reciente
+            if (requestId === this._requestId) {
+                GlobalUtil.mostrarLoader(false);
+            }
         }
     }
 
@@ -561,6 +604,11 @@ class CalendarManager {
         const ordenTrabajo = $('#FiltroOrdenTrabajo').val();
         const clasificacion = $('#FiltroClasificacion').val();
         const equipo = $('#FiltroNombreEquipo').val();
+
+        if (fechaInicio && fechaFin && new Date(fechaInicio) > new Date(fechaFin)) {
+            AlertManager.mostrar('La fecha inicio no puede ser mayor a la fecha fin.', 'warning');
+            return;
+        }
 
         // Siempre recargar desde el servidor; si no hay fechas, el endpoint usa el año actual
         this.cargarEventosReales(
@@ -636,11 +684,11 @@ class CalendarManager {
         const event = info.event;
         const props = event.extendedProps;
 
-        // Título del modal
-        $('#modalTitle').html(`
-        <i class="bi bi-info-circle-fill me-2"></i>
-        ${props.type} - ${props.equipment}
-    `);
+        // Título del modal (el equipo viene de BD: escapar)
+        $('#modalTitle').html(
+            '<i class="bi bi-info-circle-fill me-2"></i>' +
+            escapeHtml(`${props.type} - ${props.equipment}`)
+        );
 
         // Información General
         $('#modalNumeroOrden').text(props.numero_orden);
@@ -649,27 +697,11 @@ class CalendarManager {
         const badgeColorTipo = props.tipo === 'Preventivo' ? 'bg-success' : 'bg-danger';
         $('#modalType').removeClass('bg-info bg-success bg-danger').addClass(badgeColorTipo).text(props.type);
 
-        const colorMap = {
-            'NO-2': 'bg-primary',   // Liberado
-            'NO-3': 'bg-warning',    // En espera de refacción
-            'NO-4': 'bg-dark',   // En proceso de firmas
-            'SI-4': 'bg-success'    // Terminado
-        };
-
-        const tiposMap = {
-            'NO-2': 'Liberado',
-            'NO-3': 'En espera de refacción',  
-            'NO-4': 'En proceso de firmas',
-            'SI-4': 'Terminado'
-        };
-
-        const key = `${props.orden_trabajo_finalizada}-${props.id_status}`;
-
-
+        const estado = obtenerEstadoEvento(props);
         $('#modalStatus')
             .removeClass('bg-success bg-warning bg-danger bg-primary bg-secondary bg-dark')
-            .text(tiposMap[key] || 'Sin estatus')
-            .addClass(colorMap[key] || 'bg-secondary');
+            .text(estado.texto)
+            .addClass(estado.clase);
 
         $('#modalSolicitante').text(props.solicitante);
 
@@ -683,7 +715,10 @@ class CalendarManager {
         // Fechas y Duración
         $('#modalFechaCompletado').text(props.fechaCompletado);
 
-        const fmt = (f) => f ? f.substring(0, 10).split('-').reverse().join('/') : '';
+        const fmt = (f) => {
+            const iso = soloFecha(f);
+            return iso ? iso.split('-').reverse().join('/') : '';
+        };
         let periodoMostrar = props.periodoMantenimiento;
 
         if (props.tipo === 'Correctivo') {
@@ -692,10 +727,12 @@ class CalendarManager {
             (props.estatusSolicitud === 'NA' || props.estatusSolicitud === 'Aceptada')) {
             periodoMostrar = `${fmt(props.fechaRealInicio)} al ${fmt(props.fechaRealFin)}`;
         } else if (props.enviarSiguienteMes && props.estatusSolicitud === 'Aceptada') {
-            const fechaInicio = new Date(props.fechaEventoCalculada + 'T00:00:00');
-            const ultimoDia = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth() + 1, 0);
-            const fmtDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-            periodoMostrar = `${fmtDate(fechaInicio)} al ${fmtDate(ultimoDia)}`;
+            const fechaInicio = fechaLocal(props.fechaEventoCalculada);
+            if (fechaInicio) {
+                const ultimoDia = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth() + 1, 0);
+                const fmtDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                periodoMostrar = `${fmtDate(fechaInicio)} al ${fmtDate(ultimoDia)}`;
+            }
         }
 
         $('#modalPeriodoMantenimiento').text(periodoMostrar);

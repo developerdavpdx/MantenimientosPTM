@@ -376,3 +376,62 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 - `MantenimientosPTM/Controllers/MantenimientosPreventivosController.cs`
 - `MantenimientosPTM/Controllers/RutinasController.cs`
 - `MantenimientosPTM/Scripts/mantenimientos_preventivos_refactor.js`
+
+---
+
+## 11. Sesión 09/11/2026 — Revisión y ajustes del Calendario de Mantenimientos
+
+**Alcance:** `CalendarioController.cs`, `calendario_mantenimientos_refactor.js` y `Views/Calendario/CalendarioMantenimientos.cshtml`. **No se alteró ningún stored procedure ni dato.**
+
+### 11.1 Correcciones aplicadas
+
+- **Fechas incompletas:** si solo venía `fechaInicio` o `fechaFin`, el controlador usaba el año completo. Ahora completa únicamente el límite faltante. Probado: solo inicio 01/12/2026 → 0; solo fin 31/01/2026 → 0; solo inicio 01/11/2026 → 5.
+- **Validación de fechas:** rango invertido y formatos inválidos devuelven `Status=NO` con mensaje; también se valida en el front.
+- **Parseo de fechas** con `TryParseExact("yyyy-MM-dd")` + fallback, sin depender de la cultura del servidor.
+- **Parámetro `p_TIPOMANT`** corregido (antes `p_TIPOMANTENIMIENTO`), que funcionaba por posición pero era frágil.
+- **Errores del SP** case-insensitive (`EsErrorHana`).
+- **Tooltips:** se confirmó que funcionan; se mantuvieron y solo se escaparon los datos dinámicos para evitar XSS.
+- **XSS:** tooltip y título del modal ahora usan `escapeHtml`.
+- **Fechas en JS:** helpers `soloFecha`, `fechaLocal`, `sumarDiasISO` para evitar corrimientos por zona horaria (se eliminó `toISOString` del cálculo).
+- **Estatus unificado** con `obtenerEstadoEvento` (Programado, Liberado, En espera de refacción, En proceso de firmas, Terminado).
+- **IDs de evento** prefijados `P-` / `C-` para evitar colisiones.
+- **Carrera AJAX:** token `_requestId`; las respuestas viejas se descartan y el loader solo se oculta con la petición vigente.
+- **Ruido:** se quitó la alerta “Se cargaron N mantenimientos” en cada carga.
+- **Limpieza:** se eliminaron `todosLosEventos` y `ContarRegistros` sin uso.
+- **CSS:** cache-busting en `CalendarioMantenimientoPreventivo.css`.
+
+### 11.2 Decisiones respetadas
+
+- El filtro del SP por `HORA_APERTURA` y el pintado por fechas reales/siguiente mes **se dejaron como están** por decisión del usuario.
+- Correctivos siguen requiriendo **2 firmas** (regla confirmada).
+- El plugin/funcionamiento de tooltips se mantuvo intacto.
+
+### 11.3 Pruebas realizadas
+
+| Caso | Resultado |
+|---|---|
+| Noviembre completo | 5 registros |
+| Solo inicio 01/12/2026 | 0 (antes devolvía todo el año) |
+| Solo fin 31/01/2026 | 0 (antes devolvía todo el año) |
+| Solo inicio 01/11/2026 | 5 |
+| Rango invertido | `NO` con mensaje |
+| Fecha inválida | `NO` con mensaje |
+| Preventivo / Correctivo | 3 / 2 |
+| HERRAMENTALES | 2 |
+| Equipo BCP03 | 2 |
+| Orden OTMP-011 | 1 |
+| Build Debug + `node --check` | OK |
+
+### 11.4 Notas y pendientes
+
+- **Stored procedures alterados en esta ronda: 0.** Solo se modificó C#/JS/vista.
+- `LEFT JOIN` del SP contra reprogramaciones: latente si algún día hay más de una solicitud por orden; hoy no hay duplicados. Se puede blindar con migración si se requiere.
+- `addEventModal` / `guardarEvento` / `handleDateClick` quedan como código dormido (no se abren porque `dateClick` está comentado).
+- Auth del lado del servidor (#1) sigue pendiente.
+- Pendiente de despliegue a pruebas/producción.
+
+### 11.5 Archivos modificados
+
+- `MantenimientosPTM/Controllers/CalendarioController.cs`
+- `MantenimientosPTM/Scripts/calendario_mantenimientos_refactor.js`
+- `MantenimientosPTM/Views/Calendario/CalendarioMantenimientos.cshtml`

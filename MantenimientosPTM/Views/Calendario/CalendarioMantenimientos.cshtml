@@ -2,7 +2,7 @@
     ViewBag.Title = "Calendario de Mantenimientos";
 }
 
-<link href="~/Content/CalendarioMantenimientoPreventivo.css" rel="stylesheet" />
+<link href="~/Content/CalendarioMantenimientoPreventivo.css?v=@System.IO.File.GetLastWriteTime(HttpContext.Current.Server.MapPath("~/Content/CalendarioMantenimientoPreventivo.css")).Ticks" rel="stylesheet" />
 
 <main aria-labelledby="title">
     <div class="ps-2 pe-2 pt-3 pb-3">

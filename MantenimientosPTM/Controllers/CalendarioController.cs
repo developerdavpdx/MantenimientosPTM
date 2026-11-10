@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.Web.Mvc;
 
 namespace MantenimientosPTM.Controllers
@@ -34,35 +35,67 @@ namespace MantenimientosPTM.Controllers
             GlobalCommands.JsonResponseMtto jsonResponse;
             try
             {
-                // Si no se proporcionan fechas, usar el año actual completo
+                int anioActual = DateTime.Now.Year;
                 DateTime? dtFechaInicio = null;
                 DateTime? dtFechaFin = null;
 
-                if (string.IsNullOrEmpty(fechaInicio) || string.IsNullOrEmpty(fechaFin))
+                // Parsear solo las fechas que vengan; completar únicamente el límite faltante.
+                if (!string.IsNullOrWhiteSpace(fechaInicio))
                 {
-                    // Obtener el año actual completo
-                    int anioActual = DateTime.Now.Year;
+                    if (!TryParseFecha(fechaInicio, out DateTime fi))
+                    {
+                        return Json(new GlobalCommands.JsonResponseMtto
+                        {
+                            Status = "NO",
+                            Message = "Formato de fecha inicio inválido.",
+                            Data = string.Empty
+                        }, JsonRequestBehavior.AllowGet);
+                    }
+                    dtFechaInicio = fi;
+                }
+
+                if (!string.IsNullOrWhiteSpace(fechaFin))
+                {
+                    if (!TryParseFecha(fechaFin, out DateTime ff))
+                    {
+                        return Json(new GlobalCommands.JsonResponseMtto
+                        {
+                            Status = "NO",
+                            Message = "Formato de fecha fin inválido.",
+                            Data = string.Empty
+                        }, JsonRequestBehavior.AllowGet);
+                    }
+                    dtFechaFin = ff;
+                }
+
+                if (!dtFechaInicio.HasValue && !dtFechaFin.HasValue)
+                {
                     dtFechaInicio = new DateTime(anioActual, 1, 1);
                     dtFechaFin = new DateTime(anioActual, 12, 31);
                 }
-                else
+                else if (!dtFechaInicio.HasValue)
                 {
-                    // Parsear las fechas proporcionadas
-                    DateTime tempInicio, tempFin;
-                    if (DateTime.TryParse(fechaInicio, out tempInicio))
+                    dtFechaInicio = new DateTime(dtFechaFin.Value.Year, 1, 1);
+                }
+                else if (!dtFechaFin.HasValue)
+                {
+                    dtFechaFin = new DateTime(dtFechaInicio.Value.Year, 12, 31);
+                }
+
+                if (dtFechaInicio.Value > dtFechaFin.Value)
+                {
+                    return Json(new GlobalCommands.JsonResponseMtto
                     {
-                        dtFechaInicio = tempInicio;
-                    }
-                    if (DateTime.TryParse(fechaFin, out tempFin))
-                    {
-                        dtFechaFin = tempFin;
-                    }
+                        Status = "NO",
+                        Message = "La fecha inicio no puede ser mayor a la fecha fin.",
+                        Data = string.Empty
+                    }, JsonRequestBehavior.AllowGet);
                 }
 
                 // Crear parámetros en el formato correcto para HANA
                 var parametros = new Dictionary<string, (object Value, ParameterDirection Direction, HanaDbType Type)>
                 {
-                    {"p_TIPOMANTENIMIENTO", (string.IsNullOrWhiteSpace(tipoMant) ? null : (object)tipoMant, ParameterDirection.Input, HanaDbType.VarChar)},
+                    {"p_TIPOMANT", (string.IsNullOrWhiteSpace(tipoMant) ? null : (object)tipoMant, ParameterDirection.Input, HanaDbType.NVarChar)},
                     { "p_PROCESO", (proceso != null ? (object)proceso : null, ParameterDirection.Input, HanaDbType.Integer) },
                     { "p_LINEAPROD", (lineaProd != null ? (object)lineaProd : null, ParameterDirection.Input, HanaDbType.Integer) },
                     { "p_FECHA_INICIO", (dtFechaInicio.HasValue ? (object)dtFechaInicio.Value : null, ParameterDirection.Input, HanaDbType.Date) },
@@ -89,7 +122,7 @@ namespace MantenimientosPTM.Controllers
                         Data = string.Empty
                     };
                 }
-                else if (resultHana.JsonResult.Contains("Error"))
+                else if (EsErrorHana(resultHana.JsonResult))
                 {
                     jsonResponse = new GlobalCommands.JsonResponseMtto()
                     {
@@ -122,18 +155,21 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
-        // Helper para contar registros en el JSON
-        private int ContarRegistros(string jsonResult)
+        private static bool EsErrorHana(string jsonResult)
         {
-            try
-            {
-                var array = Newtonsoft.Json.JsonConvert.DeserializeObject<System.Collections.ArrayList>(jsonResult);
-                return array?.Count ?? 0;
-            }
-            catch
-            {
-                return 0;
-            }
+            return !string.IsNullOrEmpty(jsonResult) &&
+                   jsonResult.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool TryParseFecha(string valor, out DateTime fecha)
+        {
+            fecha = default(DateTime);
+            if (string.IsNullOrWhiteSpace(valor)) return false;
+
+            if (DateTime.TryParseExact(valor, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out fecha))
+                return true;
+
+            return DateTime.TryParse(valor, out fecha);
         }
         #endregion
     }

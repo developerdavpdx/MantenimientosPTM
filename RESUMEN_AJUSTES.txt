@@ -181,6 +181,28 @@
      mantenimientos_preventivos_refactor.js, CONTEXTO_SESION.md.
 
 
+12) CALENDARIO DE MANTENIMIENTOS - AJUSTES (09/11/2026)
+   - Corregido bug de fechas: si solo se enviaba fecha inicio o fecha fin, se
+     usaba el ano completo. Ahora se completa solo el limite faltante.
+   - Validacion de rango invertido y formatos invalidos (servidor y front).
+   - Parseo de fechas con formato yyyy-MM-dd independiente de cultura.
+   - Corregido nombre de parametro p_TIPOMANT (antes p_TIPOMANTENIMIENTO).
+   - Errores de SP case-insensitive.
+   - Tooltips confirmados: se mantienen y se escapan los datos para evitar XSS.
+   - Titulo del modal escapado.
+   - Fechas del calendario sin toISOString (evita corrimiento por zona horaria).
+   - Estatus unificado para tooltip y modal; IDs de evento con prefijo P-/C-.
+   - Proteccion contra respuestas AJAX viejas al cambiar filtros.
+   - Se quito la alerta de "Se cargaron N mantenimientos" en cada carga.
+   - Cache-busting del CSS del calendario.
+   - Decisiones: filtro del SP por HORA_APERTURA se deja igual; correctivos
+     requieren 2 firmas; tooltips se mantienen.
+   - Pruebas: fechas, rango invertido, fecha invalida, filtros y build OK.
+   - Stored procedures alterados en esta ronda: 0.
+   - Archivos: CalendarioController.cs, calendario_mantenimientos_refactor.js,
+     CalendarioMantenimientos.cshtml, CONTEXTO_SESION.md.
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================
