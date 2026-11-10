@@ -536,3 +536,61 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 - `MantenimientosPTM/Controllers/MantenimientosCorrectivosController.cs`
 - `MantenimientosPTM/Scripts/mantenimientos_correctivos_refactor.js`
 - `MantenimientosPTM/Views/MantenimientosCorrectivos/MantenimientoCorrectivo.cshtml`
+
+---
+
+## 14. Sesión 10/11/2026 — Almacén: migración de tablas y SPs desde on-premise
+
+**Objetivo:** alinear HANA Cloud (`DBADMIN`) con on-premise para el módulo Almacén, sin tocar los SPs que ya estaban iguales.
+
+### 14.1 Comparación de SPs (127 exportados)
+
+| Estado | Cantidad |
+|---|---|
+| Iguales / solo cosméticos | 110 |
+| Diferencias funcionales reales | 15 |
+| Faltaban en cloud | 2 |
+
+- Los 2 SPs de Calendario/Preventivos (`SpPdxMTTOObtenerMantenimientosCompletados`, `SpPdxMTTOObtenerMantenimientosPorRango`) resultaron **iguales**: no hay conflicto.
+- Los 2 SPs de Almacén adaptados (`SpPdxMTTOGetSolicitudesCompra_filtradas`, `SpPdxMTTOConsultaSolicitudesCompraMP`) se conservaron como están.
+
+### 14.2 Tablas creadas (15)
+
+**Parte 1 (5):** `PdxMTTORechazoDevolucion`, `OBTN`, `OBTQ`, `NNM1`, `OPOR`.
+
+**Parte 2 (10):** `OIGE`, `IGE1`, `OPRQ`, `PRQ1`, `OPRC`, `OUBR`, `OUSR`, `OWHS`, `PdxMTTOMCSolicitudRefacciones`, `@PDX_NOTIFICACIONES`.
+
+- `OWHS` se creó **sin** los 3 triggers ETL (`OWHS_tracking`, `ETL_S`).
+- `OUSR.UserPrefs` quedó como `BLOB`.
+- Se normalizaron las DDLs con `CS_*`, `LONGDATE`, `DAYDATE`, `UNLOAD`, `WITH PARAMETERS` y `;` faltantes.
+
+### 14.3 Columnas agregadas a tablas existentes
+
+- `PdxMTTOMovimientosAlmacen`: `ESTATUS INTEGER`, `COMENTARIOS NVARCHAR(1000)`.
+- `PdxMTTOMPSolicitudCompra`: `PLANTA NVARCHAR(10)`, `FECHA_REQUERIDA DATE`.
+- `PdxMTTOMPSolicitudRefacciones`: `ACEPTADA_MANTENIMIENTO NVARCHAR(10)`.
+- `PdxMTTOMPSolicitudCompraDetalle`: `CODIGO_ARTICULO NVARCHAR(50)`.
+
+**Notas de tipo:** on-premise usa `PLANTA INT` y `ACEPTADA_MANTENIMIENTO BOOLEAN`; en cloud se dejaron como `NVARCHAR(10)` para no romper el contrato string del front-end y porque HANA convierte `BOOLEAN` a `'true'/'false'`. `FECHA_REQUERIDA` quedó como `DATE` (equivalente a `DAYDATE`).
+
+### 14.4 SPs migrados
+
+- **9 SPs de Almacén** creados en la primera tanda (incluye los 2 adaptados).
+- **15 SPs** migrados/creados en la segunda tanda:
+  - `SpPdxMTTOGetSalidasPorOT`, `GetBalanceOT`, `ConsultaArticulosPorOT`, `GetSolicitudesCompraMP`, `InsertarSolicitudCompraMP`, `GetUsuariosXPlanta`, `GetDetallesSolicitudCompraMP`, `InsertarSolicitudCompraDetalleMP`, `ActualizarSolicitudRefaccion`, `ActualizarCabeceraSolicitudCompraMP`, `ValidarProductosTerminadosExistentes`, `UpdateUDFSalida`, `CantidadesRequisicionXAlmacen`, `ConsultaOrdenesFabricacion`, `InsertarSolicitudRefaccionCorrectivo`.
+- Los 110 SPs iguales/cosméticos **no se tocaron**.
+
+### 14.5 Validación
+
+- Compilación en staging (`ZZ_`): **19/19 OK**.
+- Ejecución directa: lecturas y 2 inserts con limpieza **OK**.
+- Comparación de las 30 tablas propias: **sin columnas faltantes**; solo diferencias de tipo/default/identidad.
+- Scripts: `MIGRACION_ALMACEN_TABLAS.sql`, `MIGRACION_ALMACEN_TABLAS_2.sql`, `MIGRACION_ALMACEN_SP.sql`, `MIGRACION_ALMACEN_SP_FIX.sql`, `MIGRACION_ALMACEN_SP_2.sql`.
+- Reportes: `REPORTE_FALTANTES_ALMACEN.md`, `SQL_ORIGEN_ALMACEN/REPORTE_DEPENDENCIAS.md`.
+
+### 14.6 Archivos
+
+- `SQL_MIGRACION/MIGRACION_ALMACEN_*.sql`
+- `REPORTE_FALTANTES_ALMACEN.md`
+- `SQL_ORIGEN_ALMACEN/` (definiciones, DDLs, reportes)
+- `SQL_ORIGEN_GENERAL/README.txt`

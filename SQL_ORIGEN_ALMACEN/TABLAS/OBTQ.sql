@@ -1,0 +1,20 @@
+CREATE ROW TABLE "TEST_JUNIO_2026"."OBTQ" ( "ItemCode" NVARCHAR(50) CS_STRING NOT NULL,
+	 "SysNumber" INT CS_INT NOT NULL,
+	 "WhsCode" NVARCHAR(8) CS_STRING NOT NULL,
+	 "Quantity" DECIMAL(21,
+	6) CS_FIXED,
+	 "CommitQty" DECIMAL(21,
+	6) CS_FIXED,
+	 "CountQty" DECIMAL(21,
+	6) CS_FIXED,
+	 "AbsEntry" INT CS_INT NOT NULL,
+	 "MdAbsEntry" INT CS_INT,
+	 "TrackingNt" INT CS_INT,
+	 "TrackiNtLn" INT CS_INT,
+	 "CCDQuant" DECIMAL(21,
+	6) CS_FIXED,
+	 PRIMARY KEY ( "AbsEntry" ) ) 
+;
+CREATE UNIQUE CPBTREE INDEX "OBTQ_SYSTEM_KEY" ON "TEST_JUNIO_2026"."OBTQ" ( "ItemCode" ASC,
+	 "SysNumber" ASC,
+	 "WhsCode" ASC )

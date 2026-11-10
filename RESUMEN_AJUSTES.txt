@@ -250,6 +250,28 @@
      mantenimientos_correctivos_refactor.js, MantenimientoCorrectivo.cshtml.
 
 
+15) ALMACEN - MIGRACION DE TABLAS Y SPs DESDE ON-PREMISE (10/11/2026)
+   - Comparados 127 SPs: 110 iguales/cosmeticos, 15 funcionales, 2 faltantes.
+   - Calendario/Preventivos: SpPdxMTTOObtenerMantenimientosCompletados y
+     SpPdxMTTOObtenerMantenimientosPorRango -> IGUALES (sin conflicto).
+   - Creadas 15 tablas: PdxMTTORechazoDevolucion, OBTN, OBTQ, NNM1, OPOR,
+     OIGE, IGE1, OPRQ, PRQ1, OPRC, OUBR, OUSR, OWHS,
+     PdxMTTOMCSolicitudRefacciones, @PDX_NOTIFICACIONES.
+   - OWHS sin los 3 triggers ETL (OWHS_tracking / ETL_S).
+   - Columnas agregadas: ESTATUS/COMENTARIOS (MovimientosAlmacen),
+     PLANTA/FECHA_REQUERIDA (MPSolicitudCompra), ACEPTADA_MANTENIMIENTO
+     (MPSolicitudRefacciones), CODIGO_ARTICULO (MPSolicitudCompraDetalle).
+   - 15 SPs migrados/creados (13 funcionales + 2 faltantes); los 2 adaptados
+     de Almacen se conservaron; los 110 iguales no se tocaron.
+   - Validacion: 19/19 compilan en staging; lecturas e inserts OK con limpieza.
+   - Comparacion de 30 tablas propias: sin columnas faltantes.
+   - Notas: PLANTA y ACEPTADA_MANTENIMIENTO quedaron NVARCHAR(10) por
+     compatibilidad con el front; FECHA_REQUERIDA DATE (DAYDATE on-premise).
+   - Scripts: SQL_MIGRACION/MIGRACION_ALMACEN_*.sql
+   - Reportes: REPORTE_FALTANTES_ALMACEN.md,
+     SQL_ORIGEN_ALMACEN/REPORTE_DEPENDENCIAS.md
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================
