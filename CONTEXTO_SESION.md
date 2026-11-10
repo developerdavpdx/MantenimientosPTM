@@ -473,3 +473,66 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 - **Stored procedures alterados en esta corrección: 0.** Solo hubo **1 `ALTER TABLE`** (DBADMIN).
 - Para TEST_JUNIO_2026 y PTM_2022_FINAL hay que ejecutar los scripts nuevos y desplegar el código.
 - Los cambios de esta corrección están en `EquiposController.cs`, `_ModalSolicitudBajaEquipo.cshtml` y los 3 scripts de migración.
+
+---
+
+## 13. Sesión 09/11/2026 — Correctivos: limpieza y endurecimiento
+
+**Objetivo:** eliminar código muerto y aplicar protecciones/bugs potenciales **sin cambiar la lógica funcional** de Correctivos.
+
+### 13.1 Código muerto eliminado
+
+- Se eliminó el endpoint `GuardarRutina` de `MantenimientosCorrectivosController.cs` y los bindings `#btnGuardarRutina` / `#btnGuardarEstatus` del JS, además de las referencias a `#rutinaNombreEquipo` / `#rutinaProceso`.
+- Correctivos **no guarda rutina**: la vista no tiene el botón/modal y el JS nunca definió `guardarRutina()`. El endpoint quedaba accesible por POST directo y escribía archivos antes de fallar; con su eliminación desaparece esa superficie.
+- `POST /MantenimientosCorrectivos/GuardarRutina` ahora responde **404** (verificado).
+
+### 13.2 Protecciones aplicadas
+
+- **Firmas (`PrepararFirmaDigital` / `ConfirmarFirma` / `DescartarFirma`):**
+  - Sanitización de `NumeroOrden` para evitar path traversal.
+  - Validación de PNG (cabecera), tamaño máximo 2 MB y tipo de firma permitido.
+  - Escritura a archivo temporal y reemplazo atómico; si la BD falla, se descartan los temporales.
+  - `FIRMA_MANTENIMIENTO` / `NOMBRE_MANTENIMIENTO` se envían `NULL` para que el SP conserve lo existente y no intente guardar base64 en `NVARCHAR(500)`.
+- **`InsertarOrdenTrabajoMC` y `InsertarOrdenTrabajoMCBorrador`:** null-safe en firmas, mismo comportamiento de validación (el borrador sigue sin exigir firmas), limpieza de archivos si falla la BD y registro del resultado de `GCActualizaMC` (el estatus 4 se conserva: es intencional).
+- **XSS:** `escapeHtml` en listado, refacciones, carátula/impresión y PDF; `#tipoSOM` pasó de `.html()` a `.text()`; `buildDataAttributes` escapa todos los valores.
+- **Fechas:** `TryParseExact("yyyy-MM-dd")` con `TryParse` de respaldo; si solo viene una fecha se completa el mes; error claro si el formato es inválido.
+- **Filtros:** si el usuario capturó fechas, se envían siempre al SP (área/línea/orden ya no las anulan). Sin fechas y con filtro adicional se conserva la búsqueda en todo el historial.
+- **`InsertarMC`:** error case-insensitive, `TryParse` de la solicitud y `try/catch` por equipo.
+- **`InsertarSolicitudRefaccion`:** null-check, error case-insensitive y actualización de estatus solo si se insertó al menos un artículo.
+- **`InsertarSolicitudMC`:** null-check y error case-insensitive.
+- **Búsquedas:** los errores de `GetMantenimientoCorrectivo`, `BuscarEmpleados` y `ObtenerTecnicosOT` se registran con `Trace.TraceError`; se mantiene el contrato actual (`[]`) para no romper los llamadores.
+- **Orden de trabajo:** placeholder cambiado a "Orden exacta (ej. OTMC-001)" para reflejar que el SP usa `=`.
+
+### 13.3 Lo que NO se cambió
+
+- Borrador: sigue sin exigir firmas y sin cambiar estatus a 4.
+- OT final: mismas validaciones; **no** se agregaron firmas obligatorias.
+- Estatus 4 al guardar OT: intencional, sin cambios.
+- Fórmula de `calcularTiemposCierreOT`: sin cambios (queda como observación).
+- Filtros de estatus/área/línea ya funcionaban: sin cambios.
+- Tooltips y autenticación del servidor: sin cambios.
+- **0 stored procedures alterados; 0 cambios de esquema.**
+
+### 13.4 Pruebas
+
+| Caso | Resultado |
+|---|---|
+| `POST /GuardarRutina` | 404 (endpoint eliminado) |
+| Compilación | OK |
+| `node --check` del JS | OK |
+| `escapeHtml` (unitario) | OK (`<script>`, comillas, `&`, null, número) |
+| Filtros: sin fechas / NOV+área / OCT+área / NOV+orden | 2 / 2 / **0** / 1 |
+| Una sola fecha (inicio o fin) | 2 y 2 (completa el mes de la fecha enviada) |
+| Fecha inválida (`abc`) | mensaje claro, sin consultar el SP |
+| Orden exacta `OTMC-001` / parcial `OTMC` | 1 / 0 (exacta, como se definió) |
+| OT final con 2 firmas PNG | `SI`; `FIRMA_REALIZO=SI`, `FIRMA_SUPERVISO=SI`, `FIRMA_MANTENIMIENTO=NULL`; archivos creados |
+| Borrador sin firmas | `SI`; fila creada y **0** archivos |
+| Firma inválida (no PNG) | `NO`; sin fila y sin archivos |
+| Path traversal `../../evil` | sin archivos fuera de `FirmasOTCorrectivo`; carpeta sanitizada |
+| Re-guardado de OT existente | `FIRMA_MANTENIMIENTO` se conserva (`MANT-OLD`); 2 PNG y 0 `.tmp` |
+
+### 13.5 Archivos
+
+- `MantenimientosPTM/Controllers/MantenimientosCorrectivosController.cs`
+- `MantenimientosPTM/Scripts/mantenimientos_correctivos_refactor.js`
+- `MantenimientosPTM/Views/MantenimientosCorrectivos/MantenimientoCorrectivo.cshtml`

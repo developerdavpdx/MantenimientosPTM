@@ -1,4 +1,16 @@
 ﻿// ========================================
+// UTILIDADES
+// ========================================
+function escapeHtml(value) {
+    return (value ?? '').toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// ========================================
 // INICIALIZACIÓN
 // ========================================
 $(document).ready(function () {
@@ -155,7 +167,7 @@ class MantenimientosCorrectivosApp {
             this.areaTecnica = $(e.currentTarget).data('areatecnica');
 
             // Limpia y escribe el texto dinámico del tipo de solicitud
-            $('#tipoSOM').html(this.areaTecnica);
+            $('#tipoSOM').text(this.areaTecnica);
 
             //Se dispara el evento de abrir modal
             this.mantenimientoManager.abrirModalCaratulaOnline($(e.currentTarget));
@@ -186,12 +198,6 @@ class MantenimientosCorrectivosApp {
 
         // 🔥 GUARDAR BORRADOR
         $('#btnGuardarBorrador').on('click', (e) => this.mantenimientoManager.guardarOTBorrador(e));
-
-        // Guardar estatus
-        $('#btnGuardarEstatus').on('click', () => this.mantenimientoManager.guardarEstatus());
-
-        // Guardar rutina
-        $('#btnGuardarRutina').on('click', () => this.mantenimientoManager.guardarRutina());
 
         // ❌ Ya no necesitas esto con arrow functions
         // const self = this;
@@ -505,9 +511,9 @@ class MantenimientosCorrectivosApp {
                                 accionesHTML = `
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-danger btn-cerrar-solicitud" 
-                                                    data-refaccion-id="${item.ID_SOLICITUD || ''}"
-                                                    data-orden-trabajo="${item.ORDEN_TRABAJO}"
-                                                    data-id-orden-trabajo="${item.ID_ORDENTRABAJOMC}"
+                                                    data-refaccion-id="${escapeHtml(item.ID_SOLICITUD || '')}"
+                                                    data-orden-trabajo="${escapeHtml(item.ORDEN_TRABAJO)}"
+                                                    data-id-orden-trabajo="${escapeHtml(item.ID_ORDENTRABAJOMC)}"
                                                     title="Cerrar esta solicitud">
                                                 <i class="bi bi-x-circle me-1"></i>Cerrar Solicitud
                                             </button>
@@ -519,8 +525,8 @@ class MantenimientosCorrectivosApp {
                                     accionesHTML = `
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-ptm-primary btn-autorizar-refaccion" 
-                                                    data-refaccion-id="${item.ID_SOLICITUD || ''}"
-                                                    data-orden-trabajo="${ordenTrabajo}"
+                                                    data-refaccion-id="${escapeHtml(item.ID_SOLICITUD || '')}"
+                                                    data-orden-trabajo="${escapeHtml(ordenTrabajo)}"
                                                     title="Autorizar esta refacción">
                                                 <i class="bi bi-check-circle me-1"></i>Autorizar
                                             </button>
@@ -561,12 +567,12 @@ class MantenimientosCorrectivosApp {
 
                             html += `
                             <tr>
-                                <td>${item.REFACCION_SOLICITADA || ''}</td>
-                                <td>${item.NOMBRE_ARTICULO || ''}</td>
-                                <td class="text-center">${item.CANTIDAD || 0}</td>
-                                <td class="text-center">${item.NIVEL_URGENCIA || ''}</td>
+                                <td>${escapeHtml(item.REFACCION_SOLICITADA || '')}</td>
+                                <td>${escapeHtml(item.NOMBRE_ARTICULO || '')}</td>
+                                <td class="text-center">${escapeHtml(item.CANTIDAD || 0)}</td>
+                                <td class="text-center">${escapeHtml(item.NIVEL_URGENCIA || '')}</td>
                                 <td class="text-center">
-                                    <span class="badge ${classBadge}">${textoEstatus}</span>
+                                    <span class="badge ${classBadge}">${escapeHtml(textoEstatus)}</span>
                                 </td>
                                 ${cantidadHTML}
                                 ${accionesHTML}
@@ -1292,7 +1298,7 @@ class MantenimientoManager {
                         render: (data, type, row) => {
                             const esNueva = row.DescEstatusOrden === 'Liberado';
                             const punto = esNueva ? `<span class="punto-pulso"></span>` : '';
-                            return `${punto}<span class="badge bg-primary badge-custom"><i class="bi bi-clipboard-data me-1"></i>${data || ''}</span>`;
+                            return `${punto}<span class="badge bg-primary badge-custom"><i class="bi bi-clipboard-data me-1"></i>${escapeHtml(data)}</span>`;
                         }
                     },
                     // ✅ Col 4: Equipo
@@ -1300,18 +1306,18 @@ class MantenimientoManager {
                         data: null,
                         render: (data, type, row) => {
                             return `<i class="bi bi-gear-fill me-1 text-muted"></i>
-                        ${(row.NombreEquipo || 'N/A')} ${(row.NumeroDocPmCalidad || '')}`;
+                        ${escapeHtml(row.NombreEquipo || 'N/A')} ${escapeHtml(row.NumeroDocPmCalidad || '')}`;
                         }
                     },
                     // ✅ Col 5: Proceso (Área)
                     {
                         data: "Area",
-                        render: (data) => `<i class="bi bi-diagram-3 me-1 text-muted"></i>${data || 'N/A'}`
+                        render: (data) => `<i class="bi bi-diagram-3 me-1 text-muted"></i>${escapeHtml(data || 'N/A')}`
                     },
                     // ✅ Col 6: Línea
                     {
                         data: "LineaProduccion",
-                        render: (data) => `<i class="bi bi-arrow-repeat me-1 text-muted"></i>${data || 'N/A'}`
+                        render: (data) => `<i class="bi bi-arrow-repeat me-1 text-muted"></i>${escapeHtml(data || 'N/A')}`
                     },
                     // ✅ Col 7: Estatus Orden
                     {
@@ -1357,7 +1363,7 @@ class MantenimientoManager {
                             }
 
                             return `<span class="badge ${badgeClass} badge-custom">
-                            ${badgeIcon}${status}
+                            ${badgeIcon}${escapeHtml(status)}
                         </span>`;
                         }
                     },
@@ -1365,37 +1371,37 @@ class MantenimientoManager {
                     {
                         data: "FechaCreacion",
                         className: "text-center",
-                        render: (data) => `<i class="bi bi-calendar-event me-1 text-muted"></i>${data || 'N/A'}`
+                        render: (data) => `<i class="bi bi-calendar-event me-1 text-muted"></i>${escapeHtml(data || 'N/A')}`
                     },
                     // ✅ Col 9: Hora Apertura
                     {
                         data: "HoraApertura",
                         className: "text-center",
-                        render: (data) => `<i class="bi bi-clock me-1 text-muted"></i>${data || ''}`
+                        render: (data) => `<i class="bi bi-clock me-1 text-muted"></i>${escapeHtml(data || '')}`
                     },
                     // ✅ Col 10: Hora Cierre
                     {
                         data: "HoraCierre",
                         className: "text-center",
-                        render: (data) => `<i class="bi bi-clock-history me-1 text-muted"></i>${data || ''}`
+                        render: (data) => `<i class="bi bi-clock-history me-1 text-muted"></i>${escapeHtml(data || '')}`
                     },
                     // ✅ Col 11: Tiempo Invertido (Hrs)
                     {
                         data: "TiempoInvertido",
                         className: "text-center",
-                        render: (data) => `<i class="bi bi-stopwatch me-1 text-muted"></i>${data ? `${data} HRS` : ''}`
+                        render: (data) => `<i class="bi bi-stopwatch me-1 text-muted"></i>${data ? `${escapeHtml(data)} HRS` : ''}`
                     },
                     // ✅ Col 12: Texto Breve
                     {
                         data: "TextoCorto",
                         className: "text-center",
-                        render: (data) => `<i class="bi bi-card-text me-1 text-muted"></i>${data || ''}`
+                        render: (data) => `<i class="bi bi-card-text me-1 text-muted"></i>${escapeHtml(data || '')}`
                     },
                     // ✅ Col 13: Solicitante
                     {
                         data: "Solicitante",
                         className: "text-center",
-                        render: (data) => `<i class="bi bi-person-circle me-1 text-muted"></i>${data || ''}`
+                        render: (data) => `<i class="bi bi-person-circle me-1 text-muted"></i>${escapeHtml(data || '')}`
                     },
                     // ✅ Col 14: Comentarios / Actividad realizada
                     {
@@ -1405,12 +1411,7 @@ class MantenimientoManager {
                             if (!texto) {
                                 return '<span class="text-muted">—</span>';
                             }
-                            const escapado = texto
-                                .replace(/&/g, '&amp;')
-                                .replace(/</g, '&lt;')
-                                .replace(/>/g, '&gt;')
-                                .replace(/"/g, '&quot;')
-                                .replace(/'/g, '&#39;');
+                            const escapado = escapeHtml(texto);
                             const corto = escapado.length > 80 ? escapado.substring(0, 80) + '…' : escapado;
                             return `<span title="${escapado}"><i class="bi bi-chat-left-text me-1 text-muted"></i>${corto}</span>`;
                         }
@@ -1584,7 +1585,7 @@ class MantenimientoManager {
         };
 
         return Object.entries(map)
-            .map(([key, value]) => `data-${key}="${(value ?? '').toString().replace(/"/g, '&quot;')}"`)
+            .map(([key, value]) => `data-${key}="${escapeHtml(value)}"`)
             .join(' ');
     }
 
@@ -1954,12 +1955,6 @@ class MantenimientoManager {
             this.ID_SOLICITUD = data.idSolicitud;
             this.ID_EQUIPO = data.idEquipo;
             this.ID_MANTENIMIENTO = data.idMantenimiento;
-
-            // ========================================
-            // 9️ RUTINA (CLAVE EN MC)
-            // ========================================
-            $('#rutinaNombreEquipo').text(data.numeroDocPmCalidad ? data.nombreEquipo + ' ' + data.numeroDocPmCalidad : data.nombreEquipo);
-            $('#rutinaProceso').text(data.area);
 
             // ========================================
             // 10️ CONFIGURACIÓN POR ROL
@@ -3079,7 +3074,7 @@ class PDFManagerMantenimiento {
             obtenerDatosDocumento: this.obtenerDatosDocumento.bind(this),
             generarContenidoHTML: this.generarContenidoHTML.bind(this),
             printEngine: this.printEngine,
-            tituloTemplate: (d) => `Orden Correctiva - ${d.NumeroOrden}`
+            tituloTemplate: (d) => `Orden Correctiva - ${escapeHtml(d.NumeroOrden)}`
         });
     }
 
@@ -3210,7 +3205,7 @@ class PDFManagerMantenimiento {
                                 <strong>Fecha:</strong> ${DateUtils.obtenerFechaHora()}
                             </div>
                             <div style="margin-top:5px;">
-                                <img src="${datos.QR}" style="width:70px;">
+                                <img src="${escapeHtml(datos.QR)}" style="width:70px;">
                             </div>
                         </div>
                     </div>
@@ -3243,7 +3238,7 @@ class PDFManagerMantenimiento {
                     <div style="padding: 8px 0; margin-top: 10px; border-top: 1px solid #e5e7eb;">
                         <strong style="font-size:9.5px;">📝 Texto Corto (Descripción de la Falla):</strong><br>
                         <div style="border: 1px solid #d1d5db; padding: 10px; background: #fffbeb; margin-top: 5px; border-radius: 4px; min-height: 40px; font-size: 10px;">
-                            ${datos.TextoCorto || ''}
+                            ${escapeHtml(datos.TextoCorto || '')}
                         </div>
                     </div>
                 </div>
@@ -3296,7 +3291,7 @@ class PDFManagerMantenimiento {
                                 display: inline-flex; align-items: center; gap: 5px;
                                 background: #eff6ff; border: 1px solid #bfdbfe;
                                 border-radius: 20px; padding: 3px 10px; font-size: 9.5px; color: #1e40af;">
-                                <strong>${t.nomina}</strong> ${t.nombre}
+                                <strong>${escapeHtml(t.nomina)}</strong> ${escapeHtml(t.nombre)}
                             </span>
                         `).join('')}
                     </div>
@@ -3309,7 +3304,7 @@ class PDFManagerMantenimiento {
                 <td colspan="2" style="padding: 8px; vertical-align: top;">
                     <strong style="font-size:9.5px;">📝 Actividad Realizada:</strong><br>
                     <div style="border: 1px solid #d1d5db; padding: 8px; background: #f9fafb; font-size: 10px; border-radius: 4px; margin-top: 4px; min-height: 40px;">
-                        ${registro.TextoSecuencia}
+                        ${escapeHtml(registro.TextoSecuencia)}
                     </div>
                 </td>
             </tr>
@@ -3362,14 +3357,14 @@ class PDFManagerMantenimiento {
                         </div>
                         <div style="padding: 8px; background: #f8f9fa; min-height: 80px; display: flex; align-items: center; justify-content: center;">
                             ${tieneImagen
-                    ? `<img src="${firma.imagen}" alt="Firma ${titulo}" style="max-width: 100%; max-height: 80px; display: block;">`
+                    ? `<img src="${escapeHtml(firma.imagen)}" alt="Firma ${escapeHtml(titulo)}" style="max-width: 100%; max-height: 80px; display: block;">`
                     : `<span style="font-size: 9px; color: #9ca3af; font-style: italic;">Sin firma</span>`
                 }
                         </div>
                         <div style="padding: 6px 10px; border-top: 1px solid #e5e7eb; font-size: 9.5px; min-height: 28px;">
                             <strong>Nombre:</strong>
                             <span style="border-bottom: 1px solid #000; display: inline-block; min-width: 100px; padding: 1px 2px;">
-                                ${tieneNombre ? firma.nombre : ''}
+                                ${tieneNombre ? escapeHtml(firma.nombre) : ''}
                             </span>
                         </div>
                     </div>
@@ -3404,13 +3399,13 @@ class PDFManagerMantenimiento {
                     <td style="width: 50%; padding: 8px; vertical-align: top;">
                         <strong style="font-size:9.5px;">${icon1} ${label1}:</strong><br>
                         <span style="font-size:10px; border-bottom: 1px solid #000; display: inline-block; min-width: 180px; padding: 2px;">
-                            ${valor1 || ''}
+                            ${escapeHtml(valor1 || '')}
                         </span>
                     </td>
                     <td style="width: 50%; padding: 8px; vertical-align: top;">
                         <strong style="font-size:9.5px;">${icon2} ${label2}:</strong><br>
                         <span style="font-size:10px; border-bottom: 1px solid #000; display: inline-block; min-width: 180px; padding: 2px;">
-                            ${valor2 || ''}
+                            ${escapeHtml(valor2 || '')}
                         </span>
                     </td>
                 </tr>
@@ -3422,7 +3417,7 @@ class PDFManagerMantenimiento {
                 <td style="width: 50%; padding: 8px; vertical-align: top;">
                     <strong style="font-size:9.5px;">${icon1} ${label1}:</strong><br>
                     <span style="font-size:10px; border-bottom: 1px solid #000; display: inline-block; min-width: 180px; padding: 2px;">
-                        ${valor1 || ''}
+                        ${escapeHtml(valor1 || '')}
                     </span>
                 </td>
             </tr>
@@ -3512,7 +3507,7 @@ class PrintManagerMantenimiento {
             },
             generarContenidoHTML: this.generarContenidoHTML.bind(this),
             obtenerEstilos: this.obtenerEstilos.bind(this),
-            tituloTemplate: (d) => `Orden Correctiva - ${d.NumeroOrden}`
+            tituloTemplate: (d) => `Orden Correctiva - ${escapeHtml(d.NumeroOrden)}`
         });
     }
 
@@ -3532,7 +3527,7 @@ class PrintManagerMantenimiento {
 
             this.printEngine.imprimir({
                 html,
-                titulo: `Orden Correctiva - ${datos.NumeroOrden}`,
+                titulo: `Orden Correctiva - ${escapeHtml(datos.NumeroOrden)}`,
                 estilos: this.obtenerEstilos(), // 🔥 CLAVE
                 autoClose: true,
                 win: ventanaImpresion // 🔥 reutiliza la ventana
@@ -3608,10 +3603,10 @@ class PrintManagerMantenimiento {
 
             <div class="encabezado-fecha">
                 <div>
-                    <strong>Fecha:</strong> ${datos.FechaImpresion}
+                    <strong>Fecha:</strong> ${escapeHtml(datos.FechaImpresion)}
                 </div>
                 <div style="margin-top:5px;">
-                    <img src="${datos.QR}" style="width:70px;">
+                    <img src="${escapeHtml(datos.QR)}" style="width:70px;">
                 </div>
             </div>
 
@@ -3631,7 +3626,7 @@ class PrintManagerMantenimiento {
 
         <!-- DATOS DE LA ORDEN -->
         <div class="seccion page-break-avoid">
-            <div class="seccion-header">📋 DATOS DE LA ORDEN<br>🔧 ÁREA TÉCNICA ${datos.AreaTecnica}</div>
+            <div class="seccion-header">📋 DATOS DE LA ORDEN<br>🔧 ÁREA TÉCNICA ${escapeHtml(datos.AreaTecnica)}</div>
             <table class="tabla-detalles">
                 ${this.generarFilaDetalle('Número de Orden', datos.NumeroOrden, 'Solicitante', datos.Solicitante)}
                 ${this.generarFilaDetalle('Número de Nómina', datos.NominaSolicitante, 'Estatus de la Orden', datos.EstatusOrden)}
@@ -3642,7 +3637,7 @@ class PrintManagerMantenimiento {
             
             <div class="texto-corto-contenedor">
                 <span class="texto-corto-label">Texto Corto (Descripción de la Falla):</span>
-                <div class="texto-corto-valor">${datos.TextoCorto || 'N/A'}</div>
+                <div class="texto-corto-valor">${escapeHtml(datos.TextoCorto || 'N/A')}</div>
             </div>
         </div>
 
@@ -3667,19 +3662,19 @@ class PrintManagerMantenimiento {
                 <tr>
                     <td colspan="2">
                         <span class="campo-label">Duración:</span>
-                        <span class="campo-valor">${datos.DuracionHrs} Hrs</span>
+                        <span class="campo-valor">${escapeHtml(datos.DuracionHrs)} Hrs</span>
                     </td>
                 </tr>
                 ` : ''}
             </table>
 
-            ${datos.TecnicosAsignados.length > 0 ? `
+            ${datos.TecnicosAsignados && datos.TecnicosAsignados.length > 0 ? `
             <div class="tecnicos-contenedor">
                 <span class="tecnicos-label">Técnicos Asignados:</span>
                 <div class="tecnicos-lista">
                     ${datos.TecnicosAsignados.map((tec, idx) => `
                         <div class="tecnico-item ${idx < datos.TecnicosAsignados.length - 1 ? 'tecnico-item-separador' : ''}">
-                            👤 <strong>${tec.nombre}</strong> - Nómina: ${tec.nomina}
+                            👤 <strong>${escapeHtml(tec.nombre)}</strong> - Nómina: ${escapeHtml(tec.nomina)}
                         </div>
                     `).join('')}
                 </div>
@@ -3689,7 +3684,7 @@ class PrintManagerMantenimiento {
             ${datos.TextoSecuencia ? `
             <div>
                 <span class="tecnicos-label">Texto de Secuencia:</span>
-                <div class="texto-corto-valor">${datos.TextoSecuencia}</div>
+                <div class="texto-corto-valor">${escapeHtml(datos.TextoSecuencia)}</div>
             </div>
             ` : ''}
         </div>
@@ -3698,7 +3693,7 @@ class PrintManagerMantenimiento {
         <!-- ✅ COMENTARIOS -->
         <div class="seccion page-break-avoid">
             <div class="seccion-header">💬 COMENTARIOS</div>
-            <div class="comentarios-valor">${datos.Comentarios || ''}</div>
+            <div class="comentarios-valor">${escapeHtml(datos.Comentarios || '')}</div>
         </div>
 
         <!-- FOOTER -->
@@ -3720,14 +3715,14 @@ class PrintManagerMantenimiento {
             <span class="campo-label">
                 ${icon1} ${label1}:
             </span>
-            <span class="campo-valor">${valor1}</span>
+            <span class="campo-valor">${escapeHtml(valor1)}</span>
         </td>
 
         <td>
             <span class="campo-label">
                 ${icon2} ${label2}:
             </span>
-            <span class="campo-valor">${valor2}</span>
+            <span class="campo-valor">${escapeHtml(valor2)}</span>
         </td>
     </tr>
     `;

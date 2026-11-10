@@ -222,6 +222,34 @@
      MIGRACION_BAJA_MOTIVO_NULL_*.sql, CONTEXTO_SESION.md.
 
 
+14) CORRECTIVOS - LIMPIEZA Y ENDURECIMIENTO (09/11/2026)
+   - Eliminado GuardarRutina (codigo muerto) + bindings btnGuardarRutina/
+     btnGuardarEstatus + refs rutinaNombreEquipo/rutinaProceso.
+   - Correctivos no guarda rutina: la vista no tenia boton/modal.
+   - Firmas: sanitizacion de NumeroOrden, validacion PNG/tamano, escritura
+     atomica con temporal y limpieza si falla la BD.
+   - FIRMA_MANTENIMIENTO se envia NULL para conservar la existente.
+   - Borrador sigue sin exigir firmas; OT final conserva sus validaciones.
+   - XSS: escapeHtml en listado, refacciones, caratula, impresion y PDF.
+   - Fechas: TryParseExact yyyy-MM-dd + completar mes si falta una.
+   - Filtros: las fechas capturadas ya no se anulan por area/linea/orden.
+   - InsertarMC: error case-insensitive + try/catch por equipo.
+   - InsertarSolicitudRefaccion: estatus solo si se inserto al menos 1.
+   - InsertarSolicitudMC: null-check + error case-insensitive.
+   - Busquedas: errores registrados con Trace.TraceError.
+   - Orden de trabajo: placeholder "Orden exacta (ej. OTMC-001)".
+   - Estatus 4 y formula de tiempos: sin cambios (intencional/observacion).
+   - 0 stored procedures alterados; 0 cambios de esquema.
+   - Pruebas: build OK, JS OK, escapeHtml OK, GuardarRutina 404.
+     Filtros: sin fechas 2 / NOV+area 2 / OCT+area 0 / NOV+orden 1;
+     una sola fecha completa el mes; fecha invalida con mensaje.
+     OT final con 2 firmas PNG OK (FIRMA_MANTENIMIENTO conservada);
+     borrador sin firmas OK (0 archivos); firma invalida rechazada (0
+     archivos); path traversal sin escritura fuera de la carpeta.
+   - Archivos: MantenimientosCorrectivosController.cs,
+     mantenimientos_correctivos_refactor.js, MantenimientoCorrectivo.cshtml.
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================

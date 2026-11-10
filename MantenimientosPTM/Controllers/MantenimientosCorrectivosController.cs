@@ -1,7 +1,6 @@
 ﻿using MantenimientosPTM.Hubs;
 using Microsoft.AspNet.SignalR;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Sap.Data.Hana;
 using System;
 using System.Collections.Generic;
@@ -55,6 +54,9 @@ namespace MantenimientosPTM.Controllers
                     RequestData = JsonConvert.DeserializeObject<AccesoDatosMantenimientosCorrectivos.SolicitudMantenimientoMC>(jsonData);
                 }
 
+                if (RequestData == null)
+                    throw new Exception("No se recibieron datos válidos.");
+
                 // Convertir modelo a parámetros HANA
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(RequestData, false, null);
                 var excludedParams = new[] { "IdSolicitud", "FechaCreacion", "ClaseMantenimiento", "FechaActualizacion" };
@@ -65,11 +67,12 @@ namespace MantenimientosPTM.Controllers
                 var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertarSolicitudMC, parameters);
 
                 // Obtener ID generado si existe
-                var nuevoId = resultHana.JsonResult;
+                var nuevoId = resultHana == null ? string.Empty : (resultHana.JsonResult ?? string.Empty);
+                bool tuvoError = nuevoId.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0;
 
                 // Construir respuesta JSON
-                jsonResponse.Status = nuevoId.Contains("ERROR") ? "NO" : "SI";
-                jsonResponse.Message = nuevoId.Contains("ERROR") ? "No fue posible insertar la solicitud de mantenimiento correctivo." : "Solicitud de mantenimiento correctivo insertada correctamente.";
+                jsonResponse.Status = tuvoError ? "NO" : "SI";
+                jsonResponse.Message = tuvoError ? "No fue posible insertar la solicitud de mantenimiento correctivo." : "Solicitud de mantenimiento correctivo insertada correctamente.";
                 jsonResponse.Data = nuevoId;
 
                 //NOTIFICAR EN LA WEB SOBRE ACTUALIZACIONES (SIGNAL R)
@@ -99,7 +102,6 @@ namespace MantenimientosPTM.Controllers
         {
             try
             {
-                bool AditionalFilter = false;
                 // ✅ Parámetros de DataTables
                 string draw = Request.Form["draw"];
                 string drawValue = !string.IsNullOrEmpty(draw) ? draw : "0";
@@ -142,24 +144,10 @@ namespace MantenimientosPTM.Controllers
                 string IdsMtto = System.Configuration.ConfigurationManager.AppSettings["PosicionesMtto"];
 
 
-                if (FiltroArea != string.Empty || FiltroLinea != string.Empty || FiltroOrdenTrabajo != string.Empty)
-                    AditionalFilter = true;
-
-                // ✅ Si no vienen fechas, usar el mes actual
-                DateTime dtFechaInicio;
-                DateTime dtFechaFin;
-
-                if (string.IsNullOrEmpty(FiltroFechaInicio) || string.IsNullOrEmpty(FiltroFechaFin))
-                {
-                    DateTime hoy = DateTime.Now;
-                    dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1); // ✅ Primer día del mes actual
-                    dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1); // ✅ Último día del mes actual
-                }
-                else
-                {
-                    dtFechaInicio = DateTime.Parse(FiltroFechaInicio);
-                    dtFechaFin = DateTime.Parse(FiltroFechaFin);
-                }
+                bool hayFiltroAdicional =
+                    !string.IsNullOrWhiteSpace(FiltroArea) ||
+                    !string.IsNullOrWhiteSpace(FiltroLinea) ||
+                    !string.IsNullOrWhiteSpace(FiltroOrdenTrabajo);
 
                 // ✅ Detectar si viene de Bitácora (algún filtro de exclusión activo)
                 bool esDesdeBitacora =
@@ -168,16 +156,50 @@ namespace MantenimientosPTM.Controllers
                     FiltroExcluirSincronizadosPEADCORR == "S" ||
                     FiltroExcluirSincronizadosINY == "S";
 
-                if(esDesdeBitacora)
-                    AditionalFilter = false;
+                // ✅ Fechas: se parsean de forma independiente. Si solo viene una,
+                // se completa el rango con el mes de la fecha enviada.
+                DateTime dtFechaInicio = default(DateTime);
+                DateTime dtFechaFin = default(DateTime);
+
+                bool hayFechaInicio = !string.IsNullOrWhiteSpace(FiltroFechaInicio);
+                bool hayFechaFin = !string.IsNullOrWhiteSpace(FiltroFechaFin);
+                bool hayFechas = hayFechaInicio || hayFechaFin;
+
+                if (hayFechas)
+                {
+                    if (hayFechaInicio && !TryParseFecha(FiltroFechaInicio, out dtFechaInicio))
+                        throw new Exception("La fecha de inicio no es válida. Use el formato AAAA-MM-DD.");
+
+                    if (hayFechaFin && !TryParseFecha(FiltroFechaFin, out dtFechaFin))
+                        throw new Exception("La fecha de fin no es válida. Use el formato AAAA-MM-DD.");
+
+                    if (hayFechaInicio && !hayFechaFin)
+                        dtFechaFin = new DateTime(dtFechaInicio.Year, dtFechaInicio.Month, 1).AddMonths(1).AddDays(-1);
+                    else if (!hayFechaInicio && hayFechaFin)
+                        dtFechaInicio = new DateTime(dtFechaFin.Year, dtFechaFin.Month, 1);
+
+                    if (dtFechaInicio > dtFechaFin)
+                        throw new Exception("La fecha de inicio no puede ser mayor que la fecha de fin.");
+                }
+                else
+                {
+                    DateTime hoy = DateTime.Now;
+                    dtFechaInicio = new DateTime(hoy.Year, hoy.Month, 1); // ✅ Primer día del mes actual
+                    dtFechaFin = dtFechaInicio.AddMonths(1).AddDays(-1); // ✅ Último día del mes actual
+                }
+
+                // ✅ Se envían fechas al SP cuando el usuario las capturó, cuando no hay
+                // filtro adicional o cuando viene de Bitácora. Si no hay fechas y hay
+                // filtro adicional se mantiene la búsqueda en todo el historial.
+                bool enviarFechas = hayFechas || !hayFiltroAdicional || esDesdeBitacora;
 
                 //=================================OBTENER DATOS===========================//
                 // ✅ TODOS LOS FILTROS SE ENVÍAN A HANA
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
                     { "P_ID_SOLICITUD", (string.IsNullOrEmpty(FiltroIDSolicitud) ? (object)null : FiltroIDSolicitud, ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_FECHA_INICIO", (AditionalFilter ? (object)null : dtFechaInicio, ParameterDirection.Input, HanaDbType.Date) },
-                    { "P_FECHA_FIN", (AditionalFilter ? (object)null : dtFechaFin, ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_INICIO", (enviarFechas ? (object)dtFechaInicio : null, ParameterDirection.Input, HanaDbType.Date) },
+                    { "P_FECHA_FIN", (enviarFechas ? (object)dtFechaFin : null, ParameterDirection.Input, HanaDbType.Date) },
                     { "P_FILTRO_AREA", (string.IsNullOrEmpty(FiltroArea) ? (object)null : FiltroArea, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_LINEA", (string.IsNullOrEmpty(FiltroLinea) ? (object)null : FiltroLinea, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_FILTRO_ORDEN", (string.IsNullOrEmpty(FiltroOrdenTrabajo) ? (object)null : FiltroOrdenTrabajo, ParameterDirection.Input, HanaDbType.NVarChar) },
@@ -302,6 +324,8 @@ namespace MantenimientosPTM.Controllers
                 string ControllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
                 string msg = $"Error al buscar la soliictud de correctivo en {MethodName} de {ControllerName}. Error: {ex.Message}";
 
+                System.Diagnostics.Trace.TraceError(msg);
+
 
                 // ✅ Retornar lista vacía en caso de error
                 return Json(new List<object>(), JsonRequestBehavior.AllowGet);
@@ -338,31 +362,42 @@ namespace MantenimientosPTM.Controllers
                 // Ahora sí puedes iterar sobre los equipos
                 foreach (var equipo in Equipos)
                 {
-
-
-                    // Crear objeto con las fechas convertidas
-                    var parametrosEquipo = new
+                    try
                     {
-                        p_ID_SOLICITUD = int.Parse(equipo.IdSolicitud),
-                        p_USUARIO = equipo.Usuario
-                    };
+                        if (equipo == null || !int.TryParse(equipo.IdSolicitud, out int idSolicitud))
+                        {
+                            OTsinGenerar.AppendLine($"Solicitud {equipo?.IdSolicitud} - {equipo?.NombreEquipo}: identificador inválido");
+                            continue;
+                        }
 
-                    // Convertir a parámetros HANA usando tu método existente
-                    var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosEquipo, false, null);
+                        // Crear objeto con las fechas convertidas
+                        var parametrosEquipo = new
+                        {
+                            p_ID_SOLICITUD = idSolicitud,
+                            p_USUARIO = equipo.Usuario
+                        };
 
-                    // Ejecutar stored procedure para insertar equipo
-                    var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertarMC, allparameters);
+                        // Convertir a parámetros HANA usando tu método existente
+                        var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosEquipo, false, null);
 
-                    // Obtener ID generado si existe
-                    OT = resultHana.JsonResult;
+                        // Ejecutar stored procedure para insertar equipo
+                        var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertarMC, allparameters);
 
-                    if (OT.Contains("ERROR"))
-                    {
-                        OTsinGenerar.AppendLine($"Solicitud {equipo.IdSolicitud} - {equipo.NombreEquipo}");
+                        // Obtener ID generado si existe
+                        OT = resultHana == null ? string.Empty : (resultHana.JsonResult ?? string.Empty);
+
+                        if (OT.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            OTsinGenerar.AppendLine($"Solicitud {equipo.IdSolicitud} - {equipo.NombreEquipo}");
+                        }
+                        else
+                        {
+                            ordenesGeneradas++;
+                        }
                     }
-                    else
+                    catch (Exception exEquipo)
                     {
-                        ordenesGeneradas++;
+                        OTsinGenerar.AppendLine($"Solicitud {equipo?.IdSolicitud} - {equipo?.NombreEquipo}: {exEquipo.Message}");
                     }
                 }
 
@@ -389,6 +424,8 @@ namespace MantenimientosPTM.Controllers
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
             AccesoDatosMantenimientosCorrectivos.OrdenTrabajoMCDTO datos;
+            FirmaPendiente firmaRealizo = null;
+            FirmaPendiente firmaSuperviso = null;
 
             try
             {
@@ -409,32 +446,38 @@ namespace MantenimientosPTM.Controllers
                         throw new Exception("No se recibieron datos válidos.");
                 }
 
-                // 🔥 PROCESAR Y GUARDAR FIRMAS DIGITALES
-                bool rutaFirmaRealizo = GuardarFirmaDigital(
+                // 🔥 PREPARAR FIRMAS DIGITALES (se confirman solo si la BD guarda bien)
+                bool okFirmaRealizo = PrepararFirmaDigital(
                     datos.FirmaRealizo,
                     datos.NumeroOrden,
-                    "Realizo"
+                    "Realizo",
+                    out firmaRealizo
                 );
 
-                //Solo guardar la bandera
-                datos.FirmaRealizo = rutaFirmaRealizo && datos.FirmaRealizo.Length > 0 ? "SI" : "";
-
-                bool rutaFirmaSuperviso = GuardarFirmaDigital(
+                bool okFirmaSuperviso = PrepararFirmaDigital(
                     datos.FirmaSuperviso,
                     datos.NumeroOrden,
-                    "Superviso"
+                    "Superviso",
+                    out firmaSuperviso
                 );
 
-
                 //Solo guardar la bandera
-                datos.FirmaSuperviso = rutaFirmaSuperviso && datos.FirmaSuperviso.Length > 0 ? "SI" : "";
+                datos.FirmaRealizo = okFirmaRealizo && firmaRealizo != null ? "SI" : "";
+                datos.FirmaSuperviso = okFirmaSuperviso && firmaSuperviso != null ? "SI" : "";
 
                 // Nota: Por petición temporal, la firma de "Mantenimiento" ya no es requerida
                 // y no se guarda ni se envía al stored procedure. Se deja el helper disponible
                 // por si en el futuro se necesita reactivar.
+                // Se envían NULL para que el SP conserve la firma existente y no intente
+                // almacenar el base64 en una columna NVARCHAR(500).
+                datos.FirmaMantenimiento = null;
+                datos.NombreMantenimiento = null;
 
-                if (!rutaFirmaRealizo || !rutaFirmaSuperviso)
+                if (!okFirmaRealizo || !okFirmaSuperviso)
                 {
+                    DescartarFirma(firmaRealizo);
+                    DescartarFirma(firmaSuperviso);
+
                     // Construir respuesta JSON
                     jsonResponse.Status = "NO";
                     jsonResponse.Message = $"No fue posible actualizar la solicitud, no fue posible guardar las firmas, intenta de nuevo más tarde.";
@@ -466,8 +509,11 @@ namespace MantenimientosPTM.Controllers
                     parameters
                 );
 
-                if (resultHana.JsonResult.ToUpper().Contains("ERROR"))
+                if ((resultHana.JsonResult ?? string.Empty).IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
+                    DescartarFirma(firmaRealizo);
+                    DescartarFirma(firmaSuperviso);
+
                     // Construir respuesta JSON
                     jsonResponse.Status = "NO";
                     jsonResponse.Message = $"No fue posible actualizar la solicitud,intenta de nuevo más tarde.";
@@ -498,6 +544,12 @@ namespace MantenimientosPTM.Controllers
                 allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, false, null);
                 //Actualizar estatus de OT
                 var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMC, allparameters);
+
+                // Se registra el resultado, pero no se cambia el flujo: el estatus 4 es intencional.
+                if (ActualizaOT == null || (ActualizaOT.JsonResult ?? string.Empty).IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    System.Diagnostics.Trace.TraceError($"No fue posible actualizar el estatus de la OT {datos.NumeroOrden}.");
+                }
 
 
 
@@ -553,6 +605,9 @@ namespace MantenimientosPTM.Controllers
                     throw new Exception("No fue posible guardar la orden de trabajo");
                 }
 
+                ConfirmarFirma(firmaRealizo);
+                ConfirmarFirma(firmaSuperviso);
+
                 return Json(jsonResponse, JsonRequestBehavior.AllowGet);
             }
             catch (Exception ex)
@@ -564,6 +619,9 @@ namespace MantenimientosPTM.Controllers
                 jsonResponse.Message = $"No fue posible guardar la orden de trabajo en {MethodName} de {ControllerName}: {ex.Message}";
                 jsonResponse.Data = string.Empty;
 
+                DescartarFirma(firmaRealizo);
+                DescartarFirma(firmaSuperviso);
+
                 return Json(jsonResponse, JsonRequestBehavior.AllowGet);
             }
         }
@@ -574,6 +632,8 @@ namespace MantenimientosPTM.Controllers
         {
             var jsonResponse = new GlobalCommands.JsonResponseMtto();
             AccesoDatosMantenimientosCorrectivos.OrdenTrabajoMCDTO datos;
+            FirmaPendiente firmaRealizo = null;
+            FirmaPendiente firmaSuperviso = null;
 
             try
             {
@@ -594,31 +654,29 @@ namespace MantenimientosPTM.Controllers
                         throw new Exception("No se recibieron datos válidos.");
                 }
 
-                // 🔥 PROCESAR Y GUARDAR FIRMAS DIGITALES (sin validar para borrador)
-                bool rutaFirmaRealizo = true;
-                bool rutaFirmaSuperviso = true;
-
-                if (!string.IsNullOrEmpty(datos.FirmaRealizo) && datos.FirmaRealizo.Length > 0)
+                // 🔥 PREPARAR FIRMAS DIGITALES (sin validar para borrador)
+                // Si una firma no se puede guardar, el borrador continúa sin ella (mismo comportamiento actual).
+                bool okFirmaRealizo = PrepararFirmaDigital(datos.FirmaRealizo, datos.NumeroOrden, "Realizo", out firmaRealizo);
+                if (!okFirmaRealizo)
                 {
-                    rutaFirmaRealizo = GuardarFirmaDigital(
-                        datos.FirmaRealizo,
-                        datos.NumeroOrden,
-                        "Realizo"
-                    );
+                    DescartarFirma(firmaRealizo);
+                    firmaRealizo = null;
                 }
 
-                datos.FirmaRealizo = rutaFirmaRealizo && datos.FirmaRealizo != null && datos.FirmaRealizo.Length > 0 ? "SI" : "";
-
-                if (!string.IsNullOrEmpty(datos.FirmaSuperviso) && datos.FirmaSuperviso.Length > 0)
+                bool okFirmaSuperviso = PrepararFirmaDigital(datos.FirmaSuperviso, datos.NumeroOrden, "Superviso", out firmaSuperviso);
+                if (!okFirmaSuperviso)
                 {
-                    rutaFirmaSuperviso = GuardarFirmaDigital(
-                        datos.FirmaSuperviso,
-                        datos.NumeroOrden,
-                        "Superviso"
-                    );
+                    DescartarFirma(firmaSuperviso);
+                    firmaSuperviso = null;
                 }
 
-                datos.FirmaSuperviso = rutaFirmaSuperviso && datos.FirmaSuperviso != null && datos.FirmaSuperviso.Length > 0 ? "SI" : "";
+                datos.FirmaRealizo = firmaRealizo != null ? "SI" : "";
+                datos.FirmaSuperviso = firmaSuperviso != null ? "SI" : "";
+
+                // Se envían NULL para que el SP conserve la firma existente y no intente
+                // almacenar el base64 en una columna NVARCHAR(500).
+                datos.FirmaMantenimiento = null;
+                datos.NombreMantenimiento = null;
 
                 string[] excludedParams = null;
                 // Convertir a parámetros HANA
@@ -642,8 +700,11 @@ namespace MantenimientosPTM.Controllers
                     parameters
                 );
 
-                if (resultHana.JsonResult.ToUpper().Contains("ERROR"))
+                if ((resultHana.JsonResult ?? string.Empty).IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
+                    DescartarFirma(firmaRealizo);
+                    DescartarFirma(firmaSuperviso);
+
                     jsonResponse.Status = "NO";
                     jsonResponse.Message = "No fue posible guardar el borrador, intenta de nuevo más tarde.";
                     jsonResponse.Data = string.Empty;
@@ -677,6 +738,9 @@ namespace MantenimientosPTM.Controllers
                     throw new Exception("No fue posible guardar el borrador");
                 }
 
+                ConfirmarFirma(firmaRealizo);
+                ConfirmarFirma(firmaSuperviso);
+
                 return Json(jsonResponse, JsonRequestBehavior.AllowGet);
             }
             catch (Exception ex)
@@ -687,6 +751,9 @@ namespace MantenimientosPTM.Controllers
                 jsonResponse.Status = "NO";
                 jsonResponse.Message = $"No fue posible guardar el borrador en {MethodName} de {ControllerName}: {ex.Message}";
                 jsonResponse.Data = string.Empty;
+
+                DescartarFirma(firmaRealizo);
+                DescartarFirma(firmaSuperviso);
 
                 return Json(jsonResponse, JsonRequestBehavior.AllowGet);
             }
@@ -711,6 +778,9 @@ namespace MantenimientosPTM.Controllers
                     // Deserializar JSON al modelo con múltiples artículos
                     RequestData = JsonConvert.DeserializeObject<AccesoDatosMantenimientosCorrectivos.SolicitudRefaccionMultiple>(jsonData);
                 }
+
+                if (RequestData == null)
+                    throw new Exception("No se recibieron datos válidos.");
 
                 if (RequestData.Articulos == null || RequestData.Articulos.Count == 0)
                     throw new Exception("No se recibieron artículos.");
@@ -760,8 +830,8 @@ namespace MantenimientosPTM.Controllers
                     // Ejecutar stored procedure para insertar artículo
                     var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCInsertarSolicitudRefaccionCorrectivo, parameters);
 
-                    var nuevoId = resultHana.JsonResult;
-                    if (!nuevoId.Contains("ERROR"))
+                    var nuevoId = resultHana == null ? string.Empty : (resultHana.JsonResult ?? string.Empty);
+                    if (nuevoId.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) < 0)
                     {
                         insertados++;
                     }
@@ -771,16 +841,25 @@ namespace MantenimientosPTM.Controllers
                     }
                 }
 
-                // ✅ Actualizar estatus del mantenimiento (solo una vez) //SE QUITO DE ESTA VERSION YA QUE PUEDEN SOLICITAR MULTIPLES REFACCIONES SIN TEMA
-                var parametrosOT = new
+                // ✅ Actualizar estatus del mantenimiento solo si al menos un artículo se insertó
+                // (antes se actualizaba incluso cuando todos fallaban).
+                if (insertados > 0)
                 {
-                    P_ID_MANTENIMIENTO = RequestData.IdMantenimiento,
-                    P_ESTATUS = RequestData.Estatus,
-                    P_USUARIO_ACTUALIZA = RequestData.UsuarioSolicita
-                };
+                    var parametrosOT = new
+                    {
+                        P_ID_MANTENIMIENTO = RequestData.IdMantenimiento,
+                        P_ESTATUS = RequestData.Estatus,
+                        P_USUARIO_ACTUALIZA = RequestData.UsuarioSolicita
+                    };
 
-                var allparametersOT = Logic.GlobalCommands.ConvertToHanaParameters(parametrosOT, false, null);
-                var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMC, allparametersOT);
+                    var allparametersOT = Logic.GlobalCommands.ConvertToHanaParameters(parametrosOT, false, null);
+                    var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMC, allparametersOT);
+
+                    if (ActualizaOT == null || (ActualizaOT.JsonResult ?? string.Empty).IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        System.Diagnostics.Trace.TraceError($"No fue posible actualizar el estatus del mantenimiento {RequestData.IdMantenimiento} al solicitar refacciones.");
+                    }
+                }
 
                 // Construir respuesta
                 if (errores.Count > 0 && insertados == 0)
@@ -868,7 +947,7 @@ namespace MantenimientosPTM.Controllers
                 string msg = $"Error al buscar empleados en {MethodName} de {ControllerName}. Error: {ex.Message}";
 
                 // ✅ Log del error (si tienes sistema de logs)
-                // Logger.Error(msg);
+                System.Diagnostics.Trace.TraceError(msg);
 
                 // ✅ Retornar lista vacía en caso de error
                 return Json(new List<object>(), JsonRequestBehavior.AllowGet);
@@ -915,191 +994,192 @@ namespace MantenimientosPTM.Controllers
                 string ControllerName = this.ControllerContext.RouteData.Values["controller"].ToString();
                 string msg = $"Error al obtener técnicos en {MethodName} de {ControllerName}. Error: {ex.Message}";
 
-                // Logger.Error(msg);
+                System.Diagnostics.Trace.TraceError(msg);
 
                 return Json(new List<object>(), JsonRequestBehavior.AllowGet);
             }
         }
 
-        [HttpPost]
-        public JsonResult GuardarRutina()
+        // 🔥 MÉTODO HELPER PARA GUARDAR FIRMAS DIGITALES (PREPARAR / CONFIRMAR / DESCARTAR)
+        private sealed class FirmaPendiente
         {
-            var jsonResponse = new GlobalCommands.JsonResponseMtto();
-            try
-            {
-                // Obtener datos básicos
-                var idMantenimiento = Request.Form["idMantenimiento"];
-                var idEquipo = Request.Form["idEquipo"];
-                var comentarios = Request.Form["comentarios"];
-                var usuarioRegistro = Request.Form["usuarioRegistro"]; // Asegúrate de enviarlo desde el front
-                var actividadesJson = Request.Form["actividades"];
-
-                // Validar datos básicos
-                if (string.IsNullOrEmpty(idMantenimiento) || string.IsNullOrEmpty(actividadesJson))
-                {
-                    throw new Exception("Faltan datos obligatorios (idMantenimiento o actividades).");
-                }
-
-                // 🔥 OBTENER Y GUARDAR LAS IMÁGENES (solo en servidor, no en BD)
-                var imagenes = Request.Files;
-                List<string> rutasImagenes = new List<string>();
-
-                if (imagenes.Count > 0)
-                {
-                    // Crear carpeta si no existe
-                    string carpetaDestino = Server.MapPath($"~/EvidenciaRutinas/{idMantenimiento}");
-                    if (!Directory.Exists(carpetaDestino))
-                    {
-                        Directory.CreateDirectory(carpetaDestino);
-                    }
-
-                    // Guardar cada imagen
-                    for (int i = 0; i < imagenes.Count; i++)
-                    {
-                        var archivo = imagenes[i];
-                        if (archivo != null && archivo.ContentLength > 0)
-                        {
-                            string nombreArchivo = $"{DateTime.Now:yyyyMMddHHmmss}_{i}_{Path.GetFileName(archivo.FileName)}";
-                            string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
-                            archivo.SaveAs(rutaCompleta);
-                            rutasImagenes.Add($"/EvicenciaRutinas/{idMantenimiento}/{nombreArchivo}");
-                        }
-                    }
-                }
-
-                // 🔥 PREPARAR PARÁMETROS PARA BASE DE DATOS
-                var parametrosRutina = new
-                {
-                    P_ID_MANTENIMIENTO = idMantenimiento,
-                    P_ID_EQUIPO = idEquipo,
-                    P_COMENTARIOS = comentarios,
-                    P_USUARIO_REGISTRO = usuarioRegistro,
-                    P_ACTIVIDADES_JSON = actividadesJson
-                };
-
-                // Convertir a parámetros HANA
-                var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosRutina, false, null);
-
-                // 🔥 EJECUTAR STORED PROCEDURE
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCGuardarRutinaMP, // Nombre de tu constante para el SP
-                    allparameters
-                );
-
-                //Validar si ya se completo la CARATULA Y LA RUTINA ONLINE
-                var parametrosMantenimeinto = new
-                {
-                    P_NUMERO_ORDEN = idMantenimiento
-                };
-
-                allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosMantenimeinto, false, null);
-
-                // ✅ Ejecutar stored procedure
-                var CaratulaRutinaCompleta = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCValidarOTCorrectivoFinalizada,
-                    allparameters
-                );
-
-
-                //Si ya esta finalizada en conjunto con la rutina online actualizar estatus de mantenimiento
-                JArray CARRUT = JArray.Parse(CaratulaRutinaCompleta.JsonResult);
-                string OT = CARRUT[0]["ORDEN_TRABAJO_FINALIZADA"].ToString();
-                string RUTINA = CARRUT[0]["RUTINA_COMPLETADA"].ToString();
-
-                if (OT == "SI" && RUTINA == "SI")
-                {
-
-                    // Crear objeto con las fechas convertidas
-                    var parametrosFinOT = new
-                    {
-                        P_ID_MANTENIMIENTO = idMantenimiento,
-                        P_ESTATUS = 4,
-                        P_USUARIO_ACTUALIZA = usuarioRegistro
-                    };
-
-                    // Convertir a parámetros HANA usando tu método existente
-                    allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosFinOT, false, null);
-                    //Actualizar estatus de OT
-                    var ActualizaOT = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCActualizaMC, allparameters);
-                }
-
-
-                // Construir respuesta JSON
-                jsonResponse.Status = resultHana.JsonResult.Contains("ERROR") ? "NO" : "SI";
-                jsonResponse.Message = resultHana.JsonResult.Contains("ERROR")
-                    ? "No fue posible guardar la rutina."
-                    : $"Rutina guardada correctamente. {rutasImagenes.Count} imagen(es) guardada(s).";
-                jsonResponse.Data = string.Empty;
-
-                return Json(jsonResponse);
-            }
-            catch (Exception ex)
-            {
-                jsonResponse.Status = "ERROR";
-                jsonResponse.Message = "No fue posible guardar la rutina: " + ex.Message;
-                jsonResponse.Data = string.Empty;
-                return Json(jsonResponse);
-            }
+            public string RutaTemporal { get; set; }
+            public string RutaFinal { get; set; }
+            public string RutaRelativa { get; set; }
         }
 
-        // 🔥 MÉTODO HELPER PARA GUARDAR FIRMAS DIGITALES
-        private bool GuardarFirmaDigital(string firmaBase64, string numeroOrden, string tipoFirma)
+        private const int MaxFirmaBytes = 2 * 1024 * 1024; // 2 MB
+
+        private bool PrepararFirmaDigital(string firmaBase64, string numeroOrden, string tipoFirma, out FirmaPendiente firmaPendiente)
         {
+            firmaPendiente = null;
+
             try
             {
-                // Si no hay firma, retornar null
-                if (string.IsNullOrEmpty(firmaBase64))
+                // Si no hay firma, no es un error: simplemente no se genera archivo.
+                if (string.IsNullOrWhiteSpace(firmaBase64))
                     return true;
 
-                // Remover el prefijo "data:image/png;base64," si existe
-                string base64Clean = firmaBase64.Contains(",")
-                    ? firmaBase64.Split(',')[1]
-                    : firmaBase64;
+                // Solo se permiten las firmas que maneja Correctivos.
+                if (tipoFirma != "Realizo" && tipoFirma != "Superviso")
+                    return false;
 
-                // Convertir de Base64 a bytes
-                byte[] imageBytes = Convert.FromBase64String(base64Clean);
+                string ordenLimpia = LimpiarNombreCarpeta(numeroOrden);
+                if (string.IsNullOrEmpty(ordenLimpia))
+                    return false;
 
-                // Limpiar el número de orden para usarlo como nombre de carpeta
-                string ordenLimpia = numeroOrden.Replace("/", "_").Replace("\\", "_").Replace(":", "_");
+                // Remover el prefijo "data:image/png;base64," si existe.
+                string base64Clean = firmaBase64;
+                int indiceComa = firmaBase64.IndexOf(',');
+                if (indiceComa >= 0)
+                    base64Clean = firmaBase64.Substring(indiceComa + 1);
 
-                // Crear nombre del archivo con fecha
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string nombreArchivo = $"Firma_{tipoFirma}.png";
+                if (string.IsNullOrWhiteSpace(base64Clean))
+                    return false;
 
-                // Ruta de la carpeta
-                string carpetaBase = Server.MapPath("~/FirmasOTCorrectivo/");
-                string carpetaOrden = Path.Combine(carpetaBase, ordenLimpia);
-
-                // Crear directorios si no existen
-                if (!Directory.Exists(carpetaBase))
-                    Directory.CreateDirectory(carpetaBase);
-
-                if (!Directory.Exists(carpetaOrden))
-                    Directory.CreateDirectory(carpetaOrden);
-
-                // Ruta completa del archivo
-                string rutaCompleta = Path.Combine(carpetaOrden, nombreArchivo);
-
-                if (System.IO.File.Exists(rutaCompleta))
-                    System.IO.File.Delete(rutaCompleta);
-
-                if (!System.IO.File.Exists(rutaCompleta))
+                byte[] imageBytes;
+                try
                 {
-                    // 🔥 GUARDAR EL ARCHIVO (Esta es la línea correcta)
-                    System.IO.File.WriteAllBytes(rutaCompleta, imageBytes);
+                    imageBytes = Convert.FromBase64String(base64Clean);
+                }
+                catch (FormatException)
+                {
+                    return false;
                 }
 
-                // Retornar ruta relativa para guardar en BD
-                string rutaRelativa = $"/FirmasOTCorrectivo/{ordenLimpia}/{nombreArchivo}";
+                if (imageBytes.Length == 0 || imageBytes.Length > MaxFirmaBytes)
+                    return false;
+
+                // Validar firma PNG (89 50 4E 47 0D 0A 1A 0A).
+                byte[] pngHeader = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+                if (imageBytes.Length < pngHeader.Length || !pngHeader.SequenceEqual(imageBytes.Take(pngHeader.Length)))
+                    return false;
+
+                string carpetaBase = Server.MapPath("~/FirmasOTCorrectivo/");
+                string carpetaBaseFull = Path.GetFullPath(carpetaBase);
+                string carpetaOrdenFull = Path.GetFullPath(Path.Combine(carpetaBaseFull, ordenLimpia));
+
+                // La carpeta final debe quedar dentro de la carpeta base (evita path traversal).
+                if (!carpetaOrdenFull.StartsWith(carpetaBaseFull.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                if (!Directory.Exists(carpetaBaseFull))
+                    Directory.CreateDirectory(carpetaBaseFull);
+
+                if (!Directory.Exists(carpetaOrdenFull))
+                    Directory.CreateDirectory(carpetaOrdenFull);
+
+                string nombreArchivo = $"Firma_{tipoFirma}.png";
+                string rutaFinal = Path.Combine(carpetaOrdenFull, nombreArchivo);
+                string rutaTemporal = Path.Combine(carpetaOrdenFull, $".{nombreArchivo}.{Guid.NewGuid():N}.tmp");
+
+                System.IO.File.WriteAllBytes(rutaTemporal, imageBytes);
+
+                firmaPendiente = new FirmaPendiente
+                {
+                    RutaTemporal = rutaTemporal,
+                    RutaFinal = rutaFinal,
+                    RutaRelativa = $"/FirmasOTCorrectivo/{ordenLimpia}/{nombreArchivo}"
+                };
 
                 return true;
             }
             catch (Exception ex)
             {
-                // Log del error pero no detener el proceso
-                System.Diagnostics.Debug.WriteLine($"Error al guardar firma {tipoFirma}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error al preparar firma {tipoFirma}: {ex.Message}");
+                DescartarFirma(firmaPendiente);
+                firmaPendiente = null;
                 return false;
             }
+        }
+
+        private static void ConfirmarFirma(FirmaPendiente firmaPendiente)
+        {
+            if (firmaPendiente == null || string.IsNullOrEmpty(firmaPendiente.RutaTemporal))
+                return;
+
+            try
+            {
+                if (System.IO.File.Exists(firmaPendiente.RutaFinal))
+                {
+                    // Reemplazo atómico dentro de la misma carpeta.
+                    System.IO.File.Replace(firmaPendiente.RutaTemporal, firmaPendiente.RutaFinal, null);
+                }
+                else
+                {
+                    System.IO.File.Move(firmaPendiente.RutaTemporal, firmaPendiente.RutaFinal);
+                }
+            }
+            catch (Exception ex)
+            {
+                // La BD ya se guardó: no se debe fallar la respuesta por el archivo.
+                System.Diagnostics.Debug.WriteLine($"No fue posible confirmar la firma {firmaPendiente.RutaFinal}: {ex.Message}");
+            }
+            finally
+            {
+                try
+                {
+                    if (System.IO.File.Exists(firmaPendiente.RutaTemporal))
+                        System.IO.File.Delete(firmaPendiente.RutaTemporal);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"No fue posible limpiar la firma temporal: {ex.Message}");
+                }
+            }
+        }
+
+        private static void DescartarFirma(FirmaPendiente firmaPendiente)
+        {
+            if (firmaPendiente == null || string.IsNullOrEmpty(firmaPendiente.RutaTemporal))
+                return;
+
+            try
+            {
+                if (System.IO.File.Exists(firmaPendiente.RutaTemporal))
+                    System.IO.File.Delete(firmaPendiente.RutaTemporal);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"No fue posible descartar la firma temporal: {ex.Message}");
+            }
+        }
+
+        private static string LimpiarNombreCarpeta(string valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor))
+                return string.Empty;
+
+            var limpio = new StringBuilder();
+            foreach (char c in valor.Trim())
+            {
+                if (char.IsLetterOrDigit(c) || c == '-' || c == '_' || c == '.')
+                    limpio.Append(c);
+                else
+                    limpio.Append('_');
+            }
+
+            string resultado = limpio.ToString().Trim('.', ' ');
+
+            if (resultado == "." || resultado == "..")
+                return string.Empty;
+
+            if (resultado.Contains(".."))
+                resultado = resultado.Replace("..", "_");
+
+            return resultado;
+        }
+
+        private static bool TryParseFecha(string valor, out DateTime fecha)
+        {
+            fecha = default(DateTime);
+            if (string.IsNullOrWhiteSpace(valor))
+                return false;
+
+            if (DateTime.TryParseExact(valor, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out fecha))
+                return true;
+
+            return DateTime.TryParse(valor, out fecha);
         }
         #endregion
 
