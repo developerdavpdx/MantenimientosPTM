@@ -276,19 +276,16 @@
      Tablas SAP nuevas vacias; se pueden poblar con seed de ejemplo (ZZTEST).
 
 
-16) SEED DE PRUEBA DE ALMACEN (10/11/2026)
-   - Script: SQL_MIGRACION/SEED_ALMACEN_PRUEBA.sql
+16) SEED DE PRUEBA DE ALMACEN CON ARTICULO REAL (10/11/2026)
+   - Script principal: SQL_MIGRACION/SEED_ALMACEN_PRUEBA_REAL.sql
    - Limpieza: SQL_MIGRACION/CLEANUP_ALMACEN_PRUEBA.sql
-   - Claves: ZZTEST/ZZTEST01/ZZ/ZZ01/900001/999/999999.
-   - Datos: item, almacen, grupo, stock 100, min 10, max 200, empleado,
-     usuario, sucursal, centro de costo, serie, OC, salida, solicitud de
-     compra, detalle, refaccion OTMC-001, movimientos SALIDA/DEVOLUCION,
-     rechazo, notificacion y solicitud de refaccion de Correctivos.
-   - Pruebas: 9 SPs devuelven datos (GetArticuloSalidaM, GetSalidasPorOT,
-     GetBalanceOT, GetDevolucionesPorOT, ConsultaArticulosPorOT,
-     GetSolicitudesCompraMP, GetDetallesSolicitudCompraMP, GetLineasOC,
-     GetSeriesByName).
-   - El seed se puede re-ejecutar (limpieza previa) y limpiar con el cleanup.
+   - Articulo real: 42000000001 - ABRAZADERA SIN FIN 1 1/2 IN / HS-16
+     (DfltWH=COR040, grupo 104, stock 29, min 30, max 60).
+   - No modifica OITM/OITW/OITB; solo maestros de apoyo y transaccionales.
+   - Datos: OC, salida, solicitud de compra, detalle, refaccion OTMC-001,
+     movimientos SALIDA/DEVOLUCION, rechazo y solicitud de Correctivos.
+   - Seed fake opcional (ZZTEST01) ya limpiado; no usar para articulos reales.
+   - Pruebas: 9 SPs devuelven el articulo real; stock 29/min 30/max 60.
 
 
 ================================================================================

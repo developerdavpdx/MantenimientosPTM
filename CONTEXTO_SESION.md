@@ -608,12 +608,12 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 
 ---
 
-## 16. Seed de prueba de Almacén (10/11/2026)
+## 16. Seed de prueba de Almacén con artículo real (10/11/2026)
 
-- **Seed:** `SQL_MIGRACION/SEED_ALMACEN_PRUEBA.sql`
+- **Seed principal:** `SQL_MIGRACION/SEED_ALMACEN_PRUEBA_REAL.sql`
 - **Limpieza:** `SQL_MIGRACION/CLEANUP_ALMACEN_PRUEBA.sql`
-- **Claves:** `ZZTEST`, `ZZTEST01`, `ZZ`, `ZZ01`, `900001`, `999`, `999999`.
-- **Datos:** artículo, almacén, grupo, stock 100, mínimos 10, máximos 200, empleado, usuario, sucursal, centro de costo, serie, OC, salida, solicitud de compra, detalle, refacción de `OTMC-001`, movimientos SALIDA/DEVOLUCIÓN, rechazo, notificación y solicitud de refacción de Correctivos.
-- **Pruebas:** 9 SPs devolvieron datos: `GetArticuloSalidaM`, `GetSalidasPorOT`, `GetBalanceOT`, `GetDevolucionesPorOT`, `ConsultaArticulosPorOT`, `GetSolicitudesCompraMP`, `GetDetallesSolicitudCompraMP`, `GetLineasOC`, `GetSeriesByName`.
-- **Nota:** el seed se ejecutó en `DBADMIN`; se puede re-ejecutar (hace limpieza previa). Para limpiar, ejecutar el cleanup.
-- **Stock:** el SP usa almacenes fijos `COR040` (planta 1) y `P2040` (planta 2); el seed crea filas de `OITW` para ambos.
+- **Artículo real:** `42000000001` — ABRAZADERA SIN FIN 1 1/2 IN / HS-16 (`DfltWH=COR040`, grupo 104, stock 29, mínimo 30, máximo 60).
+- **No modifica** `OITM`/`OITW`/`OITB`; solo inserta maestros de apoyo (`OHEM`, `OUSR`, `OUBR`, `OPRC`, `NNM1`, `@PDX_NOTIFICACIONES`) y movimientos/transaccionales.
+- **Datos:** OC, salida, solicitud de compra, detalle, refacción de `OTMC-001`, movimientos SALIDA/DEVOLUCIÓN, rechazo y solicitud de refacción de Correctivos, todos con el artículo real.
+- **Seed fake opcional:** `SEED_ALMACEN_PRUEBA.sql` (artículo `ZZTEST01`); ya fue limpiado. No usar si se quiere todo con artículos reales.
+- **Pruebas:** 9 SPs devuelven el artículo real; stock 29 / min 30 / max 60.
