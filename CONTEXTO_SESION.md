@@ -608,12 +608,13 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 
 ---
 
-## 16. Seed de prueba de Almacén con artículo real (10/11/2026)
+## 16. Seed de prueba de Almacén con varios artículos reales (10/11/2026)
 
 - **Seed principal:** `SQL_MIGRACION/SEED_ALMACEN_PRUEBA_REAL.sql`
 - **Limpieza:** `SQL_MIGRACION/CLEANUP_ALMACEN_PRUEBA.sql`
-- **Artículo real:** `42000000001` — ABRAZADERA SIN FIN 1 1/2 IN / HS-16 (`DfltWH=COR040`, grupo 104, stock 29, mínimo 30, máximo 60).
-- **No modifica** `OITM`/`OITW`/`OITB`; solo inserta maestros de apoyo (`OHEM`, `OUSR`, `OUBR`, `OPRC`, `NNM1`, `@PDX_NOTIFICACIONES`) y movimientos/transaccionales.
-- **Datos:** OC, salida, solicitud de compra, detalle, refacción de `OTMC-001`, movimientos SALIDA/DEVOLUCIÓN, rechazo y solicitud de refacción de Correctivos, todos con el artículo real.
-- **Seed fake opcional:** `SEED_ALMACEN_PRUEBA.sql` (artículo `ZZTEST01`); ya fue limpiado. No usar si se quiere todo con artículos reales.
-- **Pruebas:** 9 SPs devuelven el artículo real; stock 29 / min 30 / max 60.
+- **No modifica** `OITM`/`OITW`/`OITB`; usa artículos reales con stock:
+  - **Planta 1 / COR040:** `42000000001` (stock 29, mín 30, máx 60), `42000000006` (4/2/4), `42000000008` (8/5/10), `42000000010` (25/5/25), `42000000051` (269/462/923, queda pendiente).
+  - **Planta 2 / P2040:** `42000000474` (484/100/200), `45000000006` (416/208/416).
+- **Datos:** 2 solicitudes de compra (planta 1 y 2), 6 detalles, OC con 6 líneas, salida con 6 líneas, 6 refacciones atendidas + 1 pendiente, 6 salidas, 3 devoluciones, 2 rechazos y 3 solicitudes de refacción de Correctivos.
+- **Pruebas:** `ConsultaArticulos` devuelve 5 filas para `OTMC-001` y 2 para `OTMC-002`; solicitudes 2/1/1; detalles 4/2; líneas OC 6; salidas 4/2; devoluciones 2/1.
+- **Seed fake opcional:** `SEED_ALMACEN_PRUEBA.sql` (artículo `ZZTEST01`) ya fue limpiado; no usar si se quieren artículos reales.
