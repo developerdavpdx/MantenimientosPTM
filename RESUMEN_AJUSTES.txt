@@ -270,6 +270,25 @@
    - Scripts: SQL_MIGRACION/MIGRACION_ALMACEN_*.sql
    - Reportes: REPORTE_FALTANTES_ALMACEN.md,
      SQL_ORIGEN_ALMACEN/REPORTE_DEPENDENCIAS.md
+   - LIMITACION CLOUD: no se usara SAP Service Layer para crear documentos
+     SAP (salidas/entradas/OC). Solo tablas SAP migradas para probar el flujo
+     normal del portal; la creacion de movimientos en SAP no estara disponible.
+     Tablas SAP nuevas vacias; se pueden poblar con seed de ejemplo (ZZTEST).
+
+
+16) SEED DE PRUEBA DE ALMACEN (10/11/2026)
+   - Script: SQL_MIGRACION/SEED_ALMACEN_PRUEBA.sql
+   - Limpieza: SQL_MIGRACION/CLEANUP_ALMACEN_PRUEBA.sql
+   - Claves: ZZTEST/ZZTEST01/ZZ/ZZ01/900001/999/999999.
+   - Datos: item, almacen, grupo, stock 100, min 10, max 200, empleado,
+     usuario, sucursal, centro de costo, serie, OC, salida, solicitud de
+     compra, detalle, refaccion OTMC-001, movimientos SALIDA/DEVOLUCION,
+     rechazo, notificacion y solicitud de refaccion de Correctivos.
+   - Pruebas: 9 SPs devuelven datos (GetArticuloSalidaM, GetSalidasPorOT,
+     GetBalanceOT, GetDevolucionesPorOT, ConsultaArticulosPorOT,
+     GetSolicitudesCompraMP, GetDetallesSolicitudCompraMP, GetLineasOC,
+     GetSeriesByName).
+   - El seed se puede re-ejecutar (limpieza previa) y limpiar con el cleanup.
 
 
 ================================================================================

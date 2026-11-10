@@ -594,3 +594,26 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 - `REPORTE_FALTANTES_ALMACEN.md`
 - `SQL_ORIGEN_ALMACEN/` (definiciones, DDLs, reportes)
 - `SQL_ORIGEN_GENERAL/README.txt`
+
+---
+
+## 15. Limitación del ambiente cloud (10/11/2026)
+
+- En **HANA Cloud no se usará SAP Service Layer** para crear documentos SAP (salidas, entradas, devoluciones, órdenes de compra, etc.).
+- Solo se migraron las **tablas SAP** a `DBADMIN` para poder probar el **flujo normal del portal**.
+- La **creación de movimientos en SAP no estará disponible** en cloud; es una limitación aceptada.
+- Lo que **sí** se puede probar: navegación, listados, solicitudes, autorizaciones, firmas, estatus y movimientos internos del portal.
+- Las tablas SAP nuevas (`OIGE`, `IGE1`, `OPRQ`, `PRQ1`, `OPRC`, `OUBR`, `OUSR`, `OWHS`, etc.) están **vacías**; se pueden poblar con un **seed de datos de ejemplo** para pruebas.
+- El seed debe usar claves prefijadas (por ejemplo `ZZTEST`) para poder limpiarlo sin afectar datos reales.
+
+---
+
+## 16. Seed de prueba de Almacén (10/11/2026)
+
+- **Seed:** `SQL_MIGRACION/SEED_ALMACEN_PRUEBA.sql`
+- **Limpieza:** `SQL_MIGRACION/CLEANUP_ALMACEN_PRUEBA.sql`
+- **Claves:** `ZZTEST`, `ZZTEST01`, `ZZ`, `ZZ01`, `900001`, `999`, `999999`.
+- **Datos:** artículo, almacén, grupo, stock 100, mínimos 10, máximos 200, empleado, usuario, sucursal, centro de costo, serie, OC, salida, solicitud de compra, detalle, refacción de `OTMC-001`, movimientos SALIDA/DEVOLUCIÓN, rechazo, notificación y solicitud de refacción de Correctivos.
+- **Pruebas:** 9 SPs devolvieron datos: `GetArticuloSalidaM`, `GetSalidasPorOT`, `GetBalanceOT`, `GetDevolucionesPorOT`, `ConsultaArticulosPorOT`, `GetSolicitudesCompraMP`, `GetDetallesSolicitudCompraMP`, `GetLineasOC`, `GetSeriesByName`.
+- **Nota:** el seed se ejecutó en `DBADMIN`; se puede re-ejecutar (hace limpieza previa). Para limpiar, ejecutar el cleanup.
+- **Stock:** el SP usa almacenes fijos `COR040` (planta 1) y `P2040` (planta 2); el seed crea filas de `OITW` para ambos.
