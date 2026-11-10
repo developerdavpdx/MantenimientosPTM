@@ -622,6 +622,8 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
   - El seed de Almacén **ya no toca `OPRC`**; primero se carga el de OPRC y luego el de Almacén.
   - Valores clave que preselecciona el front: Proceso `PPVC`, Gastos `GIF`, Cedis `CCOR` (planta 1) / `PLANTA2` (planta 2), Departamento `DMAN` (MANTENIMIENTO).
   - Sin estas filas los combos muestran **“Sin opciones”** aunque el SP funcione.
+- **Catálogo `OUBR` real (sucursales):** `SQL_MIGRACION/SEED_OUBR_REAL.sql` — **14 sucursales** del export `TEST_JUNIO_2026` (origen `SQL_MIGRACION/ORIGEN_OUBR_TEST_JUNIO_2026.csv`). El seed de Almacén ya no toca `OUBR`.
+  - `SpPdxMTTOGetDepSucursal` cruza `OHEM.branch` con `OUBR.Code`; el solicitante de prueba (`branch=1`) ahora devuelve `Sucursal=CORP`.
 - **Pruebas (ejecutadas en HANA Cloud):** `ConsultaArticulos` devuelve 6 filas para `OTMC-001` y 7 para `OTMC-002`; solicitudes 2 (planta 1/2 filtra 1 cada una); detalles 5/7; líneas OC/PRQ/OIGE 12/12/12; salidas 5/7; devoluciones 2/2; `GetArticuloSalidaM` devuelve `CuentaContable=5-101-001-005`. Los 4 combos de centros de costo devuelven 14/11/9/14 filas reales.
 - **Nota:** el cleanup borra solo los datos transaccionales/de prueba (`ID 900001-900099`, `ZZTEST`); no revierte el `ExpensesAc` de los 13 artículos ni borra `OPRC`.
 - **Seed fake opcional:** `SEED_ALMACEN_PRUEBA.sql` (artículo `ZZTEST01`) ya fue limpiado; no usar si se quieren artículos reales.

@@ -305,6 +305,12 @@
      Combos reales: Departamento 14, Proceso 11, Gastos 9, Cedis 14.
      Solicitante de prueba mapea a DMAN (MANTENIMIENTO).
      Sin estas filas los combos muestran "Sin opciones".
+   - OUBR REAL: SQL_MIGRACION/SEED_OUBR_REAL.sql (14 sucursales del
+     export TEST_JUNIO_2026). Origen:
+     SQL_MIGRACION/ORIGEN_OUBR_TEST_JUNIO_2026.csv.
+     SpPdxMTTOGetDepSucursal cruza OHEM.branch con OUBR.Code;
+     el solicitante de prueba (branch=1) devuelve Sucursal=CORP.
+     El seed de Almacen ya no toca OUBR.
    - Nota: el cleanup borra datos de prueba pero no revierte ExpensesAc
      ni borra OPRC.
    - Seed fake opcional (ZZTEST01) ya limpiado; no usar para articulos reales.

@@ -23,8 +23,8 @@ DELETE FROM "DBADMIN"."OITB" WHERE "ItmsGrpCod"=999;
 DELETE FROM "DBADMIN"."OWHS" WHERE "WhsCode"='ZZ';
 DELETE FROM "DBADMIN"."OHEM" WHERE "empID"=999999;
 DELETE FROM "DBADMIN"."OUSR" WHERE "USERID"=32000;
-DELETE FROM "DBADMIN"."OUBR" WHERE "Code"=999;
 DELETE FROM "DBADMIN"."NNM1" WHERE "Series"=999;
--- OPRC no se limpia: contiene los centros de costo reales (SEED_OPRC_REAL.sql).
+-- OPRC y OUBR no se limpian: contienen catalogos reales de TEST_JUNIO_2026
+-- (SEED_OPRC_REAL.sql y SEED_OUBR_REAL.sql).
 
 COMMIT;
