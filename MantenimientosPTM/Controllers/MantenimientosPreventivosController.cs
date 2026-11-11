@@ -1307,6 +1307,19 @@ namespace MantenimientosPTM.Controllers
 
                         if (fechaRepFin < fechaRepInicio)
                             throw new Exception("La fecha fin de reprogramación no puede ser anterior a la fecha inicio.");
+
+                        // ✅ Rango permitido: primer día del mes actual al último día del mes siguiente.
+                        // Si el periodo original del MP termina después, se respeta ese fin.
+                        var hoy = DateTime.Now;
+                        var primerDiaMesActual = new DateTime(hoy.Year, hoy.Month, 1);
+                        var ultimoDiaMesSiguiente = primerDiaMesActual.AddMonths(2).AddDays(-1);
+                        var fechaMaximaPermitida = ultimoDiaMesSiguiente > fechaFin ? ultimoDiaMesSiguiente : fechaFin;
+
+                        if (fechaRepInicio < primerDiaMesActual)
+                            throw new Exception("La fecha de reprogramación no puede ser anterior al mes actual.");
+
+                        if (fechaRepFin > fechaMaximaPermitida)
+                            throw new Exception("La fecha de reprogramación no puede ser posterior al periodo permitido.");
                     }
                     // ─────────────────────────────────────────────────────────────
 
@@ -1440,7 +1453,8 @@ namespace MantenimientosPTM.Controllers
                         p_NUMERO_ORDEN = (string)null,
                         p_FECHA_REP_INICIO = (DateTime?)null,
                         p_FECHA_REP_FIN = (DateTime?)null,
-                        p_ENVIAR_SIGUIENTE_MES = true,
+                        // ✅ null = conservar las fechas y el flag actuales al solo resolver el estatus
+                        p_ENVIAR_SIGUIENTE_MES = (bool?)null,
                         p_MOTIVO = (string)null,
                         p_USUARIO_SOLICITA = (string)null,
                         p_ID_PERIODICIDAD = (int?)null,

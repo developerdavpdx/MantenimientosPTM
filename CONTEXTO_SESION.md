@@ -627,3 +627,37 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 - **Pruebas (ejecutadas en HANA Cloud):** `ConsultaArticulos` devuelve 6 filas para `OTMC-001` y 7 para `OTMC-002`; solicitudes 2 (planta 1/2 filtra 1 cada una); detalles 5/7; líneas OC/PRQ/OIGE 12/12/12; salidas 5/7; devoluciones 2/2; `GetArticuloSalidaM` devuelve `CuentaContable=5-101-001-005`. Los 4 combos de centros de costo devuelven 14/11/9/14 filas reales.
 - **Nota:** el cleanup borra solo los datos transaccionales/de prueba (`ID 900001-900099`, `ZZTEST`); no revierte el `ExpensesAc` de los 13 artículos ni borra `OPRC`.
 - **Seed fake opcional:** `SEED_ALMACEN_PRUEBA.sql` (artículo `ZZTEST01`) ya fue limpiado; no usar si se quieren artículos reales.
+
+---
+
+## 17. Preventivos: reprogramación libre y filtro de líneas completo (10/11/2026)
+
+### Reprogramación
+- **Se quitó** el checkbox “Enviar al siguiente mes” del modal. Ahora solo se eligen **Fecha Inicio real** y **Fecha Fin real**.
+- **Rango permitido:** del **primer día del mes actual** al **último día del mes siguiente**. Si el periodo original del MP termina después, se respeta ese fin.
+- **No se permiten** fechas anteriores al mes actual.
+- Las fechas se comparan como texto `YYYY-MM-DD` (sin `new Date('YYYY-MM-DD')`) para evitar el corrimiento UTC.
+- Al guardar, el SP `SpPdxMTTOSolicitarReprogramacion` registra las fechas reales con estatus `NA` y se aplican **de inmediato**.
+- **Corrección clave:** `AceptarReprogramacion` ahora manda `p_ENVIAR_SIGUIENTE_MES = NULL`; antes mandaba `TRUE` y el SP borraba `FECHA_REAL_INICIO`/`FECHA_REAL_FIN`, provocando que el MP se fuera al siguiente mes.
+- **Validación backend:** `SolicitarReprogramacion` valida el mismo rango (mes actual → mes siguiente o fin del periodo).
+
+### Tooltip de reprogramación
+- Ya **no depende** de `ENVIAR_SIGUIENTE_MES`. Se calcula comparando `FechaRealInicio` contra `FechaInicioPeriodo` (fallback `FechaInicioMantenimiento`):
+  - Mismo mes → `✅ REPROGRAMADO`
+  - +1 mes → `✅ SE ENVIÓ AL SIGUIENTE MES`
+  - +2 meses o más → `✅ REPROGRAMADO A N MESES`
+  - Mes anterior → `✅ REPROGRAMADO A N MESES ANTES`
+- El texto se guarda en `data-repro-tooltip` y el CSS lo pinta con `content: attr(data-repro-tooltip)`.
+- Registros viejos sin fecha real pero con bandera `ENVIAR_SIGUIENTE_MES = TRUE` conservan el badge “SE ENVIÓ AL SIGUIENTE MES”.
+
+### Filtro de líneas
+- En `mantenimientos_preventivos_refactor.js` se cambió `llenarLineas(planta, Area, 1, ...)` por `llenarLineas(planta, Area, null, ...)`.
+- No se agregaron filtros nuevos ni se modificó el SP.
+- Ahora el combo incluye servicios y líneas auxiliares: `SERVICIOS`, `SERVICIOS EXTERNOS`, `MOLINO PEAD`, `SILOS`, `SILOS PEAD LISO`, `SILOS PEAD CORR`, `CALIDAD`, `MEZCLADO`, `FFCC`, `OTROS`.
+- **Pruebas:** PEAD LISO devuelve 12 líneas; PVC devuelve 21 líneas.
+
+### Archivos tocados
+- `MantenimientosPTM/Views/MantenimientosPreventivos/MantenimientoPreventivo.cshtml`
+- `MantenimientosPTM/Scripts/mantenimientos_preventivos_refactor.js`
+- `MantenimientosPTM/Controllers/MantenimientosPreventivosController.cs`
+- `MantenimientosPTM/Content/MantenimientosPreventivos.css`

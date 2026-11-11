@@ -197,26 +197,6 @@ class MantenimientosPreventivoApp {
         // 🔥 Reprogramación - enviar solicitud
         $('#formReprogramacion').on('submit', (e) => this.mantenimientoManager.enviarSolicitudReprogramacion(e));
 
-        // Check deshabilitar fechas reales de ejecución
-        $('#chkSiguienteMes').on('change', function () {
-            const checked = $(this).is(':checked');
-            const $inputs = $('#RepFechaActualInicio, #RepFechaActualFin');
-
-            if (checked) {
-                $inputs
-                    .prop('disabled', true)
-                    .removeAttr('required')
-                    .val('')
-                    .removeClass('is-invalid');
-                $('.spanReq').addClass('d-none');
-            } else {
-                $inputs
-                    .prop('disabled', false)
-                    .attr('required', 'required');
-                $('.spanReq').removeClass('d-none');
-            }
-        });
-
         // ✅ CORRECTO - Debes pasar "e" como parámetro
         $('#formOrdenMantenimiento').on('submit', (e) => this.mantenimientoManager.guardarOT(e));
 
@@ -468,7 +448,7 @@ class MantenimientosPreventivoApp {
                 EquiposUtil.llenarLineas(
                     this.datos_usuario[0].PLANTA,
                     Area,
-                    1,
+                    null,
                     "FiltroLinea",
                     null
                 );
@@ -1215,100 +1195,80 @@ class MantenimientoManager {
 
         const convertirFechaReal = (fecha) => {
             if (!fecha || fecha === 'null' || fecha.trim() === '') return '';
-            return fecha.split(' ')[0]; // Toma solo "2026-08-06"
+            // Soporta "2026-08-06", "2026-08-06 00:00:00" y "2026-08-06T00:00:00.000"
+            return fecha.split('T')[0].split(' ')[0];
         };
 
-        // Obtener si la solicitud ya fue reprogramada
-        let fueReprogramda = this.datosBotón.fueReprogramado;
-        if (fueReprogramda === 'SI') { // Si ya fue reprogramada no puede volver a reprogramarse, solo asignar nuevas fechas
-            $('#enviarSigMes').addClass('d-none');
-            $('#chkSiguienteMes').prop('disabled', true);
+        // ✅ Rango permitido: primer día del mes actual al último día del mes siguiente.
+        // Si el periodo del MP termina después, se respeta ese fin.
+        const hoy = new Date();
+        const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        let ultimoDiaPermitido = new Date(hoy.getFullYear(), hoy.getMonth() + 2, 0);
 
-            $('#RepFechaActualInicio, #RepFechaActualFin')
-                .prop('disabled', false)
-                .attr('required', 'required')
-                .removeClass('is-invalid');
+        const finPeriodo = convertirFechaReal(this.datosBotón.fechaFinPeriodo);
+        if (finPeriodo) {
+            const [anioFin, mesFin, diaFin] = finPeriodo.split('-').map(Number);
+            if (anioFin && mesFin && diaFin) {
+                const finPeriodoDate = new Date(anioFin, mesFin - 1, diaFin);
+                if (finPeriodoDate > ultimoDiaPermitido) {
+                    ultimoDiaPermitido = finPeriodoDate;
+                }
+            }
+        }
 
-            $('.spanReq').removeClass('d-none');
+        const formatDate = (fecha) => {
+            const year = fecha.getFullYear();
+            const month = String(fecha.getMonth() + 1).padStart(2, '0');
+            const day = String(fecha.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
 
-            // Limitar SOLO al siguiente mes
-            const hoy = new Date();
+        const fechaMinima = formatDate(primerDiaMes);
+        const fechaMaxima = formatDate(ultimoDiaPermitido);
 
-            const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
-            const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 2, 0);
+        $('#RepFechaActualInicio, #RepFechaActualFin')
+            .prop('disabled', false)
+            .attr('required', 'required')
+            .removeClass('is-invalid')
+            .attr('min', fechaMinima)
+            .attr('max', fechaMaxima);
 
-            const formatDate = (fecha) => {
-                const year = fecha.getFullYear();
-                const month = String(fecha.getMonth() + 1).padStart(2, '0');
-                const day = String(fecha.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
+        $('.spanReq').removeClass('d-none');
 
-            $('#RepFechaActualInicio, #RepFechaActualFin')
-                .attr('min', formatDate(primerDiaMes))
-                .attr('max', formatDate(ultimoDiaMes))
-                .off('change.reprogramacion')
-                .on('change.reprogramacion', function () {
+        // Validación al cambiar fechas: rango permitido e inicio <= fin
+        $('#RepFechaActualInicio, #RepFechaActualFin')
+            .off('change.reprogramacion')
+            .on('change.reprogramacion', function () {
+                const valor = $(this).val();
+                if (!valor) return;
 
-                    const fecha = new Date($(this).val());
+                if (valor < fechaMinima || valor > fechaMaxima) {
+                    AlertManager.mostrar(
+                        `Solo puedes seleccionar fechas del ${fechaMinima} al ${fechaMaxima}.`,
+                        'warning',
+                        'alertReprogramacionContainer'
+                    );
+                    $(this).val('');
+                    return;
+                }
 
-                    if (fecha < primerDiaMes || fecha > ultimoDiaMes) {
-                        AlertManager.mostrar(
-                            'Solo puedes seleccionar fechas en base a la reprogramación conforme al mes en el que se solicito.',
-                            'warning',
-                            'alertReprogramacionContainer'
-                        );
+                const inicio = $('#RepFechaActualInicio').val();
+                const fin = $('#RepFechaActualFin').val();
 
+                if (inicio && fin && fin < inicio) {
+                    AlertManager.mostrar(
+                        'La fecha fin real de ejecución no puede ser anterior a la fecha inicio.',
+                        'warning',
+                        'alertReprogramacionContainer'
+                    );
+
+                    if ($(this).attr('id') === 'RepFechaActualInicio') {
+                        $('#RepFechaActualFin').val('');
+                    } else {
                         $(this).val('');
                     }
-                });
-
-        } else {
-            // Si la solicitud no a sido reprogramada
-
-            $('#enviarSigMes').removeClass('d-none');
-
-            // ✅ RESET COMPLETO DEL CHECKBOX Y LOS INPUTS
-            $('#chkSiguienteMes').prop('checked', false);
-            $('#chkSiguienteMes').prop('disabled', false);
-
-            $('#RepFechaActualInicio, #RepFechaActualFin')
-                .prop('disabled', false)
-                .attr('required', 'required')
-                .removeClass('is-invalid');
-
-            $('.spanReq').removeClass('d-none');
-
-            const hoy = new Date();
-
-            const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-            const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-
-            const formatDate = (fecha) => {
-                const year = fecha.getFullYear();
-                const month = String(fecha.getMonth() + 1).padStart(2, '0');
-                const day = String(fecha.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
-
-            $('#RepFechaActualInicio, #RepFechaActualFin')
-                .attr('min', formatDate(primerDiaMes))
-                .attr('max', formatDate(ultimoDiaMes));
-
-
-            //Limitar las fechas reales inicio y fin (Solo mes actual)
-            $('#RepFechaActualInicio, #RepFechaActualFin').off('change.reprogramacion').on('change.reprogramacion', function () {
-                const hoy = new Date();
-                const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-                const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-                const fecha = new Date($(this).val());
-
-                if (fecha < primerDiaMes || fecha > ultimoDiaMes) {
-                    AlertManager.mostrar('Solo puedes seleccionar fechas dentro del mes actual.', 'warning', 'alertReprogramacionContainer');
-                    $(this).val('');
                 }
             });
-        }
 
 
         // Llenar datos en el modal
@@ -1319,8 +1279,8 @@ class MantenimientoManager {
         $('#ReprogramacionArea').val(this.datosBotón.area);
         $('#ReprogramacionLinea').val(this.datosBotón.lineaProduccion);
         $('#ReprogramacionPeriodicidad').val(this.datosBotón.periodicidadMantenimiento);
-        $('#ReprogramacionFechaActualInicio').val(convertirFechaReal(this.datosBotón.fechaInicioPeriodo));
-        $('#ReprogramacionFechaActualFin').val(convertirFechaReal(this.datosBotón.fechaFinPeriodo));
+        $('#ReprogramacionFechaActualInicio').val(convertirFechaReal(this.datosBotón.fechaInicioPeriodo || this.datosBotón.fechaInicioMantenimiento));
+        $('#ReprogramacionFechaActualFin').val(convertirFechaReal(this.datosBotón.fechaFinPeriodo || this.datosBotón.fechaFinMantenimiento));
 
         $('#RepFechaActualInicio').val(convertirFechaReal(this.datosBotón.fechaRealInicio));
         $('#RepFechaActualFin').val(convertirFechaReal(this.datosBotón.fechaRealFin));
@@ -1338,31 +1298,41 @@ class MantenimientoManager {
 
     enviarSolicitudReprogramacion(e) {
         e.preventDefault();
-        const siguienteMes = $('#chkSiguienteMes').is(':checked');
 
         // ========================
         // VALIDACIÓN DE FORMULARIO
         // ========================
-        // Validar fecha
         const fechaRepInicio = $('#RepFechaActualInicio').val();
         const fechaRepFin = $('#RepFechaActualFin').val();
+        const fechaMinima = $('#RepFechaActualInicio').attr('min') || '';
+        const fechaMaxima = $('#RepFechaActualInicio').attr('max') || '';
 
-        // Validación de fechas solo si NO es siguiente mes
-        if (!siguienteMes) {
-            const fechaRepInicio = $('#RepFechaActualInicio').val();
-            const fechaRepFin = $('#RepFechaActualFin').val();
+        if (!fechaRepInicio || !fechaRepFin) {
+            AlertManager.mostrar(
+                'Ingrese las fechas de reprogramación.',
+                'warning',
+                'alertReprogramacionContainer'
+            );
+            return false;
+        }
 
-            if (fechaRepInicio && fechaRepFin) {
-                if (new Date(fechaRepFin) < new Date(fechaRepInicio)) {
-                    AlertManager.mostrar(
-                        'La fecha fin real de ejecución no puede ser anterior a la fecha inicio.',
-                        'warning',
-                        'alertReprogramacionContainer'
-                    );
-                    $('#RepFechaActualFin').focus();
-                    return false;
-                }
-            }
+        if (fechaRepFin < fechaRepInicio) {
+            AlertManager.mostrar(
+                'La fecha fin real de ejecución no puede ser anterior a la fecha inicio.',
+                'warning',
+                'alertReprogramacionContainer'
+            );
+            $('#RepFechaActualFin').focus();
+            return false;
+        }
+
+        if ((fechaMinima && fechaRepInicio < fechaMinima) || (fechaMaxima && fechaRepFin > fechaMaxima)) {
+            AlertManager.mostrar(
+                `Solo puedes seleccionar fechas del ${fechaMinima} al ${fechaMaxima}.`,
+                'warning',
+                'alertReprogramacionContainer'
+            );
+            return false;
         }
 
         if (!ValidationManager.validarFormulario('#formReprogramacion')) {
@@ -1376,9 +1346,9 @@ class MantenimientoManager {
             NumeroOrden: this.datosBotón.numeroOrden,
             FechaActualInicio: $('#ReprogramacionFechaActualInicio').val(),
             FechaActualFin: $('#ReprogramacionFechaActualFin').val(),
-            FechaRepInicio: siguienteMes ? null : $('#RepFechaActualInicio').val(),
-            FechaRepFin: siguienteMes ? null : $('#RepFechaActualFin').val(),
-            EnviarSiguienteMes: siguienteMes,
+            FechaRepInicio: fechaRepInicio,
+            FechaRepFin: fechaRepFin,
+            EnviarSiguienteMes: false,
             Motivo: $('#ReprogramacionMotivo').val(),
             UsuarioSolicita: this.datos_usuario[0].EMAIL,
             IdPeriodicidad: this.datosBotón.idPeriodicidad,
@@ -2180,6 +2150,9 @@ class MantenimientoManager {
                 },
                 createdRow: function (row, data, dataIndex) {
 
+                    // Limpiar estado visual previo (DataTables puede reutilizar la fila)
+                    $(row).removeClass('solicitud-pendiente mantenimiento-reprogramado mantenimiento-reprogramadoFRE');
+                    $(row).find('td').eq(2).removeAttr('data-repro-tooltip');
 
                     $(row).attr('data-id-equipo', data.IdEquipo);
                     $(row).attr('data-numero-ocurrencia', data.NumeroOcurrencia);
@@ -2223,8 +2196,6 @@ class MantenimientoManager {
                     //     $(row).addClass('mantenimiento-reprogramado');
                     // }
 
-                    const enviarSiguiente = data.EnviarSiguienteMes === true;
-
                     const tieneFechaRealInicio =
                         data.FechaRealInicio !== null &&
                         data.FechaRealInicio !== undefined &&
@@ -2235,20 +2206,80 @@ class MantenimientoManager {
                         data.FechaRealFin !== undefined &&
                         data.FechaRealFin !== '';
 
-                    const estatusReprogramacion = data.EstatusSolicitudRepro;
+                    const tieneFechasReales = tieneFechaRealInicio && tieneFechaRealFin;
+
+                    // ✅ Tooltip dinámico: compara el mes real contra el mes que le tocaba.
+                    const obtenerMes = (valor) => {
+                        if (!valor) return null;
+
+                        const texto = String(valor).trim();
+
+                        // Formato ISO: YYYY-MM-DD...
+                        let partes = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                        if (partes) {
+                            return (parseInt(partes[1], 10) * 12) + (parseInt(partes[2], 10) - 1);
+                        }
+
+                        // Formato DD/MM/YYYY
+                        partes = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                        if (partes) {
+                            return (parseInt(partes[3], 10) * 12) + (parseInt(partes[2], 10) - 1);
+                        }
+
+                        return null;
+                    };
+
+                    const mesProgramado = obtenerMes(data.FechaInicioPeriodo || data.FechaInicioMantenimiento);
+                    const mesReal = obtenerMes(data.FechaRealInicio);
+                    const diferenciaMeses = (mesProgramado !== null && mesReal !== null)
+                        ? (mesReal - mesProgramado)
+                        : null;
+
+                    let textoTooltip = '';
+                    if (diferenciaMeses === 0) {
+                        textoTooltip = '✅ REPROGRAMADO';
+                    } else if (diferenciaMeses === 1) {
+                        textoTooltip = '✅ SE ENVIÓ AL SIGUIENTE MES';
+                    } else if (diferenciaMeses > 1) {
+                        textoTooltip = `✅ REPROGRAMADO A ${diferenciaMeses} MESES`;
+                    } else if (diferenciaMeses < 0) {
+                        const mesesAntes = Math.abs(diferenciaMeses);
+                        textoTooltip = `✅ REPROGRAMADO A ${mesesAntes} ${mesesAntes === 1 ? 'MES' : 'MESES'} ANTES`;
+                    }
+
                     const TieneSolicitudPendiente = data.TieneSolicitudPendiente;
+                    const enviarSiguienteFlag = data.EnviarSiguienteMes === true || data.EnviarSiguienteMes === 1;
+                    const esReprogramadoHistorico =
+                        data.FueReprogramado === 'SI' &&
+                        !tieneFechasReales &&
+                        enviarSiguienteFlag;
 
                     // 🟡 SOLICITUD PENDIENTE - Amarillo suave (prioridad más alta)
                     if (TieneSolicitudPendiente === 'SI') {
                         $(row).addClass('solicitud-pendiente');
                     }
-                    // 🔵 Reprogramado (Mes Siguiente)
-                    else if (estatusReprogramacion === 'Aceptada' && enviarSiguiente) {
+                    // 🔵 Reprogramado con fechas reales
+                    else if (tieneFechasReales) {
+                        if (!textoTooltip) {
+                            textoTooltip = '✅ REPROGRAMADO';
+                        }
+
+                        if (diferenciaMeses === 1) {
+                            $(row).addClass('mantenimiento-reprogramado');
+                        } else {
+                            $(row).addClass('mantenimiento-reprogramadoFRE');
+                        }
+                    }
+                    // 🔵 Compatibilidad con registros viejos que solo tienen la bandera
+                    else if (esReprogramadoHistorico) {
+                        textoTooltip = '✅ SE ENVIÓ AL SIGUIENTE MES';
                         $(row).addClass('mantenimiento-reprogramado');
                     }
-                    // 🟢 Reprogramado
-                    else if (!enviarSiguiente && tieneFechaRealInicio && tieneFechaRealFin) {
-                        $(row).addClass('mantenimiento-reprogramadoFRE');
+
+                    if (textoTooltip) {
+                        $(row).find('td').eq(2).attr('data-repro-tooltip', textoTooltip);
+                    } else {
+                        $(row).find('td').eq(2).removeAttr('data-repro-tooltip');
                     }
 
 

@@ -316,6 +316,34 @@
    - Seed fake opcional (ZZTEST01) ya limpiado; no usar para articulos reales.
 
 
+17) PREVENTIVOS: REPROGRAMACION LIBRE Y FILTRO DE LINEAS COMPLETO (10/11/2026)
+   - Se quito el checkbox "Enviar al siguiente mes" del modal.
+     Ahora solo se eligen Fecha Inicio real y Fecha Fin real.
+   - Rango permitido: primer dia del mes actual al ultimo dia del mes
+     siguiente. Si el periodo del MP termina despues, se respeta ese fin.
+     No se permiten fechas anteriores al mes actual.
+   - Fechas comparadas como texto YYYY-MM-DD para evitar corrimiento UTC.
+   - Al guardar, el SP registra fechas reales con estatus NA (inmediato).
+   - FIX CLAVE: AceptarReprogramacion ahora manda
+     p_ENVIAR_SIGUIENTE_MES = NULL. Antes mandaba TRUE y el SP borraba
+     FECHA_REAL_INICIO/FECHA_REAL_FIN, mandando el MP al siguiente mes.
+   - Backend valida el mismo rango en SolicitarReprogramacion.
+   - Tooltip ya no depende de ENVIAR_SIGUIENTE_MES; compara FechaRealInicio
+     contra FechaInicioPeriodo (fallback FechaInicioMantenimiento):
+       mismo mes -> REPROGRAMADO
+       +1 mes -> SE ENVIO AL SIGUIENTE MES
+       +2 o mas -> REPROGRAMADO A N MESES
+       mes anterior -> REPROGRAMADO A N MESES ANTES
+     El texto se pinta con data-repro-tooltip + CSS content: attr(...).
+     Registros viejos con bandera TRUE y sin fechas conservan el badge.
+   - Filtro de lineas: llenarLineas(planta, Area, 1, ...) cambio a
+     llenarLineas(planta, Area, null, ...). Sin filtros nuevos ni cambios
+     al SP. Ahora incluye SERVICIOS, SERVICIOS EXTERNOS, MOLINO PEAD,
+     SILOS, CALIDAD, MEZCLADO, FFCC, OTROS.
+   - Pruebas SP: PEAD LISO devuelve 12 lineas; PVC devuelve 21 lineas.
+     Aceptar reprogramacion conserva fechas (probado con rollback).
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================

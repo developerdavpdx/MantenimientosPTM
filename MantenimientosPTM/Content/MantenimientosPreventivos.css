@@ -951,7 +951,7 @@ textarea.form-control-document {
 }
 
 .mantenimiento-reprogramado td:nth-child(3)::before {
-    content: '✅ REPROGRAMADO (Mes siguiente)';
+    content: attr(data-repro-tooltip);
     position: absolute;
     top: -28px;
     left: 50%;
@@ -1019,7 +1019,7 @@ textarea.form-control-document {
 }
 
 .mantenimiento-reprogramadoFRE td:nth-child(3)::before {
-    content: '✅ REPROGRAMADO';
+    content: attr(data-repro-tooltip);
     position: absolute;
     top: -28px;
     left: 50%;
