@@ -212,6 +212,7 @@ Periodicidad: **4 (cuatrimestral)**, fecha inicio mantenimiento `2026-02-01`.
 5. Recordar: datos de prueba en DBADMIN; migración base y cambios de Calendario/Reprogramación aplicados en TEST/PTM.
 6. Credenciales de prueba (solo DBADMIN): `adminmantenimiento@ptmexico.com` / `AdminMTTO`.
 7. La corrección de reprogramación **ya está publicada y funcionando** en el portal (validada 11/11/2026).
+8. **No hacer `git push` sin autorización explícita del usuario.** Se puede hacer `commit` local, pero el push se ejecuta **solo** cuando el usuario lo indique.
 
 ## 7. Manuales técnicos
 
