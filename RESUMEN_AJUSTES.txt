@@ -405,6 +405,8 @@
        (aplicado en DBADMIN)
        PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql
        PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql
+     Los scripts de TEST/PTM usan ALTER PROCEDURE: on-premise no soporta
+     CREATE OR REPLACE. En DBADMIN (cloud) si se uso CREATE OR REPLACE.
    - Validacion: SP probado en DBADMIN (solicitudes 900003 y 900007)
      devuelve 9.8589 y 4.6748, igual a OITM.AvgPrice.
      UI probada en navegador con OTMC-001: total $151.13; al bajar una

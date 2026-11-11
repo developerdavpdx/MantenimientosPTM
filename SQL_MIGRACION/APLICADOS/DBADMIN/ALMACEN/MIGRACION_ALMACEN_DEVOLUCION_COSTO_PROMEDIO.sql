@@ -19,6 +19,11 @@
 --   Se usa OITM."AvgPrice" (costo promedio a nivel articulo). OITW."AvgPrice"
 --   esta en 0 en este ambiente, por lo que no aplica valuacion por almacen.
 --
+-- Nota de sintaxis:
+--   Este script es para DBADMIN (HANA Cloud), donde CREATE OR REPLACE si funciona.
+--   En on-premise (TEST_JUNIO_2026 / PTM_2022_FINAL) usar ALTER PROCEDURE:
+--   CREATE OR REPLACE no funciona en ese ambiente.
+--
 -- Ejecutar con CREATE OR REPLACE: no requiere dropear el SP.
 -- ============================================================================
 

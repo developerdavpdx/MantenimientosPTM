@@ -15,12 +15,13 @@
 --   modal de devolucion muestre el costo unitario y el valor a devolver
 --   antes de confirmar.
 --
--- Ejecutar con CREATE OR REPLACE: no requiere dropear el SP.
+-- On-premise: usar ALTER PROCEDURE. CREATE OR REPLACE no funciona en este ambiente.
+-- El SP ya existe; no requiere dropear.
 -- ============================================================================
 
 SET SCHEMA PTM_2022_FINAL;
 
-CREATE OR REPLACE PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOGetArticuloSalidaM"
+ALTER PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOGetArticuloSalidaM"
 (
     IN P_ID_SOLICITUD INT
 )
@@ -87,7 +88,7 @@ END;
 -- devolucion antes de confirmar.
 -- ============================================================================
 
-CREATE OR REPLACE PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOGetSalidasPorOT"
+ALTER PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOGetSalidasPorOT"
 (
     IN P_ORDEN_TRABAJO NVARCHAR(50)
 )

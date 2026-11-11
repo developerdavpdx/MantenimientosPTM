@@ -44,6 +44,13 @@ Historial de la migración base del 05/11/2026:
    -- Reemplazado por: ...
    ```
 
+## Regla de sintaxis: on-premise siempre con ALTER PROCEDURE
+
+- En **TEST_JUNIO_2026** y **PTM_2022_FINAL** (on-premise) `CREATE OR REPLACE PROCEDURE` **no funciona**.
+- Todos los scripts de SP para on-premise deben usar **`ALTER PROCEDURE`**; el SP ya existe.
+- `CREATE OR REPLACE PROCEDURE` solo se usa en **HANA Cloud (`DBADMIN`)**.
+- Si el SP no existiera en on-premise, primero se crea con `CREATE PROCEDURE` y los cambios posteriores se hacen con `ALTER PROCEDURE`.
+
 ## Regla importante: un solo origen de verdad por SP
 
 - La versión **corregida y aplicada** del SP de rango de Preventivos es:

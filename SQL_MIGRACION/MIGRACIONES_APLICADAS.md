@@ -4,6 +4,8 @@
 Responsable de la reorganización: sesión OpenCode
 Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/validación en el ambiente correspondiente.
 
+> **Regla de sintaxis on-premise:** en `TEST_JUNIO_2026` y `PTM_2022_FINAL` usar siempre **`ALTER PROCEDURE`**. **`CREATE OR REPLACE PROCEDURE` no funciona en on-premise**; solo se usa en HANA Cloud (`DBADMIN`).
+
 ## Resumen
 
 | Fecha | Ambiente | Script / cambio | Estado | Notas |
@@ -63,7 +65,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 - **C#:** `LogicaAlmacen.CrearEntradaDevolucionAsync` envía ese valor en `DocumentLines[].Price`.
 - **UI:** el modal de devolución muestra **Costo Prom.**, **Valor** por fila y el total **Valor a devolver**, recalculado al cambiar cantidades o selección.
 - **DBADMIN:** `APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql` — **aplicado**.
-- **TEST/PTM:** `PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql` y `..._PTM_2022_FINAL.sql` — **pendientes de aplicar en servidor**.
+- **TEST/PTM:** `PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql` y `..._PTM_2022_FINAL.sql` — **pendientes de aplicar en servidor** (usan `ALTER PROCEDURE`; on-premise no soporta `CREATE OR REPLACE`).
 - **Validación local:** SP probado con solicitudes 900003 (9.8589) y 900007 (4.6748); UI probada con OTMC-001 (total $151.13 y recálculo a $131.41 al cambiar una cantidad). El POST a SAP no se pudo probar en cloud (Service Layer inaccesible).
 
 ## Obsoletos

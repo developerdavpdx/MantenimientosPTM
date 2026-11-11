@@ -90,6 +90,7 @@ Periodicidad: **4 (cuatrimestral)**, fecha inicio mantenimiento `2026-02-01`.
 - UTF-8 con BOM, sin emojis, con acentos en comentarios.
 - El filtro de INY usa `LIKE 'INYECCI%'` para evitar depender del acento de `INYECCIÓN`.
 - **Nota:** los maestros se actualizaron con el fix de reprogramación de Preventivos. Para ambientes ya migrados, usar los **incrementales** listados abajo.
+- **Regla on-premise:** en `TEST_JUNIO_2026` y `PTM_2022_FINAL` **`CREATE OR REPLACE PROCEDURE` no funciona**; todos los scripts de SP deben usar **`ALTER PROCEDURE`** (el SP ya existe). `CREATE OR REPLACE` solo se usa en HANA Cloud (`DBADMIN`).
 
 ### Cambios de la sesión 05/11/2026 (posteriores a la migración base)
 
@@ -750,8 +751,9 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 ### Scripts
 
 - `SQL_MIGRACION/APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql` — **aplicado en DBADMIN**.
-- `SQL_MIGRACION/PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql` — pendiente.
-- `SQL_MIGRACION/PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql` — pendiente.
+- `SQL_MIGRACION/PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql` — pendiente (usa `ALTER PROCEDURE`).
+- `SQL_MIGRACION/PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql` — pendiente (usa `ALTER PROCEDURE`).
+- **On-premise no soporta `CREATE OR REPLACE PROCEDURE`**: en TEST_JUNIO_2026 y PTM_2022_FINAL siempre se usa `ALTER PROCEDURE` porque el SP ya existe. `CREATE OR REPLACE` solo se usó en DBADMIN (cloud).
 
 ### Validación
 

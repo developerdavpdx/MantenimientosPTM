@@ -18,3 +18,8 @@ Motivo: los SPs `SpPdxMTTOGetArticuloSalidaM` y `SpPdxMTTOGetSalidasPorOT`
 deben devolver `CostoPromedio` (`OITM.AvgPrice`) para que la devolución a SAP
 se valore con el costo promedio del artículo al momento de la devolución y el
 modal lo muestre antes de confirmar.
+
+## Regla on-premise
+
+- En **TEST_JUNIO_2026** y **PTM_2022_FINAL** usar siempre **`ALTER PROCEDURE`**.
+- **`CREATE OR REPLACE PROCEDURE` no funciona en on-premise**; solo se usa en HANA Cloud (`DBADMIN`).
