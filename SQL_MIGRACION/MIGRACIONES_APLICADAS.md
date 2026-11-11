@@ -28,6 +28,8 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 10/11/2026 | — | Código app Preventivos (JS/CSHTML/CSS/Controller) | Desplegado | Publicado en pruebas/producción (confirmado 11/11/2026) |
 | 11/11/2026 | DBADMIN | `MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql` | Aplicado/validado | SPs de salida y detalle devuelven `CostoPromedio` (`OITM.AvgPrice`); modal con costo y valor |
 | 11/11/2026 | TEST/PTM | `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_*.sql` | **Pendiente** | Aplicar en servidor antes de probar devoluciones |
+| 11/11/2026 | DBADMIN | `FIX_CLASIFICACION_ABOCINADORES_DBADMIN.sql` | Aplicado/validado | 6 Abocinadores de planta 2: HERRAMENTALES → MANTENIMIENTO |
+| 11/11/2026 | TEST/PTM | Clasificación de Abocinadores | **Pendiente** | Replicar el `UPDATE` en TEST_JUNIO_2026 (y PTM si aplica) |
 
 ## Detalle de los cambios clave
 
@@ -67,6 +69,14 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 - **DBADMIN:** `APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql` — **aplicado**.
 - **TEST/PTM:** `PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql` y `..._PTM_2022_FINAL.sql` — **pendientes de aplicar en servidor** (usan `ALTER PROCEDURE`; on-premise no soporta `CREATE OR REPLACE`).
 - **Validación local:** SP probado con solicitudes 900003 (9.8589) y 900007 (4.6748); UI probada con OTMC-001 (total $151.13 y recálculo a $131.41 al cambiar una cantidad). El POST a SAP no se pudo probar en cloud (Service Layer inaccesible).
+
+### 5. Clasificación de Abocinadores (planta 2)
+- **Problema:** el técnico Miguel Medina (posición 3, TEC MTTO) no veía la OTMP-014.
+- **Causa:** el equipo Abocinador 9 estaba como `HERRAMENTALES`; la regla de posiciones del SP solo muestra `MANTENIMIENTO` a TEC MTTO.
+- **Cambio DBADMIN:** 6 equipos `Abocinador N` (IDs 377, 391, 435, 465, 473, 481) pasaron de `HERRAMENTALES` a `MANTENIMIENTO`.
+- **Script:** `APLICADOS/DBADMIN/FIX_CLASIFICACION_ABOCINADORES_DBADMIN.sql` — **aplicado/validado**.
+- **Validación:** el usuario de Miguel ahora ve OTMP-014, 015, 016 y 017.
+- **Pendiente:** replicar el `UPDATE` en TEST_JUNIO_2026 (y PTM_2022_FINAL si aplica).
 
 ## Obsoletos
 

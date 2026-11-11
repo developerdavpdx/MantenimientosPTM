@@ -415,6 +415,19 @@
      (en cloud no es alcanzable).
 
 
+19) CLASIFICACION DE ABOCINADORES (11/11/2026)
+   - Problema: el tecnico Miguel Medina (posicion 3, TEC MTTO, planta 2)
+     no veia la OTMP-014 en Preventivos.
+   - Causa: el equipo Abocinador 9 estaba clasificado HERRAMENTALES; la
+     regla de posiciones del SP solo muestra MANTENIMIENTO a TEC MTTO.
+   - Cambio en DBADMIN: 6 equipos Abocinador (IDs 377, 391, 435, 465, 473,
+     481) pasaron de HERRAMENTALES a MANTENIMIENTO.
+   - Script: SQL_MIGRACION/APLICADOS/DBADMIN/FIX_CLASIFICACION_ABOCINADORES_DBADMIN.sql
+   - Validacion: con el usuario de Miguel, Preventivos ahora muestra
+     OTMP-014, OTMP-015, OTMP-016 y OTMP-017.
+   - Pendiente: replicar el UPDATE en TEST_JUNIO_2026 (y PTM si aplica).
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================

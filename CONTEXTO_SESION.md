@@ -770,3 +770,21 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 - Si en el futuro se poblara la valuación por almacén, habría que evaluar `OITW.AvgPrice` en lugar de `OITM.AvgPrice`.
 - El campo de Service Layer usado es `DocumentLines[].Price` (documento `InventoryGenEntries`).
 - Archivos tocados: `LogicaAlmacen.cs`, `SolicitudRefacciones.cshtml`, `solicitud_refacciones_refactor.js` y los 3 scripts SQL de la migración.
+
+---
+
+## 19. Sesión 11/11/2026 — Clasificación de Abocinadores (planta 2)
+
+**Problema:** el técnico MIGUEL ÁNGEL MEDINA PÉREZ (posición 3, `TecnicoMtto`, planta 2) no veía la **OTMP-014** en Preventivos.
+
+**Causa:** el equipo **Abocinador 9** (ID 435) estaba clasificado como `HERRAMENTALES`. La regla de posiciones del SP de rango solo muestra equipos `MANTENIMIENTO` a los técnicos TEC MTTO (posiciones `44,3,82,100`); los HERRAMENTALES (posiciones `8,95,101`) no le aparecen.
+
+**Cambio en DBADMIN:** los 6 equipos `Abocinador N` de planta 2 pasaron de `HERRAMENTALES` a `MANTENIMIENTO`:
+
+- IDs: 377, 391, 435, 465, 473, 481.
+
+**Script aplicado:** `SQL_MIGRACION/APLICADOS/DBADMIN/FIX_CLASIFICACION_ABOCINADORES_DBADMIN.sql`.
+
+**Validación:** con el usuario de Miguel, el listado de Preventivos ahora devuelve **OTMP-014, OTMP-015, OTMP-016 y OTMP-017**.
+
+**Pendiente en servidor:** aplicar el `UPDATE` equivalente en `TEST_JUNIO_2026` (y `PTM_2022_FINAL` si aplica). La clasificación es un campo del portal (`PdxMTTOGestionEquipos`), no de SAP, así que no la sobrescribe la sincronización.
