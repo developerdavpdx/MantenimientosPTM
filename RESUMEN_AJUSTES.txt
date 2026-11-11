@@ -428,6 +428,24 @@
    - Pendiente: replicar el UPDATE en TEST_JUNIO_2026 (y PTM si aplica).
 
 
+20) SALIDA DE MERCANCIA A SAP - DIAGNOSTICO (11/11/2026)
+   - SAP responde HTTP 400 "Failed to initialize object data" en
+     InventoryGenExits (code -1). Login/logout OK.
+   - Ocurre con OTMC-021 (items 42000000540 y 42000001604) y OTMP-156
+     (item 44000000218), siempre igual.
+   - Payload: Series 263, CostingCode DMAN/PPVC/GIF/CCOR,
+     U_EMPLEADO MPVCC, U_ALMACENISTA ATA1, U_U_PDX_SOLICITANTE 1606/3334.
+   - Verificado que NO es causa: items inventariables con almacen COR040,
+     OPRC en dimensiones correctas y UDFs en OIGE/IGE1 segun DDLs.
+   - Pendiente: revisar serie 263 en NNM1 (ObjectCode 60, Locked N),
+     CUFD/OUFV de las UDFs y valores validos; probar payload minimo.
+   - Logs: Logs\Almacen\SolicitudCompra\LogSolicitudCompra.txtYYYYMMDD.log
+     (logger AlmacenSolicitudCompra, nivel DEBUG).
+   - Hallazgo de codigo: LogicaAlmacen.cs:454 lee "ObjectTypeSalida"
+     (singular) pero Web.config define "ObjectTypeSalidas" (plural).
+   - Sin cambios de codigo por este tema; solo diagnostico.
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================

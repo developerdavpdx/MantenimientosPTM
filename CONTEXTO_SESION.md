@@ -14,7 +14,7 @@
 - **App publicada (11/11/2026):** pruebas `http://129.80.97.150:8081` y producción `http://129.80.97.150:8083`. La publicación actual incluye filtros, Calendario, el hardening de Equipos/Preventivos/Baja y la corrección de reprogramación (validada por el usuario en el portal). **Sin pendientes de despliegue.**
 - **Correo:** configuración única `SMTP_*` con Office365 (`smtp.office365.com`, `notificaciones@ptmexico.com`). Probado con envío real desde desarrollo.
 - **Datos manuales OTMP-011:** insertados en `DBADMIN` en 5 tablas (ver sección 2.1).
-- **Commits recientes:** `3cb8cf9` (correo) y `c7e7ef8` (Calendario + reprogramación), rama `david_reyes`.
+- **Git (11/11/2026):** `origin/david_reyes` está en `b1a6e23` (devolución con costo promedio + regla `ALTER PROCEDURE`). Hay commits locales posteriores **sin push** (fix de Abocinadores y documentación). **No hacer push sin autorización del usuario.**
 - **Datos de prueba:** se quedan en `DBADMIN` (NO migrar).
 - **Credenciales de prueba (solo DBADMIN):** `adminmantenimiento@ptmexico.com` / `AdminMTTO` (administrador de mantenimiento). No usar en TEST/PTM ni producción.
 - **Firmas de prueba:** fuera del índice de Git (`git rm --cached`), siguen en disco y `.gitignore` las excluye.
@@ -788,3 +788,93 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 **Validación:** con el usuario de Miguel, el listado de Preventivos ahora devuelve **OTMP-014, OTMP-015, OTMP-016 y OTMP-017**.
 
 **Pendiente en servidor:** aplicar el `UPDATE` equivalente en `TEST_JUNIO_2026` (y `PTM_2022_FINAL` si aplica). La clasificación es un campo del portal (`PdxMTTOGestionEquipos`), no de SAP, así que no la sobrescribe la sincronización.
+
+---
+
+## 20. Sesión 11/11/2026 — Salida de mercancía a SAP: “Failed to initialize object data”
+
+**Contexto:** Almacén → Solicitud de Refacciones → Generar Salida de Mercancía.
+
+Flujo:
+`solicitud_refacciones_refactor.js` → `POST /Almacen/GenerarSalidaMercancia` (`AlmacenController.cs:1851`) → `LogicaAlmacen.CrearSalidaMercanciaAsync` (`LogicaAlmacen.cs:325`).
+
+### Dónde quedan los logs
+
+- Logger: `AlmacenSolicitudCompra`.
+- Appender: `AppenderAlmacenSolicitudCompra` en `Web.config`.
+- Archivo: `Logs\Almacen\SolicitudCompra\LogSolicitudCompra.txtYYYYMMDD.log` (relativo a la carpeta publicada).
+- Nivel `DEBUG`: incluye el JSON enviado y el body de respuesta de SAP.
+
+### Respuesta observada
+
+- Login a SAP **OK**.
+- POST a `https://saphaplastic:50000/b1s/v1/InventoryGenExits`.
+- SAP responde **HTTP 400**:
+
+```json
+{
+  "error": {
+    "code": -1,
+    "message": {
+      "lang": "en-us",
+      "value": "Failed to initialize object data"
+    }
+  }
+}
+```
+
+- Ocurrió con **OTMC-021** (items `42000000540` y `42000001604`) y **OTMP-156** (item `44000000218`), siempre con la misma respuesta.
+
+Payload enviado (resumen):
+`Series: 263`, `CostingCode: DMAN`, `CostingCode2: PPVC`, `CostingCode3: GIF`, `CostingCode4: CCOR`, `U_EMPLEADO: MPVCC`, `U_ALMACENISTA: ATA1`, `U_U_PDX_SOLICITANTE: 1606/3334`.
+
+### Verificado que NO es la causa
+
+- Los artículos existen, son inventariables (`InvntItem='Y'`) y su almacén es `COR040`.
+- `OPRC`: `DMAN` DimCode 1, `PPVC` DimCode 2, `GIF` DimCode 3, `CCOR` DimCode 4.
+- Las UDFs están en la tabla correcta según los DDLs:
+  - `OIGE.U_U_PDX_SOLICITANTE` (encabezado)
+  - `IGE1.U_EMPLEADO` y `IGE1.U_ALMACENISTA` (líneas)
+- Login y logout de SAP funcionan.
+
+### Sospechosos / pendiente de diagnosticar en el servidor
+
+1. **Serie 263** en `NNM1`: debe existir en la **misma compañía** a la que se conecta el Service Layer, con `ObjectCode='60'` y `Locked='N'`.
+2. **UDFs**: revisar `CUFD` / `OUFV` para `OIGE` e `IGE1`; que `U_EMPLEADO`, `U_ALMACENISTA` y `U_U_PDX_SOLICITANTE` tengan valores válidos (`MPVCC`, `ATA1`, `1606`, `3334`).
+3. **`DocDueDate`**: es válido, pero se puede descartar en la prueba mínima.
+4. Confirmar que el `Database` del portal y el `SapDatabase` del Service Layer apunten a la misma compañía.
+
+### Prueba rápida para aislar el campo
+
+POST mínimo a `InventoryGenExits` con solo:
+
+```json
+{
+  "DocDate": "2026-11-11",
+  "DocumentLines": [
+    { "ItemCode": "44000000218", "Quantity": 1, "WarehouseCode": "COR040" }
+  ]
+}
+```
+
+Si funciona, agregar en este orden hasta que falle:
+
+1. `Series: 263`
+2. `CostingCode` / `CostingCode2` / `CostingCode3` / `CostingCode4`
+3. `U_EMPLEADO` / `U_ALMACENISTA`
+4. `U_U_PDX_SOLICITANTE`
+
+### Hallazgo de código
+
+`LogicaAlmacen.cs:454` lee:
+
+```csharp
+ConfigurationManager.AppSettings["ObjectTypeSalida"]
+```
+
+Pero en `Web.config` la llave es **`ObjectTypeSalidas`** (plural). Hoy no rompe porque el SP `SpPdxMTTOGetSeriesByName` asume `ObjectCode = '60'`, pero conviene corregirlo para pedir la serie explícita de Goods Issue.
+
+### Estado
+
+- **Solo diagnóstico; no se modificó código por este tema.**
+- Pendiente de que el usuario comparta el resultado de `NNM1` (serie 263) y `CUFD`/`OUFV`, o de probar el payload mínimo.
