@@ -656,6 +656,25 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 - Ahora el combo incluye servicios y líneas auxiliares: `SERVICIOS`, `SERVICIOS EXTERNOS`, `MOLINO PEAD`, `SILOS`, `SILOS PEAD LISO`, `SILOS PEAD CORR`, `CALIDAD`, `MEZCLADO`, `FFCC`, `OTROS`.
 - **Pruebas:** PEAD LISO devuelve 12 líneas; PVC devuelve 21 líneas.
 
+### Flujo legacy de aceptar/rechazar oculto
+- Se eliminó el botón `btn-aceptar-reprogramacion` del render de acciones.
+- Se quitó el bloqueo de botones y el pintado amarillo (`solicitud-pendiente`) para solicitudes pendientes.
+- El endpoint `AceptarReprogramacion` y sus funciones quedan por compatibilidad, pero ya no se muestran en la UI.
+- Todo el flujo nuevo se aplica con estatus `NA` (inmediato), sin aprobación.
+
+### Columnas de `PdxMTTOAreasxPlanta` (filtro Proceso)
+- `STATUS`: **1 = producción, 0 = no producción**.
+- `ACTIVE`: **1 = área activa, 0 = inactiva**.
+- `SpPdxMTTOConsultarProcesosPorPlanta` filtra:
+  ```sql
+  WHERE "PLANTA" = :P_PLANTA
+    AND (:P_PRODUCCION IS NULL OR "STATUS" = :P_PRODUCCION)
+    AND "ACTIVE" = 1
+  ```
+- Si se manda `P_PRODUCCION = NULL`, solo aparecen las áreas con `ACTIVE = 1`. Las áreas de `SERVICIOS`, `MOLINO PEAD`, `CALIDAD`, `MEZCLADO`, `SILOS`, etc. tienen `ACTIVE = 0`, por eso no salen.
+- Además, esas áreas **no tienen equipos asignados**: los equipos de servicios están en áreas productivas (PVC/PEAD LISO) con una **línea** cuyo `PRODUCCION = 0`. Por eso el filtro correcto para servicios es el de **Línea de Producción**, no el de Proceso.
+- Recomendación: dejar `llenarProcesos(..., 1, ...)` (solo procesos productivos) y usar el filtro de líneas con `null`. Si se quisiera “SERVICIOS” como proceso, habría que asignar equipos a esa área y poner `ACTIVE = 1`.
+
 ### SP principal sin colchón de fechas
 - **Problema detectado en prueba E2E:** al mover un MP de octubre a diciembre (+2 meses), el SP `SpPdxMTTOObtenerMantenimientosPorRango` no lo devolvía porque `MANTENIMIENTOS_CALCULADOS` filtraba las ocurrencias con colchón de solo ±1 mes.
 - **Solución:** se quitó el `WHERE` de fechas de `MANTENIMIENTOS_CALCULADOS`. Ahora se generan todas las ocurrencias y el filtro final por `FECHA_INICIO_FINAL`/`FECHA_FIN_FINAL` limita el rango.

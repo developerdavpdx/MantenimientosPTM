@@ -174,11 +174,6 @@ class MantenimientosPreventivoApp {
             this.mantenimientoManager.abrirModalReprogramacion($(e.currentTarget));
         });
 
-        // 🔥 NUEVO: ACEPTAR reprogramación solicitada por (SupervisorPlaneacion)
-        $(document).on('click', '.btn-aceptar-reprogramacion', (e) => {
-            this.mantenimientoManager.aceptarReprogramacion($(e.currentTarget));
-        });
-
         // Carátula online
         $(document).on('click', '.btn-caratula-online', (e) => {
             //Asignamos como data atributos las areas del tecnico  
@@ -1767,13 +1762,11 @@ class MantenimientoManager {
                             if (esSupervisorPlaneacion) {
                                 const numeroOrden = row.NumeroOrden || '';
                                 const fueReprogramado = row.FueReprogramado || 'SI';
-                                const tieneSolicitudPendiente = row.TieneSolicitudPendiente || 'SI';
 
                                 // Validar todas las condiciones
                                 const puedeReprogramar =
                                     numeroOrden !== '' &&
-                                    fueReprogramado === 'NO' &&
-                                    tieneSolicitudPendiente === 'NO';
+                                    fueReprogramado === 'NO';
 
                                 if (puedeReprogramar && estatusOrden == 2) {
                                     const reprogramBtn = btn(
@@ -1801,8 +1794,6 @@ class MantenimientoManager {
                                     let razonDeshabilitado = 'No disponible';
                                     if (numeroOrden === '') {
                                         razonDeshabilitado = 'Orden de trabajo sin número';
-                                    } else if (tieneSolicitudPendiente === 'SI') {
-                                        razonDeshabilitado = 'Solicitud pendiente';
                                     }
 
                                     return btnDisabled(
@@ -1816,59 +1807,33 @@ class MantenimientoManager {
                             let caratulaBtn = '';
                             let impresionBtn = '';
                             let listRefBtn = '';
-                            let aceptarReprogramacionBtn = '';
-
-                            // 🔴 VERIFICAR SI HAY SOLICITUD PENDIENTE
-                            const tieneSolicitudPendiente = row.TieneSolicitudPendiente || 'NO';
-                            const tieneSolicitudPendienteFlag = tieneSolicitudPendiente === 'SI';
-
-                            // 🔵 SI HAY SOLICITUD PENDIENTE Y ES ADMIN → MOSTRAR BOTÓN DE ACEPTAR
-                            if (esAdmin && tieneSolicitudPendienteFlag) {
-                                aceptarReprogramacionBtn = btn(
-                                    'btn-ptm-light',
-                                    'btn-aceptar-reprogramacion',
-                                    'check-circle',
-                                    'Aceptar Reprogramación',
-                                    dataAttrs
-                                );
-                            }
-
                             if (estatusOrden && estatusOrden !== '') {
 
-                                // 🔴 SI HAY SOLICITUD PENDIENTE, DESHABILITAR TODOS LOS BOTONES
-                                if (tieneSolicitudPendienteFlag) {
+                                // LÓGICA NORMAL
+                                if (estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI") {
                                     refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
-                                    caratulaBtn = btnDisabled('secondary', 'eye', 'Carátula(OT)');
-                                    impresionBtn = btnDisabled('secondary', 'printer', 'Impresión(OT)');
-                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
                                 } else {
-                                    // LÓGICA NORMAL
+                                    refaccionBtn = btn('btn-ptm-primary', 'btn-solicitar-refaccion', 'tools', 'Solicitar Refacción', dataAttrs);
+                                }
 
-                                    if (estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI") {
-                                        refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
+                                caratulaBtn = btn('btn-ptm-mid', 'btn-caratula-online', 'eye', 'Carátula(OT)', dataAttrs);
+
+                                if (!esTecnico) {
+                                    if (estatusOrden == 4 || ordenFinalizada === "SI") {
+                                        impresionBtn = btnDisabled('secondary', 'printer', 'Impresión(OT)');
                                     } else {
-                                        refaccionBtn = btn('btn-ptm-primary', 'btn-solicitar-refaccion', 'tools', 'Solicitar Refacción', dataAttrs);
-                                    }
-
-                                    caratulaBtn = btn('btn-ptm-mid', 'btn-caratula-online', 'eye', 'Carátula(OT)', dataAttrs);
-
-                                    if (!esTecnico) {
-                                        if (estatusOrden == 4 || ordenFinalizada === "SI") {
-                                            impresionBtn = btnDisabled('secondary', 'printer', 'Impresión(OT)');
-                                        } else {
-                                            impresionBtn = btn('btn-ptm-light', 'btn-impresion-online', 'printer', 'Impresión(OT)', dataAttrs);
-                                        }
-                                    }
-
-                                    // 🔧 LISTADO DE REFACCIÓNES
-                                    if (tieneRefacciones === "SI") {
-                                        listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Historial de Refacciones', dataAttrs);
-                                    } else {
-                                        listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
+                                        impresionBtn = btn('btn-ptm-light', 'btn-impresion-online', 'printer', 'Impresión(OT)', dataAttrs);
                                     }
                                 }
 
-                                return `${aceptarReprogramacionBtn}${refaccionBtn}${caratulaBtn}${impresionBtn}${listRefBtn}`;
+                                // 🔧 LISTADO DE REFACCIONES
+                                if (tieneRefacciones === "SI") {
+                                    listRefBtn = btn('btn-ptm-primary', 'btn-list-refacciones', 'bi bi-box-seam', 'Historial de Refacciones', dataAttrs);
+                                } else {
+                                    listRefBtn = btnDisabled('secondary', 'bi bi-box-seam', 'Historial de Refacciones');
+                                }
+
+                                return `${refaccionBtn}${caratulaBtn}${impresionBtn}${listRefBtn}`;
 
                             } else {
 
@@ -1880,7 +1845,7 @@ class MantenimientoManager {
                                     refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
                                 }
 
-                                return `${aceptarReprogramacionBtn}${refaccionBtn}${caratulaBtn}`;
+                                return `${refaccionBtn}${caratulaBtn}`;
                             }
                         }
                     },
@@ -2247,19 +2212,14 @@ class MantenimientoManager {
                         textoTooltip = `✅ REPROGRAMADO A ${mesesAntes} ${mesesAntes === 1 ? 'MES' : 'MESES'} ANTES`;
                     }
 
-                    const TieneSolicitudPendiente = data.TieneSolicitudPendiente;
                     const enviarSiguienteFlag = data.EnviarSiguienteMes === true || data.EnviarSiguienteMes === 1;
                     const esReprogramadoHistorico =
                         data.FueReprogramado === 'SI' &&
                         !tieneFechasReales &&
                         enviarSiguienteFlag;
 
-                    // 🟡 SOLICITUD PENDIENTE - Amarillo suave (prioridad más alta)
-                    if (TieneSolicitudPendiente === 'SI') {
-                        $(row).addClass('solicitud-pendiente');
-                    }
                     // 🔵 Reprogramado con fechas reales
-                    else if (tieneFechasReales) {
+                    if (tieneFechasReales) {
                         if (!textoTooltip) {
                             textoTooltip = '✅ REPROGRAMADO';
                         }

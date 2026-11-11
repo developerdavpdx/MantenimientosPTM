@@ -354,6 +354,18 @@
        OTMP-011 octubre -> noviembre -> SE ENVIO AL SIGUIENTE MES;
        OTMP-011 octubre -> diciembre -> REPROGRAMADO A 2 MESES;
        filtro PEAD LISO mostro SERVICIOS, MOLINO PEAD, SILOS, FFCC, OTROS.
+   - FLUJO LEGACY OCULTO: se quito el boton btn-aceptar-reprogramacion,
+     el bloqueo de botones y el pintado amarillo de solicitudes pendientes.
+     El endpoint AceptarReprogramacion queda por compatibilidad, pero ya no
+     se muestra en la UI.
+   - PdxMTTOAreasxPlanta: STATUS=1 produccion / 0 no produccion;
+     ACTIVE=1 activa / 0 inactiva. El SP de procesos filtra
+     (P_PRODUCCION IS NULL OR STATUS=P_PRODUCCION) AND ACTIVE=1.
+     Las areas de SERVICIOS/MOLINO PEAD/CALIDAD/MEZCLADO/SILOS estan
+     ACTIVE=0 y no tienen equipos; los servicios son LINEAS con
+     PRODUCCION=0 dentro de areas productivas. Por eso el filtro correcto
+     para servicios es el de lineas, no el de proceso.
+     Recomendacion: dejar llenarProcesos(..., 1, ...) y usar lineas null.
 
 
 ================================================================================
