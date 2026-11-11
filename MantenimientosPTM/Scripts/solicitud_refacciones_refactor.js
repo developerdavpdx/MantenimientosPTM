@@ -726,18 +726,19 @@ class SolicitudRefaccionesApp {
                 if (!$chk.length) return;
                 if (!$chk.is(':checked')) return;
 
-                // ✅ CORREGIDO: Usar índices correctos según la estructura de la tabla
-                const idSolicitud = parseInt($chk.data('idsolicitud') || 0);
-                const ordenTrabajo = $row.find('td:eq(3) .badge').text().trim() || $chk.data('ordentrabajo') || '';
-                const codigo = $row.find('td:eq(4) small').text().trim() || $chk.data('codigo') || '';
-                const articulo = $row.find('td:eq(5)').text().trim() || $chk.data('articulo') || '';
-                const cantidadSolicitada = parseInt($row.find('td:eq(6)').text().trim() || 0);
-                const cantidadSurtida = parseInt($row.find('td:eq(7)').text().trim() || 0);
-                const cantidadDevolver = parseInt($row.find('td:eq(9) .cant-devolver').val() || 0);
-                const departamento = $row.find('td:eq(10)').text().trim() || '';
-                const proceso = $row.find('td:eq(11)').text().trim() || '';
-                const gastos = $row.find('td:eq(12)').text().trim() || '';
-                const cedis = $row.find('td:eq(13)').text().trim() || '';
+                // ✅ Leer desde data-* del input (independiente del orden de columnas)
+                const $input = $row.find('.cant-devolver');
+                const idSolicitud = parseInt($chk.data('idsolicitud') || 0, 10);
+                const ordenTrabajo = ($input.data('ordentrabajo') || $row.find('td:eq(3) .badge').text().trim() || '').toString();
+                const codigo = ($input.data('codigo') || $row.find('td:eq(4) small').text().trim() || '').toString();
+                const articulo = ($input.data('articulo') || $row.find('td:eq(5)').text().trim() || '').toString();
+                const cantidadSolicitada = parseInt($input.data('cantidadsolicitada') || 0, 10);
+                const cantidadSurtida = parseInt($input.data('cantidadsurtidabruta') || 0, 10);
+                const cantidadDevolver = parseInt($input.val() || 0, 10);
+                const departamento = ($input.data('departamento') || '').toString();
+                const proceso = ($input.data('proceso') || '').toString();
+                const gastos = ($input.data('gastos') || '').toString();
+                const cedis = ($input.data('cedis') || '').toString();
 
                 items.push({
                     IdSolicitud: idSolicitud,
@@ -2407,7 +2408,7 @@ class SolicitudManager {
         if (articulosBase.length === 0) {
             tbody.html(`
             <tr>
-                <td colspan="13" class="text-center text-muted py-4">
+                <td colspan="16" class="text-center text-muted py-4">
                     <i class="bi bi-info-circle me-1"></i>
                     No hay artículos para devolver
                 </td>
@@ -2438,6 +2439,10 @@ class SolicitudManager {
 
                 const esRechazado = art.DEVOLUCION_RECHAZADA === 1 || art.DEVOLUCION_RECHAZADA === '1';
                 const noEditable = yaDevueltoTotal || esRechazado;
+
+                const costoPromedio = Number(art.CostoPromedio || 0);
+                const cantidadAValor = noEditable ? 0 : cantidadPendienteDevolver;
+                const valorDevolucion = cantidadAValor * costoPromedio;
 
                 const claseFila = esRechazado
                     ? 'fila-devolucion-rechazada'
@@ -2552,8 +2557,24 @@ class SolicitudManager {
                            data-cantidadsolicitada="${cantidadSolicitada}"
                            data-cantidadsurtidabruta="${cantidadSurtidaBruta}"
                            data-cantidadpendiente="${cantidadPendienteDevolver}"
+                           data-departamento="${art.DEPT || ''}"
+                           data-proceso="${art.PROCESO || ''}"
+                           data-gastos="${art.GASTOS || ''}"
+                           data-cedis="${art.CEDIS || ''}"
                            ${noEditable ? 'disabled readonly' : ''}
                            required>
+                </td>
+
+                <td class="text-center align-middle fw-semibold text-nowrap">
+                    ${this._formatearCosto(costoPromedio)}
+                </td>
+
+                <td class="text-center align-middle fw-semibold text-nowrap valor-devolucion"
+                    data-costo="${costoPromedio}"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    data-bs-title="Valor = cantidad a devolver × costo promedio unitario. Representa el costo de inventario que se registrará en SAP al devolver la mercancía; no es un cargo al usuario.">
+                    ${this._formatearMoneda(valorDevolucion)}
                 </td>
 
                 
@@ -2586,10 +2607,22 @@ class SolicitudManager {
         setTimeout(() => {
             $('[data-bs-toggle="tooltip"]').tooltip('dispose');
             $('[data-bs-toggle="tooltip"]').tooltip();
+            this._inicializarTooltipsValor();
             this._inicializarPopoversFolios();
         }, 100);
 
         $('#devolucionMercancia').modal('show');
+    }
+
+    // Inicializa los tooltips de las celdas "Valor" (se generan dinámicamente)
+    _inicializarTooltipsValor() {
+        if (!window.bootstrap || !window.bootstrap.Tooltip) return;
+
+        document.querySelectorAll('#bodyArticulosDevolucion .valor-devolucion').forEach((el) => {
+            const existente = window.bootstrap.Tooltip.getInstance(el);
+            if (existente) existente.dispose();
+            new window.bootstrap.Tooltip(el);
+        });
     }
 
     // ========================================
@@ -2606,6 +2639,7 @@ class SolicitudManager {
                     ORDEN_TRABAJO: s.ORDEN_TRABAJO,
                     ItemCode: s.ItemCode,
                     ItemName: s.ItemName,
+                    CostoPromedio: Number(s.CostoPromedio || 0),
                     CANTIDAD_SOLICITADA: Number(s.CANTIDAD_SOLICITADA || 0),
                     CANTIDAD_SALIDA_BRUTA: 0,
                     CANTIDAD_DEVUELTA: Number(s.CANTIDAD_DEVUELTA ?? 0),
@@ -2681,11 +2715,58 @@ class SolicitudManager {
                 this.busquedaSolicitanteDevPendiente =
                     this.buscarDatosSolicitanteChangeDev('nomina','devolucion');
             });
+
+        // Recalcular el valor por fila y el total al cambiar la cantidad
+        $(document)
+            .off('input.devolucionValor', '.cant-devolver')
+            .on('input.devolucionValor', '.cant-devolver', () => {
+                this.actualizarContadorDevolucion();
+                // El clamp de cantidad se aplica a los 1000 ms; recalcular después
+                clearTimeout(this._timerValorDevolucion);
+                this._timerValorDevolucion = setTimeout(() => this.actualizarContadorDevolucion(), 1100);
+            });
+    }
+
+    _formatearCosto(valor) {
+        const n = Number(valor) || 0;
+        return n.toLocaleString('es-MX', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 4
+        });
+    }
+
+    _formatearMoneda(valor) {
+        const n = Number(valor) || 0;
+        return n.toLocaleString('es-MX', {
+            style: 'currency',
+            currency: 'MXN',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
     }
     
     actualizarContadorDevolucion() {
         const seleccionados = $('.chk-articulo-devolucion:checked').length;
         $('#contadorDevolucion').text(seleccionados);
+
+        let total = 0;
+
+        $('#bodyArticulosDevolucion tr').each((idx, tr) => {
+            const $row = $(tr);
+            const $input = $row.find('.cant-devolver');
+            if (!$input.length) return;
+
+            const $celdaValor = $row.find('.valor-devolucion');
+            const costo = Number($celdaValor.data('costo') || 0);
+            const seleccionado = $row.find('.chk-articulo-devolucion').is(':checked');
+            const cantidad = seleccionado ? (parseInt($input.val() || 0, 10) || 0) : 0;
+            const importe = cantidad * costo;
+
+            $celdaValor.text(this._formatearMoneda(importe));
+            total += importe;
+        });
+
+        $('#totalDevolucion').text(this._formatearMoneda(total));
     }
 
     // ========================================

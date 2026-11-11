@@ -1,6 +1,6 @@
 # Bitácora de migraciones aplicadas
 
-Última actualización: 10/11/2026
+Última actualización: 11/11/2026
 Responsable de la reorganización: sesión OpenCode
 Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/validación en el ambiente correspondiente.
 
@@ -23,7 +23,9 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 10/11/2026 | DBADMIN/TEST/PTM | `MIGRACION_PREVENTIVOS_SP_RANGO.sql` | Aplicado/validado | Versión corregida: fechas reales siempre, sin colchón y sin duplicados |
 | 10/11/2026 | DBADMIN/TEST/PTM | `MIGRACION_PREVENTIVOS_SP_SOLICITAR_REPROGRAMACION.sql` | Aplicado/validado | Si ID=0, actualiza la última solicitud de la OT; si no existe, inserta |
 | 10/11/2026 | — | Columna `TIEMPO_MUERTO_HERRAMENTALES` | Validado | Ya no es pendiente |
-| 10/11/2026 | — | Código app Preventivos (JS/CSHTML/CSS/Controller) | En repo | Requiere compilar/publicar en TEST/PTM |
+| 10/11/2026 | — | Código app Preventivos (JS/CSHTML/CSS/Controller) | Desplegado | Publicado en pruebas/producción (confirmado 11/11/2026) |
+| 11/11/2026 | DBADMIN | `MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql` | Aplicado/validado | SPs de salida y detalle devuelven `CostoPromedio` (`OITM.AvgPrice`); modal con costo y valor |
+| 11/11/2026 | TEST/PTM | `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_*.sql` | **Pendiente** | Aplicar en servidor antes de probar devoluciones |
 
 ## Detalle de los cambios clave
 
@@ -55,6 +57,15 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
   - **Aplicado/validado** en DBADMIN, TEST_JUNIO_2026 y PTM_2022_FINAL.
 - **Cuidado:** los scripts grandes `MIGRACION_TEST_JUNIO_2026.sql` y `MIGRACION_PTM_2022_FINAL.sql` contienen la versión vieja con colchón ±1 mes; no re-ejecutarlos completos.
 
+### 4. Costo promedio en devoluciones (`SpPdxMTTOGetArticuloSalidaM` y `SpPdxMTTOGetSalidasPorOT`)
+- **Requerimiento:** la entrada por devolución (`InventoryGenEntries`) debe valuarse con el costo promedio del artículo al momento de la devolución.
+- **SPs:** agregan `T1."AvgPrice"` / `I."AvgPrice"` como `"CostoPromedio"` (se usa `OITM.AvgPrice`; `OITW.AvgPrice` está en 0).
+- **C#:** `LogicaAlmacen.CrearEntradaDevolucionAsync` envía ese valor en `DocumentLines[].Price`.
+- **UI:** el modal de devolución muestra **Costo Prom.**, **Valor** por fila y el total **Valor a devolver**, recalculado al cambiar cantidades o selección.
+- **DBADMIN:** `APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql` — **aplicado**.
+- **TEST/PTM:** `PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql` y `..._PTM_2022_FINAL.sql` — **pendientes de aplicar en servidor**.
+- **Validación local:** SP probado con solicitudes 900003 (9.8589) y 900007 (4.6748); UI probada con OTMC-001 (total $151.13 y recálculo a $131.41 al cambiar una cantidad). El POST a SAP no se pudo probar en cloud (Service Layer inaccesible).
+
 ## Obsoletos
 
 En `OBSOLETO/`:
@@ -66,5 +77,8 @@ En `OBSOLETO/`:
 Motivo: contienen versiones anteriores del SP de rango. La versión vigente está en `APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql`.
 
 ## Pendientes SQL
-- `PENDIENTES/` debe quedar **sin scripts SQL** (solo su README).
-- Si se agrega un script nuevo, debe registrarse aquí al aplicarse.
+- `PENDIENTES/` contiene actualmente:
+  - `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql`
+  - `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql`
+- Al aplicarse en el servidor, moverlos a `APLICADOS/<schema>/` y actualizar esta bitácora.
+- Regla general: si `PENDIENTES/` no tiene scripts SQL, todo está al día.

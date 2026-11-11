@@ -1,6 +1,6 @@
 ================================================================================
  RESUMEN DE AJUSTES - PROYECTO MantenimientosPTM
- Fecha: 05/11/2026
+ Fecha: 11/11/2026 (actualizado)
 ================================================================================
 
 1) LOGIN
@@ -145,7 +145,7 @@
    - Pruebas: HANA Cloud DBADMIN + IIS Express; alta, edicion, reactivacion de
      periodicidades, pausa/reanudacion, validaciones y archivos. Todo OK y sin
      datos de prueba residuales (0 equipos ZZ_, 0 huerfanos).
-   - Pendiente: publicar a pruebas/produccion y validar en la app publicada.
+   - Desplegado en pruebas/produccion (11/11/2026), sin pendientes.
    - Archivos: EquiposController.cs, GlobalCommands.cs,
      gestion_equipos_refactor.js, CONTEXTO_SESION.md.
 
@@ -175,8 +175,9 @@
    - Pruebas: HANA Cloud DBADMIN + IIS Express; traversal de borrado/escritura
      bloqueado, .aspx rechazado, sanitizacion HTML OK, OT definitiva sin firma
      rechazada, OT borrador sin firma OK, borrado valido OK. Sin datos residuales.
-   - Pendiente: publicar a pruebas/produccion. No se usaron transacciones en
-     flujos multi-paso para no perder trabajo ya capturado.
+   - Desplegado en pruebas/produccion (11/11/2026), sin pendientes.
+   - Nota: no se usaron transacciones en flujos multi-paso para no perder
+     trabajo ya capturado.
    - Archivos: MantenimientosPreventivosController.cs, RutinasController.cs,
      mantenimientos_preventivos_refactor.js, CONTEXTO_SESION.md.
 
@@ -316,7 +317,7 @@
    - Seed fake opcional (ZZTEST01) ya limpiado; no usar para articulos reales.
 
 
-17) PREVENTIVOS: REPROGRAMACION LIBRE Y FILTRO DE LINEAS COMPLETO (10/11/2026)
+17) PREVENTIVOS: REPROGRAMACION LIBRE, FILTRO DE LINEAS Y FIXES FINALES (10-11/11/2026)
    - Se quito el checkbox "Enviar al siguiente mes" del modal.
      Ahora solo se eligen Fecha Inicio real y Fecha Fin real.
    - Rango permitido: primer dia del mes actual al ultimo dia del mes
@@ -342,12 +343,26 @@
      SILOS, CALIDAD, MEZCLADO, FFCC, OTROS.
    - Pruebas SP: PEAD LISO devuelve 12 lineas; PVC devuelve 21 lineas.
      Aceptar reprogramacion conserva fechas (probado con rollback).
-   - SP PRINCIPAL: se quito el colchon de fechas de MANTENIMIENTOS_CALCULADOS
-     en SpPdxMTTOObtenerMantenimientosPorRango. Antes filtraba con +/-1 mes
-     y no devolvia MPs movidos +2 meses (octubre -> diciembre).
-     Script: SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql
-     Ahora genera todas las ocurrencias y el filtro final por
-     FECHA_INICIO_FINAL/FECHA_FIN_FINAL limita el rango.
+   - SP PRINCIPAL (version final):
+     - Se quito el colchon de fechas de MANTENIMIENTOS_CALCULADOS.
+     - Las fechas reales mandan siempre, aunque ENVIAR_SIGUIENTE_MES=TRUE.
+     - ESTATUS_REPROGRAMACION toma una sola solicitud por NUMERO_ORDEN
+       para evitar duplicados.
+     Script vigente: SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql
+     Version anterior: SQL_MIGRACION/OBSOLETO/MIGRACION_PREVENTIVOS_SP_RANGO_VERSION_ANTERIOR.sql
+     Validado en DBADMIN con bandera TRUE y con solicitud duplicada.
+   - SAFEGUARD SpPdxMTTOSolicitarReprogramacion:
+     - Si P_ID_SOLICITUD=0/null, actualiza la ultima solicitud no rechazada
+       del mismo NUMERO_ORDEN; si no existe, inserta una nueva.
+     - Script: SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_SOLICITAR_REPROGRAMACION.sql
+     - Tambien se corrigio el typo p_ID_SOLIICTUD -> p_ID_SOLICITUD.
+   - ESTADO FINAL (11/11/2026): correcciones aplicadas/validadas en DBADMIN,
+     TEST_JUNIO_2026 y PTM_2022_FINAL.
+     REPROGRAMACION FUNCIONANDO en el portal publicado -> COMPLETADA.
+     App desplegada en pruebas/produccion; sin pendientes de despliegue.
+     PENDIENTES: solo los 2 scripts de costo promedio de devoluciones
+     (TEST_JUNIO_2026 y PTM_2022_FINAL).
+     Bitacora: SQL_MIGRACION/MIGRACIONES_APLICADAS.md.
    - PRUEBA E2E PORTAL (SupervisorPlaneacion bravoaj@ptmexico.com):
        modal sin checkbox; min 2026-11-01 / max 2026-12-31;
        octubre rechazado; OTMP-012 reprogramado 10-12 nov -> REPROGRAMADO;
@@ -366,6 +381,36 @@
      PRODUCCION=0 dentro de areas productivas. Por eso el filtro correcto
      para servicios es el de lineas, no el de proceso.
      Recomendacion: dejar llenarProcesos(..., 1, ...) y usar lineas null.
+
+
+18) DEVOLUCION DE REFACCIONES CON COSTO PROMEDIO (11/11/2026)
+   - Requerimiento: la entrada por devolucion a SAP debe usar el costo
+     promedio del articulo al momento de la devolucion.
+   - Situacion: CrearEntradaDevolucionAsync armaba InventoryGenEntries sin
+     enviar costo (Price), por lo que SAP aplicaba su valoracion por defecto.
+     OITW.AvgPrice esta en 0; el costo real esta en OITM.AvgPrice
+     (EvalSystem = A, promedio movil).
+   - Cambio SP SpPdxMTTOGetArticuloSalidaM: agrega
+     T1."AvgPrice" AS "CostoPromedio".
+   - Cambio SP SpPdxMTTOGetSalidasPorOT: agrega
+     I."AvgPrice" AS "CostoPromedio" para el modal de devolucion.
+   - Cambio C#: CrearEntradaDevolucionAsync lee CostoPromedio y lo envia en
+     DocumentLines[].Price. Si es 0/null registra warning y deja el default
+     de SAP. Parseo con InvariantCulture + decimal.TryParse.
+   - UI modal devolucion: nuevas columnas Costo Prom. y Valor, total
+     "Valor a devolver" y recalculo al cambiar cantidad o seleccion.
+     Ahora las columnas se leen por data-* y no por indice de td.
+   - Scripts:
+       APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql
+       (aplicado en DBADMIN)
+       PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql
+       PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql
+   - Validacion: SP probado en DBADMIN (solicitudes 900003 y 900007)
+     devuelve 9.8589 y 4.6748, igual a OITM.AvgPrice.
+     UI probada en navegador con OTMC-001: total $151.13; al bajar una
+     cantidad de 3 a 1, valor de fila $9.86 y total $131.41. Build y JS OK.
+   - Pendiente: probar el POST real a SAP en el servidor con Service Layer
+     (en cloud no es alcanzable).
 
 
 ================================================================================

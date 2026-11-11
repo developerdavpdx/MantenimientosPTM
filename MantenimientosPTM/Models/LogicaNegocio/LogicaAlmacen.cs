@@ -8,6 +8,7 @@ using System.Configuration;
 using System.Data;
 using System.Diagnostics;
 using System.Dynamic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -695,6 +696,29 @@ namespace MantenimientosPTM
                     newLine["U_EMPLEADO"] = payload.DataMovimiento.Recibe;
                     newLine["U_ALMACENISTA"] = payload.DataMovimiento.Entrega;
                     newLine["U_OBS_CALIDAD"] = payload.DataMovimiento.Comentarios;
+
+                    // ✅ Costo promedio del articulo al momento de la devolucion (OITM.AvgPrice)
+                    // Se envia en "Price" para que la entrada a SAP se valore con ese costo
+                    // y no con el default del articulo/documento.
+                    decimal costoPromedio = 0m;
+                    if (linea.ContainsKey("CostoPromedio") && linea["CostoPromedio"] != null)
+                    {
+                        decimal.TryParse(
+                            Convert.ToString(linea["CostoPromedio"], CultureInfo.InvariantCulture),
+                            NumberStyles.Any,
+                            CultureInfo.InvariantCulture,
+                            out costoPromedio);
+                    }
+
+                    if (costoPromedio > 0)
+                    {
+                        newLine["Price"] = costoPromedio;
+                        log.Info($"   💰 Costo promedio aplicado: {costoPromedio}");
+                    }
+                    else
+                    {
+                        log.Warn($"⚠️ El articulo {newLine["ItemCode"]} no tiene costo promedio valido (AvgPrice); SAP usara su valoracion por defecto.");
+                    }
 
                     // Cuenta contable (opcional pero recomendable)
                     if (linea.ContainsKey("CuentaContable") && !string.IsNullOrWhiteSpace(linea["CuentaContable"]?.ToString()))

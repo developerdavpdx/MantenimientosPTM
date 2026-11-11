@@ -1,6 +1,6 @@
 # Contexto de sesión — MantenimientosPTM
 
-**Fecha:** 05/11/2026  
+**Fecha:** 11/11/2026  
 **Repositorio:** `C:\Paradox\DEVELOPMENT\MantenimientosPTM`
 
 ---
@@ -11,7 +11,7 @@
 - **Producción/Test destino:** `TEST_JUNIO_2026` y `PTM_2022_FINAL`.
 - **Migración base BD (05/11/2026):** los scripts `MIGRACION_TEST_JUNIO_2026.sql` y `MIGRACION_PTM_2022_FINAL.sql` ya se ejecutaron en ambos schemas. Los 11 SPs y la columna `TIEMPO_MUERTO_HERRAMENTALES` de Corrugado quedaron validados por el usuario.
 - **Incrementales BD (05/11/2026):** los scripts de Calendario y Reprogramación también quedaron aplicados y validados en `TEST_JUNIO_2026` y `PTM_2022_FINAL`. No quedan pendientes de base de datos.
-- **App publicada (05/11/2026):** notificada en pruebas `http://129.80.97.150:8081` y producción `http://129.80.97.150:8083`. Esa publicación incluye los filtros y el Calendario, **NO** la corrección de reprogramación.
+- **App publicada (11/11/2026):** pruebas `http://129.80.97.150:8081` y producción `http://129.80.97.150:8083`. La publicación actual incluye filtros, Calendario, el hardening de Equipos/Preventivos/Baja y la corrección de reprogramación (validada por el usuario en el portal). **Sin pendientes de despliegue.**
 - **Correo:** configuración única `SMTP_*` con Office365 (`smtp.office365.com`, `notificaciones@ptmexico.com`). Probado con envío real desde desarrollo.
 - **Datos manuales OTMP-011:** insertados en `DBADMIN` en 5 tablas (ver sección 2.1).
 - **Commits recientes:** `3cb8cf9` (correo) y `c7e7ef8` (Calendario + reprogramación), rama `david_reyes`.
@@ -188,7 +188,7 @@ Periodicidad: **4 (cuatrimestral)**, fecha inicio mantenimiento `2026-02-01`.
 
 - `RESUMEN_AJUSTES.txt` — resumen de cambios funcionales.
 - `SQL_MIGRACION/` — scripts organizados por ciclo de vida. Ver `SQL_MIGRACION/README.md`.
-  - `PENDIENTES/` — solo scripts por aplicar (debe quedar vacía).
+  - `PENDIENTES/` — solo scripts por aplicar (sin scripts SQL = al día).
   - `APLICADOS/DBADMIN/` — aplicados en DBADMIN (incluye `ALMACEN/` y `DEV/`).
   - `APLICADOS/TEST_JUNIO_2026/` — aplicados en TEST_JUNIO_2026.
   - `APLICADOS/PTM_2022_FINAL/` — aplicados en PTM_2022_FINAL.
@@ -210,7 +210,7 @@ Periodicidad: **4 (cuatrimestral)**, fecha inicio mantenimiento `2026-02-01`.
 4. No truncar tablas ni tocar producción sin confirmar.
 5. Recordar: datos de prueba en DBADMIN; migración base y cambios de Calendario/Reprogramación aplicados en TEST/PTM.
 6. Credenciales de prueba (solo DBADMIN): `adminmantenimiento@ptmexico.com` / `AdminMTTO`.
-7. El fix de reprogramación todavía **no** está en la versión publicada; va en la siguiente.
+7. La corrección de reprogramación **ya está publicada y funcionando** en el portal (validada 11/11/2026).
 
 ## 7. Manuales técnicos
 
@@ -310,10 +310,10 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local (`http://localhost:54321`). **
 
 ### 9.3 Notas y pendientes
 
-- El punto 1 (auth del lado del servidor) sigue pendiente por decisión del usuario.
+- El punto 1 (auth del lado del servidor) se deja **sin cambios por decisión del usuario**: es un desarrollo interno y la sesión vive en el navegador (`SessionStorage`), lo que permite publicar una nueva versión en IIS sin expulsar a los usuarios; el cambio se refleja al instante. **No se considera pendiente.**
 - La numeración identity avanzó (gaps 1608-1616); es normal y no afecta.
 - IIS Express mostró un warning preexistente de `log4net` (`RollingFileAppender` no encontrado), ajeno a estos cambios.
-- **Pendiente de despliegue:** estos cambios están solo en código local; falta publicarlos a pruebas/producción y validarlos en la app publicada.
+- **Desplegado en pruebas y producción (11/11/2026), sin pendientes de publicación.**
 - **Pendiente opcional (requiere SP):** paginación real en `SpPdxMTTOConsultaEquipos`, filtro `P_USUARIO` (hoy comentado) y revisión de límites de tamaño en servidor.
 
 ---
@@ -366,12 +366,12 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 
 ### 10.5 Notas y pendientes
 
-- Auth del lado del servidor (#1) sigue pendiente por decisión del usuario.
+- Auth del lado del servidor (#1) sin cambios por decisión del usuario (desarrollo interno; sesión en `SessionStorage` para publicar sin expulsar usuarios).
 - No se envolvieron los flujos multi-paso en una sola transacción: se priorizó no perder el trabajo ya capturado (rutina, artículos, OT) y reportar advertencias. Si se requiere atomicidad estricta, se puede agregar.
 - El saneador HTML es una mitigación por lista negra; para endurecimiento adicional conviene una librería de sanitización/CSP.
 - `InsertarSolicitudRefaccion` y `SolicitarReprogramacion` funcionan por binding posicional de HANA (incluido el typo `p_ID_SOLIICTUD`); es frágil si cambia el orden de parámetros.
 - `GCAceptarReprogramacion` apunta a un SP que no existe (constante muerta); `AceptarReprogramacion` usa correctamente `GCSolicitarReprogramacion`.
-- Pendiente de despliegue: publicar a pruebas/producción y validar en la app publicada.
+- **Desplegado en pruebas y producción (11/11/2026), sin pendientes de publicación.**
 
 ### 10.6 Archivos modificados
 
@@ -429,8 +429,8 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 - **Stored procedures alterados en esta ronda: 0.** Solo se modificó C#/JS/vista.
 - `LEFT JOIN` del SP contra reprogramaciones: latente si algún día hay más de una solicitud por orden; hoy no hay duplicados. Se puede blindar con migración si se requiere.
 - `addEventModal` / `guardarEvento` / `handleDateClick` quedan como código dormido (no se abren porque `dateClick` está comentado).
-- Auth del lado del servidor (#1) sigue pendiente.
-- Pendiente de despliegue a pruebas/producción.
+- Auth del lado del servidor (#1) sin cambios por decisión del usuario (desarrollo interno; sesión en `SessionStorage`).
+- **Desplegado en pruebas y producción (11/11/2026), sin pendientes de publicación.**
 
 ### 11.5 Archivos modificados
 
@@ -473,7 +473,7 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 ### 12.3 Notas
 
 - **Stored procedures alterados en esta corrección: 0.** Solo hubo **1 `ALTER TABLE`** (DBADMIN).
-- Para TEST_JUNIO_2026 y PTM_2022_FINAL hay que ejecutar los scripts nuevos y desplegar el código.
+- Scripts de TEST_JUNIO_2026 y PTM_2022_FINAL ejecutados y código desplegado en pruebas/producción (11/11/2026).
 - Los cambios de esta corrección están en `EquiposController.cs`, `_ModalSolicitudBajaEquipo.cshtml` y los 3 scripts de migración.
 
 ---
@@ -632,7 +632,7 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 
 ---
 
-## 17. Preventivos: reprogramación libre y filtro de líneas completo (10/11/2026)
+## 17. Preventivos: reprogramación libre, filtro de líneas y fixes finales (10-11/11/2026)
 
 ### Reprogramación
 - **Se quitó** el checkbox “Enviar al siguiente mes” del modal. Ahora solo se eligen **Fecha Inicio real** y **Fecha Fin real**.
@@ -677,11 +677,31 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 - Además, esas áreas **no tienen equipos asignados**: los equipos de servicios están en áreas productivas (PVC/PEAD LISO) con una **línea** cuyo `PRODUCCION = 0`. Por eso el filtro correcto para servicios es el de **Línea de Producción**, no el de Proceso.
 - Recomendación: dejar `llenarProcesos(..., 1, ...)` (solo procesos productivos) y usar el filtro de líneas con `null`. Si se quisiera “SERVICIOS” como proceso, habría que asignar equipos a esa área y poner `ACTIVE = 1`.
 
-### SP principal sin colchón de fechas
-- **Problema detectado en prueba E2E:** al mover un MP de octubre a diciembre (+2 meses), el SP `SpPdxMTTOObtenerMantenimientosPorRango` no lo devolvía porque `MANTENIMIENTOS_CALCULADOS` filtraba las ocurrencias con colchón de solo ±1 mes.
-- **Solución:** se quitó el `WHERE` de fechas de `MANTENIMIENTOS_CALCULADOS`. Ahora se generan todas las ocurrencias y el filtro final por `FECHA_INICIO_FINAL`/`FECHA_FIN_FINAL` limita el rango.
-- **Script:** `SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql` (`CREATE OR REPLACE PROCEDURE`).
-- **Prueba:** `OTMP-011` (periodo octubre, real diciembre) aparece en diciembre y muestra `✅ REPROGRAMADO A 2 MESES`.
+### SP principal de rango (versión final)
+- **Problema 1:** al mover un MP a +2 meses (octubre → diciembre), el colchón ±1 mes de `MANTENIMIENTOS_CALCULADOS` lo ocultaba.
+- **Problema 2:** el SP solo usaba las fechas reales si `ENVIAR_SIGUIENTE_MES = FALSE`; con la bandera histórica en `TRUE` las ignoraba.
+- **Problema 3:** si había varias solicitudes por `NUMERO_ORDEN`, la CTE `ESTATUS_REPROGRAMACION` duplicaba la OT en la tabla.
+- **Solución final:**
+  - Se quitó el colchón de fechas de `MANTENIMIENTOS_CALCULADOS`.
+  - Las fechas reales mandan siempre que existan, sin importar `ENVIAR_SIGUIENTE_MES`.
+  - `ESTATUS_REPROGRAMACION` toma **una sola solicitud por orden** (prioriza NA/Aceptada con fechas reales).
+- **Script vigente:** `SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql`.
+- **Versión anterior (revertida en producción):** `SQL_MIGRACION/OBSOLETO/MIGRACION_PREVENTIVOS_SP_RANGO_VERSION_ANTERIOR.sql`.
+- **Validado en DBADMIN:** con `ENVIAR_SIGUIENTE_MES=TRUE` y fechas reales, `OTMP-011` aparece en diciembre con las fechas reales; con una solicitud duplicada, aparece una sola vez.
+
+### Safeguard de `SpPdxMTTOSolicitarReprogramacion`
+- Si `P_ID_SOLICITUD` viene en 0/null, busca la última solicitud no rechazada del mismo `NUMERO_ORDEN` y la actualiza.
+- Si no existe ninguna, inserta una nueva.
+- Evita filas duplicadas cuando el front no manda el ID.
+- Script: `SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_SOLICITAR_REPROGRAMACION.sql`.
+- También se corrigió el typo `p_ID_SOLIICTUD` → `p_ID_SOLICITUD` en el controller.
+
+### Estado final (11/11/2026)
+- Correcciones aplicadas/validadas en DBADMIN, TEST_JUNIO_2026 y PTM_2022_FINAL.
+- **Reprogramación de Preventivos: funcionando en el portal publicado (validado por el usuario 11/11/2026). Se marca como completada.**
+- `SQL_MIGRACION/PENDIENTES/` contiene solo los 2 scripts de costo promedio de devoluciones (TEST_JUNIO_2026 y PTM_2022_FINAL), pendientes de aplicar en servidor.
+- Bitácora: `SQL_MIGRACION/MIGRACIONES_APLICADAS.md`.
+- Verificación: `SQL_MIGRACION/VERIFICACION/CHECK_REPROGRAMACION_FECHAS_REALES.sql`.
 
 ### Prueba E2E en portal (usuario SupervisorPlaneacion)
 - Usuario: `bravoaj@ptmexico.com` (JORGE LUIS BRAVO ACOSTA, PLANEADOR PROD P1).
@@ -699,3 +719,51 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 - `MantenimientosPTM/Scripts/mantenimientos_preventivos_refactor.js`
 - `MantenimientosPTM/Controllers/MantenimientosPreventivosController.cs`
 - `MantenimientosPTM/Content/MantenimientosPreventivos.css`
+
+---
+
+## 18. Sesión 11/11/2026 — Devolución de refacciones con costo promedio
+
+**Requerimiento:** al generar la devolución a SAP, el costo debe ser el **costo promedio del artículo al momento de la devolución** (`OITM.AvgPrice`).
+
+### Situación encontrada
+
+- `LogicaAlmacen.CrearEntradaDevolucionAsync` construía `InventoryGenEntries` **sin enviar costo** (`Price`), por lo que SAP aplicaba su valoración por defecto.
+- `OITW.AvgPrice` está en **0** en DBADMIN; el costo real vive en `OITM.AvgPrice` (`EvalSystem = A`, promedio móvil).
+- `SpPdxMTTOGetArticuloSalidaM` no devolvía el costo.
+
+### Cambios aplicados
+
+- SP `SpPdxMTTOGetArticuloSalidaM`: agrega `T1."AvgPrice" AS "CostoPromedio"`.
+- SP `SpPdxMTTOGetSalidasPorOT`: agrega `I."AvgPrice" AS "CostoPromedio"` para que el modal de devolución muestre el costo antes de confirmar.
+- `CrearEntradaDevolucionAsync`: lee `CostoPromedio` y lo envía en `DocumentLines[].Price`.
+  - Si el costo es 0/null, registra warning y deja que SAP use su valoración por defecto.
+  - Se usa `Convert.ToString(..., InvariantCulture)` + `decimal.TryParse` para evitar problemas de cultura.
+- Se usa `OITM.AvgPrice` (no `OITW.AvgPrice`, que está en 0 en este ambiente).
+- **UI del modal de devolución** (`SolicitudRefacciones.cshtml` + `solicitud_refacciones_refactor.js`):
+  - Nuevas columnas **Costo Prom.** y **Valor**.
+  - Total **Valor a devolver** en la cabecera de la tabla.
+  - **Tooltip en la celda Valor** y en el icono de información del encabezado, explicando que es cantidad × costo promedio y que representa el costo de inventario para SAP.
+  - El valor se recalcula al cambiar la cantidad y al seleccionar/deseleccionar filas.
+  - Las columnas se leen por `data-*`, ya no por índice de `td`, para evitar rupturas si cambia el orden.
+
+### Scripts
+
+- `SQL_MIGRACION/APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql` — **aplicado en DBADMIN**.
+- `SQL_MIGRACION/PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql` — pendiente.
+- `SQL_MIGRACION/PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql` — pendiente.
+
+### Validación
+
+- SP probado en DBADMIN con las solicitudes 900003 y 900007: devuelve `CostoPromedio` 9.8589 y 4.6748, igual a `OITM.AvgPrice`.
+- `GetSalidasPorOrdenTrabajo` devuelve `CostoPromedio` por fila (verificado: 10.1774, 14.0663, 9.8589, 12.3111, 27.6218).
+- Prueba de UI en navegador (OTMC-001): modal con 16 columnas, costo por artículo y total **$151.13**; al bajar una cantidad de 3 a 1 el valor de la fila pasó a **$9.86** y el total a **$131.41**.
+- `node --check` del JS OK; sin errores de JS propios (solo el aviso de WebSocket de SignalR, que cae a long polling).
+- El POST a SAP no se puede probar en cloud (`saphaplastic:50000` inaccesible); queda pendiente validar en el servidor con Service Layer.
+- Build Debug OK (solo warning preexistente de `EmailService`).
+
+### Notas
+
+- Si en el futuro se poblara la valuación por almacén, habría que evaluar `OITW.AvgPrice` en lugar de `OITM.AvgPrice`.
+- El campo de Service Layer usado es `DocumentLines[].Price` (documento `InventoryGenEntries`).
+- Archivos tocados: `LogicaAlmacen.cs`, `SolicitudRefacciones.cshtml`, `solicitud_refacciones_refactor.js` y los 3 scripts SQL de la migración.
