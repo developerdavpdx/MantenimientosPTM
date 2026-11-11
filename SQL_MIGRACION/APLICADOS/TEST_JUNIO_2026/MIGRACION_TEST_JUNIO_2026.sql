@@ -1,4 +1,11 @@
-﻿/* ============================================================================
+-- ============================================================================
+-- HISTORICO - NO RE-EJECUTAR COMPLETO
+-- Contiene una version anterior de SpPdxMTTOObtenerMantenimientosPorRango
+-- con colchon de fechas +/-1 mes.
+-- Para el SP vigente usar:
+--   SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql
+-- ============================================================================
+/* ============================================================================
    MIGRACION DE BASE DE DATOS - MantenimientosPTM
    Destino: schema "TEST_JUNIO_2026"
    Fecha: 05/11/2026

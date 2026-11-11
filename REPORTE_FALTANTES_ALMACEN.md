@@ -154,7 +154,7 @@ Si los SPs usan secuencias para folios (por ejemplo, `SpPdxMTTOGenerarFolioSCMP`
 El script listo para ejecutar está en:
 
 ```
-SQL_MIGRACION/FALTANTES_ALMACEN_EXTRACCION.sql
+SQL_MIGRACION/VERIFICACION/FALTANTES_ALMACEN_EXTRACCION.sql
 ```
 
 Incluye:

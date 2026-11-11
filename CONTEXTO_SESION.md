@@ -83,8 +83,8 @@ Periodicidad: **4 (cuatrimestral)**, fecha inicio mantenimiento `2026-02-01`.
 
 ### Scripts de migración
 
-- `SQL_MIGRACION/MIGRACION_TEST_JUNIO_2026.sql` — **aplicado en `TEST_JUNIO_2026`**.
-- `SQL_MIGRACION/MIGRACION_PTM_2022_FINAL.sql` — **aplicado en `PTM_2022_FINAL`**.
+- `SQL_MIGRACION/APLICADOS/TEST_JUNIO_2026/MIGRACION_TEST_JUNIO_2026.sql` — **aplicado en `TEST_JUNIO_2026`**.
+- `SQL_MIGRACION/APLICADOS/PTM_2022_FINAL/MIGRACION_PTM_2022_FINAL.sql` — **aplicado en `PTM_2022_FINAL`**.
 - Usan **`ALTER PROCEDURE`** (los 11 SPs deben existir previamente).
 - Incluyen `ALTER TABLE` condicional para la columna de Corrugado.
 - UTF-8 con BOM, sin emojis, con acentos en comentarios.
@@ -116,10 +116,10 @@ Periodicidad: **4 (cuatrimestral)**, fecha inicio mantenimiento `2026-02-01`.
 
 **Scripts nuevos (incrementales)**
 
-- `SQL_MIGRACION/MIGRACION_CALENDARIO_FILTROS_TEST_JUNIO_2026.sql`
-- `SQL_MIGRACION/MIGRACION_CALENDARIO_FILTROS_PTM_2022_FINAL.sql`
-- `SQL_MIGRACION/MIGRACION_PREVENTIVOS_REPROGRAMACION_TEST_JUNIO_2026.sql`
-- `SQL_MIGRACION/MIGRACION_PREVENTIVOS_REPROGRAMACION_PTM_2022_FINAL.sql`
+- `SQL_MIGRACION/APLICADOS/TEST_JUNIO_2026/MIGRACION_CALENDARIO_FILTROS_TEST_JUNIO_2026.sql`
+- `SQL_MIGRACION/APLICADOS/PTM_2022_FINAL/MIGRACION_CALENDARIO_FILTROS_PTM_2022_FINAL.sql`
+- `SQL_MIGRACION/OBSOLETO/MIGRACION_PREVENTIVOS_REPROGRAMACION_TEST_JUNIO_2026.sql`
+- `SQL_MIGRACION/OBSOLETO/MIGRACION_PREVENTIVOS_REPROGRAMACION_PTM_2022_FINAL.sql`
 
 ### Segunda parte de la sesión 05/11/2026 — Registro de Tiempos Muertos
 
@@ -187,14 +187,16 @@ Periodicidad: **4 (cuatrimestral)**, fecha inicio mantenimiento `2026-02-01`.
 ## 5. Archivos clave
 
 - `RESUMEN_AJUSTES.txt` — resumen de cambios funcionales.
-- `SQL_MIGRACION/` — scripts ejecutables + README.
-  - Maestros: `MIGRACION_TEST_JUNIO_2026.sql`, `MIGRACION_PTM_2022_FINAL.sql`.
-  - Incrementales: `MIGRACION_CALENDARIO_FILTROS_*.sql`, `MIGRACION_PREVENTIVOS_REPROGRAMACION_*.sql`.
-- `SQL_APLICADOS_DEV/` — definiciones aplicadas en DBADMIN:
-  - `SpPdxMTTOObtenerMantenimientosCompletados.sql`
-  - `SpPdxMTTOObtenerMantenimientosPorRango.sql`
-  - `SpPdxMTTOConsultarTiemposMuertosCorrugado.sql`
-  - `SpPdxMTTOEliminarTiemposMuertosPVC / PeadLiso / INY / Corrugado.sql`
+- `SQL_MIGRACION/` — scripts organizados por ciclo de vida. Ver `SQL_MIGRACION/README.md`.
+  - `PENDIENTES/` — solo scripts por aplicar (debe quedar vacía).
+  - `APLICADOS/DBADMIN/` — aplicados en DBADMIN (incluye `ALMACEN/` y `DEV/`).
+  - `APLICADOS/TEST_JUNIO_2026/` — aplicados en TEST_JUNIO_2026.
+  - `APLICADOS/PTM_2022_FINAL/` — aplicados en PTM_2022_FINAL.
+  - `APLICADOS/COMUN/` — scripts canónicos que se adaptan por schema.
+  - `SEEDS/DBADMIN/` — seeds y datos de prueba.
+  - `OBSOLETO/` — versiones viejas que NO se deben ejecutar.
+  - `HISTORIAL/` — notas de sesión y pendientes resueltos.
+  - `MIGRACIONES_APLICADAS.md` — bitácora de migraciones.
 - `SQL_ORIGINALES/` — versiones originales para comparar.
 - `MantenimientosPTM/Web.config` — configuración SMTP única de Office365.
 - `MantenimientosPTM/Models/LogicaNegocio/EmailNotificationService.cs` — lee `SMTP_*`.
@@ -590,7 +592,7 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 
 ### 14.6 Archivos
 
-- `SQL_MIGRACION/MIGRACION_ALMACEN_*.sql`
+- `SQL_MIGRACION/APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_*.sql`
 - `REPORTE_FALTANTES_ALMACEN.md`
 - `SQL_ORIGEN_ALMACEN/` (definiciones, DDLs, reportes)
 - `SQL_ORIGEN_GENERAL/README.txt`
@@ -610,19 +612,19 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 
 ## 16. Seed de prueba de Almacén con varios artículos reales (10/11/2026)
 
-- **Seed principal:** `SQL_MIGRACION/SEED_ALMACEN_PRUEBA_REAL.sql`
-- **Limpieza:** `SQL_MIGRACION/CLEANUP_ALMACEN_PRUEBA.sql`
+- **Seed principal:** `SQL_MIGRACION/SEEDS/DBADMIN/SEED_ALMACEN_PRUEBA_REAL.sql`
+- **Limpieza:** `SQL_MIGRACION/SEEDS/DBADMIN/CLEANUP_ALMACEN_PRUEBA.sql`
 - **No inserta** en `OITM`/`OITW`/`OITB`; usa 13 artículos reales con stock. Como es ambiente de pruebas, actualiza solo el `OITW.ExpensesAc` de esos 13 artículos (almacenes `COR040`/`P2040`) a `5-101-001-005` para que `CuentaContable` salga en el portal.
   - **Planta 1 / COR040:** `42000000001` (29/30/60), `42000000006` (4/2/4), `42000000008` (8/5/10), `42000000010` (25/5/25), `42000000018` (212/0/0), `42000000051` (269/462/923, queda pendiente).
   - **Planta 2 / P2040:** `42000000474` (484/100/200), `45000000006` (416/208/416), `42000000465` (5591/0/0), `42000002418` (1315/0/0), `42000000472` (1113/0/0), `42000000477` (1045/0/0), `45000000001` (406/208/416).
 - **Datos:** 13 refacciones (12 atendidas + 1 pendiente), 2 solicitudes de compra (planta 1 y 2), 12 detalles, OC con 12 líneas, salida con 12 líneas, 12 movimientos SALIDA, 4 DEVOLUCIONES, 2 rechazos y 4 solicitudes de refacción de Correctivos.
 - **Catálogos `OPRC` reales (crítico para los combos):** `SpPdxMTTOGetCostCenters` lee `OPRC` por `DimCode`: `1`=Departamento, `2`=Proceso, `3`=Gastos, `4`=Cedis.
-  - Script: `SQL_MIGRACION/SEED_OPRC_REAL.sql` — **416 filas** del export on-premise `TEST_JUNIO_2026` (DimCode 1=14, 2=11, 3=9, 4=14, 5=368).
-  - Origen: `SQL_MIGRACION/ORIGEN_OPRC_TEST_JUNIO_2026.csv`.
+  - Script: `SQL_MIGRACION/SEEDS/DBADMIN/SEED_OPRC_REAL.sql` — **416 filas** del export on-premise `TEST_JUNIO_2026` (DimCode 1=14, 2=11, 3=9, 4=14, 5=368).
+  - Origen: `SQL_MIGRACION/SEEDS/DBADMIN/ORIGEN_OPRC_TEST_JUNIO_2026.csv`.
   - El seed de Almacén **ya no toca `OPRC`**; primero se carga el de OPRC y luego el de Almacén.
   - Valores clave que preselecciona el front: Proceso `PPVC`, Gastos `GIF`, Cedis `CCOR` (planta 1) / `PLANTA2` (planta 2), Departamento `DMAN` (MANTENIMIENTO).
   - Sin estas filas los combos muestran **“Sin opciones”** aunque el SP funcione.
-- **Catálogo `OUBR` real (sucursales):** `SQL_MIGRACION/SEED_OUBR_REAL.sql` — **14 sucursales** del export `TEST_JUNIO_2026` (origen `SQL_MIGRACION/ORIGEN_OUBR_TEST_JUNIO_2026.csv`). El seed de Almacén ya no toca `OUBR`.
+- **Catálogo `OUBR` real (sucursales):** `SQL_MIGRACION/SEEDS/DBADMIN/SEED_OUBR_REAL.sql` — **14 sucursales** del export `TEST_JUNIO_2026` (origen `SQL_MIGRACION/SEEDS/DBADMIN/ORIGEN_OUBR_TEST_JUNIO_2026.csv`). El seed de Almacén ya no toca `OUBR`.
   - `SpPdxMTTOGetDepSucursal` cruza `OHEM.branch` con `OUBR.Code`; el solicitante de prueba (`branch=1`) ahora devuelve `Sucursal=CORP`.
 - **Pruebas (ejecutadas en HANA Cloud):** `ConsultaArticulos` devuelve 6 filas para `OTMC-001` y 7 para `OTMC-002`; solicitudes 2 (planta 1/2 filtra 1 cada una); detalles 5/7; líneas OC/PRQ/OIGE 12/12/12; salidas 5/7; devoluciones 2/2; `GetArticuloSalidaM` devuelve `CuentaContable=5-101-001-005`. Los 4 combos de centros de costo devuelven 14/11/9/14 filas reales.
 - **Nota:** el cleanup borra solo los datos transaccionales/de prueba (`ID 900001-900099`, `ZZTEST`); no revierte el `ExpensesAc` de los 13 artículos ni borra `OPRC`.
@@ -678,7 +680,7 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 ### SP principal sin colchón de fechas
 - **Problema detectado en prueba E2E:** al mover un MP de octubre a diciembre (+2 meses), el SP `SpPdxMTTOObtenerMantenimientosPorRango` no lo devolvía porque `MANTENIMIENTOS_CALCULADOS` filtraba las ocurrencias con colchón de solo ±1 mes.
 - **Solución:** se quitó el `WHERE` de fechas de `MANTENIMIENTOS_CALCULADOS`. Ahora se generan todas las ocurrencias y el filtro final por `FECHA_INICIO_FINAL`/`FECHA_FIN_FINAL` limita el rango.
-- **Script:** `SQL_MIGRACION/MIGRACION_PREVENTIVOS_SP_RANGO.sql` (`CREATE OR REPLACE PROCEDURE`).
+- **Script:** `SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql` (`CREATE OR REPLACE PROCEDURE`).
 - **Prueba:** `OTMP-011` (periodo octubre, real diciembre) aparece en diciembre y muestra `✅ REPROGRAMADO A 2 MESES`.
 
 ### Prueba E2E en portal (usuario SupervisorPlaneacion)

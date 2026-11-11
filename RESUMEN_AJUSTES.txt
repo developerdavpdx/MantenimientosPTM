@@ -267,7 +267,7 @@
    - Comparacion de 30 tablas propias: sin columnas faltantes.
    - Notas: PLANTA y ACEPTADA_MANTENIMIENTO quedaron NVARCHAR(10) por
      compatibilidad con el front; FECHA_REQUERIDA DATE (DAYDATE on-premise).
-   - Scripts: SQL_MIGRACION/MIGRACION_ALMACEN_*.sql
+   - Scripts: SQL_MIGRACION/APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_*.sql
    - Reportes: REPORTE_FALTANTES_ALMACEN.md,
      SQL_ORIGEN_ALMACEN/REPORTE_DEPENDENCIAS.md
    - LIMITACION CLOUD: no se usara SAP Service Layer para crear documentos
@@ -277,8 +277,8 @@
 
 
 16) SEED DE PRUEBA DE ALMACEN CON VARIOS ARTICULOS REALES (10/11/2026)
-   - Script principal: SQL_MIGRACION/SEED_ALMACEN_PRUEBA_REAL.sql
-   - Limpieza: SQL_MIGRACION/CLEANUP_ALMACEN_PRUEBA.sql
+   - Script principal: SQL_MIGRACION/SEEDS/DBADMIN/SEED_ALMACEN_PRUEBA_REAL.sql
+   - Limpieza: SQL_MIGRACION/SEEDS/DBADMIN/CLEANUP_ALMACEN_PRUEBA.sql
    - No inserta en OITM/OITW/OITB. Usa 13 articulos reales con stock.
      En ambiente de pruebas actualiza solo OITW.ExpensesAc de estos 13
      articulos (COR040/P2040) a 5-101-001-005 para que salga CuentaContable.
@@ -296,18 +296,18 @@
      solicitudes 2 (filtro planta 1/2 = 1 cada una); detalles 5/7;
      lineas OC/PRQ/OIGE 12/12/12; salidas 5/7; devoluciones 2/2;
      GetArticuloSalidaM devuelve CuentaContable=5-101-001-005.
-   - OPRC REAL: SQL_MIGRACION/SEED_OPRC_REAL.sql (416 filas del export
+   - OPRC REAL: SQL_MIGRACION/SEEDS/DBADMIN/SEED_OPRC_REAL.sql (416 filas del export
      on-premise TEST_JUNIO_2026; dim 1=14, 2=11, 3=9, 4=14, 5=368).
-     Origen: SQL_MIGRACION/ORIGEN_OPRC_TEST_JUNIO_2026.csv.
+     Origen: SQL_MIGRACION/SEEDS/DBADMIN/ORIGEN_OPRC_TEST_JUNIO_2026.csv.
      SpPdxMTTOGetCostCenters lee OPRC por DimCode:
        1=Departamento, 2=Proceso, 3=Gastos, 4=Cedis.
      El seed de Almacen ya NO toca OPRC; cargar primero el de OPRC.
      Combos reales: Departamento 14, Proceso 11, Gastos 9, Cedis 14.
      Solicitante de prueba mapea a DMAN (MANTENIMIENTO).
      Sin estas filas los combos muestran "Sin opciones".
-   - OUBR REAL: SQL_MIGRACION/SEED_OUBR_REAL.sql (14 sucursales del
+   - OUBR REAL: SQL_MIGRACION/SEEDS/DBADMIN/SEED_OUBR_REAL.sql (14 sucursales del
      export TEST_JUNIO_2026). Origen:
-     SQL_MIGRACION/ORIGEN_OUBR_TEST_JUNIO_2026.csv.
+     SQL_MIGRACION/SEEDS/DBADMIN/ORIGEN_OUBR_TEST_JUNIO_2026.csv.
      SpPdxMTTOGetDepSucursal cruza OHEM.branch con OUBR.Code;
      el solicitante de prueba (branch=1) devuelve Sucursal=CORP.
      El seed de Almacen ya no toca OUBR.
@@ -345,7 +345,7 @@
    - SP PRINCIPAL: se quito el colchon de fechas de MANTENIMIENTOS_CALCULADOS
      en SpPdxMTTOObtenerMantenimientosPorRango. Antes filtraba con +/-1 mes
      y no devolvia MPs movidos +2 meses (octubre -> diciembre).
-     Script: SQL_MIGRACION/MIGRACION_PREVENTIVOS_SP_RANGO.sql
+     Script: SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql
      Ahora genera todas las ocurrencias y el filtro final por
      FECHA_INICIO_FINAL/FECHA_FIN_FINAL limita el rango.
    - PRUEBA E2E PORTAL (SupervisorPlaneacion bravoaj@ptmexico.com):

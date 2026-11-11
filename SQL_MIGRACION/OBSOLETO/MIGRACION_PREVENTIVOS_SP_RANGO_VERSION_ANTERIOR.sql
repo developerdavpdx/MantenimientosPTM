@@ -1,18 +1,22 @@
-﻿-- ============================================================================
--- MIGRACION: REPROGRAMACION EN MANTENIMIENTOS PREVENTIVOS
--- Schema: TEST_JUNIO_2026
--- Fecha: 05/11/2026
--- Objeto: SpPdxMTTOObtenerMantenimientosPorRango
---
--- Cambios:
---   + FECHA_INICIO_FINAL / FECHA_FIN_FINAL usan FECHA_REAL_INICIO / FECHA_REAL_FIN
---     cuando existe reprogramacion NA o Aceptada y NO es "enviar al siguiente mes".
---   + FUE_REPROGRAMADO = 'SI' tambien cuando la solicitud esta en estatus NA.
---   + Sin reprogramacion se conserva la fecha calculada por periodicidad.
---
--- IMPORTANTE: usa ALTER PROCEDURE, el SP debe existir previamente en el schema.
 -- ============================================================================
-ALTER PROCEDURE "TEST_JUNIO_2026"."SpPdxMTTOObtenerMantenimientosPorRango" (
+-- OBSOLETO - NO EJECUTAR
+-- Version anterior de SpPdxMTTOObtenerMantenimientosPorRango.
+-- Ignoraba las fechas reales cuando ENVIAR_SIGUIENTE_MES = TRUE.
+-- Reemplazada por: APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql
+-- ============================================================================
+-- ============================================================================
+-- PREVENTIVOS: SP principal sin colchón de fechas en ocurrencias calculadas
+-- Fecha: 10/11/2026
+--
+-- Problema: al mover un MP más de 1 mes (ej. periodo octubre -> fecha real
+-- diciembre), el SP no lo devolvía porque el filtro de ocurrencias calculadas
+-- solo tenía colchón de -1 mes.
+--
+-- Cambio: se quitó el colchón. Se generan todas las ocurrencias y el filtro
+-- final por FECHA_INICIO_FINAL / FECHA_FIN_FINAL limita el resultado al rango
+-- solicitado. Los usuarios no reprograman más de 2 meses.
+-- ============================================================================
+CREATE OR REPLACE PROCEDURE "DBADMIN"."SpPdxMTTOObtenerMantenimientosPorRango" (
     IN P_FECHA_INICIO        DATE,
     IN P_FECHA_FIN           DATE,
     IN P_FILTRO_AREA         NVARCHAR(5000),
@@ -204,21 +208,8 @@ BEGIN
 
         FROM EQUIPOS_CONFIG E
         CROSS JOIN SERIES S
-        WHERE
-            ADD_DAYS(
-                ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES),
-                E.DIA_INICIO_MANT - DAYOFMONTH(E.FECHA_INICIO_MANT_DATE)
-            ) <= ADD_MONTHS(:P_FECHA_FIN, E.INCREMENTO_MESES + 1)  -- Ô£à v3: colch├│n +1 mes por posible reprogramaci├│n
-            AND
-            CASE
-                WHEN E.DIA_FIN_MANT > DAYOFMONTH(LAST_DAY(ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES))) THEN
-                    LAST_DAY(ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES))
-                ELSE
-                    ADD_DAYS(
-                        ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES),
-                        E.DIA_FIN_MANT - DAYOFMONTH(E.FECHA_INICIO_MANT_DATE)
-                    )
-            END >= ADD_MONTHS(:P_FECHA_INICIO, -1)  -- Ô£à v3: colch├│n -1 mes por posible reprogramaci├│n
+        -- ✅ Sin colchón de fechas: se generan todas las ocurrencias y el
+        -- filtro final por FECHA_INICIO_FINAL / FECHA_FIN_FINAL limita el rango.
     ),
     -- Ô£à v3: cruzamos con las OT ya generadas para conocer el NUMERO_ORDEN base de cada ocurrencia
     MANTENIMIENTOS_CON_ORDEN AS (
@@ -503,5 +494,3 @@ BEGIN
     SELECT * FROM :lt_result;
 
 END
-
-

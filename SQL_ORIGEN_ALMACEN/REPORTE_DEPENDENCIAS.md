@@ -26,7 +26,7 @@
 | 5 | `OBTQ` | SAP B1 | `SpPdxMTTOGetArticuloSalidaM` | Cantidades por lote/almacén. |
 | 6 | `NNM1` | SAP B1 | `SpPdxMTTOGetSeriesByName` | Series de numeración. |
 
-> **Estado del DDL (10/11/2026):** 5 de las 6 tablas ya tienen `CREATE TABLE` generado y **validado** en un schema temporal. Script: `SQL_MIGRACION/MIGRACION_ALMACEN_TABLAS.sql`.
+> **Estado del DDL (10/11/2026):** 5 de las 6 tablas ya tienen `CREATE TABLE` generado y **validado** en un schema temporal. Script: `SQL_MIGRACION/APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_TABLAS.sql`.
 >
 > **Pendiente:** `PdxMTTOMPSolicitudCompraMP` — no vino su DDL en `SQL_ORIGEN_ALMACEN/TABLAS`.
 
@@ -191,7 +191,7 @@ Esos se crearán en el schema actual (`DBADMIN`). Verifica que `NNM1`, `OITM`, `
 
 - **Los 9 SPs quedaron creados en `DBADMIN`**.
 - `SpPdxMTTOGetSolicitudesCompra_filtradas` y `SpPdxMTTOConsultaSolicitudesCompraMP` se adaptaron a las tablas reales usando `PdxMTTOMPSolicitudCompraDetalle`.
-- Scripts: `SQL_MIGRACION/MIGRACION_ALMACEN_SP.sql` y `MIGRACION_ALMACEN_SP_FIX.sql`.
+- Scripts: `SQL_MIGRACION/APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_SP.sql` y `SQL_MIGRACION/APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_SP_FIX.sql`.
 
 ### Pruebas
 

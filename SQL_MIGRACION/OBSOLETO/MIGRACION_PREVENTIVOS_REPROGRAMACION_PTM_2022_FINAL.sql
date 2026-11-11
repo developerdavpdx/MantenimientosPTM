@@ -1,4 +1,24 @@
-﻿CREATE OR REPLACE PROCEDURE "DBADMIN"."SpPdxMTTOObtenerMantenimientosPorRango" (
+-- ============================================================================
+-- OBSOLETO - NO EJECUTAR
+-- Reemplazado por: SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql
+-- Motivo: contiene una version anterior de SpPdxMTTOObtenerMantenimientosPorRango
+--         con colchon de fechas +/-1 mes.
+-- ============================================================================
+-- ============================================================================
+-- MIGRACION: REPROGRAMACION EN MANTENIMIENTOS PREVENTIVOS
+-- Schema: PTM_2022_FINAL
+-- Fecha: 05/11/2026
+-- Objeto: SpPdxMTTOObtenerMantenimientosPorRango
+--
+-- Cambios:
+--   + FECHA_INICIO_FINAL / FECHA_FIN_FINAL usan FECHA_REAL_INICIO / FECHA_REAL_FIN
+--     cuando existe reprogramacion NA o Aceptada y NO es "enviar al siguiente mes".
+--   + FUE_REPROGRAMADO = 'SI' tambien cuando la solicitud esta en estatus NA.
+--   + Sin reprogramacion se conserva la fecha calculada por periodicidad.
+--
+-- IMPORTANTE: usa ALTER PROCEDURE, el SP debe existir previamente en el schema.
+-- ============================================================================
+ALTER PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOObtenerMantenimientosPorRango" (
     IN P_FECHA_INICIO        DATE,
     IN P_FECHA_FIN           DATE,
     IN P_FILTRO_AREA         NVARCHAR(5000),

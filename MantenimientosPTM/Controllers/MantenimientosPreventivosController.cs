@@ -1326,7 +1326,7 @@ namespace MantenimientosPTM.Controllers
                     // Construir parámetros para el stored procedure
                     var parametros = new
                     {
-                        p_ID_SOLIICTUD = datos.IdSolicitud,
+                        p_ID_SOLICITUD = datos.IdSolicitud,
                         p_ID_EQUIPO = datos.IdEquipo,
                         p_NUMERO_ORDEN = string.IsNullOrEmpty(datos.NumeroOrden) ? (object)DBNull.Value : datos.NumeroOrden,
                         p_FECHA_REP_INICIO = datos.EnviarSiguienteMes ? (object)DBNull.Value : fechaRepInicio,

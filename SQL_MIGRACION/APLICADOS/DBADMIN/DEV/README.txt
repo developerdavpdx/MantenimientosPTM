@@ -13,7 +13,8 @@ ARCHIVOS INCLUIDOS
   SpPdxMTTOMetricasOEE_PeadLiso.sql
   SpPdxMTTOMetricasOEE_Corrugado.sql
   SpPdxMTTOMetricasOEE_INY.sql
-  SpPdxMTTOObtenerMantenimientosPorRango.sql
+  SpPdxMTTOObtenerMantenimientosPorRango.sql  -> MOVIDO a OBSOLETO (version vieja con colchon)
+     Usar el SP vigente: SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql
   SpPdxMTTOObtenerMantenimientosCompletados.sql
   SpPdxMTTOConsultarTiemposMuertosCorrugado.sql
   SpPdxMTTOEliminarTiemposMuertosPVC.sql

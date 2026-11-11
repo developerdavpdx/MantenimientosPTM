@@ -1,14 +1,8 @@
 -- ============================================================================
--- PREVENTIVOS: SP principal sin colchón de fechas en ocurrencias calculadas
--- Fecha: 10/11/2026
---
--- Problema: al mover un MP más de 1 mes (ej. periodo octubre -> fecha real
--- diciembre), el SP no lo devolvía porque el filtro de ocurrencias calculadas
--- solo tenía colchón de -1 mes.
---
--- Cambio: se quitó el colchón. Se generan todas las ocurrencias y el filtro
--- final por FECHA_INICIO_FINAL / FECHA_FIN_FINAL limita el resultado al rango
--- solicitado. Los usuarios no reprograman más de 2 meses.
+-- OBSOLETO - NO EJECUTAR
+-- Reemplazado por: SQL_MIGRACION/APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql
+-- Motivo: contiene una version anterior de SpPdxMTTOObtenerMantenimientosPorRango
+--         con colchon de fechas +/-1 mes.
 -- ============================================================================
 CREATE OR REPLACE PROCEDURE "DBADMIN"."SpPdxMTTOObtenerMantenimientosPorRango" (
     IN P_FECHA_INICIO        DATE,
@@ -202,8 +196,21 @@ BEGIN
 
         FROM EQUIPOS_CONFIG E
         CROSS JOIN SERIES S
-        -- ✅ Sin colchón de fechas: se generan todas las ocurrencias y el
-        -- filtro final por FECHA_INICIO_FINAL / FECHA_FIN_FINAL limita el rango.
+        WHERE
+            ADD_DAYS(
+                ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES),
+                E.DIA_INICIO_MANT - DAYOFMONTH(E.FECHA_INICIO_MANT_DATE)
+            ) <= ADD_MONTHS(:P_FECHA_FIN, E.INCREMENTO_MESES + 1)  -- Ô£à v3: colch├│n +1 mes por posible reprogramaci├│n
+            AND
+            CASE
+                WHEN E.DIA_FIN_MANT > DAYOFMONTH(LAST_DAY(ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES))) THEN
+                    LAST_DAY(ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES))
+                ELSE
+                    ADD_DAYS(
+                        ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES),
+                        E.DIA_FIN_MANT - DAYOFMONTH(E.FECHA_INICIO_MANT_DATE)
+                    )
+            END >= ADD_MONTHS(:P_FECHA_INICIO, -1)  -- Ô£à v3: colch├│n -1 mes por posible reprogramaci├│n
     ),
     -- Ô£à v3: cruzamos con las OT ya generadas para conocer el NUMERO_ORDEN base de cada ocurrencia
     MANTENIMIENTOS_CON_ORDEN AS (
@@ -488,3 +495,5 @@ BEGIN
     SELECT * FROM :lt_result;
 
 END
+
+

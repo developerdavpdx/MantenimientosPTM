@@ -1,18 +1,22 @@
-﻿-- ============================================================================
--- MIGRACION: REPROGRAMACION EN MANTENIMIENTOS PREVENTIVOS
--- Schema: PTM_2022_FINAL
--- Fecha: 05/11/2026
--- Objeto: SpPdxMTTOObtenerMantenimientosPorRango
---
--- Cambios:
---   + FECHA_INICIO_FINAL / FECHA_FIN_FINAL usan FECHA_REAL_INICIO / FECHA_REAL_FIN
---     cuando existe reprogramacion NA o Aceptada y NO es "enviar al siguiente mes".
---   + FUE_REPROGRAMADO = 'SI' tambien cuando la solicitud esta en estatus NA.
---   + Sin reprogramacion se conserva la fecha calculada por periodicidad.
---
--- IMPORTANTE: usa ALTER PROCEDURE, el SP debe existir previamente en el schema.
 -- ============================================================================
-ALTER PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOObtenerMantenimientosPorRango" (
+-- APLICADO/VALIDADO - 10/11/2026
+-- SP: SpPdxMTTOObtenerMantenimientosPorRango
+--
+-- CAMBIOS vs version anterior:
+--   1) Las FECHAS REALES de reprogramacion ahora mandan SIEMPRE que existan,
+--      aunque ENVIAR_SIGUIENTE_MES venga en TRUE (registros historicos).
+--   2) Se quito el colchon de fechas de MANTENIMIENTOS_CALCULADOS para que
+--      las reprogramaciones a +2 meses aparezcan en el mes correcto.
+--   3) ESTATUS_REPROGRAMACION ahora toma UNA sola solicitud por NUMERO_ORDEN
+--      (la mas relevante) para evitar que la OT aparezca duplicada.
+--
+-- APLICADO EN:
+--   - DBADMIN (validacion)
+--   - TEST_JUNIO_2026
+--   - PTM_2022_FINAL
+-- Validar con VERIFICACION/CHECK_REPROGRAMACION_FECHAS_REALES.sql.
+-- ============================================================================
+CREATE OR REPLACE PROCEDURE "DBADMIN"."SpPdxMTTOObtenerMantenimientosPorRango" (
     IN P_FECHA_INICIO        DATE,
     IN P_FECHA_FIN           DATE,
     IN P_FILTRO_AREA         NVARCHAR(5000),
@@ -204,21 +208,8 @@ BEGIN
 
         FROM EQUIPOS_CONFIG E
         CROSS JOIN SERIES S
-        WHERE
-            ADD_DAYS(
-                ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES),
-                E.DIA_INICIO_MANT - DAYOFMONTH(E.FECHA_INICIO_MANT_DATE)
-            ) <= ADD_MONTHS(:P_FECHA_FIN, E.INCREMENTO_MESES + 1)  -- Ô£à v3: colch├│n +1 mes por posible reprogramaci├│n
-            AND
-            CASE
-                WHEN E.DIA_FIN_MANT > DAYOFMONTH(LAST_DAY(ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES))) THEN
-                    LAST_DAY(ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES))
-                ELSE
-                    ADD_DAYS(
-                        ADD_MONTHS(E.FECHA_INICIO_MANT_DATE, S.NUM * E.INCREMENTO_MESES),
-                        E.DIA_FIN_MANT - DAYOFMONTH(E.FECHA_INICIO_MANT_DATE)
-                    )
-            END >= ADD_MONTHS(:P_FECHA_INICIO, -1)  -- Ô£à v3: colch├│n -1 mes por posible reprogramaci├│n
+        -- ✅ Sin colchón de fechas: se generan todas las ocurrencias y el
+        -- filtro final por FECHA_INICIO_FINAL / FECHA_FIN_FINAL limita el rango.
     ),
     -- Ô£à v3: cruzamos con las OT ya generadas para conocer el NUMERO_ORDEN base de cada ocurrencia
     MANTENIMIENTOS_CON_ORDEN AS (
@@ -239,21 +230,60 @@ BEGIN
             AND MPG.FECHA_INICIO_PERIODO = M.FECHA_INICIO_MANTENIMIENTO_DATE
             AND MPG.FECHA_FIN_PERIODO    = M.FECHA_FIN_MANTENIMIENTO_DATE
     ),
-    -- Ô£à v3: resumen de solicitudes de reprogramaci├│n por NUMERO_ORDEN (aceptada / pendiente)
-    ESTATUS_REPROGRAMACION AS (
+    -- ✅ Una sola solicitud por orden (la más relevante) para evitar duplicados
+    ESTATUS_REPROGRAMACION_FLAGS AS (
         SELECT
             "NUMERO_ORDEN",
-            "FECHA_REAL_INICIO",
-            "FECHA_REAL_FIN",
-            "ENVIAR_SIGUIENTE_MES",
-            "MOTIVO",
             MAX(CASE WHEN "ESTATUS" = 'Aceptada'  THEN 1 ELSE 0 END) AS TIENE_ACEPTADA,
-            MAX(CASE WHEN "ESTATUS" = 'Pendiente' THEN 1 ELSE 0 END) AS TIENE_PENDIENTE,
-            -- Ô£à v4: como solo puede haber 1 pendiente por orden (ya lo validamos en el stored de solicitud), tomamos ese ID
-            MAX(CASE WHEN "ESTATUS" IN ('Aceptada', 'Pendiente', 'NA') THEN "ID_SOLICITUD" ELSE NULL END) AS ID_SOLICITUD_PENDIENTE,
-            "ESTATUS"
+            MAX(CASE WHEN "ESTATUS" = 'Pendiente' THEN 1 ELSE 0 END) AS TIENE_PENDIENTE
         FROM "PdxMTTOSolicitudesReprogramacion"
-        GROUP BY "NUMERO_ORDEN", "FECHA_REAL_INICIO", "FECHA_REAL_FIN", "ENVIAR_SIGUIENTE_MES", "MOTIVO", "ESTATUS"
+        WHERE "ESTATUS" <> 'Rechazada'
+        GROUP BY "NUMERO_ORDEN"
+    ),
+    ESTATUS_REPROGRAMACION_ULTIMA AS (
+        SELECT
+            R."NUMERO_ORDEN",
+            R."FECHA_REAL_INICIO",
+            R."FECHA_REAL_FIN",
+            R."ENVIAR_SIGUIENTE_MES",
+            R."MOTIVO",
+            R."ESTATUS",
+            R."ID_SOLICITUD" AS ID_SOLICITUD_PENDIENTE
+        FROM (
+            SELECT
+                "ID_SOLICITUD",
+                "NUMERO_ORDEN",
+                "FECHA_REAL_INICIO",
+                "FECHA_REAL_FIN",
+                "ENVIAR_SIGUIENTE_MES",
+                "MOTIVO",
+                "ESTATUS",
+                ROW_NUMBER() OVER (
+                    PARTITION BY "NUMERO_ORDEN"
+                    ORDER BY
+                        CASE
+                            WHEN "ESTATUS" IN ('NA','Aceptada')
+                                 AND "FECHA_REAL_INICIO" IS NOT NULL
+                                 AND "FECHA_REAL_FIN" IS NOT NULL THEN 0
+                            WHEN "ESTATUS" = 'Aceptada' THEN 1
+                            WHEN "ESTATUS" = 'Pendiente' THEN 2
+                            ELSE 3
+                        END,
+                        "ID_SOLICITUD" DESC
+                ) AS RN
+            FROM "PdxMTTOSolicitudesReprogramacion"
+            WHERE "ESTATUS" <> 'Rechazada'
+        ) R
+        WHERE R.RN = 1
+    ),
+    ESTATUS_REPROGRAMACION AS (
+        SELECT
+            U.*,
+            F.TIENE_ACEPTADA,
+            F.TIENE_PENDIENTE
+        FROM ESTATUS_REPROGRAMACION_ULTIMA U
+        INNER JOIN ESTATUS_REPROGRAMACION_FLAGS F
+            ON F."NUMERO_ORDEN" = U."NUMERO_ORDEN"
     ),
     -- Ô£à v3: aqu├¡ se decide la fecha FINAL de cada ocurrencia (base o corrida +1 mes)
     MANTENIMIENTOS_AJUSTADOS AS (
@@ -270,7 +300,6 @@ BEGIN
                 WHEN RA."ESTATUS" IN ('NA', 'Aceptada')
                      AND RA."FECHA_REAL_INICIO" IS NOT NULL
                      AND RA."FECHA_REAL_FIN"     IS NOT NULL
-                     AND IFNULL(RA."ENVIAR_SIGUIENTE_MES", FALSE) = FALSE
                 THEN CAST(RA."FECHA_REAL_INICIO" AS DATE)
                 -- Reprogramacion "enviar al siguiente mes"
                 WHEN RA.TIENE_ACEPTADA = 1
@@ -282,7 +311,6 @@ BEGIN
                 WHEN RA."ESTATUS" IN ('NA', 'Aceptada')
                      AND RA."FECHA_REAL_INICIO" IS NOT NULL
                      AND RA."FECHA_REAL_FIN"     IS NOT NULL
-                     AND IFNULL(RA."ENVIAR_SIGUIENTE_MES", FALSE) = FALSE
                 THEN CAST(RA."FECHA_REAL_FIN" AS DATE)
                 -- Reprogramacion "enviar al siguiente mes"
                 WHEN RA.TIENE_ACEPTADA = 1
@@ -503,5 +531,3 @@ BEGIN
     SELECT * FROM :lt_result;
 
 END
-
-

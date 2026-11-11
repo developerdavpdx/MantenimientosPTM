@@ -1,6 +1,8 @@
 ﻿================================================================================
- MIGRACION DE BASE DE DATOS - MantenimientosPTM
- Fecha: 05/11/2026
+ HISTORICO - MIGRACION DE BASE DE DATOS - MantenimientosPTM
+ Fecha original: 05/11/2026
+ NOTA (10/11/2026): los archivos fueron reorganizados. Ver
+ SQL_MIGRACION/README.md y SQL_MIGRACION/MIGRACIONES_APLICADAS.md.
 ================================================================================
 
 ESTADO: APLICADO Y VALIDADO (05/11/2026)
