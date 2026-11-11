@@ -342,6 +342,18 @@
      SILOS, CALIDAD, MEZCLADO, FFCC, OTROS.
    - Pruebas SP: PEAD LISO devuelve 12 lineas; PVC devuelve 21 lineas.
      Aceptar reprogramacion conserva fechas (probado con rollback).
+   - SP PRINCIPAL: se quito el colchon de fechas de MANTENIMIENTOS_CALCULADOS
+     en SpPdxMTTOObtenerMantenimientosPorRango. Antes filtraba con +/-1 mes
+     y no devolvia MPs movidos +2 meses (octubre -> diciembre).
+     Script: SQL_MIGRACION/MIGRACION_PREVENTIVOS_SP_RANGO.sql
+     Ahora genera todas las ocurrencias y el filtro final por
+     FECHA_INICIO_FINAL/FECHA_FIN_FINAL limita el rango.
+   - PRUEBA E2E PORTAL (SupervisorPlaneacion bravoaj@ptmexico.com):
+       modal sin checkbox; min 2026-11-01 / max 2026-12-31;
+       octubre rechazado; OTMP-012 reprogramado 10-12 nov -> REPROGRAMADO;
+       OTMP-011 octubre -> noviembre -> SE ENVIO AL SIGUIENTE MES;
+       OTMP-011 octubre -> diciembre -> REPROGRAMADO A 2 MESES;
+       filtro PEAD LISO mostro SERVICIOS, MOLINO PEAD, SILOS, FFCC, OTROS.
 
 
 ================================================================================

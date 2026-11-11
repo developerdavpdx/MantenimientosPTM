@@ -652,9 +652,26 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 
 ### Filtro de líneas
 - En `mantenimientos_preventivos_refactor.js` se cambió `llenarLineas(planta, Area, 1, ...)` por `llenarLineas(planta, Area, null, ...)`.
-- No se agregaron filtros nuevos ni se modificó el SP.
+- No se agregaron filtros nuevos.
 - Ahora el combo incluye servicios y líneas auxiliares: `SERVICIOS`, `SERVICIOS EXTERNOS`, `MOLINO PEAD`, `SILOS`, `SILOS PEAD LISO`, `SILOS PEAD CORR`, `CALIDAD`, `MEZCLADO`, `FFCC`, `OTROS`.
 - **Pruebas:** PEAD LISO devuelve 12 líneas; PVC devuelve 21 líneas.
+
+### SP principal sin colchón de fechas
+- **Problema detectado en prueba E2E:** al mover un MP de octubre a diciembre (+2 meses), el SP `SpPdxMTTOObtenerMantenimientosPorRango` no lo devolvía porque `MANTENIMIENTOS_CALCULADOS` filtraba las ocurrencias con colchón de solo ±1 mes.
+- **Solución:** se quitó el `WHERE` de fechas de `MANTENIMIENTOS_CALCULADOS`. Ahora se generan todas las ocurrencias y el filtro final por `FECHA_INICIO_FINAL`/`FECHA_FIN_FINAL` limita el rango.
+- **Script:** `SQL_MIGRACION/MIGRACION_PREVENTIVOS_SP_RANGO.sql` (`CREATE OR REPLACE PROCEDURE`).
+- **Prueba:** `OTMP-011` (periodo octubre, real diciembre) aparece en diciembre y muestra `✅ REPROGRAMADO A 2 MESES`.
+
+### Prueba E2E en portal (usuario SupervisorPlaneacion)
+- Usuario: `bravoaj@ptmexico.com` (JORGE LUIS BRAVO ACOSTA, PLANEADOR PROD P1).
+- Se validó:
+  - Modal sin checkbox de “siguiente mes”.
+  - `min=2026-11-01`, `max=2026-12-31` para un MP de noviembre.
+  - Octubre rechazado con mensaje de rango permitido.
+  - `OTMP-012` reprogramado a `10-12/11/2026`: guardado con `ESTATUS=NA`, fila con `✅ REPROGRAMADO`.
+  - `OTMP-011` reprogramado de octubre a `10-12/12/2026`: fila con `✅ REPROGRAMADO A 2 MESES`.
+  - `OTMP-011` (octubre → noviembre) mostró `✅ SE ENVIÓ AL SIGUIENTE MES`.
+  - Filtro de líneas PEAD LISO mostró servicios, molino, silos, FFCC y otros.
 
 ### Archivos tocados
 - `MantenimientosPTM/Views/MantenimientosPreventivos/MantenimientoPreventivo.cshtml`
