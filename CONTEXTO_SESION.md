@@ -14,7 +14,7 @@
 - **App publicada (11/11/2026):** pruebas `http://129.80.97.150:8081` y producción `http://129.80.97.150:8083`. La publicación actual incluye filtros, Calendario, el hardening de Equipos/Preventivos/Baja y la corrección de reprogramación (validada por el usuario en el portal). **Sin pendientes de despliegue.**
 - **Correo:** configuración única `SMTP_*` con Office365 (`smtp.office365.com`, `notificaciones@ptmexico.com`). Probado con envío real desde desarrollo.
 - **Datos manuales OTMP-011:** insertados en `DBADMIN` en 5 tablas (ver sección 2.1).
-- **Git (12/11/2026):** `origin/david_reyes` está en `b1a6e23`. Hay commits locales posteriores **sin push** (fix de Abocinadores, contexto de salida SAP y notas). **No hacer push sin autorización del usuario.**
+- **Git (12/11/2026):** `origin/david_reyes` está al día; sin commits pendientes de push. **No hacer push sin autorización del usuario.**
 - **Datos de prueba:** se quedan en `DBADMIN` (NO migrar).
 - **Credenciales de prueba (solo DBADMIN):** `adminmantenimiento@ptmexico.com` / `AdminMTTO` (administrador de mantenimiento). No usar en TEST/PTM ni producción.
 - **Firmas de prueba:** fuera del índice de Git (`git rm --cached`), siguen en disco y `.gitignore` las excluye.
