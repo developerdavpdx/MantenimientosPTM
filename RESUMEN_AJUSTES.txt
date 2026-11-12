@@ -425,7 +425,8 @@
    - Script: SQL_MIGRACION/APLICADOS/DBADMIN/FIX_CLASIFICACION_ABOCINADORES_DBADMIN.sql
    - Validacion: con el usuario de Miguel, Preventivos ahora muestra
      OTMP-014, OTMP-015, OTMP-016 y OTMP-017.
-   - Pendiente: replicar el UPDATE en TEST_JUNIO_2026 (y PTM si aplica).
+   - RESUELTO por el usuario (12/11/2026): UPDATE aplicado en
+     TEST_JUNIO_2026 (y PTM si aplicaba).
 
 
 20) SALIDA DE MERCANCIA A SAP - DIAGNOSTICO (11/11/2026)
@@ -437,8 +438,8 @@
      U_EMPLEADO MPVCC, U_ALMACENISTA ATA1, U_U_PDX_SOLICITANTE 1606/3334.
    - Verificado que NO es causa: items inventariables con almacen COR040,
      OPRC en dimensiones correctas y UDFs en OIGE/IGE1 segun DDLs.
-   - Pendiente: revisar serie 263 en NNM1 (ObjectCode 60, Locked N),
-     CUFD/OUFV de las UDFs y valores validos; probar payload minimo.
+   - RESUELTO por el usuario (12/11/2026): correccion aplicada en
+     servidor/SAP. Se conserva el diagnostico como referencia.
    - Logs: Logs\Almacen\SolicitudCompra\LogSolicitudCompra.txtYYYYMMDD.log
      (logger AlmacenSolicitudCompra, nivel DEBUG).
    - Hallazgo de codigo: LogicaAlmacen.cs:454 lee "ObjectTypeSalida"

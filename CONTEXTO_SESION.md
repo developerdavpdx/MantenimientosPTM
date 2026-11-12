@@ -14,7 +14,7 @@
 - **App publicada (11/11/2026):** pruebas `http://129.80.97.150:8081` y producción `http://129.80.97.150:8083`. La publicación actual incluye filtros, Calendario, el hardening de Equipos/Preventivos/Baja y la corrección de reprogramación (validada por el usuario en el portal). **Sin pendientes de despliegue.**
 - **Correo:** configuración única `SMTP_*` con Office365 (`smtp.office365.com`, `notificaciones@ptmexico.com`). Probado con envío real desde desarrollo.
 - **Datos manuales OTMP-011:** insertados en `DBADMIN` en 5 tablas (ver sección 2.1).
-- **Git (11/11/2026):** `origin/david_reyes` está en `b1a6e23` (devolución con costo promedio + regla `ALTER PROCEDURE`). Hay commits locales posteriores **sin push** (fix de Abocinadores y documentación). **No hacer push sin autorización del usuario.**
+- **Git (12/11/2026):** `origin/david_reyes` está en `b1a6e23`. Hay commits locales posteriores **sin push** (fix de Abocinadores, contexto de salida SAP y notas). **No hacer push sin autorización del usuario.**
 - **Datos de prueba:** se quedan en `DBADMIN` (NO migrar).
 - **Credenciales de prueba (solo DBADMIN):** `adminmantenimiento@ptmexico.com` / `AdminMTTO` (administrador de mantenimiento). No usar en TEST/PTM ni producción.
 - **Firmas de prueba:** fuera del índice de Git (`git rm --cached`), siguen en disco y `.gitignore` las excluye.
@@ -775,6 +775,8 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 
 ## 19. Sesión 11/11/2026 — Clasificación de Abocinadores (planta 2)
 
+**Estado:** **RESUELTO** por el usuario (confirmado 12/11/2026).
+
 **Problema:** el técnico MIGUEL ÁNGEL MEDINA PÉREZ (posición 3, `TecnicoMtto`, planta 2) no veía la **OTMP-014** en Preventivos.
 
 **Causa:** el equipo **Abocinador 9** (ID 435) estaba clasificado como `HERRAMENTALES`. La regla de posiciones del SP de rango solo muestra equipos `MANTENIMIENTO` a los técnicos TEC MTTO (posiciones `44,3,82,100`); los HERRAMENTALES (posiciones `8,95,101`) no le aparecen.
@@ -787,11 +789,13 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 
 **Validación:** con el usuario de Miguel, el listado de Preventivos ahora devuelve **OTMP-014, OTMP-015, OTMP-016 y OTMP-017**.
 
-**Pendiente en servidor:** aplicar el `UPDATE` equivalente en `TEST_JUNIO_2026` (y `PTM_2022_FINAL` si aplica). La clasificación es un campo del portal (`PdxMTTOGestionEquipos`), no de SAP, así que no la sobrescribe la sincronización.
+**Estado:** **RESUELTO** por el usuario (confirmado 12/11/2026). Se aplicó el `UPDATE` equivalente en `TEST_JUNIO_2026` (y `PTM_2022_FINAL` si aplicaba). La clasificación es un campo del portal (`PdxMTTOGestionEquipos`), no de SAP, así que no la sobrescribe la sincronización.
 
 ---
 
 ## 20. Sesión 11/11/2026 — Salida de mercancía a SAP: “Failed to initialize object data”
+
+**Estado:** **RESUELTO** por el usuario (confirmado 12/11/2026). Se conserva el diagnóstico como referencia.
 
 **Contexto:** Almacén → Solicitud de Refacciones → Generar Salida de Mercancía.
 
@@ -876,5 +880,6 @@ Pero en `Web.config` la llave es **`ObjectTypeSalidas`** (plural). Hoy no rompe 
 
 ### Estado
 
-- **Solo diagnóstico; no se modificó código por este tema.**
-- Pendiente de que el usuario comparta el resultado de `NNM1` (serie 263) y `CUFD`/`OUFV`, o de probar el payload mínimo.
+- **RESUELTO por el usuario (12/11/2026).**
+- No se modificó código por este tema en la sesión; el usuario aplicó la corrección en SAP/servidor.
+- Se conserva el diagnóstico de arriba como referencia.

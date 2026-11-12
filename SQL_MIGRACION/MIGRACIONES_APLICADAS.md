@@ -29,7 +29,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 11/11/2026 | DBADMIN | `MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql` | Aplicado/validado | SPs de salida y detalle devuelven `CostoPromedio` (`OITM.AvgPrice`); modal con costo y valor |
 | 11/11/2026 | TEST/PTM | `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_*.sql` | **Pendiente** | Aplicar en servidor antes de probar devoluciones |
 | 11/11/2026 | DBADMIN | `FIX_CLASIFICACION_ABOCINADORES_DBADMIN.sql` | Aplicado/validado | 6 Abocinadores de planta 2: HERRAMENTALES → MANTENIMIENTO |
-| 11/11/2026 | TEST/PTM | Clasificación de Abocinadores | **Pendiente** | Replicar el `UPDATE` en TEST_JUNIO_2026 (y PTM si aplica) |
+| 12/11/2026 | TEST/PTM | Clasificación de Abocinadores | Aplicado/validado | Confirmado por el usuario (12/11/2026) |
 
 ## Detalle de los cambios clave
 
@@ -76,7 +76,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 - **Cambio DBADMIN:** 6 equipos `Abocinador N` (IDs 377, 391, 435, 465, 473, 481) pasaron de `HERRAMENTALES` a `MANTENIMIENTO`.
 - **Script:** `APLICADOS/DBADMIN/FIX_CLASIFICACION_ABOCINADORES_DBADMIN.sql` — **aplicado/validado**.
 - **Validación:** el usuario de Miguel ahora ve OTMP-014, 015, 016 y 017.
-- **Pendiente:** replicar el `UPDATE` en TEST_JUNIO_2026 (y PTM_2022_FINAL si aplica).
+- **Estado:** **resuelto/aplicado** en TEST_JUNIO_2026 (y PTM_2022_FINAL si aplicaba), confirmado por el usuario el 12/11/2026.
 
 ## Obsoletos
 
