@@ -447,6 +447,24 @@
    - Sin cambios de codigo por este tema; solo diagnostico.
 
 
+21) RUTINAS PLANTA 2 - CORRECCION DE NOTAS Y MAPEO DE IDS (12/11/2026)
+   - Herramentales (rutinasherr): 68 rutinas, 57 archivos corregidos,
+     117 notas (57 nota2 + 57 nota4 + 3 nota1); actividades 0 dif.
+   - General (rutinas2): 146 rutinas, notas 1-3 correctas, nota4 no aplica;
+     1 actividad corregida en Rutina_610 (Recibidor 1); 0 dif. final.
+   - Servicios: Molino Zerma -> Rutina_277; Pulverizador -> Rutina_281.
+   - Desfase de IDs en Excel: 144/146 IDs mal. Se llenaron los IDs reales:
+     Herramentales 68/68; Mantenimiento 145/146.
+   - Pendiente: ID real de Inyectora 9 (fila 123) y copiar los 228 .cshtml
+     al servidor en Views/Rutinas/2.
+   - Archivos reales: C:\Paradox\PTM\DEVELOPMENT\RutinasMantenimiento\
+     TemplateRutinasPlanta2 27-03-2026 Herramentales.xlsx
+     TemplateRutinasPlanta2 27-03-2026 Mantenimiento.xlsx
+   - Backup rutinas: RUTINAS_SERVER\Rutinas_BACKUP_20261112_175135.
+   - Mapeo real rutinas2: RUTINAS_SERVER\MAPEO_REAL_RUTINAS2_20261112.csv.
+   - Sin cambios de BD ni de codigo; solo .cshtml y Excel.
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================

@@ -14,7 +14,7 @@
 - **App publicada (11/11/2026):** pruebas `http://129.80.97.150:8081` y producción `http://129.80.97.150:8083`. La publicación actual incluye filtros, Calendario, el hardening de Equipos/Preventivos/Baja y la corrección de reprogramación (validada por el usuario en el portal). **Sin pendientes de despliegue.**
 - **Correo:** configuración única `SMTP_*` con Office365 (`smtp.office365.com`, `notificaciones@ptmexico.com`). Probado con envío real desde desarrollo.
 - **Datos manuales OTMP-011:** insertados en `DBADMIN` en 5 tablas (ver sección 2.1).
-- **Git (12/11/2026):** `origin/david_reyes` está al día; sin commits pendientes de push. **No hacer push sin autorización del usuario.**
+- **Git (12/11/2026):** `origin/david_reyes` en `386fa35`; hay commits locales de documentación pendientes de push. **No hacer push sin autorización del usuario.**
 - **Datos de prueba:** se quedan en `DBADMIN` (NO migrar).
 - **Credenciales de prueba (solo DBADMIN):** `adminmantenimiento@ptmexico.com` / `AdminMTTO` (administrador de mantenimiento). No usar en TEST/PTM ni producción.
 - **Firmas de prueba:** fuera del índice de Git (`git rm --cached`), siguen en disco y `.gitignore` las excluye.
@@ -883,3 +883,83 @@ Pero en `Web.config` la llave es **`ObjectTypeSalidas`** (plural). Hoy no rompe 
 - **RESUELTO por el usuario (12/11/2026).**
 - No se modificó código por este tema en la sesión; el usuario aplicó la corrección en SAP/servidor.
 - Se conserva el diagnóstico de arriba como referencia.
+
+---
+
+## 21. Sesión 12/11/2026 — Revisión de rutinas de planta 2 y mapeo real de IDs
+
+### Archivos y rutas
+
+- **Excel reales (finales):**
+  - `C:\Paradox\PTM\DEVELOPMENT\RutinasMantenimiento\TemplateRutinasPlanta2 27-03-2026 Herramentales.xlsx` — hoja `rutinasherr`, 68 rutinas.
+  - `C:\Paradox\PTM\DEVELOPMENT\RutinasMantenimiento\TemplateRutinasPlanta2 27-03-2026 Mantenimiento.xlsx` — hoja `rutinas2`, 146 rutinas.
+- **Rutinas del servidor (`.cshtml`):**
+  - `C:\Paradox\PTM\DEVELOPMENT\DOCUMENTOS_DESARROLLO\RUTINAS_SERVER\Rutinas\2` — 228 archivos.
+- **Backup de rutinas:**
+  - `...\RUTINAS_SERVER\Rutinas_BACKUP_20261112_175135`
+- **Backups de Excel:**
+  - `...\RutinasMantenimiento\TemplateRutinasPlanta2 27-03-2026 Herramentales_BACKUP_20261112.xlsx`
+  - `...\DOCUMENTOS_DESARROLLO\PLANTA 2\TemplateRutinasPlanta2 27-03-2026_BACKUP_20261112.xlsx`
+- **Mapeos:**
+  - `...\DOCUMENTOS_DESARROLLO\PERIODICIDADES_PTM_2022_FINAL.csv` — 68 herramentales, delimitador `;`.
+  - `...\RUTINAS_SERVER\MAPEO_REAL_RUTINAS2_20261112.csv` — 146 filas, mapeo real de `rutinas2`.
+  - `...\Views\Rutinas\PeriodicidadesEquiposPII.csv` — **desfasado**, no usar para planta 2 general.
+
+### Corrección de rutinas
+
+**Herramentales (`rutinasherr`):**
+- 68 rutinas; **57 archivos corregidos**.
+- **117 cambios de notas:** 57 nota 2 + 57 nota 4 + 3 nota 1.
+- Nota 3 correcta en todas; nota 5 vacía.
+- Actividades: **0 diferencias**.
+- Validación final: **0 diferencias** en notas 1–4 y actividades.
+
+**Planta 2 general (`rutinas2`):**
+- 146 rutinas; notas 1–3 correctas; nota 4 no aplica (esos archivos no tienen la sección).
+- **1 actividad corregida:** `Rutina_610.cshtml` (Recibidor 1, actividad 18; se quitaron los `....`).
+- Actividades: **0 diferencias** después de la corrección.
+- Servicios especiales: **Molino Zerma → `Rutina_277`**, **Pulverizador Zerma → `Rutina_281`**.
+- Validación final: **0 diferencias** en notas y actividades.
+
+### Desfase real de IDs en el Excel
+
+La columna `IdEquipo` estaba mal: **144 de 146 IDs diferentes**. La llave correcta es **`NotaEncabezado2` = `NUMERO_DOC_PM_CALIDAD`**.
+
+Ejemplos reales:
+
+| Equipo | Excel | Real | PID | Archivo |
+|---|---:|---:|---:|---|
+| Recibidor 1 | 377 | **371** | **610** | `Rutina_610` |
+| Recibidor 2 | 384 | **378** | **152** | `Rutina_152` |
+| Recibidor 3 | 391 | **385** | **582** | `Rutina_582` |
+| Recibidor 4 | 398 | **392** | **120** | `Rutina_120` |
+| Recibidor 5 | 404 | **398** | **447** | `Rutina_447` |
+| Tenso 2 | 387 | **381** | **159** | `Rutina_159` |
+| Molino Zerma | 507 | **501** | **277** | `Rutina_277` |
+| Pulverizador Zerma | 509 | **503** | **281** | `Rutina_281` |
+
+Casos con código distinto al maestro:
+- **Tenso 2:** maestro `PL2-PVC-TV2`; archivo/Excel `PL2-PVC-T2`.
+- **Molino Zerma:** maestro `PL2-SER-MZ1`; archivo/Excel `PL2-SER-PULVZ`.
+
+### Estado de los Excel
+
+- `Herramentales.xlsx`: **68/68 IDs** llenados (ME1=518, Codo 1=548, Yee 1=564).
+- `Mantenimiento.xlsx`: **145/146 IDs** correctos.
+- **Pendiente: Inyectora 9** (fila 123), sin ID real. Celda vacía con comentario:
+  > “Revisar ID real en el portal (Inyectora 9)”
+  
+  DBADMIN no tiene ese equipo; validar en `PTM_2022_FINAL`.
+- El archivo combinado `...\DOCUMENTOS_DESARROLLO\PLANTA 2\TemplateRutinasPlanta2 27-03-2026.xlsx` quedó como copia de trabajo; los finales reales son los de `RutinasMantenimiento`.
+
+### Pendiente / siguiente
+
+- [ ] Confirmar ID real de **Inyectora 9** y llenar la fila 123 de `Mantenimiento.xlsx`.
+- [ ] Copiar los **228 `.cshtml`** de `RUTINAS_SERVER\Rutinas\2` al servidor en `Views/Rutinas/2` (el usuario iba a hacerlo el 12/11/2026). Validar en portal y reciclar App Pool si no se refleja.
+- [ ] Validar en portal: Yee 1, Codo 1, ME3, Recibidor 1 (actividad 18), Molino/Pulverizador.
+- Sin cambios de BD ni de código por esta revisión; solo archivos `.cshtml` y Excel.
+
+### Git
+
+- `origin/david_reyes` en `386fa35`.
+- La actualización de este contexto se deja en commit local, **sin push** (pendiente de autorización).
