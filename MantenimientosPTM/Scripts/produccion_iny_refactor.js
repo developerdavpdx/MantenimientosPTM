@@ -2515,6 +2515,7 @@ class GestionProduccionINY extends GestionProduccionBase {
             $('#FiltroLinea').val('');
             $('#FiltroTurno').val('');
             $('#FiltroProducto').val('');
+            $('#chkIncluirNWSCALE').prop('checked', false);
             this.consultarDatos();
         });
 

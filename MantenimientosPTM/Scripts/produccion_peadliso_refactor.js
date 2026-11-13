@@ -2786,6 +2786,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             $("#FiltroTurno").val("");
             $("#FiltroProducto").val("");
             $("#FiltroLinea").val("");
+            $("#chkIncluirNWSCALE").prop("checked", false);
 
             this.consultarDatos();
         });
