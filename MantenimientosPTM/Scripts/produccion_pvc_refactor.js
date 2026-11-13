@@ -348,9 +348,13 @@ class GestionProduccionPVC extends GestionProduccionBase {
             // ✅ IMPORTANTE: También pasar datosFormateados para acumular paros
             const seAgregaronParos = await this.traerParosProduccionCerrados(FiltroFechaInicio, FiltroFechaFin, FiltroLinea, datosFormateados);
 
-            // ✅ NUEVO: Productos terminados se agregan también
-            const productosTerminados = await this.ObtenerProductoTerminado(null, null, FiltroTurno, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
-            const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
+            // Productos terminados NWSCALE: solo si el usuario lo solicita
+            let seAgregaronProductosTerminados = false;
+            if ($('#chkIncluirNWSCALE').is(':checked')) {
+                const turnoNWSCALE = FiltroTurno || '0'; // "Todos" = 0 (día completo)
+                const productosTerminados = await this.ObtenerProductoTerminado(FiltroFechaInicio, FiltroFechaFin, turnoNWSCALE, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
+                seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
+            }
 
             // If no hay datos originales, correctivos, preventivos, paros NI productos terminados, mostramos placeholder
             if (!hayDatosOriginales && !seAgregaronCorrectivos && !seAgregaronPreventivos && !seAgregaronProductosTerminados && !seAgregaronParos) {
@@ -2583,49 +2587,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             }
         });
 
-        $('#btnAplicarFiltrosPT').on('click', async () => {
-            const $btn = $('#btnAplicarFiltrosPT');
-            $btn.prop('disabled', true);
-
-            try {
-                const fechaInicio = $('#FiltroFechaInicioPT').val();
-                const fechaFin = $('#FiltroFechaFinPT').val();
-                const filtroTurno = $('#FiltroTurnoPT').val();
-
-                const productosTerminados = await this.ObtenerProductoTerminado(fechaInicio, fechaFin, filtroTurno, (this.datos_usuario[0].PLANTA == "1" ? "PPVC" : "PPVC"));
-                const seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, true);
-
-                // ✅ Siempre borrar fila vacía DESPUÉS de agregar productos
-                const filasVacias = [];
-                this.gridApi.forEachNode(node => {
-                    if (node.data &&
-                        !node.data.ID_REGISTRO &&
-                        !node.data.OTMC &&
-                        !node.data.OTMP &&
-                        !node.data.ID_PRODUCTO_TERMINADO &&
-                        !node.data.Fecha &&
-                        node.data.id !== 'TOTALES'
-                    ) {
-                        filasVacias.push(node.data);
-                    }
-                });
-                if (seAgregaronProductosTerminados && filasVacias.length > 0) {
-                    this.gridApi.applyTransaction({ remove: filasVacias });
-                }
-
-                // 🔥 NUEVO: Si se agregaron productos terminados, colapsar automáticamente el panel de filtros
-                if (seAgregaronProductosTerminados) {
-                    const elColapso = document.getElementById('colapseFiltros');
-                    if (elColapso && elColapso.classList.contains('show')) {
-                        new bootstrap.Collapse(elColapso, { toggle: false }).hide();
-                    }
-                }
-
-
-            } finally {
-                $btn.prop('disabled', false);
-            }
-        });
+        // NWSCALE se unificó en el checkbox #chkIncluirNWSCALE del panel de datos salvados.
 
         $('#btnLimpiarFiltros').on('click', () => {
             $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());

@@ -59,24 +59,10 @@ $(document).ready(function () {
                 requiresPanel: '#colapseFiltros'
             },
             {
-                selector: '#FiltroFechaInicioPT',
-                title: 'Rango de fechas (Producto Terminado Pendiente)',
-                text: 'Elige la fecha de inicio y fin para acotar los registros que quieres consultar, esto consultará los registros de producto terminado pendiente de NEWSCALE para sincronizar en la tabla (los registros que aún no estan salvados en el sistema aparecerán con un punto azul parpadeante)',
+                selector: '#chkIncluirNWSCALE',
+                title: 'Incluir productos pendientes de NWSCALE',
+                text: 'Si lo marcas, la búsqueda también traerá los registros de producto terminado pendientes de NEWSCALE para el mismo rango de fechas y turno. Los que ya existan se actualizan y no se duplican.',
                 position: 'bottom',
-                requiresPanel: '#colapseFiltros'
-            },
-            {
-                selector: '#FiltroTurnoPT',
-                title: 'Filtra por turno (Producto Terminado Pendiente)',
-                text: 'Elige el turno que te interesa revisar en las fechas seleccionadas.',
-                position: 'bottom',
-                requiresPanel: '#colapseFiltros'
-            },
-            {
-                selector: '#btnAplicarFiltrosPT',
-                title: 'Buscar registros (Producto Terminado Pendiente)',
-                text: 'Una vez configurados tus filtros, presiona "Buscar" para cargar la información en la tabla, esto consultará los registros de producto terminado pendiente de NEWSCALE para sincronizar en la tabla',
-                position: 'top',
                 requiresPanel: '#colapseFiltros'
             },
             {

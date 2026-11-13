@@ -116,47 +116,16 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="filtros-titulo pt-2">
-                                    <i class="bi bi-sliders" style="color:#0ea5d8"></i>
-                                    <span data-bs-toggle="tooltip" title="Filtros de busqueda para producto terminado pendiente de sincronizar con el portal de mantenimientos">Filtros de búsqueda (Producto terminado Pendiente) Registros NWSCALE</span>
-                                </div>
-
-                                <div class="row g-2 align-items-end">
-                                    <!-- Fecha Inicio -->
-                                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-                                        <label class="filtro-label" for="FiltroFechaInicioPT">
-                                            <i class="bi bi-calendar-check-fill"></i> Fecha Inicio
-                                        </label>
-                                        <input type="date" class="filtro-input"
-                                               id="FiltroFechaInicioPT" name="FiltroFechaInicioPT">
-                                    </div>
-
-                                    <!-- Fecha Fin -->
-                                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-                                        <label class="filtro-label" for="FiltroFechaFinPT">
-                                            <i class="bi bi-calendar-x-fill"></i> Fecha Fin
-                                        </label>
-                                        <input type="date" class="filtro-input"
-                                               id="FiltroFechaFinPT" name="FiltroFechaFinPT">
-                                    </div>
-                                    <!-- Turno -->
-                                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-                                        <label class="filtro-label" for="Turno">
-                                            <i class="bi bi-calendar-x-fill"></i> Turno
-                                        </label>
-                                        <select class="filtro-input" id="FiltroTurnoPT" name="FiltroTurnoPT">
-                                            <option value="0">Todos los turnos...</option>
-                                            <option value="1">1</option>
-                                            <option value="2">2</option>
-                                        </select>
-                                    </div>
-                                    <!-- Botones -->
-                                    <div class="col-12 col-sm-6 col-md-4 col-xl-auto d-flex align-items-end gap-2">
-                                        <button type="button" class="btn-filtro-aplicar"
-                                                id="btnAplicarFiltrosPT" title="Aplicar filtros">
-                                            <i class="bi bi-search"></i>
-                                            Buscar
-                                        </button>
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <div class="form-check mt-3">
+                                            <input class="form-check-input" type="checkbox"
+                                                   id="chkIncluirNWSCALE" name="chkIncluirNWSCALE">
+                                            <label class="form-check-label filtro-label" for="chkIncluirNWSCALE">
+                                                <i class="bi bi-box-seam"></i>
+                                                Incluir productos terminados pendientes (NWSCALE) en la búsqueda
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -272,5 +241,5 @@
 @Html.Partial("_ModalActualizacionDatosBitacora")
 
 <script src="~/Scripts/ProductosTerminadosHelper.js"></script>
-<script src="~/Scripts/produccion_pvc_refactor.js?v=20261113-2"></script>
-<script src="~/Scripts/produccion_pvc_tour.config.js"></script>
+<script src="~/Scripts/produccion_pvc_refactor.js?v=20261113-3"></script>
+<script src="~/Scripts/produccion_pvc_tour.config.js?v=20261113-3"></script>
