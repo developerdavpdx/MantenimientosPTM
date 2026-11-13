@@ -971,3 +971,60 @@ Casos con código distinto al maestro:
 - `origin/david_reyes` en `386fa35`.
 - Commits locales pendientes de push: `b761d4f` (documentación), `d0c50c9` (rutinas) y el commit de este contexto.
 - **No hacer push sin autorización del usuario.**
+
+---
+
+## 22. Sesión 12/11/2026 — Planta 1: validación de rutinas y corrección de IDs
+
+### Archivos y rutas
+
+- **Excel reales (planta 1)** en `C:\Paradox\PTM\DEVELOPMENT\RutinasMantenimiento`:
+  - `TemplateRutinasPlanta1_PVC.xlsx` — hoja `rutinas_PVC` (195 filas de datos).
+  - `TemplateRutinasPlanta1_PEAD LISO AND CORR.xlsx` — hoja `rutinas` (185 filas).
+  - `TemplateRutinasPlanta1_PEAD LISO AND CORR  RESTANTES.xlsx` — hoja `Hoja1` (20 filas).
+- **Rutinas del servidor:** `...\DOCUMENTOS_DESARROLLO\RUTINAS_SERVER\Rutinas\1` (1341 archivos).
+- **Export real:** `...\DOCUMENTOS_DESARROLLO\PERIODICIDADES_PTM_2022_FINAL_P1.csv` (1,384 filas, delimitador `;`).
+- **Reportes:**
+  - `...\RUTINAS_SERVER\MAPEO_REAL_PLANTA1_20261112.csv`
+  - `...\RUTINAS_SERVER\VALIDACION_PLANTA1_20261112.csv`
+  - `...\RUTINAS_SERVER\VALIDACION_ACTIVIDADES_SUBSET_PLANTA1_20261112.csv`
+- **Backups de Excel:**
+  - `...\RutinasMantenimiento\TemplateRutinasPlanta1_PVC_BACKUP_20261112.xlsx`
+  - `...\TemplateRutinasPlanta1_PEAD LISO AND CORR_BACKUP_20261112.xlsx`
+  - `...\TemplateRutinasPlanta1_PEAD LISO AND CORR  RESTANTES_BACKUP_20261112.xlsx`
+
+### Resultado
+
+- **401 filas** revisadas.
+- **Notas 1–3:** coinciden en todas las filas con archivo.
+- **Actividades:** los archivos son un **subconjunto en orden** del Excel. Las “extra” son encabezados de sección (`Alimentador:`, `Transmisión potencia:`, etc.) y las 3 notas de pie (residuos, químicos, MasterWeb). **0 rutinas con contenido diferente.**
+- **IDs:** 360 filas con `IdEquipo` desfasado; se corrigieron **400 filas** con el ID real. `LISTA_PLANTA1` actualizada en **362 filas** (PVC y PEAD).
+- Ejemplos:
+  - L1 PVC- Recibidor: 7 → **1**, PID **239**.
+  - L1 PVC- Extrusor Linea: 8 → **2**, PID **242**.
+  - L1 PVC- Tanque de vacío: 9 → **3**, PID **246**.
+  - L2 PVC- Recibidor: 15 → **9**, PID **160**.
+  - L1 CORR MEZCLADOR A: 201 → **195**, PID **122**.
+  - Bomba Chiller 6: 361 → **361** ✅, PID **222**.
+- Duplicados resueltos por nombre exacto:
+  - `Servicios- Compresor 1` (135) vs `Servicios COMPRESOR 1` (350).
+  - `Servicios- Chiller 1` (138) vs `Servicios CHILLER 1` (352).
+
+### Casos especiales / faltantes
+
+- **Silo 2/3/4 LISO:** IDs reales **347/348/349**, PIDs **142/144/440**; **archivos de rutina faltantes** en `Rutinas/1`. Se marcaron con comentario en el Excel.
+- **ALUMBRADO PLANTA:** ID **369**, PID **243**; **archivo faltante** y el Excel no trae nota 1. Marcado con comentario.
+- **Hidrotester:** sin match en el export del servidor; `IdEquipo` vacío y comentario “Sin match en servidor; revisar equipo”.
+- **Silo 1 LISO:** ID **346**, PID **140**; `Rutina_140` existe y coincide.
+
+### Pendiente
+
+- [ ] Generar/cargar las rutinas faltantes de **Silo 2–4** y **ALUMBRADO** (PIDs 142/144/440/243).
+- [ ] Confirmar el equipo **Hidrotester** en el servidor.
+- [ ] Copiar los Excel corregidos al servidor si aplica (los reales son los de `RutinasMantenimiento`).
+- Sin cambios de BD ni de código; solo Excel de planta 1 y reportes. Las rutinas `.cshtml` no se modificaron.
+
+### Git
+
+- `origin/david_reyes` en `386fa35`.
+- Se agrega commit local de documentación; **sin push**.

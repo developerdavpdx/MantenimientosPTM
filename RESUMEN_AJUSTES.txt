@@ -467,6 +467,22 @@
    - Sin cambios de BD ni de codigo; solo .cshtml y Excel.
 
 
+22) PLANTA 1 - VALIDACION DE RUTINAS Y MAPEO DE IDS (12/11/2026)
+   - 401 filas revisadas; notas 1-3 correctas; actividades subset (extras
+     son encabezados y 3 notas de pie); 0 rutinas con contenido diferente.
+   - 360 IDs desfasados; 400 IDs corregidos en los 3 Excel de planta 1.
+   - LISTA_PLANTA1 actualizada en 362 filas (PVC y PEAD).
+   - Archivos reales: RutinasMantenimiento\TemplateRutinasPlanta1_PVC.xlsx,
+     TemplateRutinasPlanta1_PEAD LISO AND CORR.xlsx y ... RESTANTES.xlsx.
+   - Casos faltantes: Silo 2-4 LISO (IDs 347/348/349, PIDs 142/144/440),
+     ALUMBRADO PLANTA (ID 369, PID 243) e Hidrotester (sin match).
+   - Backups: *_BACKUP_20261112.xlsx en RutinasMantenimiento.
+   - Reportes: RUTINAS_SERVER\MAPEO_REAL_PLANTA1_20261112.csv,
+     VALIDACION_PLANTA1_20261112.csv,
+     VALIDACION_ACTIVIDADES_SUBSET_PLANTA1_20261112.csv.
+   - Sin cambios de BD ni de codigo; solo Excel y reportes.
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================
