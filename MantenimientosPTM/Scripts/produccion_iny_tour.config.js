@@ -26,7 +26,7 @@ $(document).ready(function () {
             {
                 selector: '#FiltroFechaInicio',
                 title: 'Rango de fechas (Datos Salvados)',
-                text: 'Elige la fecha de inicio y fin para acotar los registros que quieres consultar, esto consultará los registros ya guardados en el sistema una vez que tu completaste las filas correspondientes y diste clic en "Guardar", tambien consultará los registros pendientes de mantenimientos correctivos y mantenimientos preventivos completados para sincronizar en la tabla (los registros que aún no estan salvados en el sistema aparecerán con un punto azul parpadeante)',
+                text: 'Elige la fecha de inicio y fin para acotar los registros. Se consultarán los registros ya guardados, además de los correctivos, preventivos y paros del periodo. Los registros que aún no están salvados se identifican con 📦 (producto terminado), 🔧 (correctivo) o 🛠️ (preventivo).',
                 position: 'bottom',
                 requiresPanel: '#colapseFiltros'
             },
@@ -52,17 +52,17 @@ $(document).ready(function () {
                 requiresPanel: '#colapseFiltros'
             },
             {
-                selector: '#btnAplicarFiltros',
-                title: 'Buscar registros (Datos Salvados)',
-                text: 'Una vez configurados tus filtros, presiona "Buscar" para cargar la información en la tabla, esto consultará los registros ya guardados en el sistema una vez que tu completaste las filas correspondientes y diste clic en "Guardar".',
-                position: 'top',
+                selector: '#chkIncluirNWSCALE',
+                title: 'Incluir productos pendientes de NWSCALE',
+                text: 'Déjalo marcado (viene así por defecto) si quieres que la búsqueda también traiga los registros de producto terminado pendientes de NEWSCALE para el mismo rango de fechas y turno. Los que ya existan se actualizan y no se duplican.',
+                position: 'bottom',
                 requiresPanel: '#colapseFiltros'
             },
             {
-                selector: '#chkIncluirNWSCALE',
-                title: 'Incluir productos pendientes de NWSCALE',
-                text: 'Si está marcado (viene marcado por defecto), la búsqueda también traerá los registros de producto terminado pendientes de NEWSCALE para el mismo rango de fechas y turno. Los que ya existan se actualizan y no se duplican.',
-                position: 'bottom',
+                selector: '#btnAplicarFiltros',
+                title: 'Buscar registros',
+                text: 'Con el rango, turno, línea y producto listos, presiona "Buscar". Se cargarán los registros guardados más los correctivos, preventivos y paros del periodo; si el checkbox de NWSCALE está marcado, también los productos terminados pendientes.',
+                position: 'top',
                 requiresPanel: '#colapseFiltros'
             },
             {
