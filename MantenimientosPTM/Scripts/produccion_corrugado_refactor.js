@@ -2542,7 +2542,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 }
 
                 $("#mesActual").text(this.formatearRangoFechas(fechaInicio, fechaFin));
-                this.consultarDatos();
+                // No se consulta automaticamente: el usuario elige el rango y pulsa Buscar.
             });
     }
 

@@ -2845,7 +2845,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 const FechaTexto = this.formatearRangoFechas(fechaInicio, fechaFin);
                 $("#mesActual").text(FechaTexto);
 
-                this.consultarDatos();
+                // No se consulta automaticamente: el usuario elige el rango y pulsa Buscar.
 
             });
 

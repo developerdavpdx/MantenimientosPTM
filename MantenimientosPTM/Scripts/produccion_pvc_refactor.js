@@ -2660,7 +2660,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
                     FechaTexto
                 );
 
-                this.consultarDatos();
+                // No se consulta automaticamente: el usuario elige el rango y pulsa Buscar.
 
             });
     }
