@@ -1028,3 +1028,70 @@ Casos con código distinto al maestro:
 
 - `origin/david_reyes` en `386fa35`.
 - Se agrega commit local de documentación; **sin push**.
+
+## 23. Sesión 13/11/2026 — Migración PTM_2022_FINAL → DBADMIN (HANA Cloud) y ajustes de Tiempos Muertos
+
+### Objetivo
+
+Dejar `DBADMIN` (HANA Cloud) como copia de `PTM_2022_FINAL` (on-premise) para las tablas del portal y sus stored procedures, y corregir dos temas de Tiempos Muertos (filtro de turno y export de comentarios).
+
+### Migración de tablas
+
+- **Fuente:** `...\ONPREMISE\TABLES\export\PTM_2022_FINAL` (30 tablas) + `...\ONPREMISE\TABLES\index\PTM_2022_FINAL` (4 tablas).
+- **Tablas migradas:** 34 (incluye `PdxMTTOEquiposPeriodicidad` con 1,608 filas, `PdxMTTOMovimientosAlmacen` 13, `PdxMTTORechazoDevolucion` 0 y `PdxMTTOTiemposMuertosProduccionPVC_BACKUP` 0).
+- **Filas cargadas:** 4,938. **Diferencias de conteo:** 0. **Checksums:** OK.
+- Se normalizó el DDL: `CS_*` fuera, `DAYDATE`→`DATE`, `LONGDATE`→`TIMESTAMP`, `GENERATED ALWAYS`→`BY DEFAULT`, `NVARCHAR` sin longitud→`(1)`, schema `DBADMIN`.
+- Las tablas SAP (`OITM`, `OITW`, `OCRD`, etc.) y las `@PDX_*` **no se tocaron**.
+
+### Stored procedures
+
+- **125 SPs on-premise** aplicados con `CREATE OR REPLACE`.
+- **4 correcciones:**
+  - `SpPdxMTTOCalcularMantenimientoAnual`: el `CASE` comparaba una columna INT contra textos (`'mensual'`); se normalizó a los IDs 1–7 de `PdxMTTOPeriodicidadMant`.
+  - `SpPdxMTTOGetEmailsEmpleadosXModulo`: usaba `OHEM.U_PDX_MODULO`; se agregó la columna `NVARCHAR(100)`.
+  - `SpPdxMTTOConsultaSolicitudesCompraMP` y `SpPdxMTTOGetSolicitudesCompra_filtradas`: se eliminaron por ser código muerto, junto con la tabla legacy `PdxMTTOMPSolicitudCompraMP`.
+- **Total en DBADMIN:** 152 SPs (123 on-premise + 29 cloud-only).
+- **Índices únicos:** `IDX_UQ_AREA_LINEA`, `UQ_PdxMTTOCategoriasParo_Nombre`, `UK_EQUIPO_PERIODICIDAD`.
+
+### Respaldo y rollback
+
+- Respaldo previo de las 30 tablas cloud: `...\EXPORT DBADMIN 2026-11-13\PORTAL_TABLES_BACKUP`.
+- 33 tablas `*_BAK_20261113` conservadas para rollback.
+- Limpieza posterior: `...\MIGRATION\_drop_backups.ps1 -Confirm`.
+
+### Artefactos de la migración
+
+Todo en `...\EXPORT DBADMIN 2026-11-13\MIGRATION\`:
+- `MIGRATION_LOG.txt`, `SP_LOG.txt`, `SP_FIX_LOG.txt`.
+- `PLAN.csv`, `MIGRATION_RESULTS.csv`.
+- `01_TABLES.sql`, `02_INDEXES.sql`, `03_PROCEDURES.sql` (123 SPs).
+- Scripts reproducibles: `_build_migration.ps1`, `_apply_migration.ps1`, `_apply_sps.ps1`, `_verify_migration.ps1`, `_verify_deep.ps1`, `_drop_backups.ps1`.
+- El export completo de DBADMIN quedó incompleto (se atascó en `OIGN`); el respaldo dirigido de las 30 tablas sí está completo.
+
+### Ajustes de frontend (Tiempos Muertos)
+
+- **Export:** `Comentarios` no estaba en los campos de texto del exportador; se agregó en PVC, INY, Corrugado y Pead Liso. Ahora sí se descarga.
+- **Filtro de turno:** los “productos terminados” de NWSCALE se mezclaban sin respetar el turno; se agregó un guard en `agregarProductosTerminadosAlGrid`. Turno “Todos” se mapea a `0` para NWSCALE.
+- **Filtros unificados:** se eliminó el segundo panel de NWSCALE y se agregó el checkbox `#chkIncluirNWSCALE` en el panel de datos salvados (marcado por defecto). La búsqueda de NWSCALE usa el mismo rango y turno.
+- **Fechas:** cambiar Fecha Inicio/Fin ya no dispara la búsqueda; solo valida y actualiza el título. La consulta se ejecuta con **Buscar**.
+- **Limpiar:** también desmarca el checkbox.
+- **Código muerto:** se eliminaron `GetDetalleSolicitudesCompra` (`AlmacenController`) y las propiedades `GCConsultaSolicitudesCompraMP` / `GCGetSolicitudesCompraFiltradoMP` (`AccesoDatosAlmacen`).
+- **Archivos del último ajuste:** 8 JS (`produccion_*_refactor.js` y `produccion_*_tour.config.js`) + 4 vistas (`Views/Produccion/Produccion_*.cshtml`), con `?v=20261113-3`.
+
+### Git
+
+- `origin/david_reyes` actualizado con:
+  - `ecff81c` — ajustes de filtros TM.
+  - `c10e07d` — versiones de vistas.
+  - `d279c6d` — fechas sin auto-búsqueda.
+  - `37d99ac` — limpieza de código muerto (C#).
+  - `0efd302` — unificación de filtros NWSCALE.
+  - `807c473` — Limpiar desmarca checkbox.
+  - `4f2ae3a` — checkbox marcado por defecto.
+
+### Pendiente
+
+- [ ] Borrar las tablas `*_BAK_20261113` después de validar (`_drop_backups.ps1 -Confirm`).
+- [ ] Copiar los valores de `OHEM.U_PDX_MODULO` desde on-premise si se usa el filtro de correos por módulo.
+- [ ] Ajustar el endpoint de NWSCALE para que recorra todo el rango de fechas (hoy solo usa la Fecha Inicio).
+- [ ] En on-premise siguen existiendo los 2 SPs y la tabla legacy eliminados en cloud (opcional limpiarlos también).

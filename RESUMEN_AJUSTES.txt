@@ -483,6 +483,34 @@
    - Sin cambios de BD ni de codigo; solo Excel y reportes.
 
 
+23) MIGRACION PTM_2022_FINAL -> DBADMIN (HANA CLOUD) Y AJUSTES TM (13/11/2026)
+   - 34 tablas del portal migradas (30 export + 4 index): 4,938 filas,
+     0 diferencias de conteo y checksums OK.
+   - Incluye PdxMTTOEquiposPeriodicidad (1,608), PdxMTTOMovimientosAlmacen
+     (13), PdxMTTORechazoDevolucion (0) y PVC_BACKUP (0).
+   - 125 SPs on-premise aplicados; 4 corregidos:
+     * SpPdxMTTOCalcularMantenimientoAnual: CASE de texto -> IDs 1..7.
+     * SpPdxMTTOGetEmailsEmpleadosXModulo: se agrego OHEM.U_PDX_MODULO.
+     * SpPdxMTTOConsultaSolicitudesCompraMP y
+       SpPdxMTTOGetSolicitudesCompra_filtradas: eliminados por codigo muerto.
+   - Se elimino la tabla legacy PdxMTTOMPSolicitudCompraMP.
+   - Total DBADMIN: 152 SPs (123 on-premise + 29 cloud-only).
+   - Indices unicos: IDX_UQ_AREA_LINEA, UQ_PdxMTTOCategoriasParo_Nombre,
+     UK_EQUIPO_PERIODICIDAD.
+   - Respaldo previo: EXPORT DBADMIN 2026-11-13\PORTAL_TABLES_BACKUP.
+   - Rollback: 33 tablas *_BAK_20261113 (limpiar con _drop_backups.ps1).
+   - Artefactos y logs: EXPORT DBADMIN 2026-11-13\MIGRATION\.
+   - Export completo de DBADMIN incompleto (se atoro en OIGN); el respaldo
+     dirigido de las 30 tablas si esta completo.
+   - Front: Comentarios en export (4 modulos), guard de turno NWSCALE,
+     filtros unificados con checkbox #chkIncluirNWSCALE (marcado), fechas
+     sin auto-busqueda, Limpiar desmarca checkbox, codigo muerto eliminado.
+   - Git origin/david_reyes: ecff81c, c10e07d, d279c6d, 37d99ac, 0efd302,
+     807c473, 4f2ae3a.
+   - Pendiente: borrar _BAK, datos de OHEM.U_PDX_MODULO, rango multi-dia
+     de NWSCALE.
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================
