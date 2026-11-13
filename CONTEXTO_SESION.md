@@ -14,7 +14,7 @@
 - **App publicada (11/11/2026):** pruebas `http://129.80.97.150:8081` y producción `http://129.80.97.150:8083`. La publicación actual incluye filtros, Calendario, el hardening de Equipos/Preventivos/Baja y la corrección de reprogramación (validada por el usuario en el portal). **Sin pendientes de despliegue.**
 - **Correo:** configuración única `SMTP_*` con Office365 (`smtp.office365.com`, `notificaciones@ptmexico.com`). Probado con envío real desde desarrollo.
 - **Datos manuales OTMP-011:** insertados en `DBADMIN` en 5 tablas (ver sección 2.1).
-- **Git (12/11/2026):** `origin/david_reyes` en `386fa35`; hay commits locales de documentación pendientes de push. **No hacer push sin autorización del usuario.**
+- **Git (12/11/2026):** `origin/david_reyes` en `386fa35`; hay commits locales pendientes de push (documentación y corrección de rutinas). **No hacer push sin autorización del usuario.**
 - **Datos de prueba:** se quedan en `DBADMIN` (NO migrar).
 - **Credenciales de prueba (solo DBADMIN):** `adminmantenimiento@ptmexico.com` / `AdminMTTO` (administrador de mantenimiento). No usar en TEST/PTM ni producción.
 - **Firmas de prueba:** fuera del índice de Git (`git rm --cached`), siguen en disco y `.gitignore` las excluye.
@@ -959,7 +959,15 @@ Casos con código distinto al maestro:
 - [ ] Validar en portal: Yee 1, Codo 1, ME3, Recibidor 1 (actividad 18), Molino/Pulverizador.
 - Sin cambios de BD ni de código por esta revisión; solo archivos `.cshtml` y Excel.
 
+### Repo vs servidor (`Rutina_610`)
+
+- El repo `Views/Rutinas/2` quedó con **57 archivos** de notas corregidas (commit local `d0c50c9`).
+- `Rutina_610.cshtml` se **restauró a HEAD** en el repo para conservar la sección `seccion-upload-imagenes` que el archivo del servidor no trae (el servidor tiene una versión más antigua sin esa sección).
+- El archivo del servidor `RUTINAS_SERVER\...\Rutina_610.cshtml` sí tiene la corrección de la actividad 18 (sin `....`), pero no la sección de upload.
+- Si se vuelve a copiar el `Rutina_610` del servidor al repo, se perdería esa sección; el repo ya tiene la actividad correcta.
+
 ### Git
 
 - `origin/david_reyes` en `386fa35`.
-- La actualización de este contexto se deja en commit local, **sin push** (pendiente de autorización).
+- Commits locales pendientes de push: `b761d4f` (documentación), `d0c50c9` (rutinas) y el commit de este contexto.
+- **No hacer push sin autorización del usuario.**

@@ -462,6 +462,8 @@
      TemplateRutinasPlanta2 27-03-2026 Mantenimiento.xlsx
    - Backup rutinas: RUTINAS_SERVER\Rutinas_BACKUP_20261112_175135.
    - Mapeo real rutinas2: RUTINAS_SERVER\MAPEO_REAL_RUTINAS2_20261112.csv.
+   - Repo: 57 .cshtml corregidos (commit local d0c50c9); Rutina_610 se
+     mantuvo con la seccion de upload del repo.
    - Sin cambios de BD ni de codigo; solo .cshtml y Excel.
 
 
