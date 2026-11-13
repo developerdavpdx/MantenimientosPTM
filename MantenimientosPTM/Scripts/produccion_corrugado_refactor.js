@@ -1450,6 +1450,11 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
             productosTerminados.forEach(item => {
 
+                // FIX: si hay filtro de turno, no mezclar productos de otro turno
+                if (filtroTurno && filtroTurno !== '0' && String(item.Turno) !== String(filtroTurno)) {
+                    return;
+                }
+
                 //if (idsYaExistentesEnBD.has(String(item.Id))) {
                 //    return; // ✅ ya viene con detalle completo desde validarProductosTerminadosExistentes
                 //}
@@ -2934,7 +2939,7 @@ class ExcelExporterCorrugado extends ExcelExporterBase {
 
     getFileNamePrefix() { return 'Produccion_Corrugado'; }
 
-    getTextFields() { return ['Mes', 'Fecha', 'Linea', 'Corrugador', 'Producto', 'Turno', 'Grupo']; }
+    getTextFields() { return ['Mes', 'Fecha', 'Linea', 'Corrugador', 'Producto', 'Turno', 'Grupo', 'Comentarios']; }
 
     getTotalsFontColor() { return 'FF0058A1'; }
 

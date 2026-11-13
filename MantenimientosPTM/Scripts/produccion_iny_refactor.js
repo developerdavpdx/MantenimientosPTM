@@ -1208,6 +1208,11 @@ class GestionProduccionINY extends GestionProduccionBase {
 
             productosTerminados.forEach(item => {
 
+                // FIX: si hay filtro de turno, no mezclar productos de otro turno
+                if (filtroTurno && filtroTurno !== '0' && String(item.Turno) !== String(filtroTurno)) {
+                    return;
+                }
+
                 //if (idsYaExistentesEnBD.has(String(item.Id))) {
                 //    return; // ✅ ya viene con detalle completo desde validarProductosTerminadosExistentes
                 //}
@@ -3024,7 +3029,7 @@ class ExcelExporterINY extends ExcelExporterBase {
 
     getSheetName() { return 'Causas Tiempos Muertos INY'; }
     getFileNamePrefix() { return 'Produccion_INY'; }
-    getTextFields() { return ['Mes', 'Fecha', 'Linea', 'Inyectora', 'Producto', 'Descripcion', 'OP', 'Turno', 'Grupo']; }
+    getTextFields() { return ['Mes', 'Fecha', 'Linea', 'Inyectora', 'Producto', 'Descripcion', 'OP', 'Turno', 'Grupo', 'Comentarios']; }
     getTotalsFontColor() { return 'FF0058A1'; }
     getTotalsBorderColor() { return 'FF0058A1'; }
 

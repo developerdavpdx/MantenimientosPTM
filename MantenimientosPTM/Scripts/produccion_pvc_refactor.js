@@ -1160,6 +1160,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
 
             productosTerminados.forEach(item => {
 
+                // FIX: si hay filtro de turno, no mezclar productos de otro turno
+                if (filtroTurno && filtroTurno !== '0' && String(item.Turno) !== String(filtroTurno)) {
+                    return;
+                }
+
                 //if (idsYaExistentesEnBD.has(String(item.Id))) {
                 //    return; // ✅ ya viene con detalle completo desde validarProductosTerminadosExistentes
                 //}
@@ -3565,7 +3570,7 @@ class ExcelExporterPVC extends ExcelExporterBase {
 
     getFileNamePrefix() { return 'Produccion_PVC'; }
 
-    getTextFields() { return ['Mes', 'Fecha', 'Producto', 'TRIP', 'Linea', 'Turno']; }
+    getTextFields() { return ['Mes', 'Fecha', 'Producto', 'TRIP', 'Linea', 'Turno', 'Comentarios']; }
 
     getTotalsFontColor() { return 'FF0058A1'; }
 
@@ -3630,7 +3635,7 @@ class ExcelExporterPVC extends ExcelExporterBase {
 
     agregarFilasDatos(worksheet, estructura) {
 
-        const camposTexto = ['Mes', 'Fecha', 'Producto', 'TRIP', 'Linea', 'Turno'];
+        const camposTexto = ['Mes', 'Fecha', 'Producto', 'TRIP', 'Linea', 'Turno', 'Comentarios'];
 
         // ========================================
         // FILAS DE DATOS (solo las filtradas/ordenadas)

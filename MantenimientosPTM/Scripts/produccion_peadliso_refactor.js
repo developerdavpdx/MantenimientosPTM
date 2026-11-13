@@ -1955,6 +1955,11 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             productosTerminados.forEach(item => {
 
+                // FIX: si hay filtro de turno, no mezclar productos de otro turno
+                if (filtroTurno && filtroTurno !== '0' && String(item.Turno) !== String(filtroTurno)) {
+                    return;
+                }
+
                 //if (idsYaExistentesEnBD.has(String(item.Id))) {
                 //    return; // ✅ ya viene con detalle completo desde validarProductosTerminadosExistentes
                 //}
@@ -3499,7 +3504,7 @@ class ExcelExporterPeadLiso extends ExcelExporterBase {
 
     getSheetName() { return 'Causas Tiempos Muertos Pead Liso'; }
     getFileNamePrefix() { return 'Produccion_PeadLiso'; }
-    getTextFields() { return ['Mes', 'Fecha', 'Linea', 'Producto', 'Turno', 'Grupo']; }
+    getTextFields() { return ['Mes', 'Fecha', 'Linea', 'Producto', 'Turno', 'Grupo', 'Comentarios']; }
 
     getTotalsFontColor() { return 'FF0058A1'; }
     getTotalsBorderColor() { return 'FF0058A1'; }
@@ -3563,7 +3568,7 @@ class ExcelExporterPeadLiso extends ExcelExporterBase {
     }
 
     agregarFilasDatos(worksheet, estructura) {
-        const camposTexto = ['Mes', 'Fecha', 'Linea', 'Producto', 'Turno', 'Grupo'];
+        const camposTexto = ['Mes', 'Fecha', 'Linea', 'Producto', 'Turno', 'Grupo', 'Comentarios'];
 
         // ========================================
         // FILAS DE DATOS (solo las filtradas/ordenadas)
