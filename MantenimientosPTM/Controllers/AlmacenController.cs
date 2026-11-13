@@ -524,43 +524,6 @@ namespace MantenimientosPTM.Controllers
                 }, JsonRequestBehavior.AllowGet);
             }
         }
-        public JsonResult GetDetalleSolicitudesCompra(string FiltroPlanta, string FiltroRefaccion)
-        {
-            var jsonResponse = new GlobalCommands.JsonResponseMtto();
-
-            try
-            {
-                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                {
-                    { "P_FILTRO_PLANTA",(string.IsNullOrEmpty(FiltroPlanta) ? (object)null : FiltroPlanta, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_FILTRO_REFACCION",(string.IsNullOrEmpty(FiltroRefaccion) ? (object)null : FiltroRefaccion, ParameterDirection.Input, HanaDbType.NVarChar) }
-                };
-
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCGetSolicitudesCompraFiltradoMP,
-                    parameters
-                );
-
-
-                var resultError = resultHana.JsonResult.Contains("ERROR");
-
-                jsonResponse.Status = resultError ? "ERROR" : "OK";
-                jsonResponse.Message = resultError
-                    ? "No fue posible obtener el detalle de las solicitudes"
-                    : $"Detalle de solcitudes obtenida correctamente";
-                jsonResponse.Data = resultHana.JsonResult;
-
-                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
-
-            }
-            catch (Exception ex)
-            {
-                jsonResponse.Status = "ERROR";
-                jsonResponse.Message = "No fue obtener el detalle de las solcitudes: " + ex.Message;
-                jsonResponse.Data = string.Empty;
-                return Json(jsonResponse, JsonRequestBehavior.AllowGet);
-            }
-        }
         /// <summary>
         /// Obtiene el listado de los proveedores para un articulo
         /// Usado para llenar de forma dinamica el autocomplete de proveedores

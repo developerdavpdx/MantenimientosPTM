@@ -101,14 +101,6 @@ namespace MantenimientosPTM
             }
         }
 
-        public string GCConsultaSolicitudesCompraMP
-        {
-            get
-            {
-                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOConsultaSolicitudesCompraMP\"";
-            }
-        }
-
         public string GCGetSolicitudesCompraAgrupadoMP
         {
             get
@@ -122,14 +114,6 @@ namespace MantenimientosPTM
             get
             {
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGetDetallesSolicitudCompraMP\"";
-            }
-        }
-
-        public string GCGetSolicitudesCompraFiltradoMP
-        {
-            get
-            {
-                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGetSolicitudesCompra_filtradas\"";
             }
         }
 
