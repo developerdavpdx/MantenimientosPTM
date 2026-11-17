@@ -1,0 +1,58 @@
+-- ============================================================
+-- PREVENTIVOS - BLINDAJE DE GUARDADO DE RUTINA (TEST)
+-- Schema: TEST_JUNIO_2026
+-- Fecha: 2026-11-17
+--
+-- Objetivo:
+--   1) Eliminar rutinas duplicadas existentes (conserva la de menor ID_RUTINA)
+--   2) Crear indices UNIQUE que impiden fisicamente el duplicado
+--   3) El SP SpPdxMTTOGuardarRutinaMP se reemplaza aparte (MERGE atomico)
+--
+-- Aplicar en este orden:
+--   a) Este script
+--   b) TEST_JUNIO_2026/SpPdxMTTOGuardarRutinaMP_ALTER.sql
+--
+-- NOTA: ejecutar UNA sola vez. Si los indices ya existen, CREATE UNIQUE INDEX fallara.
+-- El bloque de limpieza es idempotente: si no hay duplicados no hace nada.
+-- ============================================================
+
+-- 1) Limpieza de rutinas duplicadas (header + actividades)
+DO BEGIN
+    DECLARE CURSOR C_DUP FOR
+        SELECT "ID_RUTINA"
+        FROM (
+            SELECT "ID_RUTINA",
+                   ROW_NUMBER() OVER (
+                       PARTITION BY "ID_MANTENIMIENTO"
+                       ORDER BY "ID_RUTINA" ASC
+                   ) AS RN
+            FROM "TEST_JUNIO_2026"."PdxMTTORutinasMP"
+        )
+        WHERE RN > 1;
+
+    FOR R AS C_DUP DO
+        DELETE FROM "TEST_JUNIO_2026"."PdxMTTOActividadesRutinasMP"
+        WHERE "ID_RUTINA" = R."ID_RUTINA";
+
+        DELETE FROM "TEST_JUNIO_2026"."PdxMTTORutinasMP"
+        WHERE "ID_RUTINA" = R."ID_RUTINA";
+    END FOR;
+END;
+
+-- 2) Una sola rutina por mantenimiento
+CREATE UNIQUE INDEX "UX_PdxMTTORutinasMP_IDMANT"
+ON "TEST_JUNIO_2026"."PdxMTTORutinasMP" ("ID_MANTENIMIENTO");
+
+-- 3) Una sola OT (header) por mantenimiento.
+--    El SP SpPdxMTTOInsertaOrdenTrabajoMP ya usa MERGE por ID_MANTENIMIENTO;
+--    este indice cierra la carrera ante dos guardados simultaneos.
+CREATE UNIQUE INDEX "UX_PdxMTTOOrdenesTrabajoMP_IDMANT"
+ON "TEST_JUNIO_2026"."PdxMTTOOrdenesTrabajoMP" ("ID_MANTENIMIENTO");
+
+-- Verificacion:
+-- SELECT "ID_MANTENIMIENTO", COUNT(*) FROM "TEST_JUNIO_2026"."PdxMTTORutinasMP"
+-- GROUP BY "ID_MANTENIMIENTO" HAVING COUNT(*) > 1;   -- debe devolver 0 filas
+--
+-- SELECT INDEX_NAME, INDEX_TYPE FROM SYS.INDEXES
+-- WHERE SCHEMA_NAME = 'TEST_JUNIO_2026'
+--   AND INDEX_NAME IN ('UX_PdxMTTORutinasMP_IDMANT','UX_PdxMTTOOrdenesTrabajoMP_IDMANT');
