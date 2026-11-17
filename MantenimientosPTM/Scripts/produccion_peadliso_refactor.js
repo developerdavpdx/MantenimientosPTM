@@ -1833,6 +1833,15 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             onFilterChanged: () => this.recalcularTotales(),
 
+            onModelUpdated: (params) => {
+                let count = 0;
+                params.api.forEachNodeAfterFilterAndSort(node => {
+                    if (node.data && node.data.id !== 'TOTALES') count++;
+                });
+                const el = document.getElementById('contadorRegistros');
+                if (el) el.textContent = `${count} registro${count === 1 ? '' : 's'}`;
+            },
+
             onGridReady: (params) => {
 
                 this.gridApi = params.api;
