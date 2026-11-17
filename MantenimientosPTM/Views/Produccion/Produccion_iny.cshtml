@@ -11,27 +11,26 @@
             <div class="col-12">
                 <div class="card shadow">
                     <div class="card-header text-dark">
-                        <div class="row g-3 align-items-center">
-                            <div class="col-12 col-md-8">
-                                <h4 class="mb-0 text-color-logo d-flex">
-                                    <i class="bi bi-table me-2"></i>Causas Tiempos Muertos
-                                    <span id="fechaActual" class="text-primary ms-2">INY</span>
-                                    <span id="mesActual" class="text-primary ms-2"></span>
-                                    <span id="contadorRegistros" class="badge bg-info text-dark ms-2 align-self-center" title="Registros mostrados">0 registros</span>
+                        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2">
+                            <div class="d-flex flex-wrap align-items-center gap-2" style="min-width: 0;">
+                                <h4 class="mb-0 text-color-logo d-flex flex-wrap align-items-center gap-2">
+                                    <i class="bi bi-table"></i>
+                                    <span>Causas Tiempos Muertos</span>
+                                    <span id="fechaActual" class="text-primary">INY</span>
+                                    <span id="mesActual" class="text-primary"></span>
+                                    <span id="contadorRegistros" class="badge bg-info text-dark text-nowrap" title="Registros mostrados">0 registros</span>
                                 </h4>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <div class="d-flex justify-content-md-end gap-2">
-                                    <button id="btnGuardarCambios" class="btn-filtro-aplicar">
-                                        <i class="bi bi-save-fill me-1"></i>Guardar
-                                    </button>
-                                    <button id="btnExportarExcel" class="btn-filtro-limpiar" title="Descargar Excel">
-                                        <i class="bi bi-file-excel-fill me-1"></i>Descargar
-                                    </button>
-                                    <button id="btnEnviarCorreo" class="btn-filtro-aplicar" title="Enviar por Correo">
-                                        <i class="bi bi-send-fill me-1"></i>Enviar
-                                    </button>
-                                </div>
+                            <div class="d-flex flex-wrap justify-content-lg-end gap-2 flex-shrink-0">
+                                <button id="btnGuardarCambios" class="btn-filtro-aplicar">
+                                    <i class="bi bi-save-fill me-1"></i>Guardar
+                                </button>
+                                <button id="btnExportarExcel" class="btn-filtro-limpiar" title="Descargar Excel">
+                                    <i class="bi bi-file-excel-fill me-1"></i>Descargar
+                                </button>
+                                <button id="btnEnviarCorreo" class="btn-filtro-aplicar" title="Enviar por Correo">
+                                    <i class="bi bi-send-fill me-1"></i>Enviar
+                                </button>
                             </div>
                         </div>
                     </div>
