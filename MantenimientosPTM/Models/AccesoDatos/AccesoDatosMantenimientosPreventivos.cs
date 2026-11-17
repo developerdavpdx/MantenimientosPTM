@@ -73,6 +73,20 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGuardarRutinaMP\"";
             }
         }
+        public string GCObtenerTokensOT
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOObtenerTokensOT\"";
+            }
+        }
+        public string GCValidarTokenGuardado
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOValidarTokenGuardado\"";
+            }
+        }
         public string GCObtenerActividadesPorOTMP
         {
             get
@@ -462,6 +476,8 @@ namespace MantenimientosPTM
             public string FirmaMantenimiento { get; set; }    // Base64 PNG
             public string NombreMantenimiento { get; set; }
             public string TipoOperacion { get; set; }
+            // Token de version de la OT (FECHA_ULT_MOD) para detectar edicion concurrente.
+            public string Token_OT { get; set; }
         }
         public class ActividadRutina
         {

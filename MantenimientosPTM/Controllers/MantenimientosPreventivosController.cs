@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Sap.Data.Hana;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
@@ -24,6 +25,12 @@ namespace MantenimientosPTM.Controllers
         private static readonly string[] ExtensionesImagen = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp" };
         private static readonly string[] MimesImagen = { "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp" };
 
+        // Serializa el guardado (rutina u OT) por mantenimiento dentro de este proceso.
+        // La garantia final contra duplicados es el indice UNIQUE en BD; este candado
+        // evita ademas que dos peticiones del mismo usuario se pisen.
+        private static readonly ConcurrentDictionary<string, object> _candadosGuardado =
+            new ConcurrentDictionary<string, object>();
+
         #region Helpers
 
         /// <summary>
@@ -33,6 +40,177 @@ namespace MantenimientosPTM.Controllers
         {
             return !string.IsNullOrEmpty(jsonResult) &&
                    jsonResult.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        /// <summary>
+        /// Devuelve el candado del mantenimiento. Normaliza el id para que
+        /// "155" y "0155" usen el mismo candado.
+        /// </summary>
+        private static object ObtenerCandadoGuardado(string tipo, string id)
+        {
+            string llave = (id ?? string.Empty).Trim();
+            int numero;
+            if (int.TryParse(llave, NumberStyles.Integer, CultureInfo.InvariantCulture, out numero))
+                llave = numero.ToString(CultureInfo.InvariantCulture);
+
+            return _candadosGuardado.GetOrAdd(
+                string.Format(CultureInfo.InvariantCulture, "{0}:{1}", tipo, llave),
+                _ => new object());
+        }
+
+        /// <summary>
+        /// Ejecuta un SP de guardado con candado por mantenimiento y reintento
+        /// ante choque del indice UNIQUE (por ejemplo, dos instancias del portal).
+        /// El reintento convierte el INSERT fallido en un UPDATE.
+        /// </summary>
+        private GlobalCommands.HanaProcedureResult EjecutarGuardadoProtegido(
+            string procedimiento,
+            Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)> parametros,
+            string tipo,
+            string id,
+            string tokenEsperado,
+            out string mensajeConflicto,
+            out string tokenActual,
+            out string tokenNuevo)
+        {
+            mensajeConflicto = null;
+            tokenActual = null;
+            tokenNuevo = null;
+
+            var candado = ObtenerCandadoGuardado(tipo, id);
+
+            lock (candado)
+            {
+                // El token se valida DENTRO del candado: nadie mas puede guardar
+                // este mantenimiento entre la validacion y el MERGE.
+                if (!ValidarTokenGuardado(tipo, id, tokenEsperado, out mensajeConflicto, out tokenActual))
+                    return null;
+
+                GlobalCommands.HanaProcedureResult resultado = null;
+
+                for (int intento = 1; intento <= 3; intento++)
+                {
+                    resultado = Logic.GlobalCommands.ExecuteProcedureHanaAuto(procedimiento, parametros);
+
+                    if (!EsErrorHana(resultado.JsonResult))
+                        break;
+
+                    bool esChoqueUnico =
+                        resultado.JsonResult.IndexOf("unique constraint", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        resultado.JsonResult.IndexOf("duplicate", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                    if (!esChoqueUnico || intento == 3)
+                        break;
+
+                    // El otro proceso ya inserto la fila: al reintentar se actualiza.
+                    System.Threading.Thread.Sleep(150 * intento);
+                }
+
+                // El token se lee dentro del candado para que corresponda exactamente
+                // a la version que acaba de guardar este usuario.
+                if (!EsErrorHana(resultado.JsonResult))
+                    tokenNuevo = LeerTokenActual(tipo, id);
+
+                return resultado;
+            }
+        }
+
+        /// <summary>
+        /// Devuelve el token vigente del tipo indicado ('RUTINA' u 'OT').
+        /// </summary>
+        private string LeerTokenActual(string tipo, string id)
+        {
+            int idMantenimiento;
+            if (!int.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out idMantenimiento))
+                return null;
+
+            var tokens = ObtenerTokensOT(idMantenimiento);
+
+            return string.Equals(tipo, "RUTINA", StringComparison.OrdinalIgnoreCase)
+                ? tokens.TokenRutina
+                : tokens.TokenOT;
+        }
+
+        /// <summary>
+        /// Valida que el registro siga en la version que el usuario abrio.
+        /// Token nulo o vacio = no valida (compatibilidad con clientes viejos).
+        /// </summary>
+        private bool ValidarTokenGuardado(string tipo, string id, string token, out string mensaje, out string tokenActual)
+        {
+            mensaje = null;
+            tokenActual = null;
+
+            if (string.IsNullOrWhiteSpace(token))
+                return true;
+
+            int idMantenimiento;
+            if (!int.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out idMantenimiento))
+                return true;
+
+            var parametros = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+            {
+                { "P_ID_MANTENIMIENTO", (idMantenimiento, ParameterDirection.Input, HanaDbType.Integer) },
+                { "P_TIPO", (tipo, ParameterDirection.Input, HanaDbType.NVarChar) },
+                { "P_TOKEN", (token, ParameterDirection.Input, HanaDbType.NVarChar) }
+            };
+
+            var resultado = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                Logic.AD.GCValidarTokenGuardado,
+                parametros
+            );
+
+            if (EsErrorHana(resultado.JsonResult))
+            {
+                mensaje = "No se pudo validar si la OT fue modificada. Intenta de nuevo.";
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(resultado.JsonResult) && resultado.JsonResult != "[]")
+            {
+                var filas = JArray.Parse(resultado.JsonResult);
+                if (filas.Count > 0)
+                {
+                    tokenActual = filas[0]["TOKEN_ACTUAL"]?.ToString();
+                    if (string.Equals(filas[0]["Estatus"]?.ToString(), "CONFLICTO", StringComparison.OrdinalIgnoreCase))
+                    {
+                        mensaje = filas[0]["Mensaje"]?.ToString();
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Lee los tokens de version de la OT y de su rutina.
+        /// </summary>
+        private (string TokenOT, string TokenRutina, bool RutinaExiste) ObtenerTokensOT(int idMantenimiento)
+        {
+            var parametros = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+            {
+                { "P_ID_MANTENIMIENTO", (idMantenimiento, ParameterDirection.Input, HanaDbType.Integer) }
+            };
+
+            var resultado = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                Logic.AD.GCObtenerTokensOT,
+                parametros
+            );
+
+            if (!string.IsNullOrEmpty(resultado.JsonResult) && resultado.JsonResult != "[]")
+            {
+                var filas = JArray.Parse(resultado.JsonResult);
+                if (filas.Count > 0)
+                {
+                    string tokenOT = filas[0]["TOKEN_OT"]?.ToString();
+                    string tokenRutina = filas[0]["TOKEN_RUTINA"]?.ToString();
+                    int existe = 0;
+                    int.TryParse(filas[0]["RUTINA_EXISTE"]?.ToString(), out existe);
+                    return (tokenOT, tokenRutina, existe > 0);
+                }
+            }
+
+            return (null, null, false);
         }
 
         /// <summary>
@@ -467,6 +645,24 @@ namespace MantenimientosPTM.Controllers
                 // 🔥 DETECTAR SI ES BORRADOR
                 bool esBorrador = !string.IsNullOrEmpty(datos.TipoOperacion) && datos.TipoOperacion.ToUpper() == "BORRADOR";
 
+                // CONTROL DE CONCURRENCIA: la OT debe seguir en la version que se abrio.
+                // Se valida antes de tocar firmas en disco para no pisar al otro usuario.
+                string mensajeConflicto;
+                string tokenActual;
+                if (!ValidarTokenGuardado(
+                        "OT",
+                        datos.IdMantenimiento.ToString(CultureInfo.InvariantCulture),
+                        datos.Token_OT,
+                        out mensajeConflicto,
+                        out tokenActual))
+                {
+                    jsonResponse.Status = "CONFLICTO";
+                    jsonResponse.Message = mensajeConflicto ?? "La OT fue modificada por otro usuario. Cierra y vuelve a abrir la OT para ver los cambios mas recientes.";
+                    jsonResponse.Token = tokenActual;
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+
                 // 🔥 PROCESAR Y GUARDAR FIRMAS DIGITALES
                 // Si es borrador: solo Realizo es obligatoria, Superviso y Mantenimiento son opcionales
                 // Si no es borrador: todas son obligatorias
@@ -549,7 +745,9 @@ namespace MantenimientosPTM.Controllers
                 excludedParams = new[]
                     {
                     "P_USUARIO",
-                    "P_TIPOOPERACION"
+                    "P_TIPOOPERACION",
+                    // Se usa solo para el control de concurrencia, no es parametro del SP
+                    "P_TOKEN_OT"
                     };
 
 
@@ -557,9 +755,18 @@ namespace MantenimientosPTM.Controllers
                     .Where(p => !excludedParams.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value);
                 // ✅ Ejecutar stored procedure
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                string mensajeConflictoGuardado;
+                string tokenActualGuardado;
+                string tokenNuevoOT;
+                var resultHana = EjecutarGuardadoProtegido(
                     Logic.AD.GCInsertaOrdenTrabajoMP,
-                    parameters
+                    parameters,
+                    "OT",
+                    datos.IdMantenimiento.ToString(CultureInfo.InvariantCulture),
+                    null, // ya se valido arriba, antes de guardar firmas
+                    out mensajeConflictoGuardado,
+                    out tokenActualGuardado,
+                    out tokenNuevoOT
                 );
 
                 if (resultHana.JsonResult.ToUpper().Contains("ERROR"))
@@ -614,6 +821,9 @@ namespace MantenimientosPTM.Controllers
                     jsonResponse.Status = "SI";
                     jsonResponse.Message = mensaje;
                     jsonResponse.Data = idOtDetalle;
+
+                    // Token nuevo de esta misma version (leido dentro del candado).
+                    jsonResponse.Token = tokenNuevoOT;
                 }
                 else
                 {
@@ -875,6 +1085,42 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
+        public JsonResult GetTokensOT(int idMantenimiento)
+        {
+            try
+            {
+                if (idMantenimiento <= 0)
+                {
+                    return Json(new
+                    {
+                        Status = "NO",
+                        TokenOT = (string)null,
+                        TokenRutina = (string)null,
+                        RutinaExiste = false
+                    }, JsonRequestBehavior.AllowGet);
+                }
+
+                var tokens = ObtenerTokensOT(idMantenimiento);
+
+                return Json(new
+                {
+                    Status = "SI",
+                    TokenOT = tokens.TokenOT,
+                    TokenRutina = tokens.TokenRutina,
+                    RutinaExiste = tokens.RutinaExiste
+                }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    Status = "ERROR",
+                    Message = ex.Message
+                }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        [HttpGet]
         public JsonResult ObtenerActividadesPorOTMP(string numeroOrden, DateTime? fechaInicio = null, DateTime? fechaFin = null)
         {
             try
@@ -940,6 +1186,7 @@ namespace MantenimientosPTM.Controllers
                 var IdOtDetalle = Request.Form["OrdenTrabajo"]; // Asegúrate de enviarlo desde el front
                 var Planta = Request.Form["Planta"]; // Asegúrate de enviarlo desde el front
                 var actividadesJson = Request.Form["actividades"];
+                var tokenRutina = Request.Form["tokenRutina"];
 
                 // Validar datos básicos
                 if (string.IsNullOrEmpty(idMantenimiento) || string.IsNullOrEmpty(actividadesJson))
@@ -999,10 +1246,29 @@ namespace MantenimientosPTM.Controllers
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosRutina, false, null);
 
                 // 🔥 EJECUTAR STORED PROCEDURE
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                string mensajeConflicto;
+                string tokenActual;
+                string tokenNuevo;
+                var resultHana = EjecutarGuardadoProtegido(
                     Logic.AD.GCGuardarRutinaMP, // Nombre de tu constante para el SP
-                    allparameters
+                    allparameters,
+                    "RUTINA",
+                    idMantenimiento,
+                    tokenRutina,
+                    out mensajeConflicto,
+                    out tokenActual,
+                    out tokenNuevo
                 );
+
+                if (resultHana == null)
+                {
+                    EliminarArchivosFisicos(rutasFisicasNuevas);
+                    jsonResponse.Status = "CONFLICTO";
+                    jsonResponse.Message = mensajeConflicto ?? "La rutina fue modificada por otro usuario. Cierra y vuelve a abrir la OT para ver los cambios mas recientes.";
+                    jsonResponse.Token = tokenActual;
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse);
+                }
 
                 if (EsErrorHana(resultHana.JsonResult))
                 {
@@ -1014,6 +1280,9 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 rutinaGuardada = true;
+
+                // Token nuevo de esta misma version (leido dentro del candado).
+                jsonResponse.Token = tokenNuevo;
 
                 // Validar si ya se completó la CARÁTULA Y LA RUTINA ONLINE.
                 // Si esta validación falla, la rutina ya quedó guardada: se devuelve éxito con advertencia.
@@ -1106,6 +1375,7 @@ namespace MantenimientosPTM.Controllers
                 var IdOtDetalle = Request.Form["OrdenTrabajo"];
                 var Planta = Request.Form["Planta"];
                 var actividadesJson = Request.Form["actividades"];
+                var tokenRutina = Request.Form["tokenRutina"];
                 var esBorrador = Request.Form["esBorrador"]; // 🔥 Flag para indicar borrador
                 var imagenesEliminadasJson = Request.Form["imagenesEliminadas"]; // 🔥 NUEVO: Lista de imágenes eliminadas
 
@@ -1192,10 +1462,29 @@ namespace MantenimientosPTM.Controllers
                 var allparameters = Logic.GlobalCommands.ConvertToHanaParameters(parametrosRutina, false, null);
 
                 // 🔥 EJECUTAR STORED PROCEDURE PARA BORRADOR (mismo SP existente)
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                string mensajeConflicto;
+                string tokenActual;
+                string tokenNuevo;
+                var resultHana = EjecutarGuardadoProtegido(
                     Logic.AD.GCGuardarRutinaMP,
-                    allparameters
+                    allparameters,
+                    "RUTINA",
+                    idMantenimiento,
+                    tokenRutina,
+                    out mensajeConflicto,
+                    out tokenActual,
+                    out tokenNuevo
                 );
+
+                if (resultHana == null)
+                {
+                    EliminarArchivosFisicos(rutasFisicasNuevas);
+                    jsonResponse.Status = "CONFLICTO";
+                    jsonResponse.Message = mensajeConflicto ?? "La rutina fue modificada por otro usuario. Cierra y vuelve a abrir la OT para ver los cambios mas recientes.";
+                    jsonResponse.Token = tokenActual;
+                    jsonResponse.Data = string.Empty;
+                    return Json(jsonResponse);
+                }
 
                 if (EsErrorHana(resultHana.JsonResult))
                 {
@@ -1207,6 +1496,9 @@ namespace MantenimientosPTM.Controllers
                 }
 
                 rutinaGuardada = true;
+
+                // Token nuevo de esta misma version (leido dentro del candado).
+                jsonResponse.Token = tokenNuevo;
 
                 // Solo después de guardar correctamente se eliminan las imágenes marcadas
                 int imagenesEliminadasCount = 0;

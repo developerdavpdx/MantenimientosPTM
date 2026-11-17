@@ -1139,6 +1139,17 @@ class MantenimientoManager {
         this.ID_EQUIPO_PDF = "";
         this.PLANTA_PDF = "";
         this.pdfTemporalRutina = null;
+
+        // 🔒 Candados anti-duplicado: una sola peticion de guardado a la vez
+        this._promesaGuardadoRutina = null;   // guardado normal o borrador en curso
+        this._guardandoOT = false;            // flujo completo de OT en curso
+
+        // 🔒 Tokens de version para detectar edicion concurrente (2 tecnicos)
+        this.TOKEN_OT = null;
+        this.TOKEN_RUTINA = null;             // 'NUEVO' cuando la rutina aun no existe
+        this.TOKEN_RUTINA_EXISTE = false;
+        this.TOKENES_CARGADOS = false;
+        this._conflictoGuardado = false;      // ya se mostro el aviso de edicion concurrente
     }
     // ============================
     // GUARDAR DATOS DEL BOTÓN
@@ -2698,6 +2709,9 @@ class MantenimientoManager {
             }
 
             // 🔥 Tipo operación
+            // 🔒 Guardar la version actual de la OT y su rutina para detectar concurrencia
+            await this.cargarTokensOT(data.idMantenimiento);
+
             this.TIPO_OPERACION = (data.estatusOrden == "4" ? "U" : "I");
 
             // ========================================
@@ -3637,6 +3651,14 @@ class MantenimientoManager {
         // ✅ Deshabilitar botón y mostrar loading
         $('#btnGuardarOT').html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando OT...').prop('disabled', true);
 
+        // 🔒 Evita que el flujo completo de OT se dispare dos veces
+        if (this._guardandoOT) {
+            console.warn('🛑 Ya hay un guardado de OT en curso; se ignora el segundo intento.');
+            return false;
+        }
+        this._conflictoGuardado = false;
+        this._guardandoOT = true;
+
         try {
             // 🔥 OBTENER DATOS DEL FORMULARIO
             const datos = GlobalUtil.obtenerDatosAnyFormulario("formOrdenMantenimiento");
@@ -3661,7 +3683,10 @@ class MantenimientoManager {
             const rutinaGuardada = await this.guardarRutina(datos.NumeroOrden, datos.EstatusOrden);
 
             if (!rutinaGuardada) {
-                AlertManager.mostrar('Complete las actividades pendientes antes de guardar continuar.', 'info', "alertOrdenContainer");
+                // Si fue conflicto de concurrencia, ya se mostro el aviso correspondiente
+                if (!this._conflictoGuardado) {
+                    AlertManager.mostrar('Complete las actividades pendientes antes de guardar continuar.', 'info', "alertOrdenContainer");
+                }
                 $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
                 return false;
             }
@@ -3714,8 +3739,12 @@ class MantenimientoManager {
 
         } catch (error) {
             console.error('Error en el proceso:', error);
-            AlertManager.mostrar('No es posible guardar la orden de trabajo: ' + error, 'warning', "alertOrdenContainer");
+            if (!this._conflictoGuardado) {
+                AlertManager.mostrar('No es posible guardar la orden de trabajo: ' + error, 'warning', "alertOrdenContainer");
+            }
             $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+        } finally {
+            this._guardandoOT = false;
         }
 
         return false;
@@ -3739,6 +3768,14 @@ class MantenimientoManager {
 
         // ✅ Deshabilitar botón y mostrar loading
         $('#btnGuardarBorrador').html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando Borrador...').prop('disabled', true);
+
+        // 🔒 Evita que el flujo de borrador se dispare dos veces
+        if (this._guardandoOT) {
+            console.warn('🛑 Ya hay un guardado en curso; se ignora el segundo intento.');
+            return false;
+        }
+        this._conflictoGuardado = false;
+        this._guardandoOT = true;
 
         try {
             // 🔥 OBTENER SOLO LOS DATOS DISPONIBLES (sin validaciones)
@@ -3805,8 +3842,12 @@ class MantenimientoManager {
 
         } catch (error) {
             console.error('Error en guardarBorrador:', error);
-            AlertManager.mostrar('No es posible guardar el borrador: ' + error, 'warning', "alertOrdenContainer");
+            if (!this._conflictoGuardado) {
+                AlertManager.mostrar('No es posible guardar el borrador: ' + error, 'warning', "alertOrdenContainer");
+            }
             $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+        } finally {
+            this._guardandoOT = false;
         }
 
         return false;
@@ -3866,6 +3907,8 @@ class MantenimientoManager {
     // 🔥 MÉTODO SEPARADO PARA GUARDAR EL BORRADOR (también async)
     async guardarBorradorDefinitivo(datos) {
         let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+        // Token de version: si otro usuario guardo la OT, el servidor responde CONFLICTO
+        datos.Token_OT = this.TOKEN_OT;
         return new Promise((resolve, reject) => {
             $.ajax({
                 url: `/${this.URLBase}/InsertarOrdenTrabajoMP`,
@@ -3878,7 +3921,25 @@ class MantenimientoManager {
                 data: JSON.stringify(datos),
                 dataType: 'json',
                 success: (response) => {
+                    if (response && response.Status === 'CONFLICTO') {
+                        AlertManager.mostrar(
+                            response.Message || 'La OT fue modificada por otro usuario. Cierra y vuelve a abrir la OT.',
+                            'warning',
+                            "alertOrdenContainer"
+                        );
+                        this._conflictoGuardado = true;
+                        $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+                        if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+                            $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                        }
+                        reject(false);
+                        return;
+                    }
+
                     if (response.Status === 'SI') {
+                        // Mantener el token al dia para que el borrador pueda seguir guardando
+                        if (response.Token) this.TOKEN_OT = response.Token;
+
                         AlertManager.mostrar(
                             'Borrador guardado correctamente. Puede continuar editando o cerrar.',
                             'success',
@@ -3909,6 +3970,8 @@ class MantenimientoManager {
 
     async guardarOTDefinitivo(datos) {
         let TipoUsuario = this.datos_usuario[0].TIPOUSUARIO;
+        // Token de version: si otro usuario guardo la OT, el servidor responde CONFLICTO
+        datos.Token_OT = this.TOKEN_OT;
         return new Promise((resolve, reject) => {
             $.ajax({
                 url: `/${this.URLBase}/InsertarOrdenTrabajoMP`,
@@ -3921,7 +3984,25 @@ class MantenimientoManager {
                 data: JSON.stringify(datos), // ✅ Convierte todo a JSON
                 dataType: 'json',
                 success: (response) => {
+                    if (response && response.Status === 'CONFLICTO') {
+                        AlertManager.mostrar(
+                            response.Message || 'La OT fue modificada por otro usuario. Cierra y vuelve a abrir la OT.',
+                            'warning',
+                            "alertOrdenContainer"
+                        );
+                        this._conflictoGuardado = true;
+                        $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                        // Refrescar la tabla para ver la version mas reciente
+                        if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+                            $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                        }
+                        reject(false);
+                        return;
+                    }
+
                     if (response.Status === 'SI') {
+                        if (response.Token) this.TOKEN_OT = response.Token;
+
                         AlertManager.mostrar(
                             response.Message,
                             'success',
@@ -4169,6 +4250,39 @@ class MantenimientoManager {
             });
         });
 
+    }
+
+    // ============================
+    // TOKENS DE VERSION (CONCURRENCIA)
+    // ============================
+    async cargarTokensOT(idMantenimiento) {
+        this.TOKENES_CARGADOS = false;
+        this.TOKEN_OT = null;
+        this.TOKEN_RUTINA = null;
+        this.TOKEN_RUTINA_EXISTE = false;
+
+        const id = parseInt(idMantenimiento, 10);
+        if (!id || isNaN(id)) return;
+
+        try {
+            const resp = await $.ajax({
+                url: `/${this.URLBase}/GetTokensOT`,
+                type: 'GET',
+                data: { idMantenimiento: id },
+                dataType: 'json'
+            });
+
+            if (resp && resp.Status === 'SI') {
+                this.TOKEN_OT = resp.TokenOT || null;
+                this.TOKEN_RUTINA_EXISTE = !!resp.RutinaExiste;
+                this.TOKEN_RUTINA = this.TOKEN_RUTINA_EXISTE
+                    ? (resp.TokenRutina || null)
+                    : 'NUEVO';
+                this.TOKENES_CARGADOS = true;
+            }
+        } catch (e) {
+            console.warn('No se pudieron cargar los tokens de la OT:', e);
+        }
     }
 
     ConsultarActividadesPorOTMP(numeroOrden, idEquipo, Planta, ComentariosRutina) {
@@ -4426,7 +4540,14 @@ class MantenimientoManager {
     }
 
     async guardarRutina(OrdenTrabajo, EstatusOrden) {
-        return new Promise((resolve, reject) => {
+        // 🔒 Si ya hay un guardado en curso, reutilizamos esa misma promesa
+        // para no lanzar una segunda peticion (causa de rutinas duplicadas).
+        if (this._promesaGuardadoRutina) {
+            console.warn('🛑 Ya hay un guardado de rutina en curso; se reutiliza la peticion existente.');
+            return this._promesaGuardadoRutina;
+        }
+
+        const promesa = new Promise((resolve, reject) => {
             // ✅ NUEVA LÓGICA: Si hay PDF de rutina (rutina default), no validar actividades
             const esRutinaDefault = $('#esRutinaDefault').length > 0;
             const tienePdf = this.pdfTemporalRutina !== null || ($('#seccionPdfRutina').is(':visible') && $('#pdfViewerContainer').is(':visible'));
@@ -4462,8 +4583,9 @@ class MantenimientoManager {
             formData.append('comentarios', comentarios);
             formData.append('actividades', JSON.stringify(respuestas));
             formData.append('usuarioRegistro', this.datos_usuario[0].EMAIL);
-            formData.append('OrdenTrabajo', OrdenTrabajo);
+            formData.append('OrdenTrabajo', OrdenTrabajo || $('#NumeroOrden').val());
             formData.append('Planta', this.datos_usuario[0].PLANTA);
+            formData.append('tokenRutina', this.TOKEN_RUTINA || '');
 
             // 🔥 AGREGAR IMÁGENES
             const files = window.imagenesRutina || [];
@@ -4485,8 +4607,24 @@ class MantenimientoManager {
                     $("#btnGuardarRutina").html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
                     $("#btnGuardarRutina").prop("disabled", true);
                 },
-                success: function (response) {
+                success: (response) => {
+                    if (response && response.Status === 'CONFLICTO') {
+                        AlertManager.mostrar(
+                            response.Message || 'La OT fue modificada por otro usuario. Cierra y vuelve a abrir la OT.',
+                            'warning',
+                            'alertOrdenContainer'
+                        );
+                        this._conflictoGuardado = true;
+                        $("#btnGuardarRutina").html('<i class="bi bi-check2-circle me-1"></i>Guardar Rutina');
+                        $("#btnGuardarRutina").prop("disabled", false);
+                        resolve(false);
+                        return;
+                    }
+
                     if (response && response.Status === 'SI') {
+                        // Actualizar el token para el siguiente guardado de esta sesion
+                        if (response.Token) this.TOKEN_RUTINA = response.Token;
+                        this.TOKEN_RUTINA_EXISTE = true;
                         $("#btnGuardarRutina").html('<i class="bi bi-check-circle-fill me-2 text-success"></i>Rutina guardada correctamente.');
                         $("#btnGuardarRutina").prop("disabled", false);
 
@@ -4518,11 +4656,23 @@ class MantenimientoManager {
                 }
             });
         });
+        this._promesaGuardadoRutina = promesa;
+        promesa.finally(() => {
+            if (this._promesaGuardadoRutina === promesa) this._promesaGuardadoRutina = null;
+        });
+
+        return promesa;
     }
 
     // 🔥 NUEVO: Método para guardar rutina en BORRADOR (validación relajada)
     async guardarRutinaParaBorrador(OrdenTrabajo, EstatusOrden) {
-        return new Promise((resolve, reject) => {
+        // 🔒 Mismo candado que el guardado normal
+        if (this._promesaGuardadoRutina) {
+            console.warn('🛑 Ya hay un guardado de rutina en curso; se reutiliza la peticion existente.');
+            return this._promesaGuardadoRutina;
+        }
+
+        const promesa = new Promise((resolve, reject) => {
             // ✅ MISMA LÓGICA: Si hay PDF de rutina (rutina default), no validar actividades
             const esRutinaDefault = $('#esRutinaDefault').length > 0;
             const tienePdf = this.pdfTemporalRutina !== null || ($('#seccionPdfRutina').is(':visible') && $('#pdfViewerContainer').is(':visible'));
@@ -4560,8 +4710,9 @@ class MantenimientoManager {
             formData.append('comentarios', comentarios);
             formData.append('actividades', JSON.stringify(respuestas));
             formData.append('usuarioRegistro', this.datos_usuario[0].EMAIL);
-            formData.append('OrdenTrabajo', OrdenTrabajo);
+            formData.append('OrdenTrabajo', OrdenTrabajo || $('#NumeroOrden').val());
             formData.append('Planta', this.datos_usuario[0].PLANTA);
+            formData.append('tokenRutina', this.TOKEN_RUTINA || '');
             formData.append('esBorrador', 'true'); // 🔥 Flag para indicar que es borrador
 
             // 🔥 AGREGAR IMÁGENES NUEVAS
@@ -4591,13 +4742,28 @@ class MantenimientoManager {
                 beforeSend: function () {
                     // No mostramos loading aquí porque se guarda en background
                 },
-                success: function (response) {
+                success: (response) => {
+                    if (response && response.Status === 'CONFLICTO') {
+                        AlertManager.mostrar(
+                            response.Message || 'La OT fue modificada por otro usuario. Cierra y vuelve a abrir la OT.',
+                            'warning',
+                            'alertOrdenContainer'
+                        );
+                        this._conflictoGuardado = true;
+                        resolve(false);
+                        return;
+                    }
+
                     if (!response || response.Status !== 'SI') {
                         AlertManager.mostrar(
                             (response && response.Message) || 'No se pudo guardar el borrador de la rutina',
                             'warning',
                             'alertOrdenContainer'
                         );
+                    } else {
+                        // Actualizar el token para el siguiente guardado de esta sesion
+                        if (response.Token) this.TOKEN_RUTINA = response.Token;
+                        this.TOKEN_RUTINA_EXISTE = true;
                     }
                     // El borrador es best-effort: no bloqueamos el flujo si falla.
                     resolve(true);
@@ -4610,6 +4776,13 @@ class MantenimientoManager {
                 }
             });
         });
+
+        this._promesaGuardadoRutina = promesa;
+        promesa.finally(() => {
+            if (this._promesaGuardadoRutina === promesa) this._promesaGuardadoRutina = null;
+        });
+
+        return promesa;
     }
 
     obtenerRespuestasRutina() {

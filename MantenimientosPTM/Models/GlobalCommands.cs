@@ -797,6 +797,8 @@ namespace MantenimientosPTM
             public string Message { get; set; }
             public string Data { get; set; }
             public JArray DataArray { get; set; }
+            // Token de version (FECHA_ULT_MOD) para el control de concurrencia.
+            public string Token { get; set; }
         }
         #endregion
 
