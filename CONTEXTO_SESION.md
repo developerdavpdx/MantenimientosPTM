@@ -1185,3 +1185,4 @@ Antes: 31 días ~14–23 s (y sin índices el SP solo tomaba 16.6 s).
 - Los índices son en SQL Server (NWSCALE), no en HANA Cloud.
 - El SP batch es cloud-only; `SpPdxMTTOBuscarArticulos` se conserva para el autocompletado.
 - Si el rango inicia hoy, se usa la lógica de un día (el `@Corte = 4` del SP solo aplica a fechas pasadas).
+- El `@Corte = 4` devuelve un **resumen por producto/línea para todo el rango**; es el comportamiento esperado del portal NWSCALE.

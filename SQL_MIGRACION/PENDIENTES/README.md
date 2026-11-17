@@ -13,6 +13,9 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 
 - `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql`
 - `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql`
+- `DBADMIN/PRODUCCION/SpPdxMTTOBuscarArticulosBatch.sql`
+- `NWSCALE/20261117_INDICES_NWSCALE.sql`
+- `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
 
 Motivo: los SPs `SpPdxMTTOGetArticuloSalidaM` y `SpPdxMTTOGetSalidasPorOT`
 deben devolver `CostoPromedio` (`OITM.AvgPrice`) para que la devolución a SAP
@@ -58,7 +61,7 @@ modal lo muestre antes de confirmar.
 - Endpoint `GetProductoTerminadoNewScale` en ~1–2 s para un rango de 31 días.
 - El grid muestra los pendientes de NWSCALE.
 
-### Nota importante
+### Comportamiento esperado
 
-- `@Corte = 4` devuelve un **resumen por producto/línea para todo el rango** (totales sumados y fecha más reciente), **no una fila por día**.
-- Si el grid requiere una fila por día, se debe cambiar a la estrategia día por día (con los índices nuevos, cada día tarda ~0.1–0.6 s).
+- `@Corte = 4` devuelve un **resumen por producto/línea para todo el rango** (totales sumados y fecha más reciente). **Este es el comportamiento esperado**: el portal de NWSCALE muestra el resumen del rango así.
+- Si en el futuro se requiere una fila por día, se puede cambiar a la estrategia día por día (con los índices nuevos, cada día tarda ~0.1–0.6 s).
