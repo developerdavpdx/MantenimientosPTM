@@ -511,6 +511,25 @@
      de NWSCALE.
 
 
+24) OHEM Y @PDX_* ACTUALIZADAS DESDE ON-PREM (17/11/2026)
+   - OHEM recreada: 145 columnas / 445 filas (antes 448 / 146).
+     Se elimino U_PDX_MODULO; indices OHEM_OUSR/OSLP/NAME recreados.
+     Login SPPDX_LOGIN OK; BuscarEmpleados 88 filas.
+   - @PDX_NOTIFICACIONES: 6 columnas / 21 filas (antes 1 / 5).
+     Incluye U_PDX_ORDEN_TRABAJO; indice KPDX_NOTIFICACIONES_NAME.
+     GetUsuariosXPlanta(1, NULL, 334) devuelve 1 fila.
+   - @PDX_CAPPROD: 7 columnas / 3,218 filas (antes 2,561).
+     U_PDX_CODART NVARCHAR(30); indice KPDX_CAPPROD_NAME.
+     BuscarArticulos 400 filas; GetCapacidadPorArticulo OK.
+   - Codigo muerto: se elimino el SP SpPdxMTTOGetEmailsEmpleadosXModulo,
+     la propiedad GCGetEmailsEmpleadosXModulo y el bloque comentado
+     en AlmacenController (commit ebd9a7d).
+   - Respaldos de datos en MIGRATION\OHEM_BACKUP_20261117 y
+     MIGRATION\PDX_TABLES_BACKUP_20261117; rollback documentado.
+   - Tablas _BAK_20261117 eliminadas despues de validar.
+   - Pendiente: publicar el DLL actualizado.
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================

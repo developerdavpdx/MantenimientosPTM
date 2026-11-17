@@ -1095,3 +1095,48 @@ Todo en `...\EXPORT DBADMIN 2026-11-13\MIGRATION\`:
 - [ ] Copiar los valores de `OHEM.U_PDX_MODULO` desde on-premise si se usa el filtro de correos por módulo.
 - [ ] Ajustar el endpoint de NWSCALE para que recorra todo el rango de fechas (hoy solo usa la Fecha Inicio).
 - [ ] En on-premise siguen existiendo los 2 SPs y la tabla legacy eliminados en cloud (opcional limpiarlos también).
+
+## 24. Sesión 17/11/2026 — Actualización de OHEM y tablas @PDX_* desde on-premise
+
+### Objetivo
+
+Refrescar en `DBADMIN` las tablas SAP de empleados (`OHEM`) y las tablas de notificaciones/artículos (`@PDX_NOTIFICACIONES`, `@PDX_CAPPROD`) con el DDL y datos actuales de `PTM_2022_FINAL`.
+
+### OHEM
+
+- Recreada desde el DDL on-prem: **145 columnas**, **445 filas** (antes 448 filas / 146 columnas).
+- Se eliminó la columna `U_PDX_MODULO` (ya no existe en on-prem).
+- Índices recreados: `OHEM_OUSR`, `OHEM_OSLP`, `OHEM_NAME`.
+- Validación: `SPPDX_LOGIN` con usuario real → status 200; `SpPdxMTTOBuscarEmpleados` → 88 filas.
+- Respaldo previo: `OHEM_BACKUP_20261117\OHEM_DATA_BACKUP.csv` (448 filas).
+
+### @PDX_NOTIFICACIONES
+
+- Recreada desde on-prem: **6 columnas** (incluye `U_PDX_ORDEN_TRABAJO`) y **21 filas** (antes 1 fila / 5 columnas).
+- Índice único `KPDX_NOTIFICACIONES_NAME`.
+- Validación: `SpPdxMTTOGetUsuariosXPlanta(1, NULL, 334)` → 1 fila (MARIA SAAVEDRA SEGURA).
+
+### @PDX_CAPPROD
+
+- Recreada desde on-prem: **7 columnas** (`U_PDX_CODART` ahora `NVARCHAR(30)`) y **3,218 filas** (antes 2,561).
+- Índice único `KPDX_CAPPROD_NAME`.
+- Validación: `SpPdxMTTOBuscarArticulos` → 400 filas; `SpPdxGetCapacidadPorArticulo('5P11S10X10')` → 2 filas.
+
+### Limpieza de código muerto
+
+- Se eliminó el SP `SpPdxMTTOGetEmailsEmpleadosXModulo` (usaba `U_PDX_MODULO`).
+- Se eliminó la propiedad `GCGetEmailsEmpleadosXModulo` y el bloque comentado en `AlmacenController`.
+- Commit `ebd9a7d`.
+
+### Respaldos y rollback
+
+- Respaldos de datos en:
+  - `MIGRATION\OHEM_BACKUP_20261117\OHEM_DATA_BACKUP.csv`
+  - `MIGRATION\PDX_TABLES_BACKUP_20261117\PDX_NOTIFICACIONES_DATA_BACKUP.csv`
+  - `MIGRATION\PDX_TABLES_BACKUP_20261117\PDX_CAPPROD_DATA_BACKUP.csv`
+- Instrucciones de rollback en los `ROLLBACK.txt` de cada carpeta.
+- Tablas `_BAK_20261117` eliminadas después de validar (0 restantes).
+
+### Pendiente
+
+- [ ] Publicar el DLL actualizado (commit `ebd9a7d`).
