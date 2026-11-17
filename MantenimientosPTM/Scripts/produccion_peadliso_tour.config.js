@@ -54,7 +54,7 @@ $(document).ready(function () {
             {
                 selector: '#chkIncluirNWSCALE',
                 title: 'Incluir productos pendientes de NWSCALE',
-                text: 'Déjalo marcado (viene así por defecto) si quieres que la búsqueda también traiga los registros de producto terminado pendientes de NEWSCALE para el mismo rango de fechas y turno. Los que ya existan se actualizan y no se duplican.',
+                text: 'Déjalo marcado (viene así por defecto) si quieres que la búsqueda también traiga los registros de producto terminado pendientes de NEWSCALE para el mismo rango de fechas y turno. Para varios días, NWSCALE muestra un resumen por producto/línea del rango, no una fila por día. Los que ya existan se actualizan y no se duplican.',
                 position: 'bottom',
                 requiresPanel: '#colapseFiltros'
             },

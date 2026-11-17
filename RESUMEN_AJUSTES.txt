@@ -537,6 +537,8 @@
    - Se creo SpPdxMTTOBuscarArticulosBatch(P_PLANTA) y se reemplazaron las
      llamadas por fila a SpPdxMTTOBuscarArticulos por un diccionario en
      memoria (una sola llamada a HANA).
+   - Scripts del SP batch: SQL_MIGRACION\PENDIENTES\DBADMIN y
+     PTM_2022_FINAL.
    - Indices SQL Server: IX_PT_Fecha_Planta_Linea, IX_PT_Linea_Fecha,
      IX_PT_Turno_Fecha_Planta_Linea, IX_EnvioScraps_Fecha_Planta_Linea.
      Script: MIGRATION\SQLSERVER_INDEXES_NWSCALE.sql.

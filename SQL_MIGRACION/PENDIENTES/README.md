@@ -14,6 +14,8 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 - `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql`
 - `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql`
 - `DBADMIN/PRODUCCION/SpPdxMTTOBuscarArticulosBatch.sql`
+- `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_CREATE.sql`
+- `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_ALTER.sql`
 - `NWSCALE/20261117_INDICES_NWSCALE.sql`
 - `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
 
@@ -34,6 +36,15 @@ modal lo muestre antes de confirmar.
 - `DBADMIN/PRODUCCION/SpPdxMTTOBuscarArticulosBatch.sql`
   - Crea/reemplaza el SP batch de artículos (una sola llamada para `KgsDia`/`PesoMinimo`).
   - Verificación: `CALL "DBADMIN"."SpPdxMTTOBuscarArticulosBatch"('1');`
+
+### On-premise (`PTM_2022_FINAL`)
+
+- `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_CREATE.sql`
+  - Primera creación del SP en on-premise.
+- `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_ALTER.sql`
+  - Usar si el SP ya existe (re-aplicación). En on-premise `CREATE OR REPLACE` no funciona; usar `ALTER PROCEDURE`.
+- Verificación: `CALL "PTM_2022_FINAL"."SpPdxMTTOBuscarArticulosBatch"('1');`
+- **Importante:** el C# resuelve el schema desde `AppSettings["Database"]`. El SP debe existir en el schema al que apunta el portal: `DBADMIN` (cloud) o `PTM_2022_FINAL` (on-premise).
 
 ### SQL Server NWSCALE (`PtmNwScale2`)
 
