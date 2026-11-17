@@ -23,3 +23,42 @@ modal lo muestre antes de confirmar.
 
 - En **TEST_JUNIO_2026** y **PTM_2022_FINAL** usar siempre **`ALTER PROCEDURE`**.
 - **`CREATE OR REPLACE PROCEDURE` no funciona en on-premise**; solo se usa en HANA Cloud (`DBADMIN`).
+
+## Pendientes 2026-11-17 — NWSCALE / DBADMIN (Tiempos Muertos)
+
+### HANA Cloud (`DBADMIN`)
+
+- `DBADMIN/PRODUCCION/SpPdxMTTOBuscarArticulosBatch.sql`
+  - Crea/reemplaza el SP batch de artículos (una sola llamada para `KgsDia`/`PesoMinimo`).
+  - Verificación: `CALL "DBADMIN"."SpPdxMTTOBuscarArticulosBatch"('1');`
+
+### SQL Server NWSCALE (`PtmNwScale2`)
+
+- `NWSCALE/20261117_INDICES_NWSCALE.sql`
+  - Crea los índices de `ProductoTerminados` y `EnvioScraps`. Incluye rollback al final.
+  - Índices: `IX_PT_Fecha_Planta_Linea`, `IX_PT_Linea_Fecha`, `IX_PT_Turno_Fecha_Planta_Linea`, `IX_EnvioScraps_Fecha_Planta_Linea`.
+- `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
+  - **Solo pruebas.** Inserta 15 registros del 15–17/11/2026 en `ProductoTerminados`.
+  - Borrar: `DELETE FROM dbo.ProductoTerminados WHERE OrdenFabricacion = 'TEST-NWSCALE-20261117';`
+
+### Código
+
+- Publicar el DLL con los cambios de `ProduccionController` y `AccesoDatosPlaneacion` (commit `6e23f34`).
+
+### Orden de aplicación
+
+1. HANA Cloud: `SpPdxMTTOBuscarArticulosBatch.sql`.
+2. SQL Server: `20261117_INDICES_NWSCALE.sql`.
+3. (Opcional, solo pruebas) `20261117_TEST_DATA_NWSCALE.sql`.
+4. Publicar el DLL.
+
+### Verificación
+
+- `CALL "DBADMIN"."SpPdxMTTOBuscarArticulosBatch"('1');` devuelve datos.
+- Endpoint `GetProductoTerminadoNewScale` en ~1–2 s para un rango de 31 días.
+- El grid muestra los pendientes de NWSCALE.
+
+### Nota importante
+
+- `@Corte = 4` devuelve un **resumen por producto/línea para todo el rango** (totales sumados y fecha más reciente), **no una fila por día**.
+- Si el grid requiere una fila por día, se debe cambiar a la estrategia día por día (con los índices nuevos, cada día tarda ~0.1–0.6 s).
