@@ -173,14 +173,6 @@ namespace MantenimientosPTM
             }
         }
 
-        public string GCGetEmailsEmpleadosXModulo
-        {
-            get
-            {
-                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOGetEmailsEmpleadosXModulo\"";
-            }
-        }
-
         public string GCGetUsuariosXPlanta
         {
             get

@@ -2069,21 +2069,6 @@ namespace MantenimientosPTM.Controllers
                         emails.Add(itemEmail["Email"].ToString());
                     }
 
-                    //var paramsEmails = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                    //{
-                    //    { "P_MODULO", ("AuthSolCompra", ParameterDirection.Input, HanaDbType.NVarChar) }
-                    //};
-                    //var resultEmails = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    //    Logic.AD.GCGetEmailsEmpleadosXModulo, paramsEmails
-                    //);
-
-                    //List<string> emails = new List<string>();
-                    //if (!resultEmails.JsonResult.ToString().Contains("ERROR") && resultEmails.JsonResult.ToString() != "[]")
-                    //{
-                    //    var emailsData = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(resultEmails.JsonResult.ToString());
-                    //    emails = emailsData.Select(e => e["EMAIL"].ToString()).ToList();
-                    //}
-
                     if (emails.Count == 0)
                         throw new Exception("No se encontraron destinatarios para el correo.");
 
