@@ -377,7 +377,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             if ($('#chkIncluirNWSCALE').is(':checked')) {
                 const turnoNWSCALE = FiltroTurno || '0'; // "Todos" = 0 (día completo)
                 const productosTerminados = await this.ObtenerProductoTerminado(FiltroFechaInicio, FiltroFechaFin, turnoNWSCALE, 'PPEADLISO');
-                seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, FiltroTurno, false);
+                seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, turnoNWSCALE, false);
             }
 
 
@@ -1943,7 +1943,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             if (!productosTerminados || productosTerminados.length === 0) {
                 if (showwarning)
                     AlertManager.mostrar(
-                        `No se encontraron productos terminados para los filtros seleccionados del turno: ${filtroTurno || 'de acuerdo a la hora actual'}`,
+                        `No se encontraron productos terminados para los filtros seleccionados del turno: ${(!filtroTurno || filtroTurno == "0") ? "Todos los turnos" : filtroTurno}`,
                         "warning"
                     );
                 return false;
@@ -2073,7 +2073,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
             if (filasActualizadas.length > 0) {
                 AlertManager.mostrar(
-                    `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${filtroTurno == "0" ? "Reporte del dia" : filtroTurno || 'de acuerdo a la hora actual'} con información reciente en el grid`,
+                    `🔄 Se actualizaron ${filasActualizadas.length} registro(s) existente(s) del turno: ${(!filtroTurno || filtroTurno == "0") ? "Todos los turnos" : filtroTurno} con información reciente en el grid`,
                     "info"
                 );
             }
@@ -2082,7 +2082,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 this.gridApi.applyTransaction({ add: filasNuevas });
 
                 AlertManager.mostrar(
-                    `✅ Se agregaron ${filasNuevas.length} productos terminados al grid del turno: ${filtroTurno == '0' ? 'Reporte del dia' : filtroTurno || 'de acuerdo a la hora actual'}`,
+                    `✅ Se agregaron ${filasNuevas.length} productos terminados al grid del turno: ${(!filtroTurno || filtroTurno == "0") ? "Todos los turnos" : filtroTurno}`,
                     "info"
                 );
 
