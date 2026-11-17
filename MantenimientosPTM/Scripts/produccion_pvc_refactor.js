@@ -297,6 +297,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             let FiltroLinea = $("#FiltroLinea").val() || null;
             let FiltroTurno = $("#FiltroTurno").val() || null;
             let FiltroProducto = $("#FiltroProducto").val() || '';
+            $("#mesActual").text(this.formatearRangoFechas(FiltroFechaInicio, FiltroFechaFin));
 
             const response = await $.ajax({
                 url: `/${this.URLBase}/GetTiemposMuertosPVC`,
