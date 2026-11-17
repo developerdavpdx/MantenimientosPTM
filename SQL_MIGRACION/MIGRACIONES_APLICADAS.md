@@ -90,7 +90,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
   - `APLICADOS/PTM_2022_FINAL/PREVENTIVOS/` (4 scripts).
   - `APLICADOS/TEST_JUNIO_2026/PREVENTIVOS/` (4 scripts).
 - **C# / JS:** `MantenimientosPreventivosController.cs`, `AccesoDatosMantenimientosPreventivos.cs`, `GlobalCommands.cs`, `mantenimientos_preventivos_refactor.js`.
-- **Estado:** aplicado/validado en DBADMIN, PTM_2022_FINAL y TEST_JUNIO_2026 el 17/11/2026. DLL + JS publicados en `MantenimientosRelease` (publicacion en caliente) el 17/11/2026.
+- **Estado:** aplicado/validado en DBADMIN, PTM_2022_FINAL y TEST_JUNIO_2026 el 17/11/2026. DLL + JS publicados en `MantenimientosRelease` y `MantenimientosTest` (publicacion en caliente) el 17/11/2026.
 
 ## Obsoletos
 
