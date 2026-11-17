@@ -76,3 +76,9 @@ modal lo muestre antes de confirmar.
 
 - `@Corte = 4` devuelve un **resumen por producto/línea para todo el rango** (totales sumados y fecha más reciente). **Este es el comportamiento esperado**: el portal de NWSCALE muestra el resumen del rango así.
 - Si en el futuro se requiere una fila por día, se puede cambiar a la estrategia día por día (con los índices nuevos, cada día tarda ~0.1–0.6 s).
+
+## Aplicados recientes
+
+- **2026-11-17 - PREVENTIVOS:** indices unicos, SP de rutina atomico y control de concurrencia aplicados en `DBADMIN` y `PTM_2022_FINAL`.
+  Scripts en `APLICADOS/DBADMIN/PREVENTIVOS/` y `APLICADOS/PTM_2022_FINAL/PREVENTIVOS/`.
+  Detalle en `MIGRACIONES_APLICADAS.md`.

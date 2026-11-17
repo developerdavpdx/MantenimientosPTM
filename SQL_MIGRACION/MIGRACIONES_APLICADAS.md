@@ -78,6 +78,19 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 - **Validación:** el usuario de Miguel ahora ve OTMP-014, 015, 016 y 017.
 - **Estado:** **resuelto/aplicado** en TEST_JUNIO_2026 (y PTM_2022_FINAL si aplicaba), confirmado por el usuario el 12/11/2026.
 
+### 6. Preventivos - rutinas duplicadas y edicion concurrente (2026-11-17)
+- **Problema:** `PdxMTTORutinasMP` tenia 2 filas con el mismo `ID_MANTENIMIENTO`; el `LEFT JOIN` del SP de rango duplicaba la OT en el grid. Ademas, dos tecnicos podian guardar la misma OT y el segundo pisaba al primero.
+- **Solucion:**
+  - Indices `UNIQUE` en `ID_MANTENIMIENTO` de `PdxMTTORutinasMP` y `PdxMTTOOrdenesTrabajoMP`.
+  - `SpPdxMTTOGuardarRutinaMP` con `MERGE` atomico (ya no `IF EXISTS/INSERT/UPDATE`).
+  - Control de concurrencia optimista con `FECHA_ULT_MOD`: `SpPdxMTTOObtenerTokensOT` + `SpPdxMTTOValidarTokenGuardado`.
+  - Portal: candado por mantenimiento, validacion dentro del candado y respuesta `CONFLICTO` sin sobrescribir.
+- **Scripts aplicados:**
+  - `APLICADOS/DBADMIN/PREVENTIVOS/` (4 scripts).
+  - `APLICADOS/PTM_2022_FINAL/PREVENTIVOS/` (4 scripts).
+- **C# / JS:** `MantenimientosPreventivosController.cs`, `AccesoDatosMantenimientosPreventivos.cs`, `GlobalCommands.cs`, `mantenimientos_preventivos_refactor.js`.
+- **Estado:** DBADMIN aplicado/validado; PTM_2022_FINAL aplicado por el usuario el 17/11/2026. Pendiente publicar DLL + JS.
+
 ## Obsoletos
 
 En `OBSOLETO/`:
