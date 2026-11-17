@@ -60,6 +60,14 @@ namespace MantenimientosPTM
             }
         }
 
+        public string GCBuscarArticulosBatch
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOBuscarArticulosBatch\"";
+            }
+        }
+
         public string GCGetUsuariosXPlanta
         {
             get

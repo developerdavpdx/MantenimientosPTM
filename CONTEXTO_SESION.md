@@ -1140,3 +1140,48 @@ Refrescar en `DBADMIN` las tablas SAP de empleados (`OHEM`) y las tablas de noti
 ### Pendiente
 
 - [ ] Publicar el DLL actualizado (commit `ebd9a7d`).
+
+## 25. Sesión 17/11/2026 — NWSCALE: soporte de rangos multi-día y optimización
+
+### Problema
+
+El endpoint `GetProductoTerminadoNewScale` solo usaba `FechaInicio` y armaba una ventana de un día. Para rangos multi-día solo traía el primer día.
+
+### Cambios
+
+- `ProduccionController.GetProductoTerminadoNewScale`:
+  - Si `FechaFin > FechaInicio` y el rango inicia antes de hoy, usa `@Corte = 4` y manda el rango completo:
+    - `TurnoStar = FechaInicio 04:30:01`
+    - `TurnoEnd = FechaFin + 1 día 04:30`
+    - Scrap: `FechaInicio 05:45:01` → `FechaFin + 1 día 05:45`
+  - `turno = NULL` para todos, o 1/2 para turno específico.
+  - Se mantiene la lógica de un día para rangos de un solo día o que inician hoy.
+- Se creó el SP cloud-only `SpPdxMTTOBuscarArticulosBatch(P_PLANTA)` que devuelve en una sola llamada `Codigo`, `Linea`, `KgsDia`, `PesoMinimo`.
+- Se reemplazaron las llamadas a `SpPdxMTTOBuscarArticulos` por fila por un diccionario en memoria (una sola llamada batch).
+- Se agregó `GCBuscarArticulosBatch` en `AccesoDatosPlaneacion`.
+
+### Índices SQL Server (`PtmNwScale2`)
+
+- `IX_PT_Fecha_Planta_Linea`
+- `IX_PT_Linea_Fecha`
+- `IX_PT_Turno_Fecha_Planta_Linea`
+- `IX_EnvioScraps_Fecha_Planta_Linea`
+
+Script: `MIGRATION\SQLSERVER_INDEXES_NWSCALE.sql`.
+
+### Resultado medido
+
+| Rango | Turno 0 | Turno 1 | Turno 2 |
+|---|---|---|---|
+| 1 día | 1.27 s | - | - |
+| 5 días | 1.07 s | - | - |
+| 15 días | 1.43 s | - | - |
+| 31 días | 1.51 s | 1.11 s | 1.04 s |
+
+Antes: 31 días ~14–23 s (y sin índices el SP solo tomaba 16.6 s).
+
+### Notas
+
+- Los índices son en SQL Server (NWSCALE), no en HANA Cloud.
+- El SP batch es cloud-only; `SpPdxMTTOBuscarArticulos` se conserva para el autocompletado.
+- Si el rango inicia hoy, se usa la lógica de un día (el `@Corte = 4` del SP solo aplica a fechas pasadas).

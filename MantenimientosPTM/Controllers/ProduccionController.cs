@@ -1603,9 +1603,28 @@ namespace MantenimientosPTM.Controllers
 
                 // 🔥 fechaBase ahora usa fechaInicio si viene, sin importar si fechaFin vino o no
                 DateTime fechaBase = hayFechaInicio ? fechaInicioParsed.Date : DateTime.Today;
+                DateTime fechaFinBase = hayFiltroFechas ? fechaFinParsed.Date : fechaBase;
 
+                // 🔥 Rango de varios días (días pasados): una sola consulta con @Corte = 4.
+                // El SP Sppdx_FiltradoProductosTerminados ya soporta rangos con @Corte = 4.
+                bool esRangoVariosDias = hayFiltroFechas && fechaFinParsed.Date > fechaInicioParsed.Date;
+                if (esRangoVariosDias && fechaBase < DateTime.Today)
+                {
+                    if (FiltroTurno == "0" || string.IsNullOrEmpty(FiltroTurno) || FiltroTurno == "null")
+                        turno = null;
+                    else if (FiltroTurno == "1")
+                        turno = 1;
+                    else
+                        turno = 2;
+
+                    corte = 4;
+                    TurnoStar = fechaBase.AddHours(4.5).AddSeconds(1);                   // 04:30:01 del primer día
+                    TurnoEnd = fechaFinBase.AddDays(1).AddHours(4.5);                    // 04:30:00 del día siguiente al último
+                    TurnoScrapStar = fechaBase.AddHours(5).AddMinutes(45).AddSeconds(1); // 05:45:01 del primer día
+                    TurnoScrapEnd = fechaFinBase.AddDays(1).AddHours(5).AddMinutes(45);  // 05:45:00 del día siguiente al último
+                }
                 // 🔥 Reporte del día completo (ambos turnos) => turno = NULL, corte = NULL
-                if (FiltroTurno == "0")
+                else if (FiltroTurno == "0")
                 {
                     turno = null;
                     corte = null;
@@ -1698,6 +1717,37 @@ namespace MantenimientosPTM.Controllers
 
                             System.Diagnostics.Debug.WriteLine($"Filas: {tabla1.Rows.Count}");
 
+                            // 🔥 Batch de artículos: una sola llamada a HANA para todos los KgsDia/PesoMinimo
+                            var articulosDict = new Dictionary<string, (decimal KgsDia, decimal PesoMinimo)>(StringComparer.OrdinalIgnoreCase);
+                            try
+                            {
+                                var batchParams = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                                {
+                                    { "P_PLANTA", (plantaHeader, ParameterDirection.Input, HanaDbType.NVarChar) }
+                                };
+                                var batchResult = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
+                                    logicaPlaneacion.AD.GCBuscarArticulosBatch, batchParams);
+
+                                if (!string.IsNullOrEmpty(batchResult.JsonResult) && batchResult.JsonResult != "[]")
+                                {
+                                    var arrArticulos = JArray.Parse(batchResult.JsonResult);
+                                    foreach (var a in arrArticulos)
+                                    {
+                                        string cod = Convert.ToString(a["Codigo"]);
+                                        if (string.IsNullOrEmpty(cod)) continue;
+                                        string lin = Convert.ToString(a["Linea"]);
+                                        string key = cod.Trim() + "|" + (lin ?? "").Trim().PadLeft(2, '0');
+                                        decimal kgs = a["KgsDia"] != null ? Convert.ToDecimal(a["KgsDia"]) : 0m;
+                                        decimal peso = a["PesoMinimo"] != null ? Convert.ToDecimal(a["PesoMinimo"]) : 0m;
+                                        articulosDict[key] = (kgs / 24m, peso);
+                                    }
+                                }
+                            }
+                            catch (Exception exBatch)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"ERROR batch articulos: {exBatch.Message}");
+                            }
+
                             using (tabla1)
                             {
                                 tabla1.Columns.Add("Turno", typeof(int));
@@ -1727,38 +1777,19 @@ namespace MantenimientosPTM.Controllers
                                             }
                                         }
 
-                                        var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                                        string keyArt = Convert.ToString(row["Codigo"]).Trim() + "|" + Convert.ToString(row["Id_Linea"]).PadLeft(2, '0');
+                                        if (articulosDict.TryGetValue(keyArt, out var articulo))
                                         {
-                                            { "P_QUERY", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                            { "P_USUARIO", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                            { "P_PLANTA", (plantaHeader, ParameterDirection.Input, HanaDbType.NVarChar) },
-                                            { "P_LINEA", (row["Id_Linea"], ParameterDirection.Input, HanaDbType.NVarChar) },
-                                            { "P_GRUPO_ART", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
-                                            { "P_VALIDAR_CAP", ((object)null, ParameterDirection.Input, HanaDbType.Integer) },
-                                            { "P_ITEMCODE", (row["Codigo"], ParameterDirection.Input, HanaDbType.NVarChar) }
-                                        };
-
-                                        var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                                            logicaPlaneacion.AD.GCBuscarArticulos,
-                                            parameters
-                                        );
-
-                                        JArray Articulo = JArray.Parse(resultHana.JsonResult);
-
-                                        if (!Articulo.Any())
+                                            row["Turno"] = turnoFila.HasValue ? turnoFila.Value : 0;
+                                            row["PesoMinimo"] = articulo.PesoMinimo;
+                                            row["KgsDia"] = articulo.KgsDia;
+                                        }
+                                        else
                                         {
                                             row["Turno"] = turnoFila.HasValue ? turnoFila.Value : 0;
                                             row["PesoMinimo"] = 0;
                                             row["KgsDia"] = 0;
-                                            continue;
                                         }
-
-                                        decimal KgsDia = Convert.ToDecimal(Articulo[0]["KgsDia"] != null ? (decimal.Parse(Articulo[0]["KgsDia"].ToString()) / 24).ToString() : "0");
-                                        decimal PesoMinimo = Convert.ToDecimal(Articulo[0]["PesoMinimo"] != null ? Articulo[0]["PesoMinimo"].ToString() : "0");
-
-                                        row["Turno"] = turnoFila.HasValue ? turnoFila.Value : 0;
-                                        row["PesoMinimo"] = PesoMinimo;
-                                        row["KgsDia"] = KgsDia;
                                     }
                                 }
                                 catch (Exception ex)
