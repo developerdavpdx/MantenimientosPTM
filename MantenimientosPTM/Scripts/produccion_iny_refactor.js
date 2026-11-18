@@ -833,7 +833,7 @@ class GestionProduccionINY extends GestionProduccionBase {
                 const dia = String(fecha.getDate()).padStart(2, '0');
                 return `${ano}-${mes}-${dia}`;
             }
-            const [dia, mes, anio] = fechaTexto.split('/');
+            const [dia, mes, anio] = fechaTexto.split(' ')[0].split('/');
             if (!dia || !mes || !anio) return null;
             return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
         } catch (error) {
