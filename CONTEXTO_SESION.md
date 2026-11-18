@@ -1,7 +1,25 @@
 # Contexto de sesión — MantenimientosPTM
 
-**Fecha:** 11/11/2026  
+**Fecha:** 18/11/2026  
 **Repositorio:** `C:\Paradox\DEVELOPMENT\MantenimientosPTM`
+
+---
+
+## 0. Estado al 18/11/2026 (resumen)
+
+- **Tiempos Muertos / NWSCALE (4 procesos):**
+  - `DBADMIN`: aplicado y probado completo (upsert, dedupe, token/conflicto, NWSCALE día y rango, unificación correctivo+preventivo+paro).
+  - `PTM_2022_FINAL`: **aplicado/validado** (07: 0 duplicados, 0 sin token, 4 índices, 4 SPs) y **código publicado** (DLL + 5 JS + 4 vistas + Paros). Paquete en `APLICADOS/PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`.
+  - `TEST_JUNIO_2026`: **pendiente** (paquete 00 a 07 en `PENDIENTES/TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`).
+- **Correctivos (igual que Preventivos):** índices únicos por `NUMERO_ORDEN`, `SpPdxMTTOValidarTokenOTCorrectivo`, `TOKEN` en el GET, `CONFLICTO` en controller/JS.
+  - `DBADMIN`: aplicado y probado en portal (borrador, segundo guardado y conflicto simulado).
+  - `PTM_2022_FINAL`: **aplicado/validado** (`OT_MC_DUPS 0`, `MCG_DUPS 0`, `INDICES 2`, `VALIDADOR 1`). Script en `APLICADOS/PTM_2022_FINAL/PRODUCCION/CORRECTIVOS/`.
+  - `TEST_JUNIO_2026`: **pendiente** en `PENDIENTES/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/`.
+- **Verificación de SPs/índices:** `SQL_MIGRACION/VERIFICACION/CHECK_TM_SP_PTM_2022_FINAL.sql` y `..._TEST_JUNIO_2026.sql`.
+  - PTM: **31/31 OK**.
+  - TEST: **14/31 (faltan 17)** = TM (SPs/índices/firmas) + Correctivos (validador, GET con TOKEN e índices). Preventivos ya estaba aplicado.
+- **Plan inmediato (19/11/2026):** aplicar en TEST el paquete TM (00→07) + script de Correctivos, re-correr el check (debe dar 31/31) y publicar DLL/JS/vistas; luego mover los paquetes a `APLICADOS/TEST_JUNIO_2026/`.
+- **Git:** rama `david_reyes`, todo commiteado y pusheado.
 
 ---
 
