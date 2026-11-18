@@ -86,6 +86,7 @@ Paquete: `PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`
 - `00_TM_BACKUP_PTM_2022_FINAL.sql` — respaldo de las 4 tablas **antes** de borrar.
 - `01_TM_COLUMNAS_Y_CLAVES_PTM_2022_FINAL.sql` — columnas `ORIGEN`, `CLAVE_SYNC`, `MODO`, rango; backfill.
 - `02_TM_REPORTE_DUPLICADOS_PTM_2022_FINAL.sql` — reporte (solo lectura) para autorizar la limpieza.
+- `03A_TM_PREVIEW_LIMPIEZA_PTM_2022_FINAL.sql` — preview (solo lectura) de lo que borraría el 03.
 - `03_TM_LIMPIEZA_DUPLICADOS_PTM_2022_FINAL.sql` — conserva el ID menor, fusiona `OTMC`/`OTMP`/`ID_PARO`, borra duplicados y vacías.
 - `04_TM_INDICES_UNICOS_PTM_2022_FINAL.sql` — 4 índices únicos `UX_TM_*_CLAVE_SYNC`.
 - `05_TM_SP_CONSULTA_PTM_2022_FINAL.sql` — `ALTER` de los 4 SPs de consulta.

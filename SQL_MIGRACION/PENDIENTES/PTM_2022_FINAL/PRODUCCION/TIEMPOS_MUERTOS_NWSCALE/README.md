@@ -13,6 +13,7 @@ para los 4 procesos (PVC, INY, Corrugado, PEAD Liso).
 | 00 | `00_TM_BACKUP_PTM_2022_FINAL.sql` | Respaldo completo de las 4 tablas (`*_BAK_20261117`). **Primero.** |
 | 01 | `01_TM_COLUMNAS_Y_CLAVES_PTM_2022_FINAL.sql` | Columnas `ORIGEN`, `CLAVE_SYNC`, `MODO`, rango; backfill con clave `...|DIA|...`; token inicial. |
 | 02 | `02_TM_REPORTE_DUPLICADOS_PTM_2022_FINAL.sql` | **Solo lectura**: duplicados y filas vacías. Revisar antes del 03. |
+| 03A | `03A_TM_PREVIEW_LIMPIEZA_PTM_2022_FINAL.sql` | **Solo lectura**: qué se conservaría y cuántas filas se borrarían. |
 | 03 | `03_TM_LIMPIEZA_DUPLICADOS_PTM_2022_FINAL.sql` | Conserva el `ID_REGISTRO` menor, fusiona `OTMC`/`OTMP`/`ID_PARO`, borra duplicados y vacías. |
 | 04 | `04_TM_INDICES_UNICOS_PTM_2022_FINAL.sql` | Crea los 4 índices `UX_TM_*_CLAVE_SYNC`. |
 | 05 | `05_TM_SP_CONSULTA_PTM_2022_FINAL.sql` | `ALTER` de los 4 SPs de consulta. |
