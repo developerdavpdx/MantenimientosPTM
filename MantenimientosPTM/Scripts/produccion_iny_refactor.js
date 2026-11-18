@@ -723,7 +723,7 @@ class GestionProduccionINY extends GestionProduccionBase {
         const grupos = {};
 
         preventivos.forEach(item => {
-            const fecha = this.parsearFechaPreventivo(item.FechaInicioMantenimiento);
+            const fecha = this.parsearFechaPreventivo(item.FechaRealInicio || item.HoraApertura);
 
             const lineaEncontrada = this.listaLineas.find(l => String(l.value) === String(item.IdLineaProduccion));
             const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;

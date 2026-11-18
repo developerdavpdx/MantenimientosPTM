@@ -902,7 +902,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
         const grupos = {};
 
         preventivos.forEach(item => {
-            const fecha = this.parsearFechaPreventivo(item.HoraApertura);
+            const fecha = this.parsearFechaPreventivo(item.FechaRealInicio || item.HoraApertura);
 
             // 🔍 Buscar línea
             const lineaEncontrada = this.listaLineas.find(
