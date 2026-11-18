@@ -92,7 +92,7 @@ SELECT 'PEADLISO', COUNT(*) FROM (
 );
 
 -- ============================================================================
--- 3) FILAS VACIAS QUE SE BORRARIAN (SIN_ORIGEN) — revisar que no tengan horas
+-- 3) FILAS VACIAS QUE SE BORRARIAN (SIN_ORIGEN) - revisar que no tengan horas
 -- ============================================================================
 SELECT 'PVC' AS TABLA, "ID_REGISTRO", "FECHA", "LINEA", "PRODUCTO", "TURNO",
        "OTMC", "OTMP", "ID_PARO",

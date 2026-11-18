@@ -640,7 +640,7 @@ BEGIN
 
             "MES" = :P_MES,
 
-            -- PRODUCCIÃƒâ€œN
+            -- PRODUCCION
             "PESO_MINIMO" = :P_PESO_MINIMO,
             "TR_LIBERADOS" = :P_TR_LIBERADOS,
             "PRODUCCION_NETA" = :P_PRODUCCION_NETA,
@@ -683,7 +683,7 @@ BEGIN
             "PORCENTAJE_EFICIENCIA_PRODUCTO" = :P_PORCENTAJE_EFICIENCIA_PRODUCTO,
             "EFICIENCIA_OPERATIVA" = :P_EFICIENCIA_OPERATIVA,
 
-            -- AUDITORÃƒÂA
+            -- AUDITORIA
             "USUARIO" = :P_USUARIO,
             "PLANTA" = :P_PLANTA,
             "ID_PARO" = :V_ID_PARO_DEDUP,
@@ -721,7 +721,7 @@ BEGIN
 
             "MES",
 
-            -- PRODUCCIÃƒâ€œN
+            -- PRODUCCION
             "PESO_MINIMO",
             "TR_LIBERADOS",
             "PRODUCCION_NETA",
@@ -764,7 +764,7 @@ BEGIN
             "PORCENTAJE_EFICIENCIA_PRODUCTO",
             "EFICIENCIA_OPERATIVA",
 
-            -- AUDITORÃƒÂA
+            -- AUDITORIA
             "USUARIO",
             "PLANTA",
             "ID_PARO",
@@ -796,7 +796,7 @@ BEGIN
 
             :P_MES,
 
-            -- PRODUCCIÃƒâ€œN
+            -- PRODUCCION
             :P_PESO_MINIMO,
             :P_TR_LIBERADOS,
             :P_PRODUCCION_NETA,
@@ -839,7 +839,7 @@ BEGIN
             :P_PORCENTAJE_EFICIENCIA_PRODUCTO,
             :P_EFICIENCIA_OPERATIVA,
 
-            -- AUDITORÃƒÂA
+            -- AUDITORIA
             :P_USUARIO,
             :P_PLANTA,
             :V_ID_PARO_DEDUP,
@@ -930,7 +930,7 @@ ALTER PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOGuardarTiemposMuertosCorrugado"(
     IN P_PORCENTAJE_EFICIENCIA_PRODUCTO DECIMAL(10,2),
     IN P_EFICIENCIA_OPERATIVA DECIMAL(10,2),
 
-    -- AUDITOR-A
+    -- AUDITORIA
     IN P_USUARIO NVARCHAR(50),
     IN P_PLANTA INT,
     IN P_ID_PARO NCLOB,   -- CAMBIO: JSON array de strings, ej. ["12","15"]
@@ -1307,7 +1307,7 @@ ALTER PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOGuardarTiemposMuertosPeadLiso"(
     IN P_TURNO NVARCHAR(10),
     IN P_GRUPO NVARCHAR(10),
 
-    -- PRODUCCIÃƒâ€œN
+    -- PRODUCCION
     IN P_PESO_MINIMO DECIMAL(18,6),
     IN P_TRLIBERADOS DECIMAL(18,2),
     IN P_PRODUCCION_NETA DECIMAL(18,2),
@@ -1339,7 +1339,7 @@ ALTER PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOGuardarTiemposMuertosPeadLiso"(
     -- KPI
     IN P_TIEMPO_DISPONIBLE DECIMAL(10,2),
     IN P_TIEMPO_PRODUCTIVO DECIMAL(10,2),
-    -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO - KPIs calculados
+    -- NUEVO - KPIs calculados
     IN P_KG_HR_LINEA DECIMAL(10,2),
     IN P_KG_HR_PRODUCTO DECIMAL(10,2),
     IN P_OBJETIVO_EFICIENCIA DECIMAL(10,2),
@@ -1351,7 +1351,7 @@ ALTER PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOGuardarTiemposMuertosPeadLiso"(
     IN P_PORCENTAJE_OEE DECIMAL(10,2),
     IN P_PORCENTAJE_EFICIENCIA_PRODUCTO DECIMAL(10,2),
     IN P_EFICIENCIA_OPERATIVA DECIMAL(10,2),
-    -- AUDITORÃƒÂA
+    -- AUDITORIA
     IN P_USUARIO NVARCHAR(50),
     IN P_PLANTA NVARCHAR(20),
     IN P_ID_PARO NCLOB,   -- CAMBIO: JSON array de strings, ej. ["12","15"]
@@ -1525,7 +1525,7 @@ BEGIN
 
             "TIEMPO_DISPONIBLE"                    = :P_TIEMPO_DISPONIBLE,
             "TIEMPO_PRODUCTIVO"                    = :P_TIEMPO_PRODUCTIVO,
-            -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO
+            -- NUEVO
             "KG_HR_LINEA"                          = :P_KG_HR_LINEA,
             "KG_HR_PRODUCTO"                       = :P_KG_HR_PRODUCTO,
             "OBJETIVO_EFICIENCIA"                  = :P_OBJETIVO_EFICIENCIA,
@@ -1595,7 +1595,7 @@ BEGIN
 
             "TIEMPO_DISPONIBLE",
             "TIEMPO_PRODUCTIVO",
-            -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO
+            -- NUEVO
             "KG_HR_LINEA",
             "KG_HR_PRODUCTO",
             "OBJETIVO_EFICIENCIA",
@@ -1658,7 +1658,7 @@ BEGIN
 
             :P_TIEMPO_DISPONIBLE,
             :P_TIEMPO_PRODUCTIVO,
-            -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO
+            -- NUEVO
             :P_KG_HR_LINEA,
             :P_KG_HR_PRODUCTO,
             :P_OBJETIVO_EFICIENCIA,
