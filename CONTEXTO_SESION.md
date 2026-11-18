@@ -1205,3 +1205,94 @@ Antes: 31 días ~14–23 s (y sin índices el SP solo tomaba 16.6 s).
 - El SP batch está en `SQL_MIGRACION\PENDIENTES\DBADMIN` (cloud) y `PTM_2022_FINAL` (on-premise). `SpPdxMTTOBuscarArticulos` se conserva para el autocompletado.
 - Si el rango inicia hoy, se usa la lógica de un día (el `@Corte = 4` del SP solo aplica a fechas pasadas).
 - El `@Corte = 4` devuelve un **resumen por producto/línea para todo el rango**; es el comportamiento esperado del portal NWSCALE.
+
+## 26. Sesión 18/11/2026 — Métricas: cumplimiento de PM exige las 3 firmas
+
+**Estado:** **COMPLETADO** — aplicado en `DBADMIN`, validado en portal (QA) y auditado en rendimiento.
+
+### Solicitud
+
+El KPI **Cumplimiento de Mantenimiento Preventivo** tomaba como cumplido cualquier PM en `ESTATUS = 4` ("Cerrado", que incluye "En proceso de firmas" y se alcanza con solo la firma del técnico). Ahora debe contar **únicamente** los preventivos terminados con las **3 firmas requeridas**.
+
+### Cambio aplicado (solo SQL — 0 cambios en C#/JS)
+
+En los 4 SP `SpPdxMTTOMetricasOEE_PVC / _PeadLiso / _Corrugado / _INY` de `DBADMIN`:
+
+- CTE `CUMPLIMIENTO_PM_FILTRADO`: nueva columna calculada `CUMPLIDO = 1` solo si `ESTATUS = 4` **y** `FIRMA_REALIZO` + `FIRMA_SUPERVISO` + `FIRMA_MANTENIMIENTO` = `'SI'`.
+- `LEFT JOIN` a `PdxMTTOOrdenesTrabajoMP` agrupado por `ID_MANTENIMIENTO` con `MAX(...)` → `TIENE_3_FIRMAS` (evita inflar filas). `IFNULL` cubre PM sin OT y firmas `NULL` (139 de 174 PM de nov-2026 no tienen fila en esa tabla).
+- Numerador y porcentaje usan `SUM("CUMPLIDO")`. **`TOTAL_PM_PROGRAMADOS` no cambia** por diseño: la regla redefine *qué cuenta como cumplido*, no *cuántos se programaron*.
+
+### Impacto medido (portal, 01–30/11/2026, Planta 1)
+
+| Filtro | Antes | Después | Programados | Cerrados |
+|---|---|---|---|---|
+| Todos los procesos | 23.44 % | **16.41 %** | 128 | 30 → 21 |
+| PVC | 35.06 % | **27.27 %** | 77 | 27 → 21 |
+| PEAD LISO | 3.45 % | **0 %** | 29 | 1 → 0 |
+| PEAD CORR | 9.09 % | **0 %** | 22 | 2 → 0 |
+
+OEE, Disponibilidad, Rendimiento, Calidad, DT, MTTR y MTBF permanecen idénticos.
+
+### Artefactos
+
+- **Respaldos previos:** `SQL_ORIGINALES/SpPdxMTTOMetricasOEE_{PVC,PeadLiso,Corrugado,INY}_ANTES_3_FIRMAS_20261118.sql` (+ sección nueva en `SQL_ORIGINALES/README.txt`). No se sobrescribieron los `.sql` del 04/11/2026.
+- **Script aplicado:** `SQL_MIGRACION/APLICADOS/DBADMIN/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_DBADMIN.sql`.
+- **Pendientes on-premise** (`ALTER PROCEDURE`): `SQL_MIGRACION/PENDIENTES/TEST_JUNIO_2026/METRICAS/` y `SQL_MIGRACION/PENDIENTES/PTM_2022_FINAL/METRICAS/`.
+- **Bitácoras:** `SQL_MIGRACION/MIGRACIONES_APLICADAS.md` (sección 9) y `RESUMEN_AJUSTES.txt` (sección 26).
+
+### QA (portal, `adminmantenimiento@ptmexico.com`)
+
+**APROBADO.** Valores exactos confirmados en los 4 procesos; 0 errores de consola y 0 respuestas 4xx/5xx en `GetMetricasOEE_*`. Verificación cruzada en Preventivos: de 30 órdenes en estatus 4, las 9 con solo firma del técnico (OTMP-011, 063, 068, 157, 160, 161, 162, 173, 174) quedaron fuera del numerador. La OTMP-162 (realizó + mantenimiento, sin supervisó) también se excluye, lo que confirma que se exigen las 3 y no 2.
+
+### Rendimiento
+
+**Sin cuello de botella crítico.** El `LEFT JOIN` nuevo cuesta **≤ 3 ms (1.2–1.9 %)** del endpoint. El piso de cualquier llamada a HANA Cloud es ~157 ms (RTT), por lo que el 98 % del tiempo es red preexistente. `TodosLosProcesos` = 478 ms ≈ 3 × 160 ms (apilado de round trips, no cómputo). Volumen: `PdxMTTOMPGenerados` ~5.4k filas; existe índice único en `ID_MANTENIMIENTO`. **No se crearon índices.**
+
+### Observaciones abiertas (no bloqueantes, fuera del alcance)
+
+- **RESUELTO (18/11/2026):** `GetMetricasOEE_INY` enviaba un parámetro fantasma `"P_AREA"` (`MetricasController.cs:232`) que el SP no acepta → el endpoint devolvía `ERROR` siempre y rompía el tablero al seleccionar **INY solo** en planta 2. Corregido: ver sección 27.
+- `MantenimientosPreventivos/GetMantenimientosPorRango` tarda **6.1–6.9 s** (otro módulo): candidato a optimización.
+- Polling del tablero: `setInterval` de 60 s sin pausa en pestaña oculta (`metricas_mannto_refactor.js:54`).
+- Filtro de área en INY: `DBADMIN` usa `A."AREA" LIKE 'INYECCI%'` (tolerante al acento). Los scripts on-premise generados preservan esa misma forma; conviene confirmarla contra la definición viva de cada schema antes de aplicar.
+
+## 27. Sesión 18/11/2026 — Fix: `GetMetricasOEE_INY` enviaba un parámetro fantasma
+
+**Estado:** **COMPLETADO** — corregido, compilado, validado en portal y auditado en rendimiento.
+
+### Problema
+
+`MetricasController.GetMetricasOEE_INY` armaba el diccionario de parámetros con **6 entradas**, incluyendo `"P_AREA"`. El SP `SpPdxMTTOMetricasOEE_INY` declara **solo 5** (`P_FECHA_INICIO`, `P_FECHA_FIN`, `P_LINEA`, `P_PLANTA`, `P_CLASIFICACION`), porque el filtro de INY es interno (`A."AREA" LIKE 'INYECCI%'`). Resultado:
+
+```
+Status: ERROR | Error: wrong number or types of parameters in call:
+                too many arguments: line 1 col 57 (at pos 56)
+```
+
+El endpoint fallaba **siempre**; dentro de `TodosLosProcesos` el error se absorbía, pero el tablero se rompía al seleccionar **INY solo** en planta 2. Los otros 3 métodos (`PVC`, `PeadLiso`, `Corrugado`) ya tenían esa línea **comentada**; solo INY la tenía activa.
+
+### Cambio aplicado (solo C# — 0 cambios en BD, JS, vistas)
+
+`MantenimientosPTM/Controllers/MetricasController.cs` → `GetMetricasOEE_INY` (l.231-232): se comentó `P_AREA` y se quitó la coma sobrante, dejando 5 parámetros (mismo patrón que los otros 3 métodos). **Ningún SP fue alterado.**
+
+### Verificación
+
+| Prueba | Resultado |
+|---|---|
+| Firma real del SP (`SYS.PROCEDURE_PARAMETERS`) | 5 parámetros, sin `P_AREA` |
+| Endpoint antes | HTTP 200, `Status: ERROR` (`too many arguments`), 176 ms |
+| Endpoint después | HTTP 200, `Status: OK`, **150 ms** (media de 10 muestras) |
+| Build Debug | 0 errores |
+| Portal: Planta 2 + INY, 01–30/11/2026 | 108 hr, MTTR 0, 0 paradas, DT 100 %, PM **0/5**, OEE 0 % (sin producción) |
+| Regla de 3 firmas en INY | Vigente: 1 PM en estatus 4 con firmas incompletas → **0** cerrados |
+| Consolidado planta 2 | 293 ms (2 SP), aritméticamente consistente con PVC + INY, sin duplicar |
+| Regresión planta 1 | Idéntica al baseline: PM 16.41 % (21/128), OEE 97.83 %, DT 97.72 %, MTTR 5.18 h, MTBF 221.88 h |
+| Consola / red | 0 errores JS; 0 respuestas 4xx/5xx; sin reintentos ni duplicados |
+
+**Rendimiento:** el fix no añadió costo material (≈ +13 ms en el consolidado de planta 2, +4.6 %). INY queda en **150 ms**, en línea con los otros endpoints individuales (~149 ms) y con el piso de RTT a HANA Cloud (~146 ms/SP). Sin cuello de botella crítico.
+
+### Observaciones que quedan abiertas (nuevas, no bloqueantes)
+
+- **El combo "Planta" es cosmético en este módulo:** `obtenerFiltros()` y `cargarMetricasPorProceso()` usan `sessionStorage.userData[0].PLANTA`; cambiar el combo no cambia la planta consultada y repuebla Proceso con las áreas de la planta del **usuario**. Solo se ve el tablero completo de planta 2 con un usuario de planta 2. Candidato a ticket aparte.
+- `GetMetricasOEE_TodosLosProcesos` ejecuta los SP **en serie**: P1 442 ms (3 SP), P2 293 ms (2 SP). Paralelizarlos bajaría a ~150 ms sin tocar SQL.
+- `OEE > 100 %` en varios procesos (Rendimiento > 100 %) y `MTBF = N/A` cuando no hay paradas: presentación, preexistentes.
+- Desviación de dato: planta 2 "Todos" = 408 hr (PVC 300 + INY 108), no 432. El consolidado es consistente; el descuadre apunta a `SpPdxMTTOMetricasOEE_PVC`/datos de planta 2, no al fix.

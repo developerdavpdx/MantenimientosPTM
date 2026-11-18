@@ -552,6 +552,64 @@
      AccesoDatosPlaneacion.
 
 
+
+
+26) METRICAS - CUMPLIMIENTO DE PM CON LAS 3 FIRMAS (2026-11-18)
+   - Regla anterior: contaba como cumplido cualquier PM con ESTATUS = 4
+     (Cerrado, incluye "En proceso de firmas"), que se alcanza solo con la
+     firma del tecnico.
+   - Regla nueva: cuenta como cumplido SOLO si ESTATUS = 4 Y
+     FIRMA_REALIZO = 'SI' Y FIRMA_SUPERVISO = 'SI' Y
+     FIRMA_MANTENIMIENTO = 'SI'.
+   - SPs: SpPdxMTTOMetricasOEE_PVC / _PeadLiso / _Corrugado / _INY.
+     Se agrega la columna calculada CUMPLIDO en CUMPLIMIENTO_PM_FILTRADO y un
+     LEFT JOIN con PdxMTTOOrdenesTrabajoMP agrupado por ID_MANTENIMIENTO
+     (MAX) para no inflar filas. El numerador usa SUM("CUMPLIDO").
+   - El denominador TOTAL_PM_PROGRAMADOS NO cambia (sigue siendo el total de
+     PM generados en el rango/linea/planta); OEE, Disponibilidad,
+     Rendimiento, Calidad, DT, MTTR y MTBF no se tocan.
+   - Sin cambios en C# ni JS (mismos nombres de columna en el resultset).
+   - Impacto medido (noviembre 2026, planta 1, portal):
+       Todos los procesos: 23.44 % -> 16.41 %  (128 programados, 30 -> 21)
+       PVC               : 35.06 % -> 27.27 %  ( 77 programados, 27 -> 21)
+       PEAD LISO         :  3.45 % ->  0.00 %  ( 29 programados,  1 ->  0)
+       PEAD CORR         :  9.09 % ->  0.00 %  ( 22 programados,  2 ->  0)
+   - Script aplicado: SQL_MIGRACION\APLICADOS\DBADMIN\METRICAS\
+       20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_DBADMIN.sql
+   - Pendientes on-premise (4 ALTER PROCEDURE c/u):
+       SQL_MIGRACION\PENDIENTES\TEST_JUNIO_2026\METRICAS\
+       SQL_MIGRACION\PENDIENTES\PTM_2022_FINAL\METRICAS\
+   - Respaldo previo: SQL_ORIGINALES\SpPdxMTTOMetricasOEE_*_ANTES_3_FIRMAS_20261118.sql
+27) METRICAS - FIX DEL PARAMETRO FANTASMA P_AREA EN GetMetricasOEE_INY (2026-11-18)
+   - Problema: GetMetricasOEE_INY armaba el diccionario con 6 parametros e incluia
+     P_AREA, pero el SP SpPdxMTTOMetricasOEE_INY declara solo 5
+     (P_FECHA_INICIO, P_FECHA_FIN, P_LINEA, P_PLANTA, P_CLASIFICACION); el
+     filtro de INY es interno (A."AREA" LIKE 'INYECCI%').
+     Resultado: el endpoint devolvia SIEMPRE
+     "wrong number or types of parameters in call: too many arguments".
+     Los otros 3 metodos (PVC, PeadLiso, Corrugado) ya tenian la linea comentada.
+   - Fix: MantenimientosPTM/Controllers/MetricasController.cs, metodo
+     GetMetricasOEE_INY (l.231-232): se comento P_AREA y se quito la coma
+     sobrante, dejando 5 parametros (mismo patron que los otros 3 metodos).
+   - Sin cambios en base de datos: ningun SP fue alterado. Sin cambios en JS,
+     vistas ni CSS.
+   - Verificacion del SP (SYS.PROCEDURE_PARAMETERS): 5 parametros, sin P_AREA.
+   - Antes: HTTP 200 con Status ERROR (176 ms). Despues: HTTP 200 con Status OK,
+     media 150 ms (n=10).
+   - Portal (planta 2, INY, 01-30/11/2026): 108 hr, MTTR 0, 0 paradas, DT 100 %,
+     Cumplimiento PM 0 % con 0 cerrados / 5 programados, OEE 0 % (sin produccion).
+     La regla de las 3 firmas sigue vigente: hay 1 PM en estatus 4 con firmas
+     incompletas y no se cuenta.
+   - Consolidado planta 2: 293 ms (2 SP), consistente con PVC + INY, sin duplicar.
+   - Regresion planta 1: identica al baseline (PM 16.41 % = 21/128, OEE 97.83 %,
+     DT 97.72 %, MTTR 5.18 h, MTBF 221.88 h).
+   - Rendimiento: el fix no agrego costo material (~+13 ms en el consolidado de
+     planta 2, +4.6 %). INY queda en 150 ms, en linea con los otros endpoints
+     individuales (~149 ms) y con el piso de RTT a HANA Cloud (~146 ms por SP).
+   - Archivos tocados: MantenimientosPTM/Controllers/MetricasController.cs,
+     CONTEXTO_SESION.md, RESUMEN_AJUSTES.txt.
+
+
 ================================================================================
  FIN DEL RESUMEN
 ================================================================================

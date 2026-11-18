@@ -48,3 +48,53 @@ NOTA
   CREATE OR REPLACE.
 - Los comentarios pueden venir con acentos normalizados; lo funcional es identico.
 ================================================================================
+
+================================================================================
+ EXTRACCION 2026-11-18 - REGLA DE LAS 3 FIRMAS EN EL CUMPLIMIENTO DE PM
+================================================================================
+
+Fecha de extraccion: 18/11/2026
+Origen: historial Git del repo (commit HEAD previo al cambio)
+        git show HEAD:SQL_MIGRACION/APLICADOS/DBADMIN/DEV/<SP>.sql
+        Esa era la definicion vigente en HANA Cloud / schema DBADMIN antes del
+        ajuste (no se pudo volver a extraer de la instancia porque el cambio ya
+        estaba aplicado en DBADMIN).
+
+ARCHIVOS NUEVOS (no sustituyen a los del 04/11/2026)
+  SpPdxMTTOMetricasOEE_PVC_ANTES_3_FIRMAS_20261118.sql
+  SpPdxMTTOMetricasOEE_PeadLiso_ANTES_3_FIRMAS_20261118.sql
+  SpPdxMTTOMetricasOEE_Corrugado_ANTES_3_FIRMAS_20261118.sql
+  SpPdxMTTOMetricasOEE_INY_ANTES_3_FIRMAS_20261118.sql
+
+  Los archivos SpPdxMTTOMetricasOEE_{PVC,PeadLiso,Corrugado,INY}.sql (04/11/2026)
+  se conservan intactos: son la version aun anterior (sin P_CLASIFICACION ni
+  MTTR/MTBF por clasificacion).
+
+QUE CAMBIO DESPUES (resumen)
+  - % Cumplimiento de PM:
+      ANTES  : cumplido = ESTATUS = 4 (Cerrado, incluye "En proceso de firmas")
+      DESPUES: cumplido = ESTATUS = 4 Y FIRMA_REALIZO = 'SI'
+                           Y FIRMA_SUPERVISO = 'SI'
+                           Y FIRMA_MANTENIMIENTO = 'SI'
+  - Se agrega la columna calculada CUMPLIDO en CUMPLIMIENTO_PM_FILTRADO y un
+    LEFT JOIN con PdxMTTOOrdenesTrabajoMP agrupado por ID_MANTENIMIENTO
+    (MAX) para no inflar filas.
+  - TOTAL_PM_PROGRAMADOS (denominador) NO cambia.
+  - El resto de los KPIs (OEE, Disponibilidad, Rendimiento, Calidad, DT, MTTR,
+    MTBF, paros) no se toca.
+
+DONDE ESTA EL CAMBIO APLICADO
+  SQL_MIGRACION/APLICADOS/DBADMIN/METRICAS/
+      20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_DBADMIN.sql
+  SQL_MIGRACION/PENDIENTES/TEST_JUNIO_2026/METRICAS/
+      20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_TEST_JUNIO_2026.sql
+  SQL_MIGRACION/PENDIENTES/PTM_2022_FINAL/METRICAS/
+      20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_PTM_2022_FINAL.sql
+
+COMO USAR ESTOS RESPALDOS
+  Cada archivo trae un encabezado con fecha/origen y despues la definicion
+  exacta previa al cambio (inicia en la linea "CREATE OR REPLACE PROCEDURE").
+  Para revertir en DBADMIN basta ejecutar ese CREATE OR REPLACE; para on-premise
+  cambiar CREATE OR REPLACE PROCEDURE por ALTER PROCEDURE y ajustar el schema.
+
+================================================================================

@@ -36,6 +36,9 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 18/11/2026 | DBADMIN | Correctivos: índices únicos + token de versión | Aplicado/validado | `APLICADOS/DBADMIN/CORRECTIVOS/20261118_CORRECTIVO_INDICES_Y_TOKEN_DBADMIN.sql` |
 | 18/11/2026 | PTM_2022_FINAL | Correctivos: índices únicos + token de versión | Aplicado/validado | OT_MC_DUPS 0, MCG_DUPS 0, 2 índices, 1 validador. `APLICADOS/PTM_2022_FINAL/PRODUCCION/CORRECTIVOS/` |
 | 18/11/2026 | TEST_JUNIO_2026 | Correctivos: índices únicos + token de versión | **Pendiente** | `PENDIENTES/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/` |
+| 18/11/2026 | DBADMIN | Métricas OEE: cumplimiento PM con las 3 firmas | Aplicado/validado | 4 SP `SpPdxMTTOMetricasOEE_*`; el numerador solo cuenta PM cerrados con 3 firmas. `APLICADOS/DBADMIN/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_DBADMIN.sql` |
+| 18/11/2026 | TEST_JUNIO_2026 | Métricas OEE: cumplimiento PM con las 3 firmas | **Pendiente** | `PENDIENTES/TEST_JUNIO_2026/METRICAS/` (4 `ALTER PROCEDURE`) |
+| 18/11/2026 | PTM_2022_FINAL | Métricas OEE: cumplimiento PM con las 3 firmas | **Pendiente** | `PENDIENTES/PTM_2022_FINAL/METRICAS/` (4 `ALTER PROCEDURE`) |
 
 ## Detalle de los cambios clave
 
@@ -138,6 +141,19 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 - **TEST_JUNIO_2026:** script pendiente en `PENDIENTES/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/`.
 - **Orden de despliegue:** aplicar SQL primero, luego publicar DLL + `mantenimientos_correctivos_refactor.js`.
 
+### 9. Métricas OEE - cumplimiento de PM con las 3 firmas (2026-11-18)
+- **Problema:** el `% Cumplimiento de Mantenimientos Preventivos` contaba como cumplido cualquier PM con `ESTATUS = 4` (Cerrado), que se alcanza con la firma del técnico. Se reportaban PM "cumplidos" sin la firma del Supervisor de Producción ni la del Administrador de Mantenimiento.
+- **Regla nueva:** un PM cuenta como cumplido **solo si** `ESTATUS = 4` **y** `FIRMA_REALIZO = 'SI'` **y** `FIRMA_SUPERVISO = 'SI'` **y** `FIRMA_MANTENIMIENTO = 'SI'`.
+- **Implementación (4 SPs):** `SpPdxMTTOMetricasOEE_PVC`, `_PeadLiso`, `_Corrugado`, `_INY`.
+  - `CUMPLIMIENTO_PM_FILTRADO` agrega la columna calculada `CUMPLIDO` y un `LEFT JOIN` con `PdxMTTOOrdenesTrabajoMP` agrupado por `ID_MANTENIMIENTO` (`MAX(...)` para no inflar filas; `IFNULL` para PM sin fila de OT o firmas `NULL`).
+  - `CUMPLIMIENTO_PM_TOTAL` usa `SUM("CUMPLIDO")` en `TOTAL_PM_CERRADOS` y en `PORCENTAJE_CUMPLIMIENTO_PM`.
+  - `TOTAL_PM_PROGRAMADOS` (denominador) **no cambia**: la regla define qué PM cuenta como cumplido, no cuántos se programaron.
+  - OEE, Disponibilidad, Rendimiento, Calidad, DT, MTTR, MTBF y paros **no se tocan** (salen de la bitácora).
+- **C# / JS:** sin cambios (los nombres de columna del resultset no cambian; `LogicaMetricas.ConsolidarMetricas` suma `TOTAL_PM_CERRADOS` y recalcula el %).
+- **DBADMIN:** aplicado y verificado el 18/11/2026 (los 4 SP contienen `TIENE_3_FIRMAS` y `SUM("CUMPLIDO")`, 0 objetos inválidos). Script en `APLICADOS/DBADMIN/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_DBADMIN.sql`.
+- **TEST_JUNIO_2026 / PTM_2022_FINAL:** pendientes en `PENDIENTES/<schema>/METRICAS/` (4 `ALTER PROCEDURE` cada uno).
+- **Respaldo previo:** `SQL_ORIGINALES/SpPdxMTTOMetricasOEE_{PVC,PeadLiso,Corrugado,INY}_ANTES_3_FIRMAS_20261118.sql` (ver sección nueva del `SQL_ORIGINALES/README.txt`).
+
 ## Obsoletos
 
 En `OBSOLETO/`:
@@ -152,5 +168,7 @@ Motivo: contienen versiones anteriores del SP de rango. La versión vigente est�
 - `PENDIENTES/` contiene actualmente:
   - `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql`
   - `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql`
+  - `METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_TEST_JUNIO_2026.sql`
+  - `METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_PTM_2022_FINAL.sql`
 - Al aplicarse en el servidor, moverlos a `APLICADOS/<schema>/` y actualizar esta bitácora.
 - Regla general: si `PENDIENTES/` no tiene scripts SQL, todo está al día.
