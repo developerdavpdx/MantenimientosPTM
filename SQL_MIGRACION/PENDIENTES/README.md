@@ -11,19 +11,17 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 
 ## Contenido actual
 
-- `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql`
-- `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql`
+- `PTM_2022_FINAL/ALMACEN/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql`
 - `DBADMIN/PRODUCCION/SpPdxMTTOBuscarArticulosBatch.sql`
 - `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_CREATE.sql`
 - `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_ALTER.sql`
 - `NWSCALE/20261117_INDICES_NWSCALE.sql`
 - `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
-- `TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (paquete 00 a 07 + README)
-- `TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/20261118_CORRECTIVO_INDICES_Y_TOKEN_TEST_JUNIO_2026.sql`
-- `TEST_JUNIO_2026/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_TEST_JUNIO_2026.sql`
 - `PTM_2022_FINAL/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_PTM_2022_FINAL.sql`
-- `TEST_JUNIO_2026/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_Y_ORDERBY_20261118_ALTER.sql`
 - `PTM_2022_FINAL/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_Y_ORDERBY_20261118_ALTER.sql`
+
+> **TEST_JUNIO_2026: al dia (sin scripts).** Todo lo de ese schema se aplico el
+> 2026-11-18 y se movio a `../APLICADOS/TEST_JUNIO_2026/`.
 
 > Los dos scripts de `PLANEACION` llevan **ambos cambios** del SP
 > `SpPdxMTTOBuscarArticulos`: (1) INSUMOS via `P_GRUPOS_ART` y (2) el nuevo
@@ -92,7 +90,9 @@ modal lo muestre antes de confirmar.
 
 ## Pendientes 2026-11-18 — Tiempos Muertos / NWSCALE (TEST_JUNIO_2026)
 
-Paquete: `TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`
+**APLICADO en TEST_JUNIO_2026 el 2026-11-18.** Paquete movido a
+`APLICADOS/TEST_JUNIO_2026/PRODUCCION/BITACORAS_TIEMPOS_MUERTOS/` (antes
+`TIEMPOS_MUERTOS_NWSCALE/`).
 
 - `00` respaldo (`*_BAK_20261118`), `01` columnas/backfill, `02` reporte, `03A` preview, `03` limpieza, `04` indices, `05`/`06` SPs, `07` verificacion.
 - **Orden:** 00 -> 01 -> 02 -> 03A -> 03 -> 04 -> 05 -> 06 -> 07.
@@ -110,7 +110,8 @@ Paquete: `TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`
 - **2026-11-18 - CORRECTIVOS:** índices únicos por `NUMERO_ORDEN` + token de versión + `CONFLICTO`.
   - DBADMIN aplicado/validado en portal (borrador, segundo guardado y conflicto simulado).
   - PTM_2022_FINAL aplicado/validado el 18/11/2026: 0 duplicados, 2 índices y 1 validador.
-  - TEST_JUNIO_2026 pendiente en `PENDIENTES/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/`.
+  - TEST_JUNIO_2026 aplicado/validado el 18/11/2026: OT_MC_DUPS 0, MCG_DUPS 0, INDICES 2, VALIDADOR 1.
+  - Scripts movidos a `APLICADOS/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/`.
   - Detalle en `MIGRACIONES_APLICADAS.md`.
 
 - **2026-11-17 - PREVENTIVOS:** indices unicos, SP de rutina atomico y control de concurrencia aplicados en `DBADMIN`, `PTM_2022_FINAL` y `TEST_JUNIO_2026`.
@@ -119,10 +120,11 @@ Paquete: `TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`
 
 ## Pendientes 2026-11-18 - METRICAS (Cumplimiento PM con las 3 firmas)
 
-Aplicado en `DBADMIN` el 2026-11-18. Falta aplicarlo on-premise con `ALTER PROCEDURE`.
+Aplicado en `DBADMIN` y en `TEST_JUNIO_2026` (2026-11-18). Falta solo
+`PTM_2022_FINAL`, con `ALTER PROCEDURE`.
 
-- `TEST_JUNIO_2026/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_TEST_JUNIO_2026.sql`
-  - 4 `ALTER PROCEDURE "TEST_JUNIO_2026".SpPdxMTTOMetricasOEE_{PVC,PeadLiso,Corrugado,INY}`.
+- TEST_JUNIO_2026: **aplicado** -> `APLICADOS/TEST_JUNIO_2026/METRICAS/`
+  (4 `ALTER PROCEDURE "TEST_JUNIO_2026".SpPdxMTTOMetricasOEE_{PVC,PeadLiso,Corrugado,INY}`).
 - `PTM_2022_FINAL/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_PTM_2022_FINAL.sql`
   - 4 `ALTER PROCEDURE "PTM_2022_FINAL".SpPdxMTTOMetricasOEE_{PVC,PeadLiso,Corrugado,INY}`.
 - Verificacion: `SELECT PROCEDURE_NAME FROM SYS.PROCEDURES WHERE SCHEMA_NAME = '<schema>' AND PROCEDURE_NAME LIKE 'SpPdxMTTOMetricasOEE%' AND DEFINITION LIKE '%TIENE_3_FIRMAS%';` debe devolver 4 filas.
