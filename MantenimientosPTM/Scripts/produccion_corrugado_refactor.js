@@ -36,8 +36,8 @@ class UIManager {
         });
 
         UIManager.ajustarAlturaCard();
-        $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
-        $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
+        $('#FiltroFechaInicio').val(DateUtils.obtenerFechaActual());
+        $('#FiltroFechaFin').val(DateUtils.obtenerFechaActual());
 
         console.log('✅ UI PVC inicializada');
     }
@@ -271,6 +271,12 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             const fila = {
                 id: item.ID_REGISTRO || Date.now(),
                 ID_REGISTRO: item.ID_REGISTRO,
+                MODO: item.MODO || null,
+                FECHA_INICIO_RANGO: item.FECHA_INICIO_RANGO ? String(item.FECHA_INICIO_RANGO).split('T')[0] : null,
+                FECHA_FIN_RANGO: item.FECHA_FIN_RANGO ? String(item.FECHA_FIN_RANGO).split('T')[0] : null,
+                TOKEN: item.TOKEN || null,
+                CLAVE_SYNC: item.CLAVE_SYNC || null,
+                ORIGEN: item.ORIGEN || null,
                 OTMC: this.normalizarListaOTTexto(item.OTMC),
                 OTMP: this.normalizarListaOTTexto(item.OTMP),
                 ID_PRODUCTO_TERMINADO: item.ID_PRODUCTO_TERMINADO,
@@ -415,8 +421,24 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             let seAgregaronProductosTerminados = false;
             if ($('#chkIncluirNWSCALE').is(':checked')) {
                 const turnoNWSCALE = FiltroTurno || '0'; // "Todos" = 0 (día completo)
+                const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+
+                const fIni = FiltroFechaInicio ? new Date(FiltroFechaInicio + 'T00:00:00') : null;
+
+                const fFin = FiltroFechaFin ? new Date(FiltroFechaFin + 'T00:00:00') : null;
+
+                const esRangoNWSCALE = !!(fIni && fFin && fFin > fIni && fIni < hoy);
+
+                const modoNWSCALE = esRangoNWSCALE ? 'RANGO' : 'DIA';
+
+                const rangoIni = esRangoNWSCALE ? FiltroFechaInicio : null;
+
+                const rangoFin = esRangoNWSCALE ? FiltroFechaFin : null;
+
+
                 const productosTerminados = await this.ObtenerProductoTerminado(FiltroFechaInicio, FiltroFechaFin, turnoNWSCALE, 'PCORR');
-                seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, turnoNWSCALE, false);
+
+                seAgregaronProductosTerminados = await this.agregarProductosTerminadosAlGrid(productosTerminados, turnoNWSCALE, false, modoNWSCALE, rangoIni, rangoFin);
             }
 
 
@@ -740,7 +762,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             let filaExistente = datosFormateados.find(fila =>
                 normalizarFecha(fila.Fecha) === fecha &&
                 fila.Linea === nombreLinea &&
-                (fila._origen === 'CORRECTIVO' || fila.OTMC)
+                GlobalUtil.esFilaManual(fila)
             );
 
             console.log(`🔍 Buscando (EN MEMORIA): Fecha="${fecha}" | Línea="${nombreLinea}" | Origen="CORRECTIVO" | Órdenes a agregar: ${otmcList.join(', ')}`);
@@ -975,7 +997,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             let filaExistente = datosFormateados.find(fila =>
                 normalizarFecha(fila.Fecha) === fecha &&
                 fila.Linea === nombreLinea &&
-                (fila._origen === 'PREVENTIVO' || fila.OTMP)
+                GlobalUtil.esFilaManual(fila)
             );
 
             console.log(`🔍 Buscando (EN MEMORIA): Fecha="${fecha}" | Línea="${nombreLinea}" | Origen="PREVENTIVO" | Órdenes a agregar: ${otmpList.join(', ')}`);
@@ -1220,7 +1242,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             let filaExistente = datosFormateados.find(fila =>
                 normalizarFecha(fila.Fecha) === fecha &&
                 fila.Linea === nombreLinea &&
-                (fila._origen === 'PARO_MANUAL' || fila.ID_PARO)
+                GlobalUtil.esFilaManual(fila)
             );
 
             const categoriasKeys = Object.keys(categorias);
@@ -1424,7 +1446,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
     // ========================================
     // 🔥 NUEVO: Agregar Productos Terminados al Grid
     // ========================================
-    async agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, showwarning = false) {
+    async agregarProductosTerminadosAlGrid(productosTerminados, filtroTurno, showwarning = false, modoNWSCALE = 'DIA', rangoInicio = null, rangoFin = null) {
         try {
             if (!productosTerminados || productosTerminados.length === 0) {
                 if (showwarning)
@@ -1434,17 +1456,29 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     );
                 return false;
             }
-
-            // 🔥 NUEVO: validar en batch todos los IDs antes de procesar
-            const idsAValidar = productosTerminados.map(item => item.Id);
-            const { idsExistentes: idsYaExistentesEnBD, detalle: productosYaRegistrados } =
-                await ProductosTerminadosHelper.validarProductosTerminadosExistentes(idsAValidar, this.tipoProcesoActual, this.URLBase);
+            // La validacion fuerte es el upsert por CLAVE_SYNC en el SP de guardado.
 
 
             const nodosExistentes = new Map();
+            const nodosPorClave = new Map();
+            const nodosPorNegocio = new Map();
+
             this.gridApi.forEachNode(node => {
-                if (node.data?.ID_PRODUCTO_TERMINADO) {
-                    nodosExistentes.set(String(node.data.ID_PRODUCTO_TERMINADO), node);
+                const data = node.data || {};
+
+                if (data.ID_PRODUCTO_TERMINADO) {
+                    nodosExistentes.set(String(data.ID_PRODUCTO_TERMINADO), node);
+                }
+
+                if (data.CLAVE_SYNC) {
+                    nodosPorClave.set(String(data.CLAVE_SYNC), node);
+                }
+
+                if (data._origen === 'PRODUCTO_TERMINADO') {
+                    const keyNegocio = (modoNWSCALE === 'RANGO')
+                        ? `${data.Linea}|${data.Producto}`
+                        : `${data.Fecha}|${data.Linea}|${data.Producto}|${data.Turno}`;
+                    nodosPorNegocio.set(keyNegocio, node);
                 }
             });
 
@@ -1465,12 +1499,7 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 //}
 
                 const idStr = String(item.Id);
-                const nodoExistente = nodosExistentes.get(idStr);
-
-                // Existe en BD pero no está en el grid: se ignora en silencio
-                if (!nodoExistente && idsYaExistentesEnBD.has(idStr)) {
-                    return;
-                }
+                let nodoExistente = nodosExistentes.get(idStr);
 
                 const fecha = this.calcularFechaOperativaTurno(item.FechaPesaje, item.Turno);
 
@@ -1503,6 +1532,49 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
                 /*const nodoExistente = nodosExistentes.get(String(item.Id));*/
 
+                // Clave de negocio estable (rango o dia/turno)
+
+                const claveNueva = GlobalUtil.construirClaveNWSCALE({
+
+                    planta: this.datos_usuario[0].PLANTA,
+
+                    modo: modoNWSCALE,
+
+                    fechaInicio: rangoInicio,
+
+                    fechaFin: rangoFin,
+
+                    fecha: fecha,
+
+                    linea: lineaLabel,
+
+                    producto: item.Codigo,
+
+                    turno: item.Turno
+
+                });
+
+
+                if (!nodoExistente) {
+
+                    nodoExistente = nodosPorClave.get(claveNueva);
+
+                }
+
+
+                if (!nodoExistente) {
+
+                    const keyNegocio = (modoNWSCALE === 'RANGO')
+
+                        ? `${lineaLabel}|${item.Codigo}`
+
+                        : `${fecha}|${lineaLabel}|${item.Codigo}|${String(item.Turno || '')}`;
+
+                    nodoExistente = nodosPorNegocio.get(keyNegocio);
+
+                }
+
+
                 if (nodoExistente) {
                     const dataActualizada = { ...nodoExistente.data };
 
@@ -1521,6 +1593,16 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     dataActualizada._origen = 'PRODUCTO_TERMINADO';
                     dataActualizada._marcador = '📦';
                     dataActualizada._rowClass = 'row-producto-terminado';
+
+                    dataActualizada.ID_PRODUCTO_TERMINADO = item.Id;
+
+                    dataActualizada.CLAVE_SYNC = claveNueva;
+
+                    dataActualizada.MODO = modoNWSCALE;
+
+                    dataActualizada.FECHA_INICIO_RANGO = rangoInicio;
+
+                    dataActualizada.FECHA_FIN_RANGO = rangoFin;
 
                     this.recalcularFila(dataActualizada);
                     nodoExistente.setData(dataActualizada);
@@ -1547,6 +1629,16 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                     nuevaFila._origen = 'PRODUCTO_TERMINADO';
                     nuevaFila._marcador = '📦';
                     nuevaFila._rowClass = 'row-producto-terminado';
+
+                    nuevaFila.CLAVE_SYNC = claveNueva;
+
+                    nuevaFila.MODO = modoNWSCALE;
+
+                    nuevaFila.FECHA_INICIO_RANGO = rangoInicio;
+
+                    nuevaFila.FECHA_FIN_RANGO = rangoFin;
+
+                    nuevaFila.TOKEN = null;
                     nuevaFila._esNuevo = true;
 
                     this.recalcularFila(nuevaFila);
@@ -2363,6 +2455,16 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 beforeSend: () => { GlobalUtil.mostrarLoader(true); }
             });
 
+            if (response && response.Status === "CONFLICTO") {
+                AlertManager.mostrar(
+                    response.Message || "La fila fue modificada por otro usuario. Recarga los datos e intenta de nuevo.",
+                    "warning"
+                );
+                await this.consultarDatos();
+                $("#btnGuardarCambios").html('<i class="bi bi-save me-1"></i>Guardar').prop("disabled", false);
+                return;
+            }
+
             if (response.Status === "SI") {
                 AlertManager.mostrar("Datos guardados correctamente", "success");
                 this.cambiosPendientes = [];
@@ -2401,6 +2503,11 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
                 datos.push({
                     ID_REGISTRO: node.data.ID_REGISTRO || null,
+                    MODO: node.data.MODO || null,
+                    FECHA_INICIO_RANGO: node.data.FECHA_INICIO_RANGO || null,
+                    FECHA_FIN_RANGO: node.data.FECHA_FIN_RANGO || null,
+                    TOKEN: node.data.TOKEN || null,
+                    CLAVE_SYNC: node.data.CLAVE_SYNC || null,
                     OTMC: otmcFinal,
                     OTMP: otmpFinal,
                     ID_PRODUCTO_TERMINADO: node.data.ID_PRODUCTO_TERMINADO || null,
@@ -2492,8 +2599,8 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         // NWSCALE se unificó en el checkbox #chkIncluirNWSCALE del panel de datos salvados.
 
         $('#btnLimpiarFiltros').on('click', () => {
-            $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
-            $('#FiltroFechaFin').val(DateUtils.obtenerUltimoDiaMesActual());
+            $('#FiltroFechaInicio').val(DateUtils.obtenerFechaActual());
+            $('#FiltroFechaFin').val(DateUtils.obtenerFechaActual());
             $('#FiltroTurno').val('');
             $('#FiltroProducto').val('');
             $('#FiltroLinea').val('');

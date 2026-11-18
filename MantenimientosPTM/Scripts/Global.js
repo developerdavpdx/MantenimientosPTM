@@ -1138,6 +1138,55 @@ class GlobalUtil {
         let datos_usuario = sessionStorage.getItem("userData");
         return datos_usuario ? JSON.parse(datos_usuario) : null;
     }
+
+    // 🔒 Identifica filas manuales (correctivos/preventivos/paros) para unificarlas
+    // por fecha + línea. Excluye filas NWSCALE y filas legacy con producto/turno.
+    static esFilaManual(fila) {
+        if (!fila) return false;
+        if (fila.ID_PRODUCTO_TERMINADO) return false; // es NWSCALE
+
+        const tieneProducto = !!(fila.Producto && String(fila.Producto).trim() !== '');
+        const tieneTurno = !!(fila.Turno && String(fila.Turno).trim() !== '');
+
+        // Fila con producto/turno pero sin ID: solo es manual si trae OT/paro
+        if (tieneProducto || tieneTurno) {
+            return fila._origen === 'CORRECTIVO'
+                || fila._origen === 'PREVENTIVO'
+                || fila._origen === 'PARO_MANUAL'
+                || !!fila.OTMC
+                || !!fila.OTMP
+                || !!fila.ID_PARO;
+        }
+
+        // Sin producto/turno ni ID: es una fila manual (aunque solo tenga horas)
+        return true;
+    }
+
+    // 🔒 Convierte una fecha (YYYY-MM-DD / Date) a YYYYMMDD
+    static fechaAyyyyMMdd(fecha) {
+        if (!fecha) return '';
+        const s = String(fecha);
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) return `${m[1]}${m[2]}${m[3]}`;
+        const d = new Date(fecha);
+        if (isNaN(d.getTime())) return '';
+        return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    // 🔒 Construye la CLAVE_SYNC de NWSCALE igual que el SP de guardado.
+    static construirClaveNWSCALE({ planta, modo, fechaInicio, fechaFin, fecha, linea, producto, turno }) {
+        const p = (planta ?? '').toString().trim();
+        const l = (linea ?? '').toString().trim();
+        const pr = (producto ?? '').toString().trim();
+
+        if (String(modo || '').toUpperCase() === 'RANGO') {
+            return `N|${p}|RANGO|${this.fechaAyyyyMMdd(fechaInicio)}|${this.fechaAyyyyMMdd(fechaFin)}|${l}|${pr}`;
+        }
+
+        const f = this.fechaAyyyyMMdd(fecha);
+        const t = (turno ?? '').toString().trim();
+        return `N|${p}|DIA|${f}|${l}|${pr}|${t}`;
+    }
     // ✅ Nueva función para mostrar/ocultar loader
     static mostrarLoader(mostrar, description = "") {
         const loader = document.getElementById('calendarLoader');

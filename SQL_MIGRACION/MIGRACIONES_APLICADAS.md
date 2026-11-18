@@ -1,6 +1,6 @@
 # Bitácora de migraciones aplicadas
 
-Última actualización: 11/11/2026
+Última actualización: 17/11/2026
 Responsable de la reorganización: sesión OpenCode
 Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/validación en el ambiente correspondiente.
 
@@ -30,6 +30,8 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 11/11/2026 | TEST/PTM | `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_*.sql` | **Pendiente** | Aplicar en servidor antes de probar devoluciones |
 | 11/11/2026 | DBADMIN | `FIX_CLASIFICACION_ABOCINADORES_DBADMIN.sql` | Aplicado/validado | 6 Abocinadores de planta 2: HERRAMENTALES → MANTENIMIENTO |
 | 12/11/2026 | TEST/PTM | Clasificación de Abocinadores | Aplicado/validado | Confirmado por el usuario (12/11/2026) |
+| 17/11/2026 | DBADMIN | Tiempos Muertos / NWSCALE (4 procesos) | Aplicado/validado | Columnas, claves, índices únicos, 4 SPs de consulta y 4 de guardado |
+| 17/11/2026 | PTM_2022_FINAL | Tiempos Muertos / NWSCALE (4 procesos) | **Pendiente** | Paquete en `PENDIENTES/PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` |
 
 ## Detalle de los cambios clave
 
@@ -91,6 +93,24 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
   - `APLICADOS/TEST_JUNIO_2026/PREVENTIVOS/` (4 scripts).
 - **C# / JS:** `MantenimientosPreventivosController.cs`, `AccesoDatosMantenimientosPreventivos.cs`, `GlobalCommands.cs`, `mantenimientos_preventivos_refactor.js`.
 - **Estado:** aplicado/validado en DBADMIN, PTM_2022_FINAL y TEST_JUNIO_2026 el 17/11/2026. DLL + JS publicados en `MantenimientosRelease` y `MantenimientosTest` (publicacion en caliente) el 17/11/2026.
+
+### 7. Tiempos Muertos / NWSCALE - duplicados y edicion concurrente (2026-11-17)
+- **Problema:** NWSCALE insertaba una fila por producto/turno en cada consulta y las filas manuales se duplicaban por fecha+línea. Además, dos usuarios podían guardar la misma fila y el segundo pisaba al primero.
+- **Diseño:**
+  - Una sola fila por `CLAVE_SYNC`: `N|PLANTA|RANGO|FECHA_INI|FECHA_FIN|LINEA|PRODUCTO` (rango), `N|PLANTA|DIA|FECHA|LINEA|PRODUCTO|TURNO` (día), `M|PLANTA|FECHA|LINEA` (manual).
+  - NWSCALE se mantiene como **resumen por rango** con clave de rango estable.
+  - Upsert por clave en el servidor, dedupe de `OTMC`/`OTMP`/`ID_PARO` y token de versión (`TO_VARCHAR(FECHA_ACTUALIZACION,'YYYYMMDDHH24MISSFF6')`).
+  - Índices únicos `UX_TM_{PVC|INY|CORRUGADO|PEAD}_CLAVE_SYNC`.
+  - En duplicados manuales se conserva el `ID_REGISTRO` menor.
+- **DBADMIN (aplicado 17/11/2026):**
+  - Columnas `ORIGEN`, `CLAVE_SYNC`, `MODO`, `FECHA_INICIO_RANGO`, `FECHA_FIN_RANGO`.
+  - Limpieza: PVC 235 → 220 filas; 0 duplicados en las 4 tablas.
+  - 4 SPs de consulta y 4 de guardado con upsert/dedupe/token.
+  - Respaldo: `PdxMTTOTiemposMuertosProduccionPVC_BAK_20261117`.
+  - Prueba end-to-end en INY: insert con token, segundo guardado actualiza la misma fila; token viejo → `CONFLICTO`.
+- **Código:** `ProduccionController.cs`, `AccesoDatosProduccion.cs`, `Global.js`, los 4 `produccion_*_refactor.js` y las 4 vistas (`?v=20261113-13`).
+- **Filtro inicial:** los 4 procesos abren con la fecha del día (`DateUtils.obtenerFechaActual()`).
+- **PTM_2022_FINAL:** **pendiente**. Paquete en `PENDIENTES/PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (scripts 00 a 06, respaldo antes de borrar).
 
 ## Obsoletos
 

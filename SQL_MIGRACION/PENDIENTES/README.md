@@ -18,6 +18,7 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 - `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_ALTER.sql`
 - `NWSCALE/20261117_INDICES_NWSCALE.sql`
 - `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
+- `PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (paquete 00 a 06 + README)
 
 Motivo: los SPs `SpPdxMTTOGetArticuloSalidaM` y `SpPdxMTTOGetSalidasPorOT`
 deben devolver `CostoPromedio` (`OITM.AvgPrice`) para que la devolución a SAP
@@ -77,6 +78,21 @@ modal lo muestre antes de confirmar.
 - `@Corte = 4` devuelve un **resumen por producto/línea para todo el rango** (totales sumados y fecha más reciente). **Este es el comportamiento esperado**: el portal de NWSCALE muestra el resumen del rango así.
 - Si en el futuro se requiere una fila por día, se puede cambiar a la estrategia día por día (con los índices nuevos, cada día tarda ~0.1–0.6 s).
 
+
+## Pendientes 2026-11-17 — Tiempos Muertos / NWSCALE (PTM_2022_FINAL)
+
+Paquete: `PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`
+
+- `00_TM_BACKUP_PTM_2022_FINAL.sql` — respaldo de las 4 tablas **antes** de borrar.
+- `01_TM_COLUMNAS_Y_CLAVES_PTM_2022_FINAL.sql` — columnas `ORIGEN`, `CLAVE_SYNC`, `MODO`, rango; backfill.
+- `02_TM_REPORTE_DUPLICADOS_PTM_2022_FINAL.sql` — reporte (solo lectura) para autorizar la limpieza.
+- `03_TM_LIMPIEZA_DUPLICADOS_PTM_2022_FINAL.sql` — conserva el ID menor, fusiona `OTMC`/`OTMP`/`ID_PARO`, borra duplicados y vacías.
+- `04_TM_INDICES_UNICOS_PTM_2022_FINAL.sql` — 4 índices únicos `UX_TM_*_CLAVE_SYNC`.
+- `05_TM_SP_CONSULTA_PTM_2022_FINAL.sql` — `ALTER` de los 4 SPs de consulta.
+- `06_TM_SP_GUARDADO_PTM_2022_FINAL.sql` — `ALTER` de los 4 SPs de guardado.
+- **Estado:** pendiente de aplicar en el servidor on-premise (no alcanzable desde desarrollo).
+- **Orden:** 00 → 01 → 02 (revisar) → 03 → 04 → 05 → 06.
+- **Después:** publicar DLL + 5 JS + 4 vistas (`?v=20261113-13`).
 
 ## Aplicados recientes
 

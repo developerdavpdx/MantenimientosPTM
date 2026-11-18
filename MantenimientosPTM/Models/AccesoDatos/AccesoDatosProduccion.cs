@@ -260,6 +260,20 @@ namespace MantenimientosPTM
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public int? ID_REGISTRO { get; set; }
 
+            // 🔒 Modo de la fila NWSCALE: RANGO / DIA
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public string MODO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public DateTime? FECHA_INICIO_RANGO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public DateTime? FECHA_FIN_RANGO { get; set; }
+
+            // 🔒 Token de versión (FECHA_ACTUALIZACION formateada)
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public string TOKEN { get; set; }
+
             // 🔥 NUEVO
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             [DefaultValue("")]
@@ -486,6 +500,18 @@ namespace MantenimientosPTM
         {
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public int? ID_REGISTRO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public string MODO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public DateTime? FECHA_INICIO_RANGO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public DateTime? FECHA_FIN_RANGO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public string TOKEN { get; set; }
 
             // 🔥 NUEVO
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -725,6 +751,18 @@ namespace MantenimientosPTM
         {
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
             public int? ID_REGISTRO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public string MODO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public DateTime? FECHA_INICIO_RANGO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public DateTime? FECHA_FIN_RANGO { get; set; }
+
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+            public string TOKEN { get; set; }
 
             // 🔥 NUEVO
             [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -976,6 +1014,14 @@ namespace MantenimientosPTM
         public class TiemposMuertosProduccionINY
         {
             public int? ID_REGISTRO { get; set; }
+
+            public string MODO { get; set; }
+
+            public DateTime? FECHA_INICIO_RANGO { get; set; }
+
+            public DateTime? FECHA_FIN_RANGO { get; set; }
+
+            public string TOKEN { get; set; }
             public string OTMC { get; set; }
             public string OTMP { get; set; }
             public string ID_PRODUCTO_TERMINADO { get; set; }

@@ -1,4 +1,4 @@
-﻿using MantenimientosPTM.Hubs;
+using MantenimientosPTM.Hubs;
 using MantenimientosPTM.Models.Dto;
 using Microsoft.AspNet.SignalR;
 using Newtonsoft.Json;
@@ -462,6 +462,17 @@ namespace MantenimientosPTM.Controllers
                         parameters
                     );
 
+                    // CONTROL DE CONCURRENCIA: otro usuario modificó la fila
+                    if (!string.IsNullOrEmpty(resultHana.JsonResult) &&
+                        resultHana.JsonResult.IndexOf("CONFLICTO", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        jsonResponse.Status = "CONFLICTO";
+                        jsonResponse.Message = "La fila fue modificada por otro usuario. Recarga los datos e intenta de nuevo.";
+                        jsonResponse.Data = string.Empty;
+
+                        return Json(jsonResponse);
+                    }
+
                     if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
                     {
                         jsonResponse.Status = "NO";
@@ -519,7 +530,18 @@ namespace MantenimientosPTM.Controllers
                         parameters
                     );
 
-                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                                        // CONTROL DE CONCURRENCIA: otro usuario modificó la fila
+                    if (!string.IsNullOrEmpty(resultHana.JsonResult) &&
+                        resultHana.JsonResult.IndexOf("CONFLICTO", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        jsonResponse.Status = "CONFLICTO";
+                        jsonResponse.Message = "La fila fue modificada por otro usuario. Recarga los datos e intenta de nuevo.";
+                        jsonResponse.Data = string.Empty;
+
+                        return Json(jsonResponse);
+                    }
+
+if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
                     {
                         jsonResponse.Status = "NO";
                         jsonResponse.Message = $"Error al guardar registros: {resultHana.JsonResult}";
@@ -576,7 +598,18 @@ namespace MantenimientosPTM.Controllers
                         parameters
                     );
 
-                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                                        // CONTROL DE CONCURRENCIA: otro usuario modificó la fila
+                    if (!string.IsNullOrEmpty(resultHana.JsonResult) &&
+                        resultHana.JsonResult.IndexOf("CONFLICTO", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        jsonResponse.Status = "CONFLICTO";
+                        jsonResponse.Message = "La fila fue modificada por otro usuario. Recarga los datos e intenta de nuevo.";
+                        jsonResponse.Data = string.Empty;
+
+                        return Json(jsonResponse);
+                    }
+
+if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
                     {
                         jsonResponse.Status = "NO";
                         jsonResponse.Message = $"Error al guardar registros INY: {resultHana.JsonResult}";
@@ -633,7 +666,18 @@ namespace MantenimientosPTM.Controllers
                         parameters
                     );
 
-                    if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
+                                        // CONTROL DE CONCURRENCIA: otro usuario modificó la fila
+                    if (!string.IsNullOrEmpty(resultHana.JsonResult) &&
+                        resultHana.JsonResult.IndexOf("CONFLICTO", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        jsonResponse.Status = "CONFLICTO";
+                        jsonResponse.Message = "La fila fue modificada por otro usuario. Recarga los datos e intenta de nuevo.";
+                        jsonResponse.Data = string.Empty;
+
+                        return Json(jsonResponse);
+                    }
+
+if (resultHana.JsonResult.Contains("ERROR") || resultHana.JsonResult.Contains("Error"))
                     {
                         jsonResponse.Status = "NO";
                         jsonResponse.Message = $"Error al guardar registros: {resultHana.JsonResult}";
