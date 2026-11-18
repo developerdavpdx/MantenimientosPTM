@@ -419,6 +419,52 @@ namespace MantenimientosPTM.Controllers
             }
         }
 
+        /// <summary>
+        /// Valida el token (FECHA_ULT_MOD) de la OT de correctivo contra la BD.
+        /// Devuelve false cuando otro usuario modifico la OT desde que se abrio.
+        /// Si el token viene vacio, no valida (compatibilidad).
+        /// </summary>
+        private bool ValidarTokenOTCorrectivo(string numeroOrden, string token, out string tokenActual)
+        {
+            tokenActual = null;
+
+            try
+            {
+                var parametros = new
+                {
+                    P_NUMERO_ORDEN = numeroOrden,
+                    P_TOKEN = token
+                };
+
+                var parameters = Logic.GlobalCommands.ConvertToHanaParameters(parametros, false, null);
+                var result = Logic.GlobalCommands.ExecuteProcedureHanaAuto(Logic.AD.GCValidarTokenOTCorrectivo, parameters);
+
+                if (string.IsNullOrEmpty(result?.JsonResult) || result.JsonResult == "[]")
+                    return true;
+
+                var rows = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(result.JsonResult);
+                if (rows == null || rows.Count == 0)
+                    return true;
+
+                var estatus = rows[0].ContainsKey("Estatus") ? rows[0]["Estatus"]?.ToString() : null;
+                tokenActual = rows[0].ContainsKey("TOKEN_ACTUAL") ? rows[0]["TOKEN_ACTUAL"]?.ToString() : null;
+
+                return !string.Equals(estatus, "CONFLICTO", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                // Si la validacion no se puede ejecutar, no se bloquea el guardado.
+                return true;
+            }
+        }
+
+        private string ObtenerTokenActualOTCorrectivo(string numeroOrden)
+        {
+            string tokenActual;
+            ValidarTokenOTCorrectivo(numeroOrden, null, out tokenActual);
+            return tokenActual;
+        }
+
         [HttpPost]
         public JsonResult InsertarOrdenTrabajoMC()
         {
@@ -444,6 +490,18 @@ namespace MantenimientosPTM.Controllers
 
                     if (datos == null)
                         throw new Exception("No se recibieron datos válidos.");
+                }
+
+                // CONTROL DE CONCURRENCIA: la OT cambio desde que se abrio?
+                string tokenActual;
+                if (!ValidarTokenOTCorrectivo(datos.NumeroOrden, datos.TOKEN, out tokenActual))
+                {
+                    jsonResponse.Status = "CONFLICTO";
+                    jsonResponse.Message = "La OT fue modificada por otro usuario. Cierra y vuelve a abrir la OT para ver los cambios mas recientes.";
+                    jsonResponse.Data = string.Empty;
+                    jsonResponse.Token = tokenActual;
+
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
                 }
 
                 // 🔥 PREPARAR FIRMAS DIGITALES (se confirman solo si la BD guarda bien)
@@ -495,7 +553,8 @@ namespace MantenimientosPTM.Controllers
                     "P_IDMANTENIMIENTO",
                     "P_SOLICITANTE",
                     "P_USUARIO",
-                    "P_TIPOOPERACION"
+                    "P_TIPOOPERACION",
+                    "P_TOKEN"
                     // Excluir temporalmente la firma de Mantenimiento del SP porque ya no es requerida
                     };
 
@@ -605,6 +664,9 @@ namespace MantenimientosPTM.Controllers
                     throw new Exception("No fue posible guardar la orden de trabajo");
                 }
 
+                // Token nuevo para el siguiente guardado
+                jsonResponse.Token = ObtenerTokenActualOTCorrectivo(datos.NumeroOrden);
+
                 ConfirmarFirma(firmaRealizo);
                 ConfirmarFirma(firmaSuperviso);
 
@@ -654,6 +716,18 @@ namespace MantenimientosPTM.Controllers
                         throw new Exception("No se recibieron datos válidos.");
                 }
 
+                // CONTROL DE CONCURRENCIA: la OT cambio desde que se abrio?
+                string tokenActual;
+                if (!ValidarTokenOTCorrectivo(datos.NumeroOrden, datos.TOKEN, out tokenActual))
+                {
+                    jsonResponse.Status = "CONFLICTO";
+                    jsonResponse.Message = "La OT fue modificada por otro usuario. Cierra y vuelve a abrir la OT para ver los cambios mas recientes.";
+                    jsonResponse.Data = string.Empty;
+                    jsonResponse.Token = tokenActual;
+
+                    return Json(jsonResponse, JsonRequestBehavior.AllowGet);
+                }
+
                 // 🔥 PREPARAR FIRMAS DIGITALES (sin validar para borrador)
                 // Si una firma no se puede guardar, el borrador continúa sin ella (mismo comportamiento actual).
                 bool okFirmaRealizo = PrepararFirmaDigital(datos.FirmaRealizo, datos.NumeroOrden, "Realizo", out firmaRealizo);
@@ -687,7 +761,8 @@ namespace MantenimientosPTM.Controllers
                     "P_IDMANTENIMIENTO",
                     "P_SOLICITANTE",
                     "P_USUARIO",
-                    "P_TIPOOPERACION"
+                    "P_TIPOOPERACION",
+                    "P_TOKEN"
                     };
 
                 var parameters = allparameters
@@ -737,6 +812,9 @@ namespace MantenimientosPTM.Controllers
                 {
                     throw new Exception("No fue posible guardar el borrador");
                 }
+
+                // Token nuevo para el siguiente guardado
+                jsonResponse.Token = ObtenerTokenActualOTCorrectivo(datos.NumeroOrden);
 
                 ConfirmarFirma(firmaRealizo);
                 ConfirmarFirma(firmaSuperviso);

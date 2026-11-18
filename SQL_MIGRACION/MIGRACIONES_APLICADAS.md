@@ -33,6 +33,9 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 17/11/2026 | DBADMIN | Tiempos Muertos / NWSCALE (4 procesos) | Aplicado/validado | Columnas, claves, índices únicos, 4 SPs de consulta y 4 de guardado |
 | 17/11/2026 | PTM_2022_FINAL | Tiempos Muertos / NWSCALE (4 procesos) | Aplicado/validado | 0 duplicados y 0 sin token en las 4 tablas; 4 índices únicos; 4 SPs de guardado con 4 parámetros nuevos. DLL + JS + vistas publicados 18/11/2026 |
 | 18/11/2026 | TEST_JUNIO_2026 | Tiempos Muertos / NWSCALE (4 procesos) | **Pendiente** | Paquete en `PENDIENTES/TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (aplicar 18/11/2026) |
+| 18/11/2026 | DBADMIN | Correctivos: índices únicos + token de versión | Aplicado/validado | `APLICADOS/DBADMIN/CORRECTIVOS/20261118_CORRECTIVO_INDICES_Y_TOKEN_DBADMIN.sql` |
+| 18/11/2026 | PTM_2022_FINAL | Correctivos: índices únicos + token de versión | **Pendiente** | `PENDIENTES/PTM_2022_FINAL/PRODUCCION/CORRECTIVOS/` |
+| 18/11/2026 | TEST_JUNIO_2026 | Correctivos: índices únicos + token de versión | **Pendiente** | `PENDIENTES/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/` |
 
 ## Detalle de los cambios clave
 
@@ -121,6 +124,18 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
   - Resultado del 07: 7 columnas por tabla, 4 índices `CPBTREE UNIQUE`, **0 duplicados**, **0 filas sin token**, y los 4 SPs de guardado con 4 parámetros nuevos.
   - Filas: PVC 251 (190 NWSCALE / 17 MANUAL / 44 LEGACY), INY 10 (9 / 0 / 1), Corrugado 87 (0 / 1 / 86), PEAD Liso 197 (0 / 0 / 197).
   - **Código publicado en PTM_2022_FINAL el 18/11/2026:** `MantenimientosPTM.dll`, `Global.js`, los 4 `produccion_*_refactor.js` (PVC `?v=20261113-14`; INY/Corrugado/PEAD `?v=20261113-15`), las 4 vistas `Produccion_*.cshtml`, `ParosProduccion.cshtml` y `paros_produccion_refactor.js?v=20261117-2`.
+
+### 8. Correctivos - guardado blindado (2026-11-18)
+- **Problema:** la OT de correctivo no tenía token de versión. Borrador y firma ya usaban `MERGE` por `NUMERO_ORDEN` (no duplicaban la OT), pero sin índice único ni aviso de conflicto: dos usuarios podían pisarse (last write wins).
+- **Solución (mismo patrón que Preventivos):**
+  - Índices `UNIQUE` `UX_PdxMTTOOrdenesTrabajoMC_NUMORDEN` y `UX_PdxMTTOMCGenerados_NUMORDEN` (con limpieza previa de duplicados).
+  - `SpPdxMTTOValidarTokenOTCorrectivo` (devuelve `OK` / `CONFLICTO`).
+  - `SpPdxMTTOObtenerMantenimientosCorrectivos` devuelve `TOKEN` (`FECHA_ULT_MOD`).
+  - `MantenimientosCorrectivosController`: valida el token antes de guardar borrador/firma y responde `CONFLICTO`; después de guardar devuelve el token nuevo.
+  - `mantenimientos_correctivos_refactor.js`: envía `TOKEN`, maneja `CONFLICTO` y actualiza el token tras guardar.
+- **DBADMIN:** aplicado y probado en portal (borrador, segundo guardado sin conflicto y conflicto simulado con token viejo).
+- **PTM_2022_FINAL / TEST_JUNIO_2026:** scripts pendientes en `PENDIENTES/<schema>/PRODUCCION/CORRECTIVOS/`.
+- **Orden de despliegue:** aplicar SQL primero, luego publicar DLL + `mantenimientos_correctivos_refactor.js`.
 
 ## Obsoletos
 

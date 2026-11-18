@@ -19,6 +19,8 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 - `NWSCALE/20261117_INDICES_NWSCALE.sql`
 - `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
 - `TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (paquete 00 a 07 + README)
+- `PTM_2022_FINAL/PRODUCCION/CORRECTIVOS/20261118_CORRECTIVO_INDICES_Y_TOKEN_PTM_2022_FINAL.sql`
+- `TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/20261118_CORRECTIVO_INDICES_Y_TOKEN_TEST_JUNIO_2026.sql`
 
 Motivo: los SPs `SpPdxMTTOGetArticuloSalidaM` y `SpPdxMTTOGetSalidasPorOT`
 deben devolver `CostoPromedio` (`OITM.AvgPrice`) para que la devolución a SAP
@@ -96,6 +98,9 @@ Paquete: `TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`
   - Resultado 07 en PTM: 0 duplicados, 0 filas sin token, 4 indices unicos y 4 SPs de guardado con 4 parametros nuevos.
   - Filas PTM: PVC 251 (190 NWSCALE / 17 MANUAL / 44 LEGACY), INY 10, Corrugado 87, PEAD Liso 197.
   - **Código publicado en PTM el 18/11/2026:** DLL + 5 JS + 4 vistas + Paros.
+- **2026-11-18 - CORRECTIVOS:** índices únicos por `NUMERO_ORDEN` + token de versión + `CONFLICTO`.
+  - DBADMIN aplicado/validado en portal (borrador, segundo guardado y conflicto simulado).
+  - PTM/TEST pendientes en `PENDIENTES/<schema>/PRODUCCION/CORRECTIVOS/`.
   - Detalle en `MIGRACIONES_APLICADAS.md`.
 
 - **2026-11-17 - PREVENTIVOS:** indices unicos, SP de rutina atomico y control de concurrencia aplicados en `DBADMIN`, `PTM_2022_FINAL` y `TEST_JUNIO_2026`.

@@ -1574,6 +1574,7 @@ class MantenimientoManager {
             estatusorden: row.EstatusOrden,
             descestatusorden: row.DescEstatusOrden,
             idmantenimiento: row.IdMantenimiento,
+            token: row.TOKEN,
 
             firmarealizo: row.FirmaRealizo,
             nombrerealizo: row.NombreRealizo,
@@ -1842,6 +1843,8 @@ class MantenimientoManager {
             // 🔥 Tipo operación
             this.TIPO_OPERACION = (data.estatusOrden == "4" ? "U" : "I");
             this.EstatusOrden = data.estatusOrden; //GUARDAR EL ESTATUS ACTUAL DE LA ORDEN
+            // Token de version para detectar edicion concurrente
+            this.TOKEN_OT = data.TOKEN || null;
             // ========================================
             // 3️ RESET
             // ========================================
@@ -2242,6 +2245,7 @@ class MantenimientoManager {
 
             datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
             datos.IdMantenimiento = this.ID_MANTENIMIENTO;
+            datos.TOKEN = this.TOKEN_OT;
 
             // ✅ Incluir el estado real de "Máquina detenida" como entero (1 = detenido, 0 = funcionando)
             // El input checkbox tiene id #MaquinaDetenidaToggle
@@ -2295,6 +2299,7 @@ class MantenimientoManager {
 
             datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
             datos.IdMantenimiento = this.ID_MANTENIMIENTO;
+            datos.TOKEN = this.TOKEN_OT;
 
             // Estado de máquina detenida
             datos.MaquinaDetenida = $('#MaquinaDetenidaToggle').is(':checked') ? 1 : 0;
@@ -2365,7 +2370,20 @@ class MantenimientoManager {
                 data: JSON.stringify(datos),
                 dataType: 'json',
                 success: (response) => {
+                    if (response.Status === 'CONFLICTO') {
+                        AlertManager.mostrar(
+                            response.Message || 'La OT fue modificada por otro usuario. Cierra y vuelve a abrir la OT para ver los cambios mas recientes.',
+                            'warning',
+                            "alertOrdenContainer"
+                        );
+                        try { $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false); } catch (e) { }
+                        $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                        resolve(false);
+                        return;
+                    }
+
                     if (response.Status === 'SI') {
+                        if (response.Token) this.TOKEN_OT = response.Token;
                         AlertManager.mostrar(
                             response.Message,
                             'success',
@@ -2416,7 +2434,20 @@ class MantenimientoManager {
                 data: JSON.stringify(datos),
                 dataType: 'json',
                 success: (response) => {
+                    if (response.Status === 'CONFLICTO') {
+                        AlertManager.mostrar(
+                            response.Message || 'La OT fue modificada por otro usuario. Cierra y vuelve a abrir la OT para ver los cambios mas recientes.',
+                            'warning',
+                            "alertOrdenContainer"
+                        );
+                        try { $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false); } catch (e) { }
+                        $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false);
+                        resolve(false);
+                        return;
+                    }
+
                     if (response.Status === 'SI') {
+                        if (response.Token) this.TOKEN_OT = response.Token;
                         AlertManager.mostrar(
                             'Borrador guardado correctamente, puede seguir editando o cerrar la ventana.',
                             'success',
@@ -2497,6 +2528,7 @@ class MantenimientoManager {
             estatusOrden: d.estatusorden,
             descEstatusOrden: d.descestatusorden,
             idMantenimiento: d.idmantenimiento,
+            TOKEN: d.token,
 
             firmaRealizo: d.firmarealizo || '',
             nombreRealizo: d.nombrerealizo || '',

@@ -65,6 +65,13 @@ namespace MantenimientosPTM
                 return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOValidarOTCorrectivoFinalizada\"";
             }
         }
+        public string GCValidarTokenOTCorrectivo
+        {
+            get
+            {
+                return $"{ConfigurationManager.AppSettings["Database"]}.\"SpPdxMTTOValidarTokenOTCorrectivo\"";
+            }
+        }
         public string GCGuardarRutinaMP
         {
             get
@@ -405,6 +412,8 @@ namespace MantenimientosPTM
             public string FirmaMantenimiento { get; set; }    // Base64 PNG
             public string NombreMantenimiento { get; set; }
             public string TipoOperacion { get; set; }
+        // Token de version (FECHA_ULT_MOD) de la OT para detectar edicion concurrente
+        public string TOKEN { get; set; }
             // Indicador si la máquina estaba detenida al momento del registro (1 = detenido, 0 = funcionando)
             public int? MaquinaDetenida { get; set; }
         }
