@@ -95,6 +95,7 @@ Paquete: `TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`
   - Scripts en `APLICADOS/PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (00 a 07).
   - Resultado 07 en PTM: 0 duplicados, 0 filas sin token, 4 indices unicos y 4 SPs de guardado con 4 parametros nuevos.
   - Filas PTM: PVC 251 (190 NWSCALE / 17 MANUAL / 44 LEGACY), INY 10, Corrugado 87, PEAD Liso 197.
+  - **Código publicado en PTM el 18/11/2026:** DLL + 5 JS + 4 vistas + Paros.
   - Detalle en `MIGRACIONES_APLICADAS.md`.
 
 - **2026-11-17 - PREVENTIVOS:** indices unicos, SP de rutina atomico y control de concurrencia aplicados en `DBADMIN`, `PTM_2022_FINAL` y `TEST_JUNIO_2026`.

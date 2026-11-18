@@ -31,7 +31,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 11/11/2026 | DBADMIN | `FIX_CLASIFICACION_ABOCINADORES_DBADMIN.sql` | Aplicado/validado | 6 Abocinadores de planta 2: HERRAMENTALES → MANTENIMIENTO |
 | 12/11/2026 | TEST/PTM | Clasificación de Abocinadores | Aplicado/validado | Confirmado por el usuario (12/11/2026) |
 | 17/11/2026 | DBADMIN | Tiempos Muertos / NWSCALE (4 procesos) | Aplicado/validado | Columnas, claves, índices únicos, 4 SPs de consulta y 4 de guardado |
-| 17/11/2026 | PTM_2022_FINAL | Tiempos Muertos / NWSCALE (4 procesos) | Aplicado/validado | 0 duplicados y 0 sin token en las 4 tablas; 4 índices únicos; 4 SPs de guardado con 4 parámetros nuevos |
+| 17/11/2026 | PTM_2022_FINAL | Tiempos Muertos / NWSCALE (4 procesos) | Aplicado/validado | 0 duplicados y 0 sin token en las 4 tablas; 4 índices únicos; 4 SPs de guardado con 4 parámetros nuevos. DLL + JS + vistas publicados 18/11/2026 |
 | 18/11/2026 | TEST_JUNIO_2026 | Tiempos Muertos / NWSCALE (4 procesos) | **Pendiente** | Paquete en `PENDIENTES/TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (aplicar 18/11/2026) |
 
 ## Detalle de los cambios clave
@@ -120,6 +120,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 - **PTM_2022_FINAL:** **aplicado/validado el 17/11/2026**. Paquete en `APLICADOS/PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (scripts 00 a 07, respaldo antes de borrar).
   - Resultado del 07: 7 columnas por tabla, 4 índices `CPBTREE UNIQUE`, **0 duplicados**, **0 filas sin token**, y los 4 SPs de guardado con 4 parámetros nuevos.
   - Filas: PVC 251 (190 NWSCALE / 17 MANUAL / 44 LEGACY), INY 10 (9 / 0 / 1), Corrugado 87 (0 / 1 / 86), PEAD Liso 197 (0 / 0 / 197).
+  - **Código publicado en PTM_2022_FINAL el 18/11/2026:** `MantenimientosPTM.dll`, `Global.js`, los 4 `produccion_*_refactor.js` (PVC `?v=20261113-14`; INY/Corrugado/PEAD `?v=20261113-15`), las 4 vistas `Produccion_*.cshtml`, `ParosProduccion.cshtml` y `paros_produccion_refactor.js?v=20261117-2`.
 
 ## Obsoletos
 
