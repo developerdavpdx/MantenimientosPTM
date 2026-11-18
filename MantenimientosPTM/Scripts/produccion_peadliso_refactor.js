@@ -116,14 +116,14 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         // a PEAD Liso en Planta 2 — los de abajo son placeholder, cópialos de
         // como los tengan mapeados en NW para este proceso.
         this.MAPA_LINEAS_INY = {
-            1: 'Linea 1 PEAD LISO',
-            2: 'Linea 2 PEAD LISO',
-            3: 'Linea 3 PEAD LISO',
-            4: 'Linea 4 PEAD LISO',
-            5: 'Linea 5 PEAD LISO',
-            6: 'Linea 6 PEAD LISO',
-            7: 'Linea 7 PEAD LISO',
-            8: 'Linea 8 PEAD LISO',
+            1: 'LÍNEA 1 PEAD LISO',
+            2: 'LÍNEA 2 PEAD LISO',
+            3: 'LÍNEA 3 PEAD LISO',
+            4: 'LÍNEA 4 PEAD LISO',
+            5: 'LÍNEA 5 PEAD LISO',
+            6: 'LÍNEA 6 PEAD LISO',
+            7: 'LÍNEA 7 PEAD LISO',
+            8: 'LÍNEA 8 PEAD LISO',
         };
     }
 
