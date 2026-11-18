@@ -1122,7 +1122,13 @@ class SolicitudManager {
 
     configurarAutoCompletados() {
         // ✅ Autocomplete de nombres de clientes
-        UIManager.createAutoComplete($("#nombre"), $("#acNombre"), this.nombresClientes);
+        // Nota: el input #nombre no existe en esta vista (SolicitudRefacciones), solo el contenedor #acNombre.
+        // Se condiciona para no invocar createAutoComplete con elementos vacíos (evita el warning en consola).
+        const inputNombre = $("#nombre");
+        const listaNombre = $("#acNombre");
+        if (inputNombre.length && listaNombre.length) {
+            UIManager.createAutoComplete(inputNombre, listaNombre, this.nombresClientes);
+        }
 
         // ✅ Autocomplete de órdenes de compra
         UIManager.createAutoCompleteAjax(

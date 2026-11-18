@@ -1449,3 +1449,60 @@ QA y la auditoría de rendimiento detectaron que con `LIMIT 400` + `ORDER BY sto
 - Con rol **SupervisorMantenimiento** el botón "Solicitar Refacción" aparece **deshabilitado** en todas las OT; con AdminMtto se habilita. Comportamiento por permisos, ajeno a estos cambios.
 - Si `GrupoArticulos` llega con tokens **no numéricos** (ej. `abc`), el controller cae a "sin filtro de grupo" y devuelve grupos no deseados, sin log ni error. Preexistente.
 - El autocomplete no aborta el XHR en vuelo (`Global.js:3929-3947`): con latencias variables una respuesta vieja puede pintarse después de una nueva. El debounce de 300 ms sí funciona.
+
+## 30. Sesión 18/11/2026 — Almacén/Correctivos: 3 ajustes de UI y permisos
+
+**Estado:** **COMPLETADO** — aplicado y validado en portal (QA APROBADO).
+
+### A. Cache-busting real en `SolicitudRefacciones`
+
+`Views/Almacen/SolicitudRefacciones.cshtml:1166` cargaba el JS con `?v1.0.7` **hardcodeado**, así que al desplegar el navegador servía la versión vieja desde caché. Ahora usa el mismo patrón que Correctivos/Preventivos:
+
+```cshtml
+?solicitud_refacciones_refactor.js?v=@System.IO.File.GetLastWriteTime(HttpContext.Current.Server.MapPath("~/Scripts/solicitud_refacciones_refactor.js")).Ticks
+```
+
+Render verificado: `?v=639306178875326195`. `FileUpload.js` se dejó sin versión, igual que en las otras vistas.
+
+### B. `SupervisorMantenimiento` puede solicitar refacciones
+
+El botón `.btn-solicitar-refaccion` se deshabilitaba por rol en `Scripts/mantenimientos_preventivos_refactor.js:1823`:
+
+- **Antes:** `if (estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI")`
+- **Después:** `if (estatusOrden == 4 || esSupProduccion || ordenFinalizada === "SI")`
+
+Se eliminó también la declaración ya sin uso `esSupMantenimiento` (l.1756).
+
+**`mantenimientos_correctivos_refactor.js:1216` no requirió cambios:** su condición ya era `estatusOrden == 4 || ordenFinalizada === "SI" || esSupProduccion`, sin restringir a `SupervisorMantenimiento`.
+
+**Sin validación de rol en servidor:** `InsertarSolicitudRefaccion` (ambos controllers) solo deserializa, inserta y actualiza estatus. `SupervisorProduccion` sigue bloqueado y las OT en estatus 4 / finalizadas siguen deshabilitadas.
+
+### C. Warning de autocomplete eliminado
+
+Causa raíz: `configurarAutoCompletados()` llamaba `UIManager.createAutoComplete($("#nombre"), $("#acNombre"), …)`, pero **`#nombre` no existe** en `SolicitudRefacciones` (solo `#acNombre`). Se condicionó la llamada (`solicitud_refacciones_refactor.js:1123-1132`). El guard de `createAutoComplete` se conserva.
+
+### Verificación
+
+| Prueba | Resultado |
+|---|---|
+| Build Debug | 0 errores, 0 warnings |
+| `node --check` (2 JS) | OK |
+| `?v=` del script | **numérico** `639306178875326195` (sin rastro de `1.0.7`) |
+| Consola en Almacén | **0 warnings** de autocomplete |
+| Preventivos (01–30/11) | **42 de 43** botones habilitados; solo `OTMP-172` ("En proceso de firmas") deshabilitada |
+| Correctivos | `OTMC-019` y `OTMC-020` habilitadas; `OTMC-041` (en firmas) deshabilitada |
+| Flujo completo | `OTMP-112` + `2INSUMO0063` → `POST InsertarSolicitudRefaccion` 200 `Status: SI` |
+
+**Limpieza verificada:** `PdxMTTOMPSolicitudRefacciones` ID 32 eliminada (0 filas para `OTMP-112`) y `PdxMTTOMPGenerados.ESTATUS` de `OTMP-112` devuelto a **2 (Liberado)**.
+
+> Nota: en la prueba se tocó temporalmente `PdxMTTOMPGenerados.USUARIO_ACTUALIZA` de `OTMP-112`; se dejó en vacío (patrón de sus vecinas).
+
+### Observaciones abiertas (preexistentes, no bloqueantes)
+
+- El banner "Se detectaron cambios en los datos… ¿Deseas recargar?" se renderiza **sin botones de acción**: pregunta algo que el usuario no puede responder (los botones existen en el DOM pero no se muestran).
+- Inconsistencia de urgencia para la misma solicitud: el historial de la OT muestra **"Critico"** y Almacén muestra **"Urgente"**.
+- El botón deshabilitado pierde `data-numeroorden` y demás `data-*` (conviven dos plantillas de render del botón).
+- `data-tienesolicitudpendiente="NO"` con `data-idsolicitudpendiente="57"` en `OTMP-112`: valor stale.
+- `OTMP-155` ("En espera de refacción") conserva el botón habilitado — confirmar si es intencional.
+- El **modal "Cambiar Refacción"** (`#solicitarRefAlmModal`) **no está huérfano**: su disparador es `.btn-change-ref`, un botón **por fila** de la tabla (`solicitud_refacciones_refactor.js:1738-1749`) que solo existe cuando hay solicitudes cargadas y se deshabilita si la refacción ya se surtió parcialmente.
+- El `console.error` de SignalR (`ws://…/signalr/connect` → 500) es preexistente; cae a longPolling y no afecta.

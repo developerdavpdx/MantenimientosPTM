@@ -1753,7 +1753,6 @@ class MantenimientoManager {
                             const esAdmin = tipoUsuario === "AdminMtto" || tipoUsuario === "Administrador";
                             const esTecnico = tipoUsuario === "TecnicoMtto";
                             const esSupProduccion = tipoUsuario === "Produccion" || tipoUsuario === "SupervisorProduccion";
-                            const esSupMantenimiento = tipoUsuario === "SupervisorMantenimiento";
                             const esSupervisorPlaneacion = tipoUsuario === "SupervisorPlaneacion";
                             const tieneRefacciones = data.TieneRefacciones;
 
@@ -1821,7 +1820,7 @@ class MantenimientoManager {
                             if (estatusOrden && estatusOrden !== '') {
 
                                 // LÓGICA NORMAL
-                                if (estatusOrden == 4 || esSupMantenimiento || esSupProduccion || ordenFinalizada === "SI") {
+                                if (estatusOrden == 4 || esSupProduccion || ordenFinalizada === "SI") {
                                     refaccionBtn = btnDisabled('secondary', 'tools', 'Solicitar Refacción');
                                 } else {
                                     refaccionBtn = btn('btn-ptm-primary', 'btn-solicitar-refaccion', 'tools', 'Solicitar Refacción', dataAttrs);

@@ -718,6 +718,42 @@
      los 2 pendientes on-premise se regeneraron como un solo pase
      (..._INSUMOS_Y_ORDERBY_20261118_ALTER.sql) y se eliminaron los
      ..._INSUMOS_..._ALTER.sql anteriores.
+30) ALMACEN/CORRECTIVOS - 3 AJUSTES DE UI Y PERMISOS (2026-11-18)
+   - A) Cache-busting real en Almacen:
+     Views/Almacen/SolicitudRefacciones.cshtml:1166 cargaba el JS con ?v1.0.7
+     hardcodeado, por lo que el navegador servia la version vieja tras desplegar.
+     Ahora usa ?v=@System.IO.File.GetLastWriteTime(...).Ticks, igual que
+     Correctivos y Preventivos. Render verificado: ?v=639306178875326195.
+   - B) SupervisorMantenimiento puede solicitar refacciones:
+     en Scripts/mantenimientos_preventivos_refactor.js:1823 se quito
+     esSupMantenimiento de la condicion que deshabilitaba .btn-solicitar-refaccion
+     (se conservan estatus 4, ordenFinalizada y esSupProduccion). Se elimino la
+     declaracion sin uso (l.1756).
+     mantenimientos_correctivos_refactor.js no requirio cambios: su condicion ya
+     no restringia a ese rol.
+     Sin validacion de rol en servidor: InsertarSolicitudRefaccion (ambos
+     controllers) solo deserializa, inserta y actualiza estatus.
+   - C) Warning de autocomplete eliminado:
+     configurarAutoCompletados() llamaba createAutoComplete($("#nombre"), ...)
+     pero #nombre no existe en SolicitudRefacciones (solo #acNombre). Se
+     condiciono la llamada (solicitud_refacciones_refactor.js:1123-1132).
+   - Verificacion: build Debug 0 errores y 0 warnings; node --check OK en los 2 JS;
+     consola de Almacen sin el warning; Preventivos 42 de 43 botones habilitados
+     (solo OTMP-172 "En proceso de firmas" deshabilitada); Correctivos OTMC-019 y
+     OTMC-020 habilitadas y OTMC-041 deshabilitada; flujo completo en OTMP-112 con
+     2INSUMO0063 -> InsertarSolicitudRefaccion 200 Status SI.
+   - Limpieza verificada: PdxMTTOMPSolicitudRefacciones ID 32 eliminada (0 filas
+     para OTMP-112) y PdxMTTOMPGenerados.ESTATUS de OTMP-112 devuelto a 2.
+   - Archivos tocados: Views/Almacen/SolicitudRefacciones.cshtml,
+     Scripts/solicitud_refacciones_refactor.js,
+     Scripts/mantenimientos_preventivos_refactor.js, CONTEXTO_SESION.md,
+     RESUMEN_AJUSTES.txt.
+   - Aclaraciones: el modal "Cambiar Refaccion" (#solicitarRefAlmModal) NO esta
+     huerfano; su disparador es .btn-change-ref, un boton por fila de la tabla que
+     solo existe cuando hay solicitudes cargadas. El autocomplete de articulos no
+     aborta el XHR en vuelo (condicion de carrera, mejora pendiente). Si
+     GrupoArticulos llega con tokens no numericos el controller cae a "sin filtro"
+     y devuelve todos los grupos (solo alcanzable manipulando la URL).
 
 
 ================================================================================
