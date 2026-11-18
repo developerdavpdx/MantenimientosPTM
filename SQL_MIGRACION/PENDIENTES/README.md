@@ -11,17 +11,12 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 
 ## Contenido actual
 
-- `PTM_2022_FINAL/ALMACEN/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql`
 - `DBADMIN/PRODUCCION/SpPdxMTTOBuscarArticulosBatch.sql`
-- `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_CREATE.sql`
-- `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_ALTER.sql`
 - `NWSCALE/20261117_INDICES_NWSCALE.sql`
 - `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
-- `PTM_2022_FINAL/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_PTM_2022_FINAL.sql`
-- `PTM_2022_FINAL/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_Y_ORDERBY_20261118_ALTER.sql`
 
-> **TEST_JUNIO_2026: al dia (sin scripts).** Todo lo de ese schema se aplico el
-> 2026-11-18 y se movio a `../APLICADOS/TEST_JUNIO_2026/`.
+> **TEST_JUNIO_2026 y PTM_2022_FINAL: al dia (sin scripts).** Todo lo de esos
+> schemas se aplico el 2026-11-18 y se movio a `../APLICADOS/<schema>/`.
 
 > Los dos scripts de `PLANEACION` llevan **ambos cambios** del SP
 > `SpPdxMTTOBuscarArticulos`: (1) INSUMOS via `P_GRUPOS_ART` y (2) el nuevo
@@ -120,13 +115,12 @@ modal lo muestre antes de confirmar.
 
 ## Pendientes 2026-11-18 - METRICAS (Cumplimiento PM con las 3 firmas)
 
-Aplicado en `DBADMIN` y en `TEST_JUNIO_2026` (2026-11-18). Falta solo
-`PTM_2022_FINAL`, con `ALTER PROCEDURE`.
+Aplicado en `DBADMIN`, `TEST_JUNIO_2026` y `PTM_2022_FINAL` (2026-11-18).
 
 - TEST_JUNIO_2026: **aplicado** -> `APLICADOS/TEST_JUNIO_2026/METRICAS/`
   (4 `ALTER PROCEDURE "TEST_JUNIO_2026".SpPdxMTTOMetricasOEE_{PVC,PeadLiso,Corrugado,INY}`).
-- `PTM_2022_FINAL/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_PTM_2022_FINAL.sql`
-  - 4 `ALTER PROCEDURE "PTM_2022_FINAL".SpPdxMTTOMetricasOEE_{PVC,PeadLiso,Corrugado,INY}`.
+- PTM_2022_FINAL: **aplicado** -> `APLICADOS/PTM_2022_FINAL/METRICAS/`
+  (4 `ALTER PROCEDURE "PTM_2022_FINAL".SpPdxMTTOMetricasOEE_{PVC,PeadLiso,Corrugado,INY}`).
 - Verificacion: `SELECT PROCEDURE_NAME FROM SYS.PROCEDURES WHERE SCHEMA_NAME = '<schema>' AND PROCEDURE_NAME LIKE 'SpPdxMTTOMetricasOEE%' AND DEFINITION LIKE '%TIENE_3_FIRMAS%';` debe devolver 4 filas.
 - Antes de aplicar, respaldar `SYS.PROCEDURES.DEFINITION` de los 4 SP (la consulta viene incluida en el script).
 - Version previa respaldada en `../../SQL_ORIGINALES/SpPdxMTTOMetricasOEE_*_ANTES_3_FIRMAS_20261118.sql`.

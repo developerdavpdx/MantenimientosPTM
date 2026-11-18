@@ -27,7 +27,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 10/11/2026 | — | Columna `TIEMPO_MUERTO_HERRAMENTALES` | Validado | Ya no es pendiente |
 | 10/11/2026 | — | Código app Preventivos (JS/CSHTML/CSS/Controller) | Desplegado | Publicado en pruebas/producción (confirmado 11/11/2026) |
 | 11/11/2026 | DBADMIN | `MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql` | Aplicado/validado | SPs de salida y detalle devuelven `CostoPromedio` (`OITM.AvgPrice`); modal con costo y valor |
-| 11/11/2026 | TEST/PTM | `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_*.sql` | Parcial | DBADMIN aplicado; TEST_JUNIO_2026 aplicado el 18/11/2026; **PTM_2022_FINAL pendiente** en `PENDIENTES/PTM_2022_FINAL/ALMACEN/` |
+| 11/11/2026 | TEST/PTM | `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_*.sql` | Aplicado/validado | DBADMIN, TEST_JUNIO_2026 y PTM_2022_FINAL aplicados (18/11/2026). Scripts en `APLICADOS/<schema>/ALMACEN/` |
 | 11/11/2026 | DBADMIN | `FIX_CLASIFICACION_ABOCINADORES_DBADMIN.sql` | Aplicado/validado | 6 Abocinadores de planta 2: HERRAMENTALES → MANTENIMIENTO |
 | 12/11/2026 | TEST/PTM | Clasificación de Abocinadores | Aplicado/validado | Confirmado por el usuario (12/11/2026) |
 | 17/11/2026 | DBADMIN | Tiempos Muertos / NWSCALE (4 procesos) | Aplicado/validado | Columnas, claves, índices únicos, 4 SPs de consulta y 4 de guardado |
@@ -38,7 +38,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 18/11/2026 | TEST_JUNIO_2026 | Correctivos: indices unicos + token de version | Aplicado/validado | OT_MC_DUPS 0, MCG_DUPS 0, INDICES 2, VALIDADOR 1. `APLICADOS/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/` |
 | 18/11/2026 | DBADMIN | Métricas OEE: cumplimiento PM con las 3 firmas | Aplicado/validado | 4 SP `SpPdxMTTOMetricasOEE_*`; el numerador solo cuenta PM cerrados con 3 firmas. `APLICADOS/DBADMIN/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_DBADMIN.sql` |
 | 18/11/2026 | TEST_JUNIO_2026 | Metricas OEE: cumplimiento PM con las 3 firmas | Aplicado/validado | 4 ALTER PROCEDURE aplicados el 18/11/2026. `APLICADOS/TEST_JUNIO_2026/METRICAS/` |
-| 18/11/2026 | PTM_2022_FINAL | Métricas OEE: cumplimiento PM con las 3 firmas | **Pendiente** | `PENDIENTES/PTM_2022_FINAL/METRICAS/` (4 `ALTER PROCEDURE`) |
+| 18/11/2026 | PTM_2022_FINAL | Metricas OEE: cumplimiento PM con las 3 firmas | Aplicado/validado | 4 ALTER PROCEDURE aplicados el 18/11/2026. `APLICADOS/PTM_2022_FINAL/METRICAS/` |
 
 ## Detalle de los cambios clave
 
@@ -76,7 +76,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 - **C#:** `LogicaAlmacen.CrearEntradaDevolucionAsync` envía ese valor en `DocumentLines[].Price`.
 - **UI:** el modal de devolución muestra **Costo Prom.**, **Valor** por fila y el total **Valor a devolver**, recalculado al cambiar cantidades o selección.
 - **DBADMIN:** `APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql` — **aplicado**.
-- **TEST/PTM:** `PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql` y `..._PTM_2022_FINAL.sql` — **pendientes de aplicar en servidor** (usan `ALTER PROCEDURE`; on-premise no soporta `CREATE OR REPLACE`).
+- **TEST/PTM:** `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_*.sql` aplicados el 18/11/2026 (usan `ALTER PROCEDURE`; on-premise no soporta `CREATE OR REPLACE`).
 - **Validación local:** SP probado con solicitudes 900003 (9.8589) y 900007 (4.6748); UI probada con OTMC-001 (total $151.13 y recálculo a $131.41 al cambiar una cantidad). El POST a SAP no se pudo probar en cloud (Service Layer inaccesible).
 
 ### 5. Clasificación de Abocinadores (planta 2)
@@ -151,7 +151,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
   - OEE, Disponibilidad, Rendimiento, Calidad, DT, MTTR, MTBF y paros **no se tocan** (salen de la bitácora).
 - **C# / JS:** sin cambios (los nombres de columna del resultset no cambian; `LogicaMetricas.ConsolidarMetricas` suma `TOTAL_PM_CERRADOS` y recalcula el %).
 - **DBADMIN:** aplicado y verificado el 18/11/2026 (los 4 SP contienen `TIENE_3_FIRMAS` y `SUM("CUMPLIDO")`, 0 objetos inválidos). Script en `APLICADOS/DBADMIN/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_DBADMIN.sql`.
-- **TEST_JUNIO_2026:** aplicado el 18/11/2026 -> `APLICADOS/TEST_JUNIO_2026/METRICAS/` (4 `ALTER PROCEDURE`). **PTM_2022_FINAL:** pendiente.
+- **TEST_JUNIO_2026 y PTM_2022_FINAL:** aplicados el 18/11/2026 -> `APLICADOS/<schema>/METRICAS/` (4 `ALTER PROCEDURE` cada uno).
 - **Respaldo previo:** `SQL_ORIGINALES/SpPdxMTTOMetricasOEE_{PVC,PeadLiso,Corrugado,INY}_ANTES_3_FIRMAS_20261118.sql` (ver sección nueva del `SQL_ORIGINALES/README.txt`).
 
 ## 2026-11-18 - Busqueda de articulos: REFACCIONES + INSUMOS
@@ -163,7 +163,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 - **C#:** `PlaneacionController.BuscarArticulo` recibe `GrupoArticulos` como string, lo normaliza a `102,104` y manda `P_GRUPOS_ART`.
 - **JS:** `GestionArticulosCustom` se instancia con `'102,104'` en `mantenimientos_preventivos_refactor.js`, `mantenimientos_correctivos_refactor.js` y `solicitud_refacciones_refactor.js`.
 - **DBADMIN:** aplicado y verificado el 18/11/2026. Script en `APLICADOS/DBADMIN/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_20261118.sql`.
-- **TEST_JUNIO_2026:** aplicado el 18/11/2026 (incluye INSUMOS + `ORDER BY`). **PTM_2022_FINAL:** pendiente en `PENDIENTES/PTM_2022_FINAL/PLANEACION/`.
+- **TEST_JUNIO_2026 y PTM_2022_FINAL:** aplicados el 18/11/2026 (incluye INSUMOS + `ORDER BY`) -> `APLICADOS/<schema>/PLANEACION/`.
 - **Respaldo previo:** `SQL_ORIGINALES/SpPdxMTTOBuscarArticulos_ANTES_INSUMOS_20261118.sql`.
 
 ## 2026-11-18 - Busqueda de articulos: ORDER BY por relevancia (INSUMOS visibles)
@@ -190,13 +190,9 @@ Motivo: contienen versiones anteriores del SP de rango. La versión vigente est�
 
 ## Pendientes SQL
 - `PENDIENTES/` contiene actualmente:
-  - `PTM_2022_FINAL/ALMACEN/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql`
-  - `PTM_2022_FINAL/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_PTM_2022_FINAL.sql`
-  - `PTM_2022_FINAL/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_Y_ORDERBY_20261118_ALTER.sql`
   - `DBADMIN/PRODUCCION/SpPdxMTTOBuscarArticulosBatch.sql`
-  - `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_CREATE.sql`
-  - `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_ALTER.sql`
   - `NWSCALE/20261117_INDICES_NWSCALE.sql`
   - `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
+- **TEST_JUNIO_2026 y PTM_2022_FINAL no tienen scripts pendientes** (todo aplicado el 18/11/2026 y movido a `APLICADOS/<schema>/`).
 - Al aplicarse en el servidor, moverlos a `APLICADOS/<schema>/` y actualizar esta bitácora.
 - Regla general: si `PENDIENTES/` no tiene scripts SQL, todo está al día.
