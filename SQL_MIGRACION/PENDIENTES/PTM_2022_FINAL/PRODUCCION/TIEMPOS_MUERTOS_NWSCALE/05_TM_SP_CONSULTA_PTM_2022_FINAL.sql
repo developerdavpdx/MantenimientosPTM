@@ -1,12 +1,11 @@
 -- ============================================================================
--- 05 - SPs de CONSULTA de Tiempos Muertos (agregan CLAVE_SYNC, ORIGEN, MODO, rango y TOKEN)
+-- 05 - SPs de CONSULTA de Tiempos Muertos (CLAVE_SYNC, ORIGEN, MODO, rango y TOKEN)
 -- Schema: PTM_2022_FINAL (HANA on-premise)
 -- Fecha: 2026-11-17
 --
--- IMPORTANTE:
---   Los 8 SPs YA EXISTEN en PTM_2022_FINAL, por eso se usa ALTER PROCEDURE.
---   Si alguno NO existiera, cambiar ALTER por CREATE en ese bloque.
---   Se pueden ejecutar por separado; el orden no importa.
+-- Generado desde las definiciones vivas de DBADMIN (las ya probadas).
+-- Los 8 SPs YA EXISTEN en PTM_2022_FINAL: se usa ALTER PROCEDURE (permite
+-- cambiar la firma agregando P_MODO / rango / P_TOKEN).
 -- ============================================================================
 
 SET SCHEMA "PTM_2022_FINAL";
@@ -20,8 +19,8 @@ ALTER PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOConsultarTiemposMuertosPVC"(
     IN p_FECHA_FIN DATE,
     IN p_LINEA NVARCHAR(20),
     IN p_PLANTA NVARCHAR(20),
-    IN p_TURNO NVARCHAR(5),       -- ï¿½ï¿½ NUEVO
-    IN p_PRODUCTO NVARCHAR(50)    -- ï¿½ï¿½ NUEVO
+    IN p_TURNO NVARCHAR(5),       -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO
+    IN p_PRODUCTO NVARCHAR(50)    -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO
 )
 LANGUAGE SQLSCRIPT
 SQL SECURITY INVOKER
@@ -106,13 +105,13 @@ WHERE
         OR :p_PLANTA = ''
         OR "PLANTA" = :p_PLANTA
     )
-    -- ï¿½ï¿½ NUEVO: Filtro Turno
+    -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO: Filtro Turno
     AND (
         :p_TURNO IS NULL
         OR :p_TURNO = ''
         OR "TURNO" = :p_TURNO
     )
-    -- ï¿½ï¿½ NUEVO: Filtro Producto con LIKE
+    -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO: Filtro Producto con LIKE
     AND (
         :p_PRODUCTO IS NULL
         OR :p_PRODUCTO = ''
@@ -130,13 +129,18 @@ END
 -- ============================================================================
 -- SpPdxMTTOConsultarTiemposMuertosINY
 -- ============================================================================
+
+
+-- ============================================================================
+-- SpPdxMTTOConsultarTiemposMuertosINY
+-- ============================================================================
 ALTER PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOConsultarTiemposMuertosINY"(
     IN p_FECHA_INICIO DATE,
     IN p_FECHA_FIN DATE,
     IN p_LINEA NVARCHAR(20),
     IN p_PLANTA NVARCHAR(20),
-    IN p_TURNO NVARCHAR(5),       -- ï¿½ï¿½ NUEVO
-    IN p_PRODUCTO NVARCHAR(50)    -- ï¿½ï¿½ NUEVO
+    IN p_TURNO NVARCHAR(5),       -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO
+    IN p_PRODUCTO NVARCHAR(50)    -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO
 )
 LANGUAGE SQLSCRIPT
 SQL SECURITY INVOKER
@@ -173,7 +177,7 @@ BEGIN
         "ID_PARO",
         "COMENTARIOS",
         -- ========================================
-        -- PRODUCCIÃ“N
+        -- PRODUCCIÃƒâ€œN
         -- ========================================
         "PESO_MINIMO",
         "TR_LIBERADOS",
@@ -228,7 +232,7 @@ BEGIN
         "EFICIENCIA_OPERATIVA",
 
         -- ========================================
-        -- AUDITORÃA
+        -- AUDITORÃƒÂA
         -- ========================================
         "USUARIO",
         "PLANTA",
@@ -258,14 +262,14 @@ BEGIN
             OR "PLANTA" = :p_PLANTA
         )
 
-        -- ï¿½ï¿½ NUEVO: Filtro Turno
+        -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO: Filtro Turno
         AND (
             :p_TURNO IS NULL
             OR :p_TURNO = ''
             OR "TURNO" = :p_TURNO
         )
 
-        -- ï¿½ï¿½ NUEVO: Filtro Producto con LIKE
+        -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO: Filtro Producto con LIKE
         AND (
             :p_PRODUCTO IS NULL
             OR :p_PRODUCTO = ''
@@ -281,6 +285,11 @@ BEGIN
         "TURNO";
 
 END
+
+
+-- ============================================================================
+-- SpPdxMTTOConsultarTiemposMuertosCorrugado
+-- ============================================================================
 
 
 -- ============================================================================
@@ -406,13 +415,18 @@ END;
 -- ============================================================================
 -- SpPdxMTTOConsultarTiemposMuertosPeadLiso
 -- ============================================================================
+
+
+-- ============================================================================
+-- SpPdxMTTOConsultarTiemposMuertosPeadLiso
+-- ============================================================================
 ALTER PROCEDURE "PTM_2022_FINAL"."SpPdxMTTOConsultarTiemposMuertosPeadLiso"(
     IN p_FECHA_INICIO DATE,
     IN p_FECHA_FIN DATE,
     IN p_LINEA NVARCHAR(20),
     IN p_PLANTA NVARCHAR(20),
-    IN p_TURNO NVARCHAR(5),       -- ï¿½ï¿½ NUEVO
-    IN p_PRODUCTO NVARCHAR(50)    -- ï¿½ï¿½ NUEVO
+    IN p_TURNO NVARCHAR(5),       -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO
+    IN p_PRODUCTO NVARCHAR(50)    -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO
 )
 LANGUAGE SQLSCRIPT
 SQL SECURITY INVOKER
@@ -439,7 +453,7 @@ SELECT
     "ID_PRODUCTO_TERMINADO",
     "ID_PARO",
     "COMENTARIOS",
-    -- PRODUCCIÃ“N
+    -- PRODUCCIÃƒâ€œN
     -- ========================================
     "PESO_MINIMO",
     "TRLIBERADOS",
@@ -476,7 +490,7 @@ SELECT
     -- ========================================
     "TIEMPO_DISPONIBLE",
     "TIEMPO_PRODUCTIVO",
-    -- ï¿½ï¿½ NUEVO
+    -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO
     "KG_HR_LINEA",
     "KG_HR_PRODUCTO",
     "OBJETIVO_EFICIENCIA",
@@ -489,7 +503,7 @@ SELECT
     "PORCENTAJE_EFICIENCIA_PRODUCTO",
     "EFICIENCIA_OPERATIVA",
     -- ========================================
-    -- AUDITORÃA
+    -- AUDITORÃƒÂA
     -- ========================================
     "USUARIO",
     "PLANTA",
@@ -514,13 +528,13 @@ WHERE
         OR :p_PLANTA = ''
         OR "PLANTA" = :p_PLANTA
     )
-     -- ï¿½ï¿½ NUEVO: Filtro Turno
+     -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO: Filtro Turno
     AND (
         :p_TURNO IS NULL
         OR :p_TURNO = ''
         OR "TURNO" = :p_TURNO
     )
-    -- ï¿½ï¿½ NUEVO: Filtro Producto con LIKE
+    -- Ã¯Â¿Â½Ã¯Â¿Â½ NUEVO: Filtro Producto con LIKE
     AND (
         :p_PRODUCTO IS NULL
         OR :p_PRODUCTO = ''

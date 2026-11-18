@@ -110,7 +110,13 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
   - Prueba end-to-end en INY: insert con token, segundo guardado actualiza la misma fila; token viejo → `CONFLICTO`.
 - **Código:** `ProduccionController.cs`, `AccesoDatosProduccion.cs`, `Global.js`, los 4 `produccion_*_refactor.js` y las 4 vistas (`?v=20261113-13`).
 - **Filtro inicial:** los 4 procesos abren con la fecha del día (`DateUtils.obtenerFechaActual()`).
-- **PTM_2022_FINAL:** **pendiente**. Paquete en `PENDIENTES/PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (scripts 00 a 06, respaldo antes de borrar).
+- **Pruebas en portal (17/11/2026):** ciclo completo con admin + técnico + supervisor en los 4 procesos. Correctivo + preventivo + paro unificados en una fila; doble guardado sin duplicar; NWSCALE día y rango probado en PVC e INY (y con semilla de prueba también en Corrugado y PEAD).
+- **Correcciones derivadas de las pruebas:**
+  - Preventivos ahora usan `FechaRealInicio` (antes `HoraApertura`/`FechaInicioMantenimiento`, ignorando la reprogramación). Commit `b558f05`.
+  - INY: el parser de fecha de preventivos no quitaba la hora y rompía el guardado. Commit `125309a`.
+  - Paros: se conserva el área al buscar líneas y se valida antes de agregar (evita `ID_AREA=0`). Commit `12811fc`.
+  - Corrugado/PEAD: etiquetas del mapa de respaldo alineadas al catálogo (`LÍNEA ...`). Commit `fc7dc8e`.
+- **PTM_2022_FINAL:** **pendiente**. Paquete en `PENDIENTES/PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (scripts **00 a 07**, respaldo antes de borrar).
 
 ## Obsoletos
 

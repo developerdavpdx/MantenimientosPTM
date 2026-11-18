@@ -90,8 +90,9 @@ Paquete: `PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`
 - `04_TM_INDICES_UNICOS_PTM_2022_FINAL.sql` — 4 índices únicos `UX_TM_*_CLAVE_SYNC`.
 - `05_TM_SP_CONSULTA_PTM_2022_FINAL.sql` — `ALTER` de los 4 SPs de consulta.
 - `06_TM_SP_GUARDADO_PTM_2022_FINAL.sql` — `ALTER` de los 4 SPs de guardado.
+- `07_TM_VERIFICACION_PTM_2022_FINAL.sql` — verificación final (solo lectura).
 - **Estado:** pendiente de aplicar en el servidor on-premise (no alcanzable desde desarrollo).
-- **Orden:** 00 → 01 → 02 (revisar) → 03 → 04 → 05 → 06.
+- **Orden:** 00 → 01 → 02 (revisar) → 03 → 04 → 05 → 06 → 07.
 - **Después:** publicar DLL + 5 JS + 4 vistas (`?v=20261113-13`).
 
 ## Aplicados recientes
