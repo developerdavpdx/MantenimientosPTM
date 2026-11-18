@@ -64,3 +64,6 @@ node_modules/
 graphify-out/
 # Freebuff (archivos temporales local del agente)
 .freebuff/
+
+# Archivos temporales de Playwright MCP
+.playwright-mcp/
