@@ -1,6 +1,13 @@
-# Migracion TIEMPOS MUERTOS / NWSCALE - PTM_2022_FINAL
+# Migracion TIEMPOS MUERTOS / NWSCALE — PTM_2022_FINAL
 
-Paquete listo para aplicar en el schema **PTM_2022_FINAL** (HANA on-premise).
+> **APLICADO / VALIDADO el 2026-11-17.**
+> Resultado del script 07: 7 columnas por tabla, 4 índices `CPBTREE UNIQUE`,
+> **0 duplicados**, **0 filas sin token** y los 4 SPs de guardado con sus
+> 4 parámetros nuevos.
+> Filas PTM: PVC 251 (190 NWSCALE / 17 MANUAL / 44 LEGACY), INY 10 (9 / 0 / 1),
+> Corrugado 87 (0 / 1 / 86), PEAD Liso 197 (0 / 0 / 197).
+
+Paquete aplicado en el schema **PTM_2022_FINAL** (HANA on-premise).
 Replica el esquema que ya esta probado en `DBADMIN` y validado en el portal
 para los 4 procesos (PVC, INY, Corrugado, PEAD Liso).
 

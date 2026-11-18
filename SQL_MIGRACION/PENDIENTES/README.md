@@ -18,7 +18,6 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 - `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_ALTER.sql`
 - `NWSCALE/20261117_INDICES_NWSCALE.sql`
 - `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
-- `PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (paquete 00 a 06 + README)
 
 Motivo: los SPs `SpPdxMTTOGetArticuloSalidaM` y `SpPdxMTTOGetSalidasPorOT`
 deben devolver `CostoPromedio` (`OITM.AvgPrice`) para que la devolución a SAP
@@ -79,24 +78,13 @@ modal lo muestre antes de confirmar.
 - Si en el futuro se requiere una fila por día, se puede cambiar a la estrategia día por día (con los índices nuevos, cada día tarda ~0.1–0.6 s).
 
 
-## Pendientes 2026-11-17 — Tiempos Muertos / NWSCALE (PTM_2022_FINAL)
-
-Paquete: `PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`
-
-- `00_TM_BACKUP_PTM_2022_FINAL.sql` — respaldo de las 4 tablas **antes** de borrar.
-- `01_TM_COLUMNAS_Y_CLAVES_PTM_2022_FINAL.sql` — columnas `ORIGEN`, `CLAVE_SYNC`, `MODO`, rango; backfill.
-- `02_TM_REPORTE_DUPLICADOS_PTM_2022_FINAL.sql` — reporte (solo lectura) para autorizar la limpieza.
-- `03A_TM_PREVIEW_LIMPIEZA_PTM_2022_FINAL.sql` — preview (solo lectura) de lo que borraría el 03.
-- `03_TM_LIMPIEZA_DUPLICADOS_PTM_2022_FINAL.sql` — conserva el ID menor, fusiona `OTMC`/`OTMP`/`ID_PARO`, borra duplicados y vacías.
-- `04_TM_INDICES_UNICOS_PTM_2022_FINAL.sql` — 4 índices únicos `UX_TM_*_CLAVE_SYNC`.
-- `05_TM_SP_CONSULTA_PTM_2022_FINAL.sql` — `ALTER` de los 4 SPs de consulta.
-- `06_TM_SP_GUARDADO_PTM_2022_FINAL.sql` — `ALTER` de los 4 SPs de guardado.
-- `07_TM_VERIFICACION_PTM_2022_FINAL.sql` — verificación final (solo lectura).
-- **Estado:** pendiente de aplicar en el servidor on-premise (no alcanzable desde desarrollo).
-- **Orden:** 00 → 01 → 02 (revisar) → 03 → 04 → 05 → 06 → 07.
-- **Después:** publicar DLL + 5 JS + 4 vistas (`?v=20261113-13`).
-
 ## Aplicados recientes
+
+- **2026-11-17 - TIEMPOS MUERTOS / NWSCALE:** aplicado en `DBADMIN` y `PTM_2022_FINAL` (4 procesos).
+  - Scripts en `APLICADOS/PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (00 a 07).
+  - Resultado 07 en PTM: 0 duplicados, 0 filas sin token, 4 indices unicos y 4 SPs de guardado con 4 parametros nuevos.
+  - Filas PTM: PVC 251 (190 NWSCALE / 17 MANUAL / 44 LEGACY), INY 10, Corrugado 87, PEAD Liso 197.
+  - Detalle en `MIGRACIONES_APLICADAS.md`.
 
 - **2026-11-17 - PREVENTIVOS:** indices unicos, SP de rutina atomico y control de concurrencia aplicados en `DBADMIN`, `PTM_2022_FINAL` y `TEST_JUNIO_2026`.
   Scripts en `APLICADOS/DBADMIN/PREVENTIVOS/`, `APLICADOS/PTM_2022_FINAL/PREVENTIVOS/` y `APLICADOS/TEST_JUNIO_2026/PREVENTIVOS/`.

@@ -31,7 +31,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 11/11/2026 | DBADMIN | `FIX_CLASIFICACION_ABOCINADORES_DBADMIN.sql` | Aplicado/validado | 6 Abocinadores de planta 2: HERRAMENTALES → MANTENIMIENTO |
 | 12/11/2026 | TEST/PTM | Clasificación de Abocinadores | Aplicado/validado | Confirmado por el usuario (12/11/2026) |
 | 17/11/2026 | DBADMIN | Tiempos Muertos / NWSCALE (4 procesos) | Aplicado/validado | Columnas, claves, índices únicos, 4 SPs de consulta y 4 de guardado |
-| 17/11/2026 | PTM_2022_FINAL | Tiempos Muertos / NWSCALE (4 procesos) | **Pendiente** | Paquete en `PENDIENTES/PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` |
+| 17/11/2026 | PTM_2022_FINAL | Tiempos Muertos / NWSCALE (4 procesos) | Aplicado/validado | 0 duplicados y 0 sin token en las 4 tablas; 4 índices únicos; 4 SPs de guardado con 4 parámetros nuevos |
 
 ## Detalle de los cambios clave
 
@@ -116,7 +116,9 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
   - INY: el parser de fecha de preventivos no quitaba la hora y rompía el guardado. Commit `125309a`.
   - Paros: se conserva el área al buscar líneas y se valida antes de agregar (evita `ID_AREA=0`). Commit `12811fc`.
   - Corrugado/PEAD: etiquetas del mapa de respaldo alineadas al catálogo (`LÍNEA ...`). Commit `fc7dc8e`.
-- **PTM_2022_FINAL:** **pendiente**. Paquete en `PENDIENTES/PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (scripts **00 a 07**, respaldo antes de borrar).
+- **PTM_2022_FINAL:** **aplicado/validado el 17/11/2026**. Paquete en `APLICADOS/PTM_2022_FINAL/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (scripts 00 a 07, respaldo antes de borrar).
+  - Resultado del 07: 7 columnas por tabla, 4 índices `CPBTREE UNIQUE`, **0 duplicados**, **0 filas sin token**, y los 4 SPs de guardado con 4 parámetros nuevos.
+  - Filas: PVC 251 (190 NWSCALE / 17 MANUAL / 44 LEGACY), INY 10 (9 / 0 / 1), Corrugado 87 (0 / 1 / 86), PEAD Liso 197 (0 / 0 / 197).
 
 ## Obsoletos
 
