@@ -3140,7 +3140,7 @@ class SessionManager {
             $("#AlmacenURL").addClass("d-none"); //ALMACEN
             $("#PlaneacionURL").addClass("d-none"); //PLANEACION
             $("#ProduccionURL").addClass("d-none"); //PRODUCCION
-            $("#MCProgramarURL").addClass("d-none"); //SOLICITUD MTTO CORRECTIVO
+            //SOLICITUD MTTO CORRECTIVO: habilitada para este perfil (genera solicitudes de correctivo)
         }
 
         //ALMACEN

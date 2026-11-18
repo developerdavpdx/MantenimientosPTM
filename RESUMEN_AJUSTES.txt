@@ -608,6 +608,38 @@
      individuales (~149 ms) y con el piso de RTT a HANA Cloud (~146 ms por SP).
    - Archivos tocados: MantenimientosPTM/Controllers/MetricasController.cs,
      CONTEXTO_SESION.md, RESUMEN_AJUSTES.txt.
+28) CORRECTIVOS - HABILITAR GENERACION DE SOLICITUDES PARA SupervisorMantenimiento (2026-11-18)
+   - Solicitud: habilitar la generacion de solicitudes de mantenimientos
+     correctivos para el perfil SupervisorMantenimiento.
+   - Diagnostico: el bloqueo era solo de UI (menu lateral). En
+     MantenimientosPTM/Scripts/Global.js:3143 el bloque de rol ocultaba la
+     entrada: $("#MCProgramarURL").addClass("d-none");
+     El perfil ya veia el modulo de Correctivos (OT Pendientes) pero no la
+     entrada de generacion.
+     Descartados con evidencia: PROGMC() no tiene Authorize ni validacion de
+     rol; InsertarSolicitudMC e InsertarMC no leen TIPOUSUARIO; los SP
+     SpPdxMTTOInsertarSolicitudMC y SpPdxMTTOInsertarMC no filtran por rol ni
+     posicion. El rol se define en OHEM."U_Pbx_Nw_TipoUsuario" via SPPDX_LOGIN.
+   - Cambio: MantenimientosPTM/Scripts/Global.js:3143. Se elimino la
+     ocultacion de #MCProgramarURL del bloque de SupervisorMantenimiento
+     (la linea quedo como comentario explicativo).
+     UNICO archivo tocado. Sin cambios en BD, C#, vistas ni CSS.
+   - Verificacion: build Debug 0 errores; node --check OK.
+     Flujo completo en portal con supervisormantpl2@ptmexico.com / 12345:
+     menu "Solicitud Mtto. Correctivo" visible, InsertarSolicitudMC 200 ->
+     InsertarMC 200 -> GetMantenimientoCorrectivo 200, OTMC-045 generada con
+     estatus Liberado y 1 registro en OT Pendientes. 0 errores de consola y
+     0 respuestas 4xx/5xx.
+   - Datos de prueba limpiados: PdxMTTOSolicitudMC 46 y PdxMTTOMCGenerados
+     OTMC-045 eliminados (0 filas restantes en las 4 tablas verificadas).
+   - Rendimiento: no aplica (no se tocaron SP, consultas SQL ni cargas de
+     datos; es una linea de visibilidad en JS).
+   - Archivos tocados: MantenimientosPTM/Scripts/Global.js,
+     CONTEXTO_SESION.md, RESUMEN_AJUSTES.txt.
+   - Observaciones abiertas (preexistentes, no bloqueantes): no hay
+     autorizacion por rol en servidor para PROGMC/InsertarSolicitudMC; el
+     autocomplete de Solicitante duplica al empleado; la cabecera de impresion
+     de PROGMC muestra fecha/hora estaticas obsoletas.
 
 
 ================================================================================

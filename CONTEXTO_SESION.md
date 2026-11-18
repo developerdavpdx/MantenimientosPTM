@@ -1296,3 +1296,65 @@ El endpoint fallaba **siempre**; dentro de `TodosLosProcesos` el error se absorb
 - `GetMetricasOEE_TodosLosProcesos` ejecuta los SP **en serie**: P1 442 ms (3 SP), P2 293 ms (2 SP). Paralelizarlos bajaría a ~150 ms sin tocar SQL.
 - `OEE > 100 %` en varios procesos (Rendimiento > 100 %) y `MTBF = N/A` cuando no hay paradas: presentación, preexistentes.
 - Desviación de dato: planta 2 "Todos" = 408 hr (PVC 300 + INY 108), no 432. El consolidado es consistente; el descuadre apunta a `SpPdxMTTOMetricasOEE_PVC`/datos de planta 2, no al fix.
+
+## 28. Sesión 18/11/2026 — Correctivos: habilitar generación de solicitudes para SupervisorMantenimiento
+
+**Estado:** **COMPLETADO** — cambio aplicado, validado en portal (QA) y sin impacto en rendimiento.
+
+### Solicitud
+
+Habilitar la **generación de solicitudes de mantenimientos correctivos** para el perfil `SupervisorMantenimiento`.
+
+### Diagnóstico
+
+El bloqueo era **exclusivo de UI (menú lateral)**. En `Scripts/Global.js:3143` el bloque de rol ocultaba la entrada:
+
+```js
+if (tipoUsuario === "SupervisorMantenimiento") {
+    $("#GestionEquiposURL").addClass("d-none");
+    $("#AlmacenURL").addClass("d-none");
+    $("#PlaneacionURL").addClass("d-none");
+    $("#ProduccionURL").addClass("d-none");
+    $("#MCProgramarURL").addClass("d-none"); //SOLICITUD MTTO CORRECTIVO  ← bloqueo
+}
+```
+
+Verificado en vivo antes del cambio: `#MCProgramarURL` tenía `d-none` / `display:none`, mientras `#MCProgramadoURL` (OT Pendientes) sí se mostraba. Es decir, el perfil **ya veía** el módulo de Correctivos, pero no la entrada de generación.
+
+**Descartados con evidencia:** `PROGMC()` no tiene `Authorize` ni validación de rol; `InsertarSolicitudMC` / `InsertarMC` no leen `TIPOUSUARIO`; `SpPdxMTTOInsertarSolicitudMC` y `SpPdxMTTOInsertarMC` no filtran por rol ni posición. El módulo ya trataba al rol como admin (`mantenimientos_correctivos_refactor.js:422, 616, 735`). El rol se define en `OHEM."U_Pbx_Nw_TipoUsuario"` vía `SPPDX_LOGIN`.
+
+### Cambio aplicado
+
+`MantenimientosPTM/Scripts/Global.js:3143` — se eliminó la ocultación de `#MCProgramarURL` del bloque de `SupervisorMantenimiento`:
+
+- **Antes:** `$("#MCProgramarURL").addClass("d-none"); //SOLICITUD MTTO CORRECTIVO`
+- **Después:** `//SOLICITUD MTTO CORRECTIVO: habilitada para este perfil (genera solicitudes de correctivo)`
+
+**Único archivo tocado. Sin cambios en BD, C#, vistas ni CSS.**
+
+### Verificación
+
+| Prueba | Resultado |
+|---|---|
+| Build Debug | 0 errores |
+| `node --check Scripts/Global.js` | OK |
+| Menú visible para el perfil | ✅ "Solicitud Mtto. Correctivo" → `/MantenimientosCorrectivos/PROGMC` |
+| Flujo completo de alta | `InsertarSolicitudMC` 200 → `InsertarMC` 200 → `GetMantenimientoCorrectivo` 200 |
+| OT generada | `OTMC-045`, estatus **Liberado**, solicitante y equipo correctos |
+| Listado OT Pendientes | 1 registro |
+| Consola / red | 0 errores en el módulo; 0 respuestas 4xx/5xx |
+| Datos de prueba | Limpiados (`PdxMTTOSolicitudMC` 46 y `PdxMTTOMCGenerados` OTMC-045 → 0 filas) |
+
+**Rendimiento:** no aplica auditoría. El cambio no modifica Stored Procedures, consultas SQL ni cargas de datos; es una sola línea de visibilidad en JS.
+
+### Usuario de prueba
+
+`supervisormantpl2@ptmexico.com` / `12345` → `SupervisorMantenimiento`, posición `SUP DE MANTENIMIENTO`, planta 2. Alterno: `p2techerramentales5@ptm.com` / `12345`.
+
+### Observaciones abiertas (no bloqueantes, preexistentes)
+
+- **No hay autorización por rol en servidor** para `PROGMC` / `InsertarSolicitudMC`: cualquier sesión puede invocar los endpoints. Deuda de seguridad preexistente, no se añadió validación para no inventar un patrón que el repo no usa.
+- El autocomplete de **Solicitante** devuelve al mismo empleado duplicado (nómina 2388), probablemente por join con posiciones/áreas.
+- La cabecera de impresión de `PROGMC` muestra fecha/hora **estáticas y obsoletas** (`26/09/2025 13:39`).
+- Tras generar, el botón base cambia de "Generar Solicitud" a "Guardar", lo que puede sugerir un guardado adicional que ya ocurrió.
+- El perfil sigue sin acceso a Gestión de Equipos, Almacén, Planeación y Producción (sin cambios).
