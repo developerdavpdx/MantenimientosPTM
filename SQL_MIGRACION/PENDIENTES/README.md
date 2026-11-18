@@ -18,6 +18,7 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 - `PTM_2022_FINAL/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_ALTER.sql`
 - `NWSCALE/20261117_INDICES_NWSCALE.sql`
 - `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
+- `TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (paquete 00 a 07 + README)
 
 Motivo: los SPs `SpPdxMTTOGetArticuloSalidaM` y `SpPdxMTTOGetSalidasPorOT`
 deben devolver `CostoPromedio` (`OITM.AvgPrice`) para que la devolución a SAP
@@ -77,6 +78,16 @@ modal lo muestre antes de confirmar.
 - `@Corte = 4` devuelve un **resumen por producto/línea para todo el rango** (totales sumados y fecha más reciente). **Este es el comportamiento esperado**: el portal de NWSCALE muestra el resumen del rango así.
 - Si en el futuro se requiere una fila por día, se puede cambiar a la estrategia día por día (con los índices nuevos, cada día tarda ~0.1–0.6 s).
 
+
+## Pendientes 2026-11-18 — Tiempos Muertos / NWSCALE (TEST_JUNIO_2026)
+
+Paquete: `TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/`
+
+- `00` respaldo (`*_BAK_20261118`), `01` columnas/backfill, `02` reporte, `03A` preview, `03` limpieza, `04` indices, `05`/`06` SPs, `07` verificacion.
+- **Orden:** 00 -> 01 -> 02 -> 03A -> 03 -> 04 -> 05 -> 06 -> 07.
+- **Antes del 03:** revisar 02 y 03A (0 filas sin `CLAVE_SYNC`; `SIN_ORIGEN` sin horas).
+- **Despues:** publicar DLL + 5 JS + 4 vistas + `ParosProduccion` y probar en el portal.
+- Es el mismo paquete ya aplicado/validado en `PTM_2022_FINAL` el 2026-11-17.
 
 ## Aplicados recientes
 
