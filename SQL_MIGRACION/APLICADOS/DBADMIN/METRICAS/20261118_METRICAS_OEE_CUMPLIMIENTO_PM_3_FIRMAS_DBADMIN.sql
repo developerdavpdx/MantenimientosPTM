@@ -182,12 +182,12 @@ MTTR_TOTAL AS (
         IFNULL(SUM(HORAS_PARO), 0)                 AS TIEMPO_REPARACION_TOTAL_HRS,
         IFNULL(SUM(N_OTMC), 0)                     AS TOTAL_OTMC,
         IFNULL(SUM(N_PAROS_MANUALES), 0)           AS TOTAL_PAROS_MANUALES,
-        IFNULL(SUM(N_OTMC /*+ N_PAROS_MANUALES*/), 0)  AS TOTAL_PARADAS,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
-             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+        IFNULL(SUM(N_OTMC), 0)  AS TOTAL_PARADAS,
+        CASE WHEN SUM(N_OTMC) > 0
+             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC)
         END                                        AS MTTR_HRS_EXACTO,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
-             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+        CASE WHEN SUM(N_OTMC) > 0
+             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC)
              ELSE 0
         END                                        AS MTTR_HRS
     FROM BITACORA_FILTRADA
@@ -200,13 +200,13 @@ MTTR_TOTAL AS (
 -- ----------------------------------------------------------------------------
 MTBF_TOTAL AS (
     SELECT
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
+        CASE WHEN SUM(N_OTMC) > 0
              THEN TO_DOUBLE(SUM(IFNULL("TIEMPO_DISPONIBLE", 0)) - SUM(HORAS_PARO))
-                  / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+                  / SUM(N_OTMC)
         END AS MTBF_HRS_EXACTO,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
+        CASE WHEN SUM(N_OTMC) > 0
              THEN TO_DOUBLE(SUM(IFNULL("TIEMPO_DISPONIBLE", 0)) - SUM(HORAS_PARO))
-                  / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+                  / SUM(N_OTMC)
         END AS MTBF_HRS
     FROM BITACORA_FILTRADA
 ),
@@ -496,12 +496,12 @@ MTTR_TOTAL AS (
         IFNULL(SUM(HORAS_PARO), 0)                 AS TIEMPO_REPARACION_TOTAL_HRS,
         IFNULL(SUM(N_OTMC), 0)                     AS TOTAL_OTMC,
         IFNULL(SUM(N_PAROS_MANUALES), 0)           AS TOTAL_PAROS_MANUALES,
-        IFNULL(SUM(N_OTMC /*+ N_PAROS_MANUALES*/), 0)  AS TOTAL_PARADAS,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
-             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+        IFNULL(SUM(N_OTMC), 0)  AS TOTAL_PARADAS,
+        CASE WHEN SUM(N_OTMC) > 0
+             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC)
         END                                        AS MTTR_HRS_EXACTO,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
-             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+        CASE WHEN SUM(N_OTMC) > 0
+             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC)
              ELSE 0
         END                                        AS MTTR_HRS
     FROM BITACORA_FILTRADA
@@ -514,13 +514,13 @@ MTTR_TOTAL AS (
 -- ----------------------------------------------------------------------------
 MTBF_TOTAL AS (
     SELECT
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
+        CASE WHEN SUM(N_OTMC) > 0
              THEN TO_DOUBLE(SUM(IFNULL("TIEMPO_DISPONIBLE", 0)) - SUM(HORAS_PARO))
-                  / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+                  / SUM(N_OTMC)
         END AS MTBF_HRS_EXACTO,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
+        CASE WHEN SUM(N_OTMC) > 0
              THEN TO_DOUBLE(SUM(IFNULL("TIEMPO_DISPONIBLE", 0)) - SUM(HORAS_PARO))
-                  / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+                  / SUM(N_OTMC)
         END AS MTBF_HRS
     FROM BITACORA_FILTRADA
 ),
@@ -806,12 +806,12 @@ MTTR_TOTAL AS (
         IFNULL(SUM(HORAS_PARO), 0)                 AS TIEMPO_REPARACION_TOTAL_HRS,
         IFNULL(SUM(N_OTMC), 0)                     AS TOTAL_OTMC,
         IFNULL(SUM(N_PAROS_MANUALES), 0)           AS TOTAL_PAROS_MANUALES,
-        IFNULL(SUM(N_OTMC /*+ N_PAROS_MANUALES*/), 0)  AS TOTAL_PARADAS,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
-             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+        IFNULL(SUM(N_OTMC), 0)  AS TOTAL_PARADAS,
+        CASE WHEN SUM(N_OTMC) > 0
+             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC)
         END                                        AS MTTR_HRS_EXACTO,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
-             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+        CASE WHEN SUM(N_OTMC) > 0
+             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC)
              ELSE 0
         END                                        AS MTTR_HRS
     FROM BITACORA_FILTRADA
@@ -824,13 +824,13 @@ MTTR_TOTAL AS (
 -- ----------------------------------------------------------------------------
 MTBF_TOTAL AS (
     SELECT
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
+        CASE WHEN SUM(N_OTMC) > 0
              THEN TO_DOUBLE(SUM(IFNULL("TIEMPO_DISPONIBLE", 0)) - SUM(HORAS_PARO))
-                  / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+                  / SUM(N_OTMC)
         END AS MTBF_HRS_EXACTO,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
+        CASE WHEN SUM(N_OTMC) > 0
              THEN TO_DOUBLE(SUM(IFNULL("TIEMPO_DISPONIBLE", 0)) - SUM(HORAS_PARO))
-                  / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+                  / SUM(N_OTMC)
         END AS MTBF_HRS
     FROM BITACORA_FILTRADA
 ),
@@ -1119,12 +1119,12 @@ MTTR_TOTAL AS (
         IFNULL(SUM(HORAS_PARO), 0)                 AS TIEMPO_REPARACION_TOTAL_HRS,
         IFNULL(SUM(N_OTMC), 0)                     AS TOTAL_OTMC,
         IFNULL(SUM(N_PAROS_MANUALES), 0)           AS TOTAL_PAROS_MANUALES,
-        IFNULL(SUM(N_OTMC /*+ N_PAROS_MANUALES*/), 0)  AS TOTAL_PARADAS,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
-             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+        IFNULL(SUM(N_OTMC), 0)  AS TOTAL_PARADAS,
+        CASE WHEN SUM(N_OTMC) > 0
+             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC)
         END                                        AS MTTR_HRS_EXACTO,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
-             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+        CASE WHEN SUM(N_OTMC) > 0
+             THEN TO_DOUBLE(SUM(HORAS_PARO)) / SUM(N_OTMC)
              ELSE 0
         END                                        AS MTTR_HRS
     FROM BITACORA_FILTRADA
@@ -1137,13 +1137,13 @@ MTTR_TOTAL AS (
 -- ----------------------------------------------------------------------------
 MTBF_TOTAL AS (
     SELECT
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
+        CASE WHEN SUM(N_OTMC) > 0
              THEN TO_DOUBLE(SUM(IFNULL("TIEMPO_DISPONIBLE", 0)) - SUM(HORAS_PARO))
-                  / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+                  / SUM(N_OTMC)
         END AS MTBF_HRS_EXACTO,
-        CASE WHEN SUM(N_OTMC /*+ N_PAROS_MANUALES*/) > 0
+        CASE WHEN SUM(N_OTMC) > 0
              THEN TO_DOUBLE(SUM(IFNULL("TIEMPO_DISPONIBLE", 0)) - SUM(HORAS_PARO))
-                  / SUM(N_OTMC /*+ N_PAROS_MANUALES*/)
+                  / SUM(N_OTMC)
         END AS MTBF_HRS
     FROM BITACORA_FILTRADA
 ),
