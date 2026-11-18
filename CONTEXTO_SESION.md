@@ -7,6 +7,7 @@
 
 ## 1. Estado actual
 
+- **Regla de pruebas (17/11/2026):** todas las pruebas funcionales se hacen **siempre en el portal**, simulando al usuario (login por rol, formularios, modales, guardado). Ver `AGENTS.md`. La API/SQL solo se usa para verificar debajo (conteos, claves, duplicados) o para preparar datos cuando el módulo no lo permita; los datos de prueba se limpian al terminar.
 - **Desarrollo:** HANA Cloud, schema `DBADMIN`. El `Web.config` activo apunta a `DBADMIN`.
 - **Producción/Test destino:** `TEST_JUNIO_2026` y `PTM_2022_FINAL`.
 - **Migración base BD (05/11/2026):** los scripts `MIGRACION_TEST_JUNIO_2026.sql` y `MIGRACION_PTM_2022_FINAL.sql` ya se ejecutaron en ambos schemas. Los 11 SPs y la columna `TIEMPO_MUERTO_HERRAMENTALES` de Corrugado quedaron validados por el usuario.
