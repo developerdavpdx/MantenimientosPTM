@@ -206,6 +206,31 @@ SET
 WHERE "CLAVE_SYNC" IS NULL OR "CLAVE_SYNC" = '';
 
 -- ============================================================================
+-- PASO 4 - TOKEN INICIAL (recomendado)
+--
+-- Por que: las filas con "FECHA_ACTUALIZACION" NULL no tienen token, asi que su
+-- PRIMER guardado no valida concurrencia (el SP ignora el token nulo).
+-- Este UPDATE les asigna token de una vez.
+--
+-- Ejecutar SOLO si la columna FECHA_ACTUALIZACION existe (ver PASO 1).
+-- ============================================================================
+UPDATE "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionPVC"
+SET "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP
+WHERE "FECHA_ACTUALIZACION" IS NULL;
+
+UPDATE "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionINY"
+SET "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP
+WHERE "FECHA_ACTUALIZACION" IS NULL;
+
+UPDATE "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionCorrugado"
+SET "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP
+WHERE "FECHA_ACTUALIZACION" IS NULL;
+
+UPDATE "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionPeadLiso"
+SET "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP
+WHERE "FECHA_ACTUALIZACION" IS NULL;
+
+-- ============================================================================
 -- VERIFICACION POST-BACKFILL: no debe haber CLAVE_SYNC nulas/vacias
 -- ============================================================================
 SELECT 'PVC' AS TABLA, COUNT(*) AS NULAS FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionPVC"

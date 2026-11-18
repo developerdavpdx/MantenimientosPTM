@@ -40,6 +40,9 @@ Aplica el mismo esquema que ya esta en `DBADMIN`:
 - **Filas vacias:** las `SIN_ORIGEN` se eliminan en la seccion 5 del script 03.
   Si el reporte 02 muestra alguna con horas capturadas, **no** ejecutar esa
   seccion y revisarla a mano.
+- **Token inicial:** el paso 4 del script 01 asigna `FECHA_ACTUALIZACION` a las
+  filas que la tengan nula. Sin eso, el primer guardado de esas filas no valida
+  concurrencia (el SP ignora el token nulo).
 - **NWSCALE por rango:** las filas historicas quedan con clave `DIA`
   (`N|PLANTA|DIA|FECHA|LINEA|PRODUCTO|TURNO`). Las nuevas consultas por rango
   generan `N|PLANTA|RANGO|FECHA_INI|FECHA_FIN|LINEA|PRODUCTO`.
