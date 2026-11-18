@@ -34,7 +34,7 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 17/11/2026 | PTM_2022_FINAL | Tiempos Muertos / NWSCALE (4 procesos) | Aplicado/validado | 0 duplicados y 0 sin token en las 4 tablas; 4 índices únicos; 4 SPs de guardado con 4 parámetros nuevos. DLL + JS + vistas publicados 18/11/2026 |
 | 18/11/2026 | TEST_JUNIO_2026 | Tiempos Muertos / NWSCALE (4 procesos) | **Pendiente** | Paquete en `PENDIENTES/TEST_JUNIO_2026/PRODUCCION/TIEMPOS_MUERTOS_NWSCALE/` (aplicar 18/11/2026) |
 | 18/11/2026 | DBADMIN | Correctivos: índices únicos + token de versión | Aplicado/validado | `APLICADOS/DBADMIN/CORRECTIVOS/20261118_CORRECTIVO_INDICES_Y_TOKEN_DBADMIN.sql` |
-| 18/11/2026 | PTM_2022_FINAL | Correctivos: índices únicos + token de versión | **Pendiente** | `PENDIENTES/PTM_2022_FINAL/PRODUCCION/CORRECTIVOS/` |
+| 18/11/2026 | PTM_2022_FINAL | Correctivos: índices únicos + token de versión | Aplicado/validado | OT_MC_DUPS 0, MCG_DUPS 0, 2 índices, 1 validador. `APLICADOS/PTM_2022_FINAL/PRODUCCION/CORRECTIVOS/` |
 | 18/11/2026 | TEST_JUNIO_2026 | Correctivos: índices únicos + token de versión | **Pendiente** | `PENDIENTES/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/` |
 
 ## Detalle de los cambios clave
@@ -134,7 +134,8 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
   - `MantenimientosCorrectivosController`: valida el token antes de guardar borrador/firma y responde `CONFLICTO`; después de guardar devuelve el token nuevo.
   - `mantenimientos_correctivos_refactor.js`: envía `TOKEN`, maneja `CONFLICTO` y actualiza el token tras guardar.
 - **DBADMIN:** aplicado y probado en portal (borrador, segundo guardado sin conflicto y conflicto simulado con token viejo).
-- **PTM_2022_FINAL / TEST_JUNIO_2026:** scripts pendientes en `PENDIENTES/<schema>/PRODUCCION/CORRECTIVOS/`.
+- **PTM_2022_FINAL:** **aplicado/validado el 18/11/2026**. Resultado: `OT_MC_DUPS 0`, `MCG_DUPS 0`, `INDICES 2`, `VALIDADOR 1`. Script en `APLICADOS/PTM_2022_FINAL/PRODUCCION/CORRECTIVOS/`.
+- **TEST_JUNIO_2026:** script pendiente en `PENDIENTES/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/`.
 - **Orden de despliegue:** aplicar SQL primero, luego publicar DLL + `mantenimientos_correctivos_refactor.js`.
 
 ## Obsoletos
