@@ -298,7 +298,7 @@ namespace MantenimientosPTM.Controllers
         }
 
         [HttpGet]
-        public JsonResult BuscarArticulo(string query, string Usuario,string Planta,int? Linea, int? GrupoArticulos,int? ValidarCap,bool RestringirFabricante = false)
+        public JsonResult BuscarArticulo(string query, string Usuario,string Planta,int? Linea, string GrupoArticulos,int? ValidarCap,bool RestringirFabricante = false)
         {
             try
             {
@@ -314,6 +314,27 @@ namespace MantenimientosPTM.Controllers
                 if (string.IsNullOrWhiteSpace(fabricantes))
                     fabricantes = null;
 
+                // ✅ Normalizar grupos de artículos
+                // Acepta un grupo ("104") o una lista separada por comas ("102,104").
+                // 0, vacío o nulo => sin filtro de grupo (todos), igual que antes.
+                int? grupoUnico = null;
+                string gruposCsv = null;
+
+                if (!string.IsNullOrWhiteSpace(GrupoArticulos))
+                {
+                    var grupos = GrupoArticulos
+                        .Split(new[] { ',', ';', ' ', '|' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(g => { int valor; return int.TryParse(g.Trim(), out valor) ? valor : -1; })
+                        .Where(g => g > 0)
+                        .Distinct()
+                        .ToList();
+
+                    if (grupos.Count == 1)
+                        grupoUnico = grupos[0];
+                    else if (grupos.Count > 1)
+                        gruposCsv = string.Join(",", grupos);
+                }
+
                 // ✅ Preparar parámetros para el SP
                 var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
                 {
@@ -321,10 +342,11 @@ namespace MantenimientosPTM.Controllers
                     { "P_USUARIO", (Usuario, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_PLANTA", (Planta, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_LINEA", (Linea, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_GRUPO_ART", (GrupoArticulos == 0 ? (object)null : GrupoArticulos, ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_GRUPO_ART", ((object)grupoUnico, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_VALIDAR_CAP", (ValidarCap, ParameterDirection.Input, HanaDbType.NVarChar) },
                     { "P_ITEMCODE", ((object)null, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_FABRICANTES", ((RestringirFabricante ? fabricantes : null), ParameterDirection.Input, HanaDbType.NVarChar) }
+                    { "P_FABRICANTES", ((RestringirFabricante ? fabricantes : null), ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_GRUPOS_ART", ((object)gruposCsv, ParameterDirection.Input, HanaDbType.NVarChar) }
                 };
 
                 // ✅ Ejecutar el Stored Procedure

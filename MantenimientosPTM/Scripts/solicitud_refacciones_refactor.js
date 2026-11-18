@@ -29,7 +29,7 @@ class SolicitudRefaccionesApp {
             '#bodyArticulosRefaccionMP',
             'Planeacion',
             'alertRefaccionContainer',
-            104,
+            '102,104', // 102 = INSUMOS, 104 = REFACCIONES
             false,
             this.datos_usuario
         );

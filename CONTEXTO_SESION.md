@@ -1358,3 +1358,94 @@ Verificado en vivo antes del cambio: `#MCProgramarURL` tenía `d-none` / `displa
 - La cabecera de impresión de `PROGMC` muestra fecha/hora **estáticas y obsoletas** (`26/09/2025 13:39`).
 - Tras generar, el botón base cambia de "Generar Solicitud" a "Guardar", lo que puede sugerir un guardado adicional que ya ocurrió.
 - El perfil sigue sin acceso a Gestión de Equipos, Almacén, Planeación y Producción (sin cambios).
+
+## 29. Sesión 18/11/2026 — Refacciones: la búsqueda de artículos incluye INSUMOS (102)
+
+**Estado:** **COMPLETADO** — aplicado en `DBADMIN` y validado en el portal (QA APROBADO).
+
+### Solicitud
+
+Al capturar una solicitud de refacción, el buscador de artículos solo filtraba el grupo **104 (REFACCIONES)**. Debe buscar también los artículos que en `OITM` tengan `ItmsGrpCod` de **INSUMOS**.
+
+**Código confirmado en `OITB`:** `INSUMOS = 102`, `REFACCIONES = 104`.
+
+### Diagnóstico
+
+`SpPdxMTTOBuscarArticulos` usaba igualdad exacta:
+
+```sql
+AND ( :P_GRUPO_ART IS NULL OR A."ItmsGrpCod" = :P_GRUPO_ART )
+```
+
+El valor `104` se pasaba desde `GestionArticulosCustom` (`Scripts/Global.js:3929-3947`) instanciado en 3 sitios: Preventivos (`:84-95`), Correctivos (`:81-92`) y Almacén/SolicitudRefacciones (`:24-35`).
+
+**Consumidores del SP:** un solo caller C# (`PlaneacionController.BuscarArticulo` → `GCBuscarArticulos`). Ese endpoint lo usan `GestionArticulosCustom` (MP/MC/Almacén, grupo 104) y `GestionArticulos` (Planeación y Paros, grupo 110 con `RestringirFabricante=true` y `ValidarCap=1`).
+
+**Datos reales (activos, `validFor='Y'`):** INSUMOS 74 · REFACCIONES 3840 · universo `IN (102,104)` = **3914**.
+
+### Cambio aplicado
+
+**Opción elegida (retrocompatible):** nuevo parámetro al final de la firma, en lugar de cambiar el `SMALLINT` existente.
+
+- **SP** `DBADMIN.SpPdxMTTOBuscarArticulos`: `IN P_GRUPOS_ART NVARCHAR(100) DEFAULT NULL` + filtro `LIKE '%,<grupo>,%'` (mismo patrón que ya usaba `P_FABRICANTES`). Las llamadas de 8 parámetros siguen funcionando por el `DEFAULT NULL`.
+- **`Controllers/PlaneacionController.cs`** (`BuscarArticulo`): `int? GrupoArticulos` → `string`, con normalización (`','` `';'` `' '` `'|'`, solo valores `>0`, `Distinct`). Un valor → `P_GRUPO_ART`; varios → `P_GRUPOS_ART`; vacío/0 → ambos `NULL`.
+- **JS** (3 archivos): `104` → `'102,104'` en `mantenimientos_preventivos_refactor.js:92`, `mantenimientos_correctivos_refactor.js:89` y `solicitud_refacciones_refactor.js:32`.
+- `Global.js`: **sin cambios** (reenvía el valor tal cual).
+
+**Descartadas:** dos llamadas + merge en JS (rompe el `ORDER BY stock DESC … LIMIT 400` y mueve la regla al cliente); grupo 100/"todos" (mete empaque, materias primas y producto terminado); cambiar `P_GRUPO_ART` a CSV (rompe la firma `SMALLINT` de los consumidores on-premise).
+
+### Artefactos
+
+- **Respaldo previo:** `SQL_ORIGINALES/SpPdxMTTOBuscarArticulos_ANTES_INSUMOS_20261118.sql` (+ sección en `SQL_ORIGINALES/README.txt`).
+- **Aplicado en `DBADMIN`:** `SQL_MIGRACION/APLICADOS/DBADMIN/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_20261118.sql`.
+- **Pendientes on-premise** (`ALTER PROCEDURE`): `SQL_MIGRACION/PENDIENTES/TEST_JUNIO_2026/PLANEACION/` y `.../PTM_2022_FINAL/PLANEACION/`. El encabezado advierte comparar contra `SYS.PROCEDURES` del schema destino y portar solo el bloque del filtro si la versión difiere.
+- **Bitácoras:** `SQL_MIGRACION/MIGRACIONES_APLICADAS.md`, `SQL_MIGRACION/PENDIENTES/README.md`.
+
+### Verificación
+
+| Prueba | Resultado |
+|---|---|
+| Build Debug | 0 errores (warning preexistente `CS0168` en `EmailService.cs`) |
+| `node --check` (4 JS) | OK |
+| Retrocompatibilidad | 8 parámetros, `P_GRUPO_ART=110` → solo 110 ✔ |
+| Endpoint `104` | 76 resultados, todos 104 |
+| Endpoint `110` | 1 resultado, solo 110 |
+| Endpoint `102,104` | solo grupos 102 y 104 (nunca 110, 103, 101) |
+| Portal Preventivos | `COPLE PT CORR` → 5 INSUMOS `2INSUMO00*`; `RODAMIENTO 6302` → `42000002638` (104) |
+| Portal Correctivos | idéntico |
+| Portal Almacén | insumo seleccionable en el detalle |
+| Consola / red | 0 errores nuevos; `BuscarArticulo` 200 en ~150–250 ms |
+
+**Limpieza:** no se guardó ninguna solicitud; no hubo datos de prueba que borrar.
+
+### Corrección posterior — `ORDER BY` por relevancia (misma fecha)
+
+QA y la auditoría de rendimiento detectaron que con `LIMIT 400` + `ORDER BY stock DESC` los INSUMOS quedaban **fuera** en búsquedas genéricas (todos tienen `StockTotal = 0`, las refacciones tienen 12–1446). Medido antes del fix: `12` → 0 de 2 insumos; `A` → 0 de 67.
+
+**Cambio aplicado en `DBADMIN.SpPdxMTTOBuscarArticulos`** (solo el `ORDER BY`; filtros, parámetros y `LIMIT 400` intactos):
+
+1. Coincidencia **exacta** de `ItemCode` o `ItemName`
+2. Coincidencia por **prefijo**
+3. `RANK() OVER (PARTITION BY ItmsGrpCod ORDER BY stock DESC, ItemName, ItemCode)` — **intercalado por grupo**
+4. Stock disponible DESC
+5. `ItemName`, `ItemCode`
+
+> El punto 3 es imprescindible: la variante sin `RANK()` (exacto → prefijo → stock) **no** rescataba los insumos (`12` seguía en 0/2, `A` en 5/67). El intercalado reparte los 400 lugares entre 102 y 104 sin quitarle lugares a nadie.
+
+**Resultado verificado:** `12` → **2 de 2** insumos (posiciones 2 y 4); `A` → **67 de 67**; `BOL` y `COP` sin cambio. Retrocompatibilidad intacta: `GrupoArticulos=104` → solo 104; `=110` → solo 110 (Planeación/Paros conservan su conjunto de resultados, `RANK()` es no-op con un solo grupo).
+
+**Verificado en portal** (Preventivos y Correctivos): `12` → `2INSUMO0064` TAPA 12" RD-11 en posición 2 y `2INSUMO0069` TAPA 12" RD-7 en posición 4; `AD` → `2INSUMO0005` ADITIVO 8188-4 en posición 1, con 12 insumos intercalados. 398 de 400 resultados siguen siendo refacciones; 0 grupos ajenos. Endpoint 200 en 323–415 ms.
+
+**Artefactos:** respaldo `SQL_ORIGINALES/SpPdxMTTOBuscarArticulos_ANTES_ORDERBY_20261118.sql`; aplicado `SQL_MIGRACION/APLICADOS/DBADMIN/PLANEACION/SpPdxMTTOBuscarArticulos_ORDERBY_RELEVANCIA_20261118.sql`; los 2 pendientes on-premise se regeneraron como **un solo pase** con ambos cambios (`..._INSUMOS_Y_ORDERBY_20261118_ALTER.sql`) y se eliminaron los `..._INSUMOS_..._ALTER.sql` anteriores.
+
+**Nota:** el portal exige **mínimo 2 caracteres** (`mantenimientos_preventivos_refactor.js:138`, `mantenimientos_correctivos_refactor.js:181`), así que `A` no es reproducible desde la UI; se validó con `AD`.
+
+### Observaciones abiertas (no bloqueantes)
+
+- ~~`LIMIT 400` + `ORDER BY stock DESC` ocultaba los INSUMOS~~ → **RESUELTO** con el `ORDER BY` por relevancia (ver arriba).
+- Los 5 INSUMOS de `COPLE PT CORR` tienen **stock 0** y aun así se pueden agregar a la solicitud (cantidad 1 por defecto). Es razonable para una *solicitud*; confirmar si negocio exige bloquearlos.
+- En `/Almacen/SolicitudRefacciones` el modal se titula **"Cambiar Refacción"** y **no tiene disparador visible** en pantalla; el endpoint y los resultados son correctos, pero ese flujo parece huérfano de UI.
+- Warning preexistente en Almacén: `Elementos de autocomplete no encontrados` (`solicitud_refacciones_refactor.js:3507`) al cargar.
+- Con rol **SupervisorMantenimiento** el botón "Solicitar Refacción" aparece **deshabilitado** en todas las OT; con AdminMtto se habilita. Comportamiento por permisos, ajeno a estos cambios.
+- Si `GrupoArticulos` llega con tokens **no numéricos** (ej. `abc`), el controller cae a "sin filtro de grupo" y devuelve grupos no deseados, sin log ni error. Preexistente.
+- El autocomplete no aborta el XHR en vuelo (`Global.js:3929-3947`): con latencias variables una respuesta vieja puede pintarse después de una nueva. El debounce de 300 ms sí funciona.

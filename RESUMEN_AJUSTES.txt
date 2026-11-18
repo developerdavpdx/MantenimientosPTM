@@ -640,6 +640,84 @@
      autorizacion por rol en servidor para PROGMC/InsertarSolicitudMC; el
      autocomplete de Solicitante duplica al empleado; la cabecera de impresion
      de PROGMC muestra fecha/hora estaticas obsoletas.
+29) REFACCIONES - LA BUSQUEDA DE ARTICULOS INCLUYE INSUMOS (102) (2026-11-18)
+   - Solicitud: al capturar una solicitud de refaccion el buscador solo filtraba el
+     grupo 104 (REFACCIONES). Debe buscar tambien los articulos INSUMOS.
+   - Codigo confirmado en OITB: INSUMOS = 102, REFACCIONES = 104.
+   - Diagnostico: SpPdxMTTOBuscarArticulos usaba igualdad exacta
+     ( :P_GRUPO_ART IS NULL OR A."ItmsGrpCod" = :P_GRUPO_ART ). El valor 104 se
+     pasaba desde GestionArticulosCustom (Global.js:3929-3947), instanciado en
+     Preventivos, Correctivos y Almacen/SolicitudRefacciones.
+     Consumidores del SP: un solo caller C# (PlaneacionController.BuscarArticulo);
+     el endpoint lo usan GestionArticulosCustom (104) y GestionArticulos (110,
+     Planeacion y Paros).
+   - Cambio (retrocompatible):
+       * SP DBADMIN.SpPdxMTTOBuscarArticulos: nuevo parametro al final
+         IN P_GRUPOS_ART NVARCHAR(100) DEFAULT NULL + filtro LIKE '%,<grupo>,%'
+         (mismo patron que ya usaba P_FABRICANTES). Las llamadas de 8 parametros
+         siguen funcionando por el DEFAULT NULL.
+       * PlaneacionController.BuscarArticulo: GrupoArticulos pasa de int? a string
+         con normalizacion (',' ';' ' ' '|', solo valores >0, Distinct). Un valor
+         -> P_GRUPO_ART; varios -> P_GRUPOS_ART; vacio/0 -> ambos NULL.
+       * JS (3 archivos): 104 -> '102,104' en
+         mantenimientos_preventivos_refactor.js:92,
+         mantenimientos_correctivos_refactor.js:89 y
+         solicitud_refacciones_refactor.js:32. Global.js sin cambios.
+   - Descartadas: 2 llamadas + merge en JS (rompe ORDER BY stock DESC + LIMIT
+     400); grupo 100/"todos" (mete empaque, materias primas y producto
+     terminado); cambiar P_GRUPO_ART a CSV (rompe la firma SMALLINT on-premise).
+   - Respaldo previo: SQL_ORIGINALES\SpPdxMTTOBuscarArticulos_ANTES_INSUMOS_20261118.sql
+   - Script aplicado: SQL_MIGRACION\APLICADOS\DBADMIN\PLANEACION\
+       SpPdxMTTOBuscarArticulos_INSUMOS_20261118.sql
+   - Pendientes on-premise (ALTER PROCEDURE):
+       SQL_MIGRACION\PENDIENTES\TEST_JUNIO_2026\PLANEACION\
+       SQL_MIGRACION\PENDIENTES\PTM_2022_FINAL\PLANEACION\
+   - Verificacion: build Debug 0 errores; node --check OK en los 4 JS.
+     Retrocompatibilidad probada con 8 parametros (P_GRUPO_ART=110 -> solo 110).
+     Endpoint: 104 -> 76 (solo 104); 110 -> 1 (solo 110);
+     102,104 -> solo grupos 102 y 104.
+     Portal Preventivos y Correctivos: "COPLE PT CORR" -> 5 INSUMOS 2INSUMO00*;
+     "RODAMIENTO 6302" -> 42000002638 (104). Almacen: insumo seleccionable.
+     0 errores nuevos de consola; BuscarArticulo 200 en ~150-250 ms.
+   - Datos: INSUMOS 74 activos, REFACCIONES 3840 activos, universo IN (102,104)
+     = 3914. No se guardo ninguna solicitud; no hubo datos de prueba que borrar.
+   - Archivos tocados: PlaneacionController.cs, 3 JS, los scripts SQL y las
+     bitacoras (MIGRACIONES_APLICADAS.md, PENDIENTES/README.md,
+     SQL_ORIGINALES/README.txt, CONTEXTO_SESION.md, RESUMEN_AJUSTES.txt).
+   - Observaciones abiertas (no bloqueantes): los 5 INSUMOS de "COPLE PT CORR" tienen
+     stock 0 y aun asi se pueden solicitar; el modal de Almacen ("Cambiar Refaccion")
+     parece huerfano de UI; warning preexistente de autocomplete en
+     solicitud_refacciones_refactor.js:3507.
+
+29-bis) REFACCIONES - ORDER BY POR RELEVANCIA EN LA BUSQUEDA DE ARTICULOS (2026-11-18)
+   - Motivo: con LIMIT 400 + ORDER BY stock DESC los INSUMOS (StockTotal = 0)
+     quedaban fuera en busquedas genericas. Medido: "12" -> 0 de 2 insumos;
+     "A" -> 0 de 67.
+   - Cambio (solo el ORDER BY del SP; filtros, parametros y LIMIT 400 intactos):
+       1) coincidencia exacta de ItemCode o ItemName
+       2) coincidencia por prefijo
+       3) RANK() OVER (PARTITION BY ItmsGrpCod ORDER BY stock DESC, ItemName,
+          ItemCode)  -- intercalado por grupo
+       4) stock disponible DESC
+       5) ItemName, ItemCode
+     El punto 3 es imprescindible: sin RANK() la variante exacto -> prefijo ->
+     stock NO rescataba los insumos ("12" seguia en 0/2, "A" en 5/67).
+   - Resultado: "12" -> 2 de 2 insumos (posiciones 2 y 4); "A" -> 67 de 67;
+     "BOL" y "COP" sin cambio. Retrocompatibilidad: GrupoArticulos=104 -> solo
+     104; =110 -> solo 110 (RANK() es no-op con un solo grupo, Planeacion/Paros
+     conservan su conjunto de resultados).
+   - Portal (Preventivos y Correctivos): "12" muestra 2INSUMO0064 TAPA 12" RD-11
+     (pos 2) y 2INSUMO0069 TAPA 12" RD-7 (pos 4); "AD" muestra 2INSUMO0005
+     ADITIVO 8188-4 (pos 1) y 12 insumos intercalados. 398 de 400 resultados
+     siguen siendo refacciones; 0 grupos ajenos. Endpoint 200 en 323-415 ms.
+   - Nota: el portal exige minimo 2 caracteres, asi que "A" no es reproducible
+     desde la UI; se valido con "AD".
+   - Artefactos: respaldo SQL_ORIGINALES\SpPdxMTTOBuscarArticulos_ANTES_ORDERBY_20261118.sql;
+     aplicado SQL_MIGRACION\APLICADOS\DBADMIN\PLANEACION\
+       SpPdxMTTOBuscarArticulos_ORDERBY_RELEVANCIA_20261118.sql;
+     los 2 pendientes on-premise se regeneraron como un solo pase
+     (..._INSUMOS_Y_ORDERBY_20261118_ALTER.sql) y se eliminaron los
+     ..._INSUMOS_..._ALTER.sql anteriores.
 
 
 ================================================================================

@@ -22,6 +22,14 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 - `TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/20261118_CORRECTIVO_INDICES_Y_TOKEN_TEST_JUNIO_2026.sql`
 - `TEST_JUNIO_2026/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_TEST_JUNIO_2026.sql`
 - `PTM_2022_FINAL/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_PTM_2022_FINAL.sql`
+- `TEST_JUNIO_2026/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_Y_ORDERBY_20261118_ALTER.sql`
+- `PTM_2022_FINAL/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_Y_ORDERBY_20261118_ALTER.sql`
+
+> Los dos scripts de `PLANEACION` llevan **ambos cambios** del SP
+> `SpPdxMTTOBuscarArticulos`: (1) INSUMOS via `P_GRUPOS_ART` y (2) el nuevo
+> `ORDER BY` por relevancia. Se aplican en **un solo pase**; ya no existe la
+> version `..._INSUMOS_20261118_ALTER.sql` (se renombro para evitar aplicar
+> dos migraciones encadenadas sobre el mismo objeto).
 
 Motivo: los SPs `SpPdxMTTOGetArticuloSalidaM` y `SpPdxMTTOGetSalidasPorOT`
 deben devolver `CostoPromedio` (`OITM.AvgPrice`) para que la devolución a SAP

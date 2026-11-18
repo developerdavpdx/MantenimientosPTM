@@ -154,6 +154,30 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 - **TEST_JUNIO_2026 / PTM_2022_FINAL:** pendientes en `PENDIENTES/<schema>/METRICAS/` (4 `ALTER PROCEDURE` cada uno).
 - **Respaldo previo:** `SQL_ORIGINALES/SpPdxMTTOMetricasOEE_{PVC,PeadLiso,Corrugado,INY}_ANTES_3_FIRMAS_20261118.sql` (ver sección nueva del `SQL_ORIGINALES/README.txt`).
 
+## 2026-11-18 - Busqueda de articulos: REFACCIONES + INSUMOS
+
+- **Problema:** en Mantenimientos Preventivos, Mantenimientos Correctivos y Solicitud de Refacciones el buscador de articulos solo filtraba el grupo 104 (REFACCIONES). Los INSUMOS (`OITM.ItmsGrpCod = 102`) nunca aparecian.
+- **Grupos confirmados en `OITB`:** 101 MATERIAS PRIMAS, 102 INSUMOS, 103 EMPAQUE, 104 REFACCIONES, 105 EQUIPO PP, 107 HERRAMIENTAS.
+- **Regla nueva:** la busqueda devuelve REFACCIONES (104) + INSUMOS (102).
+- **SP `SpPdxMTTOBuscarArticulos`:** nuevo parametro `IN P_GRUPOS_ART NVARCHAR(100) DEFAULT NULL` (lista separada por comas). El filtro previo (`A."ItmsGrpCod" = :P_GRUPO_ART`) se conserva intacto y solo se aplica cuando `P_GRUPOS_ART` viene NULL/vacio, por lo que el cambio es retrocompatible.
+- **C#:** `PlaneacionController.BuscarArticulo` recibe `GrupoArticulos` como string, lo normaliza a `102,104` y manda `P_GRUPOS_ART`.
+- **JS:** `GestionArticulosCustom` se instancia con `'102,104'` en `mantenimientos_preventivos_refactor.js`, `mantenimientos_correctivos_refactor.js` y `solicitud_refacciones_refactor.js`.
+- **DBADMIN:** aplicado y verificado el 18/11/2026. Script en `APLICADOS/DBADMIN/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_20261118.sql`.
+- **TEST_JUNIO_2026 / PTM_2022_FINAL:** pendientes en `PENDIENTES/<schema>/PLANEACION/` (`ALTER PROCEDURE`). El archivo vigente es `SpPdxMTTOBuscarArticulos_INSUMOS_Y_ORDERBY_20261118_ALTER.sql` (incluye tambien el cambio de `ORDER BY`).
+- **Respaldo previo:** `SQL_ORIGINALES/SpPdxMTTOBuscarArticulos_ANTES_INSUMOS_20261118.sql`.
+
+## 2026-11-18 - Busqueda de articulos: ORDER BY por relevancia (INSUMOS visibles)
+
+- **Problema medido:** con el `ORDER BY` por stock, los INSUMOS (grupo 102) tienen `StockTotal = 0` mientras REFACCIONES (104) trae 12..1446, asi que caian al final y el `LIMIT 400` los recortaba. En `DBADMIN` (grupos 102+104, `validFor='Y'`): `'12'` -> 2 insumos, **0** visibles en el top 400; `'A'` -> 67 insumos, **0** visibles. `'BOL'` y `'COP'` si los mostraban.
+- **SP `SpPdxMTTOBuscarArticulos`:** se reemplaza **solo** el bloque `ORDER BY`. No se tocan parametros, filtros de grupo, joins ni el `LIMIT 400`.
+  - Antes: `stock DESC -> prefijo ItemName -> prefijo ItemCode -> ItemName -> ItemCode`.
+  - Ahora: `exacto (ItemCode|ItemName) -> prefijo (ItemCode|ItemName) -> rank de stock dentro de su grupo (intercalado) -> stock DESC -> ItemName -> ItemCode`.
+  - El intercalado por grupo es necesario: el orden exacto/prefijo por si solo seguia dejando `'12'` en 0 de 2 insumos y `'A'` en 5 de 67.
+- **DBADMIN:** aplicado y verificado el 18/11/2026. Script en `APLICADOS/DBADMIN/PLANEACION/SpPdxMTTOBuscarArticulos_ORDERBY_RELEVANCIA_20261118.sql`.
+- **TEST_JUNIO_2026 / PTM_2022_FINAL:** pendientes `PENDIENTES/<schema>/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_Y_ORDERBY_20261118_ALTER.sql` (un solo pase con los dos cambios).
+- **Respaldo previo:** `SQL_ORIGINALES/SpPdxMTTOBuscarArticulos_ANTES_ORDERBY_20261118.sql`.
+- **Retrocompatibilidad verificada:** `GrupoArticulos=104` -> solo 104; `GrupoArticulos=110` -> solo 110.
+
 ## Obsoletos
 
 En `OBSOLETO/`:
@@ -170,5 +194,7 @@ Motivo: contienen versiones anteriores del SP de rango. La versión vigente est�
   - `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql`
   - `METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_TEST_JUNIO_2026.sql`
   - `METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_PTM_2022_FINAL.sql`
+  - `TEST_JUNIO_2026/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_Y_ORDERBY_20261118_ALTER.sql`
+  - `PTM_2022_FINAL/PLANEACION/SpPdxMTTOBuscarArticulos_INSUMOS_Y_ORDERBY_20261118_ALTER.sql`
 - Al aplicarse en el servidor, moverlos a `APLICADOS/<schema>/` y actualizar esta bitácora.
 - Regla general: si `PENDIENTES/` no tiene scripts SQL, todo está al día.

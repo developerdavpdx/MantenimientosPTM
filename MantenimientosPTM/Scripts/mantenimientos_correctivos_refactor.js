@@ -86,7 +86,7 @@ class MantenimientosCorrectivosApp {
             '#bodyArticulosRefaccionMC',
             'Planeacion',
             'alertRefaccionContainer',
-            104,
+            '102,104', // 102 = INSUMOS, 104 = REFACCIONES
             true,
             this.datos_usuario// Grupos de articulos excluidos 110 -> Producto Terminado
         );
