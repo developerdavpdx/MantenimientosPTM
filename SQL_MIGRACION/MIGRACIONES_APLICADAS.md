@@ -189,10 +189,7 @@ En `OBSOLETO/`:
 Motivo: contienen versiones anteriores del SP de rango. La versión vigente está en `APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql`.
 
 ## Pendientes SQL
-- `PENDIENTES/` contiene actualmente:
-  - `DBADMIN/PRODUCCION/SpPdxMTTOBuscarArticulosBatch.sql`
-  - `NWSCALE/20261117_INDICES_NWSCALE.sql`
-  - `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
-- **TEST_JUNIO_2026 y PTM_2022_FINAL no tienen scripts pendientes** (todo aplicado el 18/11/2026 y movido a `APLICADOS/<schema>/`).
+- **`PENDIENTES/` esta vacio de scripts SQL:** todo aplicado y movido a `APLICADOS/`
+  (`DBADMIN`, `TEST_JUNIO_2026`, `PTM_2022_FINAL` y `NWSCALE`).
 - Al aplicarse en el servidor, moverlos a `APLICADOS/<schema>/` y actualizar esta bitácora.
 - Regla general: si `PENDIENTES/` no tiene scripts SQL, todo está al día.

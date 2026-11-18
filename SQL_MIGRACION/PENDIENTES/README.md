@@ -1,4 +1,4 @@
-# PENDIENTES
+﻿# PENDIENTES
 
 Esta carpeta debe estar **sin scripts SQL** en estado normal. Este README es solo una referencia.
 
@@ -11,12 +11,12 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 
 ## Contenido actual
 
-- `DBADMIN/PRODUCCION/SpPdxMTTOBuscarArticulosBatch.sql`
-- `NWSCALE/20261117_INDICES_NWSCALE.sql`
-- `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
+**Ninguno.** Todo esta aplicado y movido a `../APLICADOS/`.
 
-> **TEST_JUNIO_2026 y PTM_2022_FINAL: al dia (sin scripts).** Todo lo de esos
-> schemas se aplico el 2026-11-18 y se movio a `../APLICADOS/<schema>/`.
+> **DBADMIN, TEST_JUNIO_2026 y PTM_2022_FINAL: al dia.** Lo de esos schemas se
+> aplico y se movio a `../APLICADOS/<schema>/`. Los scripts de `NWSCALE`
+> (SQL Server `PtmNwScale2`) y `DBADMIN/PRODUCCION` tambien quedaron aplicados
+> y estan en `../APLICADOS/NWSCALE/` y `../APLICADOS/DBADMIN/PRODUCCION/`.
 
 > Los dos scripts de `PLANEACION` llevan **ambos cambios** del SP
 > `SpPdxMTTOBuscarArticulos`: (1) INSUMOS via `P_GRUPOS_ART` y (2) el nuevo
@@ -34,11 +34,11 @@ modal lo muestre antes de confirmar.
 - En **TEST_JUNIO_2026** y **PTM_2022_FINAL** usar siempre **`ALTER PROCEDURE`**.
 - **`CREATE OR REPLACE PROCEDURE` no funciona en on-premise**; solo se usa en HANA Cloud (`DBADMIN`).
 
-## Pendientes 2026-11-17 — NWSCALE / DBADMIN (Tiempos Muertos)
+## Aplicados 2026-11-17 - NWSCALE / DBADMIN (Tiempos Muertos)
 
 ### HANA Cloud (`DBADMIN`)
 
-- `DBADMIN/PRODUCCION/SpPdxMTTOBuscarArticulosBatch.sql`
+- `APLICADOS/DBADMIN/PRODUCCION/SpPdxMTTOBuscarArticulosBatch.sql`
   - Crea/reemplaza el SP batch de artículos (una sola llamada para `KgsDia`/`PesoMinimo`).
   - Verificación: `CALL "DBADMIN"."SpPdxMTTOBuscarArticulosBatch"('1');`
 
@@ -53,10 +53,10 @@ modal lo muestre antes de confirmar.
 
 ### SQL Server NWSCALE (`PtmNwScale2`)
 
-- `NWSCALE/20261117_INDICES_NWSCALE.sql`
+- `APLICADOS/NWSCALE/20261117_INDICES_NWSCALE.sql`
   - Crea los índices de `ProductoTerminados` y `EnvioScraps`. Incluye rollback al final.
   - Índices: `IX_PT_Fecha_Planta_Linea`, `IX_PT_Linea_Fecha`, `IX_PT_Turno_Fecha_Planta_Linea`, `IX_EnvioScraps_Fecha_Planta_Linea`.
-- `NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
+- `APLICADOS/NWSCALE/PRUEBAS/20261117_TEST_DATA_NWSCALE.sql`
   - **Solo pruebas.** Inserta 15 registros del 15–17/11/2026 en `ProductoTerminados`.
   - Borrar: `DELETE FROM dbo.ProductoTerminados WHERE OrdenFabricacion = 'TEST-NWSCALE-20261117';`
 
