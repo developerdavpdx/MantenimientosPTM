@@ -14,7 +14,7 @@
 --     fila superviviente (no se suman).
 --   * Las filas SIN_ORIGEN (vacias) se eliminan en la seccion final.
 --
--- ⚠ Si en el reporte (02) una fila SIN_ORIGEN trae horas capturadas,
+-- OJO: Si en el reporte (02) una fila SIN_ORIGEN trae horas capturadas,
 --   NO ejecutar la ultima seccion y revisarla manualmente.
 -- ============================================================================
 
@@ -370,7 +370,7 @@ WHERE "ID_REGISTRO" IN (
 
 -- ============================================================================
 -- 5) FILAS VACIAS (SIN_ORIGEN)
--- ⚠ Revisar la seccion 4 del reporte 02 antes de ejecutar esto.
+-- OJO: Revisar la seccion 4 del reporte 02 antes de ejecutar esto.
 -- ============================================================================
 DELETE FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionPVC"
 WHERE "ORIGEN" = 'SIN_ORIGEN';
