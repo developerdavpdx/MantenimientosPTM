@@ -182,10 +182,13 @@ class GestionEventosApp {
 
         $('#btnAplicarFiltrosParo').on('click', () => {
             $("#LineasProduccionContainer").addClass("d-none");
+            $('#modalRegistrarParo').removeData('areaId');
             const Planta = $("#FiltroPlantaParo").val();
             const Proceso = $("#FiltroProcesoParo").val() || null;
-            if (Planta && Proceso)
+            if (Planta && Proceso) {
+                $('#modalRegistrarParo').data('areaId', Proceso);
                 EquiposUtil.llenarLineasCheckbox(Planta, Proceso, 1, "contenedorLineasParo");
+            }
             else
                 AlertManager.mostrar('Selecciona una planta y un proceso', 'warning', 'alertParoContainer');
         });
@@ -1049,6 +1052,7 @@ class ProduccionManager {
         $("#FiltroPlantaParo").val(this.PLANTA).prop("disabled", true).trigger("change");
         $("#tablaParos tbody").empty();
         $('#FiltroPlantaParo option[value=""]').show();
+        $('#modalRegistrarParo').removeData('areaId');
         $('#modalRegistrarParo').modal('show');
     }
 
@@ -1094,7 +1098,16 @@ class ProduccionManager {
         // 🔥 IMPORTANTE: Limpiar dropdowns de autocomplete huérfanos
         $('.autocomplete-dropdownv2').remove();
 
-        const areaIdActual = $('#FiltroProcesoParo').val() || 0;
+        const areaIdActual = $('#modalRegistrarParo').data('areaId') || $('#FiltroProcesoParo').val() || 0;
+
+        if (!areaIdActual) {
+            AlertManager.mostrar(
+                'Selecciona una planta y un proceso antes de agregar los paros.',
+                'warning',
+                'alertParoContainer'
+            );
+            return;
+        }
 
         lineasSeleccionadas.forEach(linea => {
             const fila = `
