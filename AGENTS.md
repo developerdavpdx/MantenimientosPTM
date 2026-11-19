@@ -74,3 +74,56 @@
 
 ### Cómo mantenerlo
 - Al crear, mover o eliminar un módulo (vista / acción / JS principal / SP / tabla), actualizar esta tabla y la lista de legacy en el mismo commit.
+
+---
+
+## Flujos esperados por módulo
+
+> Reglas de negocio de referencia. Sirven para distinguir un **bug** de un **comportamiento diseñado**.
+> Si un resultado no cuadra con lo que dice aquí, es candidato a defecto; si el caso no está documentado, requiere **confirmación de negocio** antes de reportarse como bug.
+
+### Sesión y login
+- **No hay sesión de servidor**: el usuario vive en `sessionStorage` (`userData`, `Login.js:91`). No existe timeout ni expiración por inactividad; los POST AJAX nunca "expiran".
+- Si se pierde `sessionStorage` (pestaña nueva, restauración del navegador, logout), el guard de `Global.js:3090` redirige a la raíz (`/Login/Login`).
+- **`/Login/Ended` significa "licencia vencida"** (`appSettings["FechaVencimiento"]`), **no** sesión expirada. No confundir ambos casos.
+
+### Mantenimientos Preventivos
+- **Generar Órdenes** crea la OT directamente en **Liberado (2)**; **no** existe un paso manual de liberación.
+- El **técnico se autoasigna**; la sección "Asignar Técnicos" está oculta para el Administrador (así está diseñado).
+- **Secuencia real de firmas:** técnico firma → pulsa **Finalizar** → la OT pasa a **estatus 4** → **supervisor de producción** firma → **administrador de mantenimiento** firma → queda cerrada.
+  - Supervisor y administrador **solo** pueden firmar cuando la OT está en estatus 4.
+- **Guardar Borrador NO cambia el estatus** y **no debe ocultar los botones**: el usuario debe poder seguir avanzando después de guardar un borrador.
+- **Cumplimiento PM** = MP **liberadas** con las **3 firmas** ÷ MP **liberadas** del periodo. Una MP sin las 3 firmas **no** cuenta.
+- Las marcas de "Realizado" de la rutina solo se ven en la vista del técnico mientras la OT está en captura; en las vistas de supervisor/admin la rutina se muestra como texto.
+
+### Mantenimientos Correctivos
+- **PROGMC** genera la solicitud **y** la OT en un solo paso, con estatus **Liberado**.
+- Requiere **2 firmas**: técnico (Realizó) + supervisor de producción (Supervisó).
+- **Si "Máquina detenida" está encendido** al cerrar, se genera un **paro `COR-xx`** (`TIPO_PARO = CORRECTIVO`) en `PdxMTTOTParoProduccion`.
+- **Si está apagado**, no debería generar paro.
+- La hora de cierre se toma del **reloj del servidor** (decisión de negocio); la hora capturada por el técnico puede diferir del `TIEMPO INVERTIDO`.
+
+### Tiempos Muertos / Bitácoras
+- El grid mezcla **dos tipos de fila**:
+  - **MANUAL** — clave `M|planta|fecha|línea`: concentra las **OT** del día (correctivos y preventivos).
+  - **NWSCALE** — clave `N|planta|DIA|fecha|línea|producto|turno`: una por producto y turno con producción real.
+- Las **OT se unifican** en la fila MANUAL por fecha + línea (no una fila por OT).
+- **Los correctivos llegan por la ruta de la OT** (`GetMantenimientosCorrectivosPendientes`), **no** por el endpoint de paros. Por eso `FiltroIncluirCorrectivo` se envía en `null` en los 4 procesos: incluirlos ahí **duplicaría** las horas en la misma columna (`MttoCorrectivos`).
+- Los **paros manuales** (`PAR-xx`) sí llegan por `obtenerParosProduccionSS`.
+- El paro se captura en la **fila del producto/turno** que se detuvo; el total de la línea es la suma de sus filas.
+- **Guardar dos veces no debe duplicar**: mismo `CLAVE_SYNC` ⇒ actualiza el mismo registro.
+
+### Métricas (OEE)
+- **Cumplimiento PM** solo cuenta las MP cerradas con **las 3 firmas**.
+- El **denominador** son las MP **liberadas** del periodo, no el total de equipos programados.
+- `HORAS_PARO` / **MTTR** dependen de la **bitácora de tiempos muertos guardada**, no solo del cierre de la OT: si no se guarda la bitácora, el indicador no se mueve.
+- La **planta** se toma de `sessionStorage.userData[0].PLANTA`, **no** del combo "Planta" (que es cosmético en este módulo).
+- `TodosLosProcesos` ejecuta los SP **en serie** (~150 ms por SP, latencia de red a HANA Cloud).
+
+### Almacén
+- Las refacciones solicitadas desde una OT se consultan en **Almacén → Solicitud de Refacciones**, no dentro de la OT.
+- El modal **"Cambiar Refacción"** (`#solicitarRefAlmModal`) es una acción **por fila** (`.btn-change-ref`): necesita registros cargados y se deshabilita si la refacción ya se surtió parcialmente.
+- La búsqueda de artículos del módulo de refacciones incluye **REFACCIONES (104) + INSUMOS (102)**.
+
+### Cómo mantener esta sección
+- Al cambiar una regla de negocio (flujo de firmas, cálculo de un KPI, origen de un dato), actualizar aquí en el mismo commit. **Esta sección es la que usan los agentes de QA para decidir si algo es un bug.**
