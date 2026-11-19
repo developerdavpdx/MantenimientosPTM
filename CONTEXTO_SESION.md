@@ -1568,16 +1568,19 @@ Antes: `VICTOR` → 0 filas. Ahora: `VICTOR`, `victor` y `AGUILERA` → empleado
 ### G. Despliegue y pendientes
 
 - **DLL publicada en `:8081`** por el usuario. Confirmado: cache-busting nuevo y **2 de 6** verificaciones aprobadas (asterisco Scrap Real, toggle Máquina detenida con `0.00 HRS`).
-- **Pendiente de verificar en vivo** (requieren rol técnico): búsqueda sin acentos en portal, borrador sin ocultar botones, layout a 1034 px, aviso SignalR.
+- **Verificaciones en vivo: 6/6 COMPLETADAS.** El usuario confirmó (19/11/2026) que las 4 restantes —búsqueda sin acentos en portal, borrador sin ocultar botones, layout a 1034 px y aviso SignalR— **ya quedaron validadas**. No son pendientes.
+- **Pendiente único de despliegue:** subir los archivos modificados al servidor (ver sección 32, "Archivos a publicar").
 - **⚠️ Cadena de conexión:** el `Web.config` del repo apunta a **`DBADMIN`** (sin commitear). El `:8081` debe usar **`TEST_JUNIO_2026`** y el `:8083` **`PTM_2022_FINAL`**. **No publicar el `Web.config` del repo tal cual en producción.**
 - `:8083` (producción) **no se tocó** en toda la sesión.
 - Conexión a HANA Cloud **intermitente** (`Cannot create SSL engine`): falla el almacén de credenciales del cliente SAP; requiere regenerar el PSE.
 
-### H. Ajustes pendientes (detectados en la validación del 19/11, no bloqueantes)
+### H. Ajustes de UX detectados en la validación del 19/11 — ✅ TODOS RESUELTOS
 
-1. **`#Comentarios` es `required` nativo en Preventivos.** Si está vacío, el navegador muestra solo el globo de validación HTML y **no hay mensaje del portal**: el usuario percibe que *"el botón no hace nada"*. → Convertirlo en validación del portal (mensaje visible + marcar el campo), no en `required` nativo.
-2. **La etiqueta del botón no se restaura tras una validación fallida.** Después de un intento fallido queda como **"Guardar"** en lugar de **"Finalizar"** (`mantenimientos_preventivos_refactor.js:3753, 3772, 3801, 3819`). → Restaurar el texto al terminar la validación.
-3. **El aviso "Debe asignar al menos un técnico" se autodestruye a los 4 s** (`AlertManager.mostrar` → `Global.js:3230`). Es fácil de perder. → Alargar su duración o dejarlo hasta que el usuario lo cierre.
+> Los 3 se implementaron, validaron en portal y commitearon en **`5359bea`**. Detalle en la **sección 32**.
+
+1. ~~**`#Comentarios` es `required` nativo en Preventivos.**~~ → **RESUELTO.** Ahora es validación del portal al finalizar (mensaje visible + `is-invalid` + foco).
+2. ~~**La etiqueta del botón no se restaura tras una validación fallida.**~~ → **RESUELTO.** Helper `_restaurarBotonGuardarOT()`; el botón siempre vuelve a "Finalizar".
+3. ~~**El aviso "Debe asignar al menos un técnico" se autodestruye a los 4 s.**~~ → **RESUELTO.** `AlertManager.mostrar` acepta `duracionMs` opcional; ese aviso es ahora persistente.
 
 **Dato a limpiar en TEST:** ✅ **RESUELTO el 19/11/2026.** `OTMP-009` quedó en **estatus 4** con `Tiempo Invertido = 981.55 HRS` tras la prueba de la botonera. Se revirtió:
 - `PdxMTTOOrdenesTrabajoMP` → **0** filas (DELETE).
@@ -1651,3 +1654,31 @@ El `<form id="formOrdenMantenimiento">` tiene **`novalidate`**, así que **el gl
 ### Nota de entorno
 
 El arranque local del módulo requiere IIS Express con el `applicationhost.config` de `.vs\MantenimientosPTM\config` (sitio `MantenimientosPTM`, puerto **52538**). El `Web.config` se mantiene en `DBADMIN` y **no se commitea** (se cambia a mano al publicar, por decisión del usuario).
+
+### Archivos a publicar (único pendiente)
+
+Todo lo demás está validado. Solo falta copiar al servidor; los archivos son del **HEAD** (`5359bea`).
+
+**Requieren compilar/publicar DLL** (cambios C# de `1893c14`):
+- `bin\MantenimientosPTM.dll`
+
+**Copiar tal cual (no requieren build):**
+
+| Archivo | Último commit |
+|---|---|
+| `MantenimientosPTM\Scripts\Global.js` | `5359bea` (2026-11-19) |
+| `MantenimientosPTM\Scripts\mantenimientos_preventivos_refactor.js` | `5359bea` (2026-11-19) |
+| `MantenimientosPTM\Scripts\solicitud_refacciones_refactor.js` | `40dc7f6` (2026-11-19) |
+| `MantenimientosPTM\Views\Almacen\SolicitudRefacciones.cshtml` | `40dc7f6` (2026-11-19) |
+| `MantenimientosPTM\Scripts\mantenimientos_correctivos_refactor.js` | `1893c14` (2026-11-18) |
+| `MantenimientosPTM\Scripts\produccion_pvc_refactor.js` | `1893c14` (2026-11-18) |
+| `MantenimientosPTM\Scripts\produccion_peadliso_refactor.js` | `1893c14` (2026-11-18) |
+| `MantenimientosPTM\Scripts\produccion_iny_refactor.js` | `1893c14` (2026-11-18) |
+| `MantenimientosPTM\Scripts\produccion_corrugado_refactor.js` | `1893c14` (2026-11-18) |
+| `MantenimientosPTM\Views\MantenimientosCorrectivos\MantenimientoCorrectivo.cshtml` | `1893c14` (2026-11-18) |
+
+**⚠️ NO publicar:**
+- `Web.config` del repo → apunta a `DBADMIN`. En el servidor debe quedar `TEST_JUNIO_2026` (`:8081`) y `PTM_2022_FINAL` (`:8083`).
+- `AGENTS.md`, `CONTEXTO_SESION.md`, `RESUMEN_AJUSTES.txt` → documentación, no se sirven.
+
+Después de copiar los `.js`, basta con **Ctrl+F5**: el cache-busting usa los ticks de `GetLastWriteTime`, así que el navegador pedirá la versión nueva automáticamente.

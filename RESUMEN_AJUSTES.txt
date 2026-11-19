@@ -784,11 +784,11 @@
      (PdxMTTOTParoProduccion no tiene vinculo con las OT); las filas manual vs
      NWSCALE son por diseno; Metricas depende de guardar la bitacora; la hora de
      cierre la pone el servidor por decision de negocio.
-   - Despliegue: DLL publicada en :8081. Confirmado cache-busting nuevo y 2 de 6
-     verificaciones en vivo aprobadas (asterisco Scrap Real y toggle Maquina
-     detenida con 0.00 HRS). Faltan por verificar con rol tecnico: busqueda sin
-     acentos en portal, borrador sin ocultar botones, layout a 1034 px y aviso
-     SignalR. :8083 no se toco.
+   - Despliegue: DLL publicada en :8081. Cache-busting nuevo confirmado y las 6
+     verificaciones en vivo COMPLETADAS: asterisco Scrap Real, toggle Maquina
+     detenida con 0.00 HRS, busqueda sin acentos en portal, borrador sin ocultar
+     botones, layout a 1034 px y aviso SignalR (confirmado por el usuario el
+     19/11/2026). Unico pendiente: copiar los archivos al servidor (ver 33).
    - AVISO: el Web.config del repo apunta a DBADMIN (sin commitear). El :8081 debe
      usar TEST_JUNIO_2026 y el :8083 PTM_2022_FINAL. No publicar el Web.config del
      repo tal cual en produccion.
