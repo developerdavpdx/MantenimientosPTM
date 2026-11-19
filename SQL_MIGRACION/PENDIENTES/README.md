@@ -9,16 +9,18 @@ Esta carpeta debe estar **sin scripts SQL** en estado normal. Este README es sol
 
 Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está al día.
 
-## Estado 2026-11-19 - DBADMIN al dia
+## Estado 2026-11-19 - SP de empleados aplicado en los 3 esquemas
 
-- **Busqueda de empleados sin acentos:** APLICADO en DBADMIN.
-  `SQL_MIGRACION/APLICADOS/DBADMIN/SpPdxMTTOBuscarEmpleados_ACENTOS_20261118.sql`
-  (respaldo previo en `SQL_ORIGINALES/SpPdxMTTOBuscarEmpleados_ANTES_ACENTOS_20261118.sql`).
-  Verificado: `VICTOR`, `victor` y `AGUILERA` devuelven al empleado; antes `VICTOR` daba 0 filas.
-- **Backfill "Maquina detenida":** movido a `ONPREMISE/CORRECTIVOS/`. **No aplica en
-  DBADMIN** porque `PdxMTTOTParoProduccion` no tiene `ORDEN_TRABAJO` ni `TIPO_PARO`.
-- El script incompleto `DBADMIN/SpPdxMTTOBuscarEmpleados_ACENTOS_OPCIONAL_20261118.sql`
-  se elimino: no contenia el cuerpo del PROCEDURE y quedo reemplazado por el aplicado.
+- **Busqueda de empleados sin acentos:** aplicado en **DBADMIN**, **TEST_JUNIO_2026**
+  y **PTM_2022_FINAL**. Verificado en DBADMIN: `VICTOR`, `victor` y `AGUILERA`
+  devuelven al empleado; antes `VICTOR` daba 0 filas.
+  - DBADMIN: `APLICADOS/DBADMIN/SpPdxMTTOBuscarEmpleados_ACENTOS_20261118.sql`
+  - On-premise: `APLICADOS/<schema>/EMPLEADOS/SpPdxMTTOBuscarEmpleados_ACENTOS_20261118_ALTER.sql`
+  - Respaldo previo: `SQL_ORIGINALES/SpPdxMTTOBuscarEmpleados_ANTES_ACENTOS_20261118.sql`
+- **Backfill "Maquina detenida":** en `ONPREMISE/CORRECTIVOS/`. **No aplica en
+  DBADMIN** porque `PdxMTTOTParraProduccion` no tiene `ORDEN_TRABAJO` ni `TIPO_PARO`.
+- **Verificacion de SPs faltantes:** `../VERIFICACION/CHECK_SP_FALTANTES.sql` lista,
+  por schema, los SPs que el codigo referencia y no existen.
 
 ## Pendientes on-premise - backfill de MAQUINA_DETENIDA
 
