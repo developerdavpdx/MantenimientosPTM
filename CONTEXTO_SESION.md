@@ -1572,3 +1572,16 @@ Antes: `VICTOR` → 0 filas. Ahora: `VICTOR`, `victor` y `AGUILERA` → empleado
 - **⚠️ Cadena de conexión:** el `Web.config` del repo apunta a **`DBADMIN`** (sin commitear). El `:8081` debe usar **`TEST_JUNIO_2026`** y el `:8083` **`PTM_2022_FINAL`**. **No publicar el `Web.config` del repo tal cual en producción.**
 - `:8083` (producción) **no se tocó** en toda la sesión.
 - Conexión a HANA Cloud **intermitente** (`Cannot create SSL engine`): falla el almacén de credenciales del cliente SAP; requiere regenerar el PSE.
+
+### H. Ajustes pendientes (detectados en la validación del 19/11, no bloqueantes)
+
+1. **`#Comentarios` es `required` nativo en Preventivos.** Si está vacío, el navegador muestra solo el globo de validación HTML y **no hay mensaje del portal**: el usuario percibe que *"el botón no hace nada"*. → Convertirlo en validación del portal (mensaje visible + marcar el campo), no en `required` nativo.
+2. **La etiqueta del botón no se restaura tras una validación fallida.** Después de un intento fallido queda como **"Guardar"** en lugar de **"Finalizar"** (`mantenimientos_preventivos_refactor.js:3753, 3772, 3801, 3819`). → Restaurar el texto al terminar la validación.
+3. **El aviso "Debe asignar al menos un técnico" se autodestruye a los 4 s** (`AlertManager.mostrar` → `Global.js:3230`). Es fácil de perder. → Alargar su duración o dejarlo hasta que el usuario lo cierre.
+
+**Dato a limpiar en TEST:** `OTMP-009` quedó en **estatus 4** con `HORA_CIERRE = 19/11/2026 14:26:39` y **`Tiempo Invertido = 981.55 HRS`** (es de octubre, se cerró en noviembre). Infla Métricas/Bitácoras. Revertir con:
+```sql
+DELETE FROM "TEST_JUNIO_2026"."PdxMTTOOrdenesTrabajoMP" WHERE "NUMERO_ORDEN"='OTMP-009';
+UPDATE "TEST_JUNIO_2026"."PdxMTTOMPGenerados" SET "ESTATUS"=2, "HORA_CIERRE"=NULL WHERE "NUMERO_ORDEN"='OTMP-009';
+COMMIT;
+```
