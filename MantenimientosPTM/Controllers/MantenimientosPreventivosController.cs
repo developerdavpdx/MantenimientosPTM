@@ -645,6 +645,14 @@ namespace MantenimientosPTM.Controllers
                 // 🔥 DETECTAR SI ES BORRADOR
                 bool esBorrador = !string.IsNullOrEmpty(datos.TipoOperacion) && datos.TipoOperacion.ToUpper() == "BORRADOR";
 
+                // ============================================================
+                // 🔥 EL BORRADOR SÍ PUEDE GUARDAR FIRMAS
+                // El borrador NO cambia el estatus de la OT (se queda en 2 -
+                // Liberado), por lo que el usuario puede guardar todo lo
+                // capturado, incluida la firma, y seguir editando. Para cerrar
+                // la orden se usa "Finalizar" (que sí lleva la OT a estatus 4).
+                // ============================================================
+
                 // CONTROL DE CONCURRENCIA: la OT debe seguir en la version que se abrio.
                 // Se valida antes de tocar firmas en disco para no pisar al otro usuario.
                 string mensajeConflicto;
@@ -1043,28 +1051,22 @@ namespace MantenimientosPTM.Controllers
                 string usuarioWebFinal = string.IsNullOrEmpty(usuarioWeb) ? null : usuarioWeb;
                 string tipoUsuarioFinal = string.IsNullOrEmpty(tipoUsuario) ? null : tipoUsuario;
 
-                // ✅ Preparar parámetros para el SP
-                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                {
-                    { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_POSICION",(posicionIdFinal,  ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_USUARIOWEB",(usuarioWebFinal,  ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_TIPOUSUARIO",(tipoUsuarioFinal, ParameterDirection.Input, HanaDbType.NVarChar) },
-                };
-
-                // ✅ Ejecutar el Stored Procedure
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCBuscarEmpleados, // ⬅️ Nombre de tu SP
-                    parameters
-                );
+                // ✅ Ejecutar el SP tolerando acentos/mayúsculas (VICTOR -> VÍCTOR)
+                string jsonEmpleados = BusquedaEmpleadosAcentos.BuscarJson(
+                    Logic.GlobalCommands,
+                    Logic.AD.GCBuscarEmpleados,
+                    query,
+                    planta,
+                    posicionIdFinal,
+                    usuarioWebFinal,
+                    tipoUsuarioFinal);
 
                 // ✅ Deserializar resultado
                 List<AccesoDatosMantenimientosPreventivos.EmpleadoDTO> empleados = new List<AccesoDatosMantenimientosPreventivos.EmpleadoDTO>();
 
-                if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
+                if (!string.IsNullOrEmpty(jsonEmpleados) && jsonEmpleados.Trim() != "[]")
                 {
-                    empleados = JsonConvert.DeserializeObject<List<AccesoDatosMantenimientosPreventivos.EmpleadoDTO>>(resultHana.JsonResult);
+                    empleados = JsonConvert.DeserializeObject<List<AccesoDatosMantenimientosPreventivos.EmpleadoDTO>>(jsonEmpleados);
                 }
 
                 // ✅ Retornar JSON

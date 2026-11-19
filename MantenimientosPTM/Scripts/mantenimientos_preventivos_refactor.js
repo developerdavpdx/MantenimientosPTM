@@ -2953,11 +2953,125 @@ class MantenimientoManager {
             // ========================================
             this.cargarTecnicos(data.numeroOrden, "MP");
 
+            // ========================================
+            // 🔥 1️2 BOTONES DE GUARDADO (POLÍTICA ÚNICA)
+            // Se aplica AL FINAL para que ninguna rama de rol deje la botonera
+            // inconsistente (esa era la causa de que "desaparecieran" los
+            // botones al guardar un borrador).
+            // ========================================
+            this._recordarEstadoVista(data.estatusOrden, {
+                realizo: data.firmaRealizo,
+                superviso: data.firmaSuperviso,
+                mantenimiento: data.firmaMantenimiento
+            });
+
+            this._aplicarVisibilidadBotones(data.estatusOrden, {
+                realizo: data.firmaRealizo,
+                superviso: data.firmaSuperviso,
+                mantenimiento: data.firmaMantenimiento
+            });
+
         }
         catch (error) {
             console.error("❌ Error en abrirModalCaratulaOnline:", error);
             AlertManager.mostrar("Error al abrir la orden, intente de nuevo más tarde.", "danger");
         }
+    }
+
+    // ============================================================
+    // 🔥 POLÍTICA ÚNICA DE VISIBILIDAD DE LOS BOTONES DE GUARDADO
+    // ------------------------------------------------------------
+    // REGLA: la visibilidad depende SOLO del estatus de la OT y del rol,
+    //        NUNCA de si existe una firma capturada.
+    //
+    // Motivos (bug real reportado):
+    //  - "Guardar Borrador" NO cambia el estatus (se queda en 2 - Liberado),
+    //    así que el técnico debe seguir viendo "Finalizar" y "Guardar
+    //    Borrador" aunque ya haya firmado.
+    //  - Cuando el estatus SÍ es 4 (cerrada / en proceso de firmas) el
+    //    técnico conserva el bloqueo: no re-firma ni duplica el cierre.
+    // ============================================================
+    _recordarEstadoVista(EstatusOrden, firmas = {}) {
+        this._estadoVistaOT = {
+            estatusOrden: EstatusOrden,
+            firmas: {
+                realizo: firmas.realizo || '',
+                superviso: firmas.superviso || '',
+                mantenimiento: firmas.mantenimiento || ''
+            }
+        };
+    }
+
+    _aplicarVisibilidadBotones(EstatusOrden, firmas = {}) {
+        const tipoUsuario = (this.datos_usuario && this.datos_usuario[0])
+            ? (this.datos_usuario[0].TIPOUSUARIO || '')
+            : '';
+
+        const esTecnico = tipoUsuario === 'TecnicoMtto';
+        const esAdmin = tipoUsuario === 'AdminMtto' ||
+            tipoUsuario === 'Administrador' ||
+            tipoUsuario === 'SupervisorMantenimiento';
+        const esProduccion = tipoUsuario === 'Produccion' ||
+            tipoUsuario === 'SupervisorProduccion';
+
+        const estatus = parseInt(EstatusOrden, 10);
+        const firma = {
+            realizo: firmas.realizo || '',
+            superviso: firmas.superviso || '',
+            mantenimiento: firmas.mantenimiento || ''
+        };
+
+        const mostrar = (selector, visible) => {
+            const $el = $(selector);
+            if (!$el.length) return;
+            if (visible) {
+                $el.removeClass('d-none').prop('disabled', false);
+            } else {
+                $el.addClass('d-none').prop('disabled', true);
+            }
+        };
+
+        // OT cerrada / en proceso de firmas
+        if (estatus === 4) {
+            if (esTecnico) {
+                // Bloqueo actual conservado: el técnico ya no captura nada.
+                mostrar('#btnGuardarOT', false);
+                mostrar('#btnGuardarBorrador', false);
+            } else if (esProduccion) {
+                mostrar('#btnGuardarOT', firma.superviso === '');
+                mostrar('#btnGuardarBorrador', false);
+            } else if (esAdmin) {
+                mostrar('#btnGuardarOT', firma.mantenimiento === '');
+                mostrar('#btnGuardarBorrador', false);
+            } else {
+                mostrar('#btnGuardarOT', false);
+                mostrar('#btnGuardarBorrador', false);
+            }
+            return;
+        }
+
+        // OT abierta (1 = nueva, 2 = Liberado, 3 = En espera de refacción)
+        if (esTecnico) {
+            // 🔥 El técnico SIEMPRE puede finalizar y guardar borrador,
+            // aunque ya tenga firma (el borrador no cambia el estatus).
+            mostrar('#btnGuardarOT', true);
+            mostrar('#btnGuardarBorrador', true);
+        } else {
+            // Admin/Producción sólo guardan (firman) cuando la OT llegó a 4.
+            mostrar('#btnGuardarOT', false);
+            mostrar('#btnGuardarBorrador', false);
+        }
+    }
+
+    // Re-aplica la botonera con el último estatus/firmas conocidos.
+    // Se usa después de guardar un borrador para que los botones NO
+    // desaparezcan al terminar el guardado.
+    _refrescarBotonesGuardado() {
+        if (!this._estadoVistaOT) return;
+        this._aplicarVisibilidadBotones(
+            this._estadoVistaOT.estatusOrden,
+            this._estadoVistaOT.firmas
+        );
     }
 
     // ========================================
@@ -3024,13 +3138,25 @@ class MantenimientoManager {
                 uploaderDisabled.disableUpload();
             }
 
-            // BOTONES
+            // ============================================================
+            // 🔥 BOTONES (LA OT YA ESTÁ CERRADA: ESTATUS 4)
+            // Aquí SÍ se ocultan los botones si el técnico ya firmó, por dos
+            // motivos: no re-firmar y no duplicar el cierre de la orden.
+            // La visibilidad se resuelve con la política única
+            // (_aplicarVisibilidadBotones) para que ninguna rama la deje
+            // inconsistente.
+            // ============================================================
+            this._aplicarVisibilidadBotones(EstatusOrden, { realizo: FirmaTecnico, superviso: FirmaSupervisor, mantenimiento: FirmaMantenimiento });
+
             if (FirmaTecnico != "") {
-                $('#btnGuardarOT').addClass('d-none').prop('disabled', true);
-                $('#btnGuardarBorrador').addClass('d-none').prop('disabled', true);
+                // La OT ya no admite acciones del técnico, pero se le explica
+                // por qué (antes los botones simplemente "desaparecían").
+                AlertManager.mostrar(
+                    'Esta orden ya fue firmada por ti y está en proceso de firmas. El administrador de mantenimiento es quien la cierra.',
+                    'info',
+                    "alertOrdenContainer"
+                );
             }
-            else
-                $('#btnGuardarOT').removeClass('d-none').prop('disabled', false);
 
             $('#btnExportMantenimientoPDF').addClass('d-none');
 
@@ -3055,8 +3181,12 @@ class MantenimientoManager {
         // 🔥 SI NO ES STATUS 4: HABILITAR TODO
         // ========================================
         // SECCIONES
-        $('#btnGuardarOT').removeClass('d-none').prop('disabled', false);
-        $('#btnGuardarBorrador').removeClass('d-none').prop('disabled', false);
+        // 🔥 REGLA CLAVE: mientras EstatusOrden != 4 el técnico SIEMPRE puede
+        // pulsar "Finalizar" para llevar la OT a estatus 4, aunque ya tenga
+        // FIRMA_REALIZO guardada (caso real: firmó + "Guardar Borrador" y la OT
+        // se quedó en estatus 2 → quedaba atrapada sin que nadie pudiera cerrarla).
+        // La firma existente NO es motivo para ocultar el botón.
+        this._aplicarVisibilidadBotones(EstatusOrden, { realizo: FirmaTecnico, superviso: FirmaSupervisor, mantenimiento: FirmaMantenimiento });
         $('#EvidenciaOrdenTrabajo').removeClass('d-none');
         $('#CierreOrdenTrabajo').removeClass('d-none');
         $('#SeccionFirmas').removeClass('d-none');
@@ -3765,6 +3895,13 @@ class MantenimientoManager {
             return false;
         }
 
+        // ============================================================
+        // 🔥 EL BORRADOR SÍ PUEDE GUARDAR FIRMAS
+        // El borrador NO cambia el estatus de la OT (sigue en 2 - Liberado),
+        // así que se permite guardar todo (incluida la firma) sin bloquear al
+        // usuario. Para cerrar la orden se usa "Finalizar".
+        // ============================================================
+
         // ✅ Deshabilitar botón y mostrar loading
         $('#btnGuardarBorrador').html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando Borrador...').prop('disabled', true);
 
@@ -3788,6 +3925,7 @@ class MantenimientoManager {
                 const rutinaGuardada = await this.guardarRutinaParaBorrador(datosBorrador.NumeroOrden, datosBorrador.EstatusOrden);
                 if (!rutinaGuardada) {
                     $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+                    this._refrescarBotonesGuardado();
                     return false;
                 }
 
@@ -3845,6 +3983,7 @@ class MantenimientoManager {
                 AlertManager.mostrar('No es posible guardar el borrador: ' + error, 'warning', "alertOrdenContainer");
             }
             $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+            this._refrescarBotonesGuardado();
         } finally {
             this._guardandoOT = false;
         }
@@ -3928,6 +4067,8 @@ class MantenimientoManager {
                         );
                         this._conflictoGuardado = true;
                         $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+                        // 🔥 El borrador NO cambia el estatus: la botonera debe seguir igual
+                        this._refrescarBotonesGuardado();
                         if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
                             $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
                         }
@@ -3957,10 +4098,14 @@ class MantenimientoManager {
 
                     // Restaurar botón
                     $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+                    // 🔥 El borrador NO cambia el estatus: se re-aplica la botonera
+                    // para que "Finalizar"/"Guardar Borrador" sigan visibles.
+                    this._refrescarBotonesGuardado();
                 },
                 error: (xhr, status, error) => {
                     AlertManager.mostrar('Error al conectar con el servidor', 'warning', "alertOrdenContainer");
                     $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false);
+                    this._refrescarBotonesGuardado();
                     reject(error);
                 }
             });

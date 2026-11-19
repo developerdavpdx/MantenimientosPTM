@@ -8,6 +8,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -802,5 +803,145 @@ namespace MantenimientosPTM
         }
         #endregion
 
+    }
+    /// <summary>
+    /// Búsqueda de empleados TOLERANTE A ACENTOS Y MAYÚSCULAS.
+    ///
+    /// Motivo: HANA compara cadenas por code point, así que "VICTOR" no
+    /// encuentra "VÍCTOR" (el SP SpPdxMTTOBuscarEmpleados hace LIKE directo).
+    /// La corrección definitiva es normalizar ambos lados en el SP (script en
+    /// SQL_MIGRACION/PENDIENTES/DBADMIN). Mientras ese script no esté
+    /// aplicado, aquí se reintenta con variantes acentuadas de la búsqueda;
+    /// en cuanto el SP normalice, la primera ejecución ya devuelve resultados
+    /// y el reintento no se usa.
+    /// </summary>
+    public static class BusquedaEmpleadosAcentos
+    {
+        // Equivalencias usadas en español para la búsqueda (1:1).
+        private static readonly Dictionary<char, char> MapaAcentos = new Dictionary<char, char>
+        {
+            { 'A', 'Á' }, { 'E', 'É' }, { 'I', 'Í' },
+            { 'O', 'Ó' }, { 'U', 'Ú' }, { 'N', 'Ñ' }
+        };
+
+        private const string CaracteresAcentuados = "ÁÉÍÓÚÜÑáéíóúüñ";
+
+        /// <summary>¿El texto ya trae acentos o eñes?</summary>
+        public static bool TieneAcento(string texto)
+        {
+            if (string.IsNullOrEmpty(texto)) return false;
+
+            foreach (char c in texto)
+            {
+                if (CaracteresAcentuados.IndexOf(c) >= 0) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Variantes a probar, en orden. Siempre incluye el texto original.
+        /// Si el usuario ya escribió acentos no se generan variantes.
+        /// </summary>
+        public static List<string> Variantes(string query, int maximo = 8)
+        {
+            var variantes = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(query)) return variantes;
+
+            string original = query.Trim();
+            variantes.Add(original);
+
+            if (TieneAcento(original)) return variantes;
+
+            char[] letras = original.ToCharArray();
+            var posiciones = new List<int>();
+
+            for (int i = 0; i < letras.Length; i++)
+            {
+                if (MapaAcentos.ContainsKey(char.ToUpperInvariant(letras[i])))
+                    posiciones.Add(i);
+            }
+
+            if (posiciones.Count == 0) return variantes;
+
+            // 1) Todas las letras acentuables acentuadas a la vez
+            char[] todas = letras.ToArray();
+            foreach (int p in posiciones)
+                todas[p] = Acentuar(todas[p]);
+
+            string combinada = new string(todas);
+            if (!string.Equals(combinada, original, StringComparison.Ordinal) &&
+                !variantes.Contains(combinada))
+            {
+                variantes.Add(combinada);
+            }
+
+            // 2) Una sola letra acentuada (cubre VÍCTOR, JOSÉ, MARTÍNEZ, HERNÁNDEZ...)
+            foreach (int p in posiciones)
+            {
+                if (variantes.Count >= maximo) break;
+
+                char[] una = letras.ToArray();
+                una[p] = Acentuar(una[p]);
+                string variante = new string(una);
+
+                if (!variantes.Contains(variante)) variantes.Add(variante);
+            }
+
+            return variantes;
+        }
+
+        /// <summary>
+        /// Devuelve la letra acentuada respetando el caso original
+        /// ("i" -> "í", "I" -> "Í").
+        /// </summary>
+        private static char Acentuar(char letra)
+        {
+            char acentuada = MapaAcentos[char.ToUpperInvariant(letra)];
+            return char.IsLower(letra) ? char.ToLowerInvariant(acentuada) : acentuada;
+        }
+
+        /// <summary>
+        /// Ejecuta el SP de empleados probando las variantes hasta obtener
+        /// resultados. Devuelve el JSON crudo del SP (mismo contrato de antes).
+        /// </summary>
+        public static string BuscarJson(
+            GlobalCommands comandos,
+            string nombreSp,
+            string query,
+            int? planta,
+            string posicionId,
+            string usuarioWeb,
+            string tipoUsuario)
+        {
+            if (comandos == null || string.IsNullOrEmpty(nombreSp)) return "[]";
+
+            string ultimoJson = "[]";
+
+            foreach (string variante in Variantes(query))
+            {
+                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
+                {
+                    { "P_QUERY",       (variante,    ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_PLANTA",      (planta,      ParameterDirection.Input, HanaDbType.Integer) },
+                    { "P_POSICION",    (posicionId,  ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_USUARIOWEB",  (usuarioWeb,  ParameterDirection.Input, HanaDbType.NVarChar) },
+                    { "P_TIPOUSUARIO", (tipoUsuario, ParameterDirection.Input, HanaDbType.NVarChar) },
+                };
+
+                var resultado = comandos.ExecuteProcedureHanaAuto(nombreSp, parameters);
+                string json = resultado != null ? resultado.JsonResult : null;
+
+                if (!string.IsNullOrEmpty(json) && json.Trim() != "[]")
+                {
+                    // Un mensaje de error del SP se devuelve tal cual para que
+                    // el llamador lo registre (mismo comportamiento de antes).
+                    return json;
+                }
+            }
+
+            return ultimoJson;
+        }
     }
 }

@@ -489,7 +489,8 @@ class GestionTecnicos {
                 method: 'GET',
                 data: {
                     planta: planta,
-                    query: query,
+                    // La búsqueda la resuelve el backend ignorando acentos/mayúsculas
+                    query: (query || '').trim(),
                     posicionId: posicionId,
                     usuarioWeb: usuarioWeb,
                     tipoUsuario: tipoUsuario
@@ -573,6 +574,11 @@ class GestionTecnicos {
             return;
         }
         this.tecnicosAsignados.push(tecnico);
+        // El aviso de "falta asignar técnicos" deja de aplicar
+        $('#BuscarTecnico').removeClass('is-invalid');
+        if ($('#alertTecnicosContainer').length) {
+            $('#alertTecnicosContainer').empty();
+        }
         this.renderizarTecnicos();
     }
 
@@ -769,7 +775,7 @@ class AutocompleteSolicitante {
             const response = await $.ajax({
                 url: `/${this.URLBase}/BuscarEmpleados`,
                 method: 'GET',
-                data: { planta, query, posicionId, usuarioWeb, tipoUsuario },
+                data: { planta, query: (query || '').trim(), posicionId, usuarioWeb, tipoUsuario },
                 dataType: 'json'
             });
 
@@ -4667,6 +4673,75 @@ class GestionProduccionBase {
         const v = parseFloat(value || 0);
         if (isNaN(v)) return '';
         return v.toLocaleString('es-MX', { maximumFractionDigits: 2 }) + '%';
+    }
+
+    // ============================================================
+    // 📐 ANCHOS RESPONSIVOS DEL GRUPO "DATOS GENERALES" (Tiempos Muertos)
+    // ------------------------------------------------------------
+    // Problema real: el grupo va "pinned left" y sumaba ~930-980 px. En una
+    // ventana de ~1034 px dejaba ~15 px para el área de horas (inoperable).
+    // Solución: en ventanas angostas se usan anchos compactos; en pantallas
+    // grandes se conservan los anchos de siempre.
+    // ============================================================
+    esAnchoCompacto() {
+        const ancho = window.innerWidth || document.documentElement.clientWidth || 0;
+        return ancho > 0 && ancho < 1440;
+    }
+
+    anchosDatosGenerales() {
+        if (this.esAnchoCompacto()) {
+            // Suma ≈ 725 px (antes 930-980 px)
+            return {
+                Mes: 105,
+                Fecha: 100,
+                Linea: 115,
+                Producto: 140,
+                Turno: 70,
+                TRIP: 65,
+                Grupo: 65,
+                Comentarios: 130
+            };
+        }
+
+        // Pantallas grandes: se mantiene el diseño actual
+        return {
+            Mes: 170,
+            Fecha: 120,
+            Linea: 120,
+            Producto: 140,
+            Turno: 90,
+            TRIP: 90,
+            Grupo: 80,
+            Comentarios: 200
+        };
+    }
+
+    aplicarAnchosDatosGenerales() {
+        if (!this.gridApi) return;
+
+        const anchos = this.anchosDatosGenerales();
+
+        Object.keys(anchos).forEach(campo => {
+            try {
+                this.gridApi.setColumnWidth(campo, anchos[campo], true);
+            } catch (e) {
+                // El proceso no tiene esa columna (TRIP vs Grupo): se ignora.
+            }
+        });
+    }
+
+    configurarAnchosResponsivosDatosGenerales() {
+        if (this._resizeHandlerDatosGenerales) {
+            window.removeEventListener('resize', this._resizeHandlerDatosGenerales);
+        }
+
+        let temporizador = null;
+        this._resizeHandlerDatosGenerales = () => {
+            clearTimeout(temporizador);
+            temporizador = setTimeout(() => this.aplicarAnchosDatosGenerales(), 150);
+        };
+
+        window.addEventListener('resize', this._resizeHandlerDatosGenerales);
     }
 
     // ========================================

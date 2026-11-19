@@ -1843,6 +1843,11 @@ class MantenimientoManager {
             // 🔥 Tipo operación
             this.TIPO_OPERACION = (data.estatusOrden == "4" ? "U" : "I");
             this.EstatusOrden = data.estatusOrden; //GUARDAR EL ESTATUS ACTUAL DE LA ORDEN
+            // 🔥 Estado de "Máquina detenida" leído de la OT (se conserva al guardar
+            // cuando la orden ya está en estatus 4, para no pisarlo con NULL).
+            this.MaquinaDetenidaActual = (parseInt(data.MaquinaDetenida, 10) === 1) ? 1 : 0;
+            // 🔥 Mantener sincronizado el switch con el input oculto / tiempos
+            this._bindToggleMaquinaDetenida();
             // Token de version para detectar edicion concurrente
             this.TOKEN_OT = data.TOKEN || null;
             // ========================================
@@ -2182,6 +2187,17 @@ class MantenimientoManager {
         // ✅ Candado de fechas/horas (incompleto, día de apertura, fin >= inicio)
         if (!this.appReferencia.validarRangoHoras(true)) return false;
 
+        // ============================================================
+        // ✅ TÉCNICOS OBLIGATORIOS (SOLO EN GUARDADO DEFINITIVO)
+        // El borrador (guardarOTBorrador) NO valida técnicos: se puede
+        // guardar sin asignarlos. Aquí sí es obligatorio, y se avisa de
+        // forma explícita (antes el usuario no veía ningún mensaje).
+        // ============================================================
+        if (this.gestionTecnicos.tecnicosAsignados.length === 0) {
+            this._marcarFaltaTecnicos();
+            return false;
+        }
+
         // ✅ Obligatorias solo cuando el campo es editable (required lo define la vista por rol/estatus)
         if (($('#HoraInicioTrabajo').prop('required') && !$('#HoraInicioTrabajo').val()) ||
             ($('#HoraFin').prop('required') && !$('#HoraFin').val())) {
@@ -2192,18 +2208,6 @@ class MantenimientoManager {
         // Validar formulario
         if (!ValidationManager.validarFormulario('#formOrdenMantenimiento')) {
             AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', "alertOrdenContainer");
-            return false;
-        }
-
-        // ✅ Validar técnicos
-        if (this.gestionTecnicos.tecnicosAsignados.length === 0) {
-            AlertManager.mostrar(
-                'Debe asignar al menos un técnico a la orden de trabajo',
-                'warning',
-                "alertOrdenContainer"
-            );
-            $('#BuscarTecnico').focus();
-            $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
             return false;
         }
 
@@ -2252,7 +2256,10 @@ class MantenimientoManager {
             datos.MaquinaDetenida = $('#MaquinaDetenidaToggle').is(':checked') ? 1 : 0;
 
             if (this.EstatusOrden == "4")
-                datos.MaquinaDetenida = null; //EVITAR QUE LO ACTUALICE SI YA ESTA EN PROCESO DE FIRMAS
+                // Ya está en proceso de firmas: se reenvía el estado leído de la OT.
+                // Antes se enviaba null esperando que el SP conservara el valor; si el
+                // SP no lo conserva, el estado se perdía al firmar supervisión/admin.
+                datos.MaquinaDetenida = (this.MaquinaDetenidaActual === 1) ? 1 : 0;
 
             // 🔥 OBTENER Y AGREGAR FIRMAS DIGITALES
             const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
@@ -2277,6 +2284,36 @@ class MantenimientoManager {
 
         return false;
     }
+
+    // ============================================================
+    // 🔔 Aviso explícito: falta asignar técnicos (sólo guardado definitivo)
+    // Marca el campo, enfoca y muestra el mensaje junto a la sección de
+    // técnicos, además de dejarlo en el contenedor general de la orden.
+    // ============================================================
+    _marcarFaltaTecnicos() {
+        const mensaje = 'Debe asignar al menos un técnico a la orden de trabajo antes de finalizarla. Puede guardar como borrador sin técnicos.';
+
+        $('#BuscarTecnico').addClass('is-invalid');
+
+        if ($('#alertTecnicosContainer').length) {
+            $('#alertTecnicosContainer').empty();
+        }
+        AlertManager.mostrar(mensaje, 'warning', 'alertTecnicosContainer');
+
+        const $busqueda = $('#BusquedaTecnicosContainer');
+        if ($busqueda.length) {
+            const el = $busqueda[0];
+            if (el.scrollIntoView) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        $('#BuscarTecnico').trigger('focus');
+        $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+
+        return false;
+    }
+
 
     // 🔥 GUARDAR BORRADOR DE OT CORRECTIVO
     async guardarOTBorrador(e) {
@@ -2897,9 +2934,11 @@ class MantenimientoManager {
         // Asegurar que para Administrador el botón siga oculto
         $('#btnGuardarOT').addClass('d-none').prop('disabled', true).addClass('btn_disabled');
 
-        // Restaurar estilo y habilitar switch
-        $('#MaquinaDetenidaToggle').prop('disabled', false);
-        $('#maquinaDetenidaBanner').removeClass('maquina-detenida-banner');
+        // 🔥 BANNER + SWITCH "MÁQUINA DETENIDA"
+        // La vista de administrador no configuraba el banner, así que al reabrir
+        // una OT cerrada se veía el texto por defecto y el switch quedaba apagado.
+        // Se aplica al final para que el estado guardado prevalezca.
+        this._configurarBannerMaquinaDetenida(MaquinaDetenida, EstatusOrden);
     }
 
     // ============================
@@ -2956,12 +2995,19 @@ class MantenimientoManager {
         const $icon = $('#maquina_detenida_icon');
         const $title = $('#maquina_detenida_title');
 
+        // 🔥 El switch debe reflejar SIEMPRE el estado guardado en la OT.
+        // Antes solo se marcaba cuando la OT NO estaba en estatus 4, por lo que al
+        // reabrir una OT cerrada con "máquina detenida" el switch aparecía apagado.
+        const detenida = (Detenida === true || Detenida === 1 || Detenida === '1' || Detenida === 'true');
+        $toggle.prop('checked', detenida);
+        $('#MaquinaDetenidaHidden').val(detenida ? 'true' : 'false');
+
         // Si es status 4 (completado): Mostrar banner sin switch
         if (EstatusOrden == '4') {
             $container.addClass('d-none');
             $toggle.prop('disabled', true);
 
-            if (Detenida) {
+            if (detenida) {
                 // Máquina estuvo detenida
                 $banner.addClass('banner-stopped').addClass('maquina-detenida-banner-stopped');
                 $icon.removeClass('bi-check-circle-fill').addClass('bi-exclamation-octagon-fill');
@@ -2985,13 +3031,43 @@ class MantenimientoManager {
             $container.removeClass('d-none');
             $toggle.prop('disabled', false);
             $toggle.prop('required', false);
-            $toggle.prop('checked', Detenida);
             $banner.removeClass('banner-stopped').removeClass('maquina-detenida-banner-stopped').removeClass('maquina-detenida-banner');
             $banner.css('animation', 'none');
             $icon.removeClass('bi-exclamation-octagon-fill').addClass('bi-info-circle');
             $icon.css('color', '#6c757d');
             $title.text('Máquina detenida');
         }
+    }
+
+    // ============================
+    // 🔥 SINCRONIZAR EL SWITCH "MÁQUINA DETENIDA"
+    // Mantiene al día: el input oculto (que alimenta la carátula impresa),
+    // el banner y los tiempos analíticos mientras el usuario captura.
+    // ============================
+    _sincronizarToggleMaquinaDetenida() {
+        const detenida = $('#MaquinaDetenidaToggle').is(':checked');
+        $('#MaquinaDetenidaHidden').val(detenida ? 'true' : 'false');
+
+        // Solo se refrescan los tiempos si la sección de cierre es visible
+        if ($('#TiempoMuertoContainer').length && !$('#TiempoMuertoContainer').hasClass('d-none')) {
+            const horas = this._horasOTActuales || {};
+            this.calcularTiemposCierreOT(
+                detenida ? 1 : 0,
+                horas.apertura,
+                horas.cierre,
+                horas.inicio,
+                horas.fin
+            );
+        }
+    }
+
+    _bindToggleMaquinaDetenida() {
+        if (this._toggleMaquinaDetenidaBound) return;
+        this._toggleMaquinaDetenidaBound = true;
+
+        $('#MaquinaDetenidaToggle').on('change', () => {
+            this._sincronizarToggleMaquinaDetenida();
+        });
     }
 
     // ============================
@@ -3025,17 +3101,39 @@ class MantenimientoManager {
 
     calcularTiemposCierreOT(MaquinaDetenida, HoraAperturaOT, HoraCierreOT, HoraInicioTrabajo, HoraFinTrabajo) {
 
-        //CALCULO DE TIEMPO DE ESPERA VA AQUI
+        // 🔥 Se recuerdan las horas de la OT para poder recalcular los tiempos
+        // desde el cambio del switch "Máquina detenida" sin volver a leer la fila.
+        this._horasOTActuales = {
+            apertura: HoraAperturaOT,
+            cierre: HoraCierreOT,
+            inicio: HoraInicioTrabajo,
+            fin: HoraFinTrabajo
+        };
+
+        // 🔥 Formato seguro: calcularDiferenciaHoras devuelve null cuando falta
+        // una fecha/hora y antes se imprimía el texto crudo "null HRS".
+        const formatoHoras = (valor) => {
+            if (valor === null || valor === undefined || valor === '') return 'N/A';
+            const numero = Number(valor);
+            if (isNaN(numero) || !isFinite(numero)) return 'N/A';
+            return numero.toFixed(2);
+        };
+
         // Tiempo de espera
         let TE = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraInicioTrabajo);
-        $('#TiempoEspera').val(TE + ' HRS');
+        let teTexto = formatoHoras(TE);
+        $('#TiempoEspera').val(teTexto === 'N/A' ? 'N/A' : teTexto + ' HRS');
+
         // Tiempo reparación
         let TR = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraFinTrabajo);
-        $('#TiempoReparacion').val(TR + ' HRS');
+        let trTexto = formatoHoras(TR);
+        $('#TiempoReparacion').val(trTexto === 'N/A' ? 'N/A' : trTexto + ' HRS');
+
         // Tiempo muerto
         if (MaquinaDetenida) {
             let TM = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraFinTrabajo);
-            $('#TiempoMuerto').val(TM + ' HRS');
+            let tmTexto = formatoHoras(TM);
+            $('#TiempoMuerto').val(tmTexto === 'N/A' ? 'N/A' : tmTexto + ' HRS');
         }
         else {
             $('#TiempoMuerto').val('N/A');

@@ -991,28 +991,22 @@ namespace MantenimientosPTM.Controllers
                 string usuarioWebFinal = string.IsNullOrEmpty(usuarioWeb) ? null : usuarioWeb;
                 string tipoUsuarioFinal = string.IsNullOrEmpty(tipoUsuario) ? null : tipoUsuario;
 
-                // ✅ Preparar parámetros para el SP
-                var parameters = new Dictionary<string, (object value, ParameterDirection direction, HanaDbType type)>
-                {
-                    { "P_QUERY", (query, ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_PLANTA", (planta, ParameterDirection.Input, HanaDbType.Integer) },
-                    { "P_POSICION",(posicionIdFinal,  ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_USUARIOWEB",(usuarioWebFinal,  ParameterDirection.Input, HanaDbType.NVarChar) },
-                    { "P_TIPOUSUARIO",(tipoUsuarioFinal, ParameterDirection.Input, HanaDbType.NVarChar) },
-                };
-
-                // ✅ Ejecutar el Stored Procedure
-                var resultHana = Logic.GlobalCommands.ExecuteProcedureHanaAuto(
-                    Logic.AD.GCBuscarEmpleados, // ⬅️ Nombre de tu SP
-                    parameters
-                );
+                // ✅ Ejecutar el SP tolerando acentos/mayúsculas (VICTOR -> VÍCTOR)
+                string jsonEmpleados = BusquedaEmpleadosAcentos.BuscarJson(
+                    Logic.GlobalCommands,
+                    Logic.AD.GCBuscarEmpleados,
+                    query,
+                    planta,
+                    posicionIdFinal,
+                    usuarioWebFinal,
+                    tipoUsuarioFinal);
 
                 // ✅ Deserializar resultado
                 List<AccesoDatosMantenimientosPreventivos.EmpleadoDTO> empleados = new List<AccesoDatosMantenimientosPreventivos.EmpleadoDTO>();
 
-                if (!string.IsNullOrEmpty(resultHana.JsonResult) && resultHana.JsonResult != "[]")
+                if (!string.IsNullOrEmpty(jsonEmpleados) && jsonEmpleados.Trim() != "[]")
                 {
-                    empleados = JsonConvert.DeserializeObject<List<AccesoDatosMantenimientosPreventivos.EmpleadoDTO>>(resultHana.JsonResult);
+                    empleados = JsonConvert.DeserializeObject<List<AccesoDatosMantenimientosPreventivos.EmpleadoDTO>>(jsonEmpleados);
                 }
 
                 // ✅ Retornar JSON

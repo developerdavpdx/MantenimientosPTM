@@ -542,11 +542,16 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             document.getElementById('btnConfirmarActualizacionBitacoras')
                 .addEventListener('click', function () {
                     modalActualizacion.hide();
-                    // Cerrar todos los modales abiertos antes de recargar
-                    document.querySelectorAll('.modal.show').forEach(function (modalAbierto) {
-                        var instancia = bootstrap.Modal.getInstance(modalAbierto);
-                        if (instancia) instancia.hide();
-                    });
+
+                    // 🔥 NUNCA cerrar modales de captura ajenos al aviso
+                    // (antes se cerraban TODOS los `.modal.show`, lo que
+                    // destruía una firma o una captura en curso).
+                    if (hayCapturaEnCurso() || hayCambiosSinGuardar()) {
+                        avisoPendiente = { tipo: ultimoTipoAviso };
+                        console.info('🔔 Recarga de bitácoras diferida: hay captura o cambios sin guardar.');
+                        return;
+                    }
+
                     self.consultarDatos();
                 });
         }
@@ -554,22 +559,40 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
         // ========================================
         // 📡 EVENTO PARA BITÁCORAS
         // ========================================
-        hub.client.actualizarTablaBitacoras = function (rolQueCambio, tipoActualizacion = 'CORRECTIVOS') {
-            console.warn("📡 Actualización de Bitácoras desde SignalR | Origen:", rolQueCambio || "desconocido", "| Tipo:", tipoActualizacion);
+        // ========================================
+        // 🧠 REGLAS DEL AVISO DE BITÁCORAS
+        // - Sólo se avisa a los roles que consumen la bitácora y que no
+        //   hicieron el cambio (mismo criterio que Correctivos).
+        // - El aviso NUNCA cierra ni interrumpe un modal de captura.
+        // - Si hay captura en curso o cambios sin guardar, el aviso se
+        //   ENCOLA y se muestra cuando el usuario termine.
+        // ========================================
+        const ROLES_BITACORAS = ['Produccion', 'SupervisorProduccion', 'AdminMtto', 'Administrador', 'SupervisorMantenimiento'];
 
-            if ($modalEl && $modalEl.classList.contains('show')) return;
+        // Modales que son sólo avisos (no cuentan como captura)
+        const MODALES_AVISO = ['actualizacionDatosModalBitacoras'];
 
-            // Actualizar mensaje dinámico en el modal
-            if ($modalEl && mensajesPorTipo[tipoActualizacion]) {
-                const mensaje = mensajesPorTipo[tipoActualizacion];
+        const debeRecibirAviso = (rolQueCambio) =>
+            ROLES_BITACORAS.indexOf(miRol) !== -1 && miRol !== rolQueCambio;
 
-                // Actualizar título del modal
+        // ¿Hay un modal de captura abierto? (firmas, correo, edición...)
+        const hayCapturaEnCurso = () => Array.from(document.querySelectorAll('.modal.show'))
+            .some(function (m) { return MODALES_AVISO.indexOf(m.id) === -1; });
+
+        // ¿Hay cambios del grid sin guardar?
+        const hayCambiosSinGuardar = () => Array.isArray(self.cambiosPendientes) && self.cambiosPendientes.length > 0;
+
+        let avisoPendiente = null;
+        let ultimoTipoAviso = 'CORRECTIVOS';
+
+        // Muestra el aviso (o recarga directo si la vista no tiene el modal)
+        const mostrarAviso = (tipo) => {
+            if ($modalEl && mensajesPorTipo[tipo]) {
+                const mensaje = mensajesPorTipo[tipo];
+
                 const $subtituloEl = $modalEl.querySelector('.modal-subtitle-custom');
-                if ($subtituloEl) {
-                    $subtituloEl.textContent = mensaje.titulo;
-                }
+                if ($subtituloEl) $subtituloEl.textContent = mensaje.titulo;
 
-                // Actualizar descripción
                 const $alertEl = $modalEl.querySelector('.alert');
                 if ($alertEl) {
                     $alertEl.innerHTML = `
@@ -583,10 +606,59 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                 }
             }
 
+            if (modalActualizacion) {
+                modalActualizacion.show();
+            } else {
+                self.consultarDatos();
+            }
+        };
+
+        // Al cerrar cualquier modal, si ya no hay captura en curso se muestra el aviso pendiente
+        const flushAvisoPendiente = () => {
+            if (!avisoPendiente) return;
+            if (hayCapturaEnCurso() || hayCambiosSinGuardar()) return;
+
+            const tipo = avisoPendiente.tipo;
+            avisoPendiente = null;
+
+            // Se espera a que termine la transición del modal que se está cerrando
+            setTimeout(function () {
+                if ($modalEl && $modalEl.classList.contains('show')) return;
+                if (hayCapturaEnCurso() || hayCambiosSinGuardar()) {
+                    avisoPendiente = { tipo: tipo };
+                    return;
+                }
+                mostrarAviso(tipo);
+            }, 350);
+        };
+
+        if (!self._bitacorasFlushBound) {
+            self._bitacorasFlushBound = true;
+            $(document).on('hidden.bs.modal', flushAvisoPendiente);
+        }
+
+        hub.client.actualizarTablaBitacoras = function (rolQueCambio, tipoActualizacion = 'CORRECTIVOS') {
+            console.warn("📡 Actualización de Bitácoras desde SignalR | Origen:", rolQueCambio || "desconocido", "| Tipo:", tipoActualizacion);
+
+            if ($modalEl && $modalEl.classList.contains('show')) return;
+
+            // 🔕 Filtro por rol: sólo los consumidores de la bitácora
+            if (!debeRecibirAviso(rolQueCambio)) {
+                console.info("🔕 Aviso de bitácoras ignorado — no corresponde al rol:", miRol);
+                return;
+            }
+
+            ultimoTipoAviso = tipoActualizacion;
+
+            // 🔔 No interrumpir: se encola y se muestra al terminar
+            if (hayCapturaEnCurso() || hayCambiosSinGuardar()) {
+                avisoPendiente = { tipo: tipoActualizacion };
+                console.info("🔔 Aviso de bitácoras encolado: hay captura o cambios sin guardar.");
+                return;
+            }
+
             // Mostrar modal si existe, sino recargar directo
-            modalActualizacion
-                ? modalActualizacion.show()
-                : self.consultarDatos();
+            mostrarAviso(tipoActualizacion);
         };
 
         // ========================================
@@ -1399,6 +1471,9 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
         const gridDiv = document.querySelector('#tablaProduccion');
 
+        // Anchura del grupo fijo DATOS GENERALES (responsivo)
+        const anchoDG = this.anchosDatosGenerales();
+
         const columnDefs = [
 
             // ========================================
@@ -1412,7 +1487,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'Mes',
                         headerName: 'Mes',
                         editable: false,
-                        width: 170,
+                        width: anchoDG.Mes,
                         cellClass: 'celda-gris',
                         pinned: 'left',
                         // ✅ NUEVO: Renderer para mostrar emoji + mes + tooltip + punto pulsante
@@ -1465,7 +1540,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'Fecha',
                         headerName: 'Fecha',
                         editable: true,
-                        width: 120,
+                        width: anchoDG.Fecha,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'agDateStringCellEditor',
@@ -1495,7 +1570,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                             // Habilitar edición solo si la fila NO tiene ID_REGISTRO (es una fila nueva)
                             return !params.data?.ID_REGISTRO;
                         },
-                        width: 150,
+                        width: anchoDG.Linea,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'agSelectCellEditor',
@@ -1513,7 +1588,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'Producto',
                         headerName: 'Producto',
                         editable: true,
-                        width: 180,
+                        width: anchoDG.Producto,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'articuloAutocompleteEditor',
@@ -1526,7 +1601,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'Turno',
                         headerName: 'Turno',
                         editable: true,
-                        width: 80,
+                        width: anchoDG.Turno,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         valueFormatter: params => {
@@ -1538,7 +1613,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'Grupo',
                         headerName: 'Grupo',
                         editable: true,
-                        width: 80,
+                        width: anchoDG.Grupo,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'agSelectCellEditor',
@@ -1556,7 +1631,7 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'Comentarios',
                         headerName: 'Comentarios',
                         editable: true,
-                        width: 200,
+                        width: anchoDG.Comentarios,
                         cellClass: 'celda-azul',
                         pinned: 'left',
                         cellEditor: 'agLargeTextCellEditor',
@@ -1869,6 +1944,8 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
 
                 this.gridApi = params.api;
                 this.gridColumnApi = params.columnApi;
+                // Anchos responsivos del grupo fijo DATOS GENERALES
+                this.configurarAnchosResponsivosDatosGenerales();
 
                 this.agregarFilaTotales();
                 this.inicializarTooltipsGrid(); // 🔥 AGREGAR
