@@ -1585,3 +1585,19 @@ DELETE FROM "TEST_JUNIO_2026"."PdxMTTOOrdenesTrabajoMP" WHERE "NUMERO_ORDEN"='OT
 UPDATE "TEST_JUNIO_2026"."PdxMTTOMPGenerados" SET "ESTATUS"=2, "HORA_CIERRE"=NULL WHERE "NUMERO_ORDEN"='OTMP-009';
 COMMIT;
 ```
+
+### I. Almacén — columnas de costo ocultas en "Artículos a Devolver"
+
+En el modal **Artículos a Devolver** de `Almacen/SolicitudRefacciones` se quitaron de la UI (a petición del usuario):
+
+- El resumen **"Artículos seleccionados"** y **"Valor a devolver"**.
+- Las columnas **"Costo Prom."** y **"Valor"** (incluido su icono de tooltip).
+- El JS asociado: render de las dos celdas, `_formatearCosto`, `_formatearMoneda`, `_inicializarTooltipsValor` y el recálculo por `input` → **−86 líneas** de código muerto.
+
+**Se conserva intacta la lógica de negocio:** el costo promedio se sigue leyendo y enviando a SAP en `DocumentLines[].Price` al generar la devolución. Solo se ocultó en pantalla.
+
+- Tabla resultante: **14 columnas** (`colspan` de la fila vacía coherente).
+- **Se conserva** el badge de conteo `📦 Artículos a Devolver (N)` — decisión del usuario.
+- Archivos: `Views/Almacen/SolicitudRefacciones.cshtml`, `Scripts/solicitud_refacciones_refactor.js`.
+- Validado: `node --check` OK y build 0 errores.
+- Commit `40dc7f6`.
