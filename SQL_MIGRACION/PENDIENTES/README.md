@@ -17,23 +17,13 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
   - DBADMIN: `APLICADOS/DBADMIN/SpPdxMTTOBuscarEmpleados_ACENTOS_20261118.sql`
   - On-premise: `APLICADOS/<schema>/EMPLEADOS/SpPdxMTTOBuscarEmpleados_ACENTOS_20261118_ALTER.sql`
   - Respaldo previo: `SQL_ORIGINALES/SpPdxMTTOBuscarEmpleados_ANTES_ACENTOS_20261118.sql`
-- **Backfill "Maquina detenida":** en `ONPREMISE/CORRECTIVOS/`. **No aplica en
-  DBADMIN** porque `PdxMTTOTParraProduccion` no tiene `ORDEN_TRABAJO` ni `TIPO_PARO`.
+- **Backfill "Maquina detenida": DESCARTADO.** `PdxMTTOTParoProduccion` no tiene
+  vinculo con las OT correctivas (los paros COR se registran a mano en Paros de
+  Produccion), asi que no habia datos historicos que corregir. El fix del toggle
+  ya esta en codigo.
 - **Verificacion de SPs faltantes:** `../VERIFICACION/CHECK_SP_FALTANTES.sql` lista,
   por schema, los SPs que el codigo referencia y no existen.
 
-## Pendientes on-premise - backfill de MAQUINA_DETENIDA
-
-- `ONPREMISE/CORRECTIVOS/20261118_MAQUINA_DETENIDA_BACKFILL_ONPREMISE.sql`
-  - **Solo on-premise.** No aplicable en DBADMIN: ahi `PdxMTTOTParoProduccion`
-    no tiene `ORDEN_TRABAJO` ni `TIPO_PARO`, asi que no se puede identificar
-    que OT genero cada paro.
-  - Rellena `PdxMTTOOrdenesTrabajoMC.MAQUINA_DETENIDA = 1` en las OT que ya
-    generaron un paro `COR-xx` y quedaron en 0.
-  - Antes de ejecutar: cambiar `DBADMIN` por el schema destino y correr los
-    PASOS 0 (diagnostico). Incluye respaldo y rollback.
-  - **No toca SPs**: la lectura ya devuelve `COALESCE(OT."MAQUINA_DETENIDA", 0)`
-    y el aplicativo ahora reenvia el valor real en estatus 4 (antes `NULL`).
 ## Contenido actual
 
 **Ninguno.** Todo esta aplicado y movido a `../APLICADOS/`.
