@@ -2414,7 +2414,7 @@ class SolicitudManager {
         if (articulosBase.length === 0) {
             tbody.html(`
             <tr>
-                <td colspan="16" class="text-center text-muted py-4">
+                <td colspan="14" class="text-center text-muted py-4">
                     <i class="bi bi-info-circle me-1"></i>
                     No hay artículos para devolver
                 </td>
@@ -2445,10 +2445,6 @@ class SolicitudManager {
 
                 const esRechazado = art.DEVOLUCION_RECHAZADA === 1 || art.DEVOLUCION_RECHAZADA === '1';
                 const noEditable = yaDevueltoTotal || esRechazado;
-
-                const costoPromedio = Number(art.CostoPromedio || 0);
-                const cantidadAValor = noEditable ? 0 : cantidadPendienteDevolver;
-                const valorDevolucion = cantidadAValor * costoPromedio;
 
                 const claseFila = esRechazado
                     ? 'fila-devolucion-rechazada'
@@ -2571,19 +2567,6 @@ class SolicitudManager {
                            required>
                 </td>
 
-                <td class="text-center align-middle fw-semibold text-nowrap">
-                    ${this._formatearCosto(costoPromedio)}
-                </td>
-
-                <td class="text-center align-middle fw-semibold text-nowrap valor-devolucion"
-                    data-costo="${costoPromedio}"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"
-                    data-bs-title="Valor = cantidad a devolver × costo promedio unitario. Representa el costo de inventario que se registrará en SAP al devolver la mercancía; no es un cargo al usuario.">
-                    ${this._formatearMoneda(valorDevolucion)}
-                </td>
-
-                
                 <td class="text-center align-middle fw-semibold">${art.DEPT}</td>
                 <td class="text-center align-middle fw-semibold">${art.PROCESO}</td>
                 <td class="text-center align-middle fw-semibold">${art.GASTOS}</td>
@@ -2608,27 +2591,13 @@ class SolicitudManager {
         $('#formDevolucionMercancia').removeClass('was-validated');
         $('#alertDevolucionContainer').empty();
 
-        this.actualizarContadorDevolucion();
-
         setTimeout(() => {
             $('[data-bs-toggle="tooltip"]').tooltip('dispose');
             $('[data-bs-toggle="tooltip"]').tooltip();
-            this._inicializarTooltipsValor();
             this._inicializarPopoversFolios();
         }, 100);
 
         $('#devolucionMercancia').modal('show');
-    }
-
-    // Inicializa los tooltips de las celdas "Valor" (se generan dinámicamente)
-    _inicializarTooltipsValor() {
-        if (!window.bootstrap || !window.bootstrap.Tooltip) return;
-
-        document.querySelectorAll('#bodyArticulosDevolucion .valor-devolucion').forEach((el) => {
-            const existente = window.bootstrap.Tooltip.getInstance(el);
-            if (existente) existente.dispose();
-            new window.bootstrap.Tooltip(el);
-        });
     }
 
     // ========================================
@@ -2678,8 +2647,6 @@ class SolicitudManager {
                 const $input = $(el).closest('tr').find('.cant-devolver');
                 $input.prop('disabled', !checked);
             });
-
-            this.actualizarContadorDevolucion();
         });
 
         // ✅ Cuando se desmarca una fila
@@ -2695,8 +2662,6 @@ class SolicitudManager {
                 const $input = $(this).closest('tr').find('.cant-devolver');
                 $input.prop('disabled', !$(this).prop('checked'));
             });
-
-            this.actualizarContadorDevolucion();
         });
 
         // Por defecto deshabilitar los que no están seleccionados
@@ -2721,58 +2686,6 @@ class SolicitudManager {
                 this.busquedaSolicitanteDevPendiente =
                     this.buscarDatosSolicitanteChangeDev('nomina','devolucion');
             });
-
-        // Recalcular el valor por fila y el total al cambiar la cantidad
-        $(document)
-            .off('input.devolucionValor', '.cant-devolver')
-            .on('input.devolucionValor', '.cant-devolver', () => {
-                this.actualizarContadorDevolucion();
-                // El clamp de cantidad se aplica a los 1000 ms; recalcular después
-                clearTimeout(this._timerValorDevolucion);
-                this._timerValorDevolucion = setTimeout(() => this.actualizarContadorDevolucion(), 1100);
-            });
-    }
-
-    _formatearCosto(valor) {
-        const n = Number(valor) || 0;
-        return n.toLocaleString('es-MX', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 4
-        });
-    }
-
-    _formatearMoneda(valor) {
-        const n = Number(valor) || 0;
-        return n.toLocaleString('es-MX', {
-            style: 'currency',
-            currency: 'MXN',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    }
-    
-    actualizarContadorDevolucion() {
-        const seleccionados = $('.chk-articulo-devolucion:checked').length;
-        $('#contadorDevolucion').text(seleccionados);
-
-        let total = 0;
-
-        $('#bodyArticulosDevolucion tr').each((idx, tr) => {
-            const $row = $(tr);
-            const $input = $row.find('.cant-devolver');
-            if (!$input.length) return;
-
-            const $celdaValor = $row.find('.valor-devolucion');
-            const costo = Number($celdaValor.data('costo') || 0);
-            const seleccionado = $row.find('.chk-articulo-devolucion').is(':checked');
-            const cantidad = seleccionado ? (parseInt($input.val() || 0, 10) || 0) : 0;
-            const importe = cantidad * costo;
-
-            $celdaValor.text(this._formatearMoneda(importe));
-            total += importe;
-        });
-
-        $('#totalDevolucion').text(this._formatearMoneda(total));
     }
 
     // ========================================
