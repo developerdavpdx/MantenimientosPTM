@@ -1,3 +1,19 @@
+﻿-- ============================================================================
+--  ADVERTENCIA - SOLO ON-PREMISE (TEST_JUNIO_2026 / PTM_2022_FINAL)
+-- ============================================================================
+--  Este script NO es aplicable en DBADMIN (HANA Cloud).
+--  Motivo verificado el 2026-11-19: en DBADMIN la tabla
+--  "PdxMTTOTParoProduccion" NO tiene las columnas "ORDEN_TRABAJO" ni
+--  "TIPO_PARO" (solo ID_PARO, LINEA_PRODUCCION, ARTICULO, COMENTARIOS,
+--  FECHA_PARO, FECHA_REANUDACION, ESTATUS, USUARIO, ID_CATEGORIA_PARO,
+--  DURACION_HRS, PLANTA, ID_AREA), por lo que no se puede saber que OT
+--  genero cada paro. Esa estructura solo existe en on-premise.
+--
+--  ANTES DE EJECUTAR:
+--    1. Cambiar "DBADMIN" por el schema destino en todas las referencias.
+--    2. Correr los PASOS 0 (diagnostico) y revisar el detalle.
+--    3. Confirmar que el schema SI tiene las columnas usadas arriba.
+-- ============================================================================
 -- ============================================================================
 -- CORRECTIVOS - Backfill del indicador MAQUINA_DETENIDA de la OT
 -- ============================================================================

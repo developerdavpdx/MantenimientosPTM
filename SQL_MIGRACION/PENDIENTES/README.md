@@ -9,33 +9,29 @@ Esta carpeta debe estar **sin scripts SQL** en estado normal. Este README es sol
 
 Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está al día.
 
-## Pendientes 2026-11-18 - Busqueda de empleados sin acentos (OPCIONAL)
+## Estado 2026-11-19 - DBADMIN al dia
 
-- `DBADMIN/SpPdxMTTOBuscarEmpleados_ACENTOS_OPCIONAL_20261118.sql`
-  - **Estado: NO aplicado** (el ambiente local no logro conectar a HANA Cloud:
-    el proveedor SAP falla al crear el motor SSL, el mismo error que reporta el
-    portal `http://localhost:54321`, por lo que no se pudo ni leer
-    `SYS.PROCEDURES` ni ejecutar DDL).
-  - **No es obligatorio:** la correccion funcional ya esta en el codigo
-    (`Models/GlobalCommands.cs` > `BusquedaEmpleadosAcentos`), que reintenta la
-    busqueda con variantes acentuadas cuando la primera devuelve 0 filas.
-  - El script documenta respaldo, expresion de normalizacion y verificacion.
+- **Busqueda de empleados sin acentos:** APLICADO en DBADMIN.
+  `SQL_MIGRACION/APLICADOS/DBADMIN/SpPdxMTTOBuscarEmpleados_ACENTOS_20261118.sql`
+  (respaldo previo en `SQL_ORIGINALES/SpPdxMTTOBuscarEmpleados_ANTES_ACENTOS_20261118.sql`).
+  Verificado: `VICTOR`, `victor` y `AGUILERA` devuelven al empleado; antes `VICTOR` daba 0 filas.
+- **Backfill "Maquina detenida":** movido a `ONPREMISE/CORRECTIVOS/`. **No aplica en
+  DBADMIN** porque `PdxMTTOTParoProduccion` no tiene `ORDEN_TRABAJO` ni `TIPO_PARO`.
+- El script incompleto `DBADMIN/SpPdxMTTOBuscarEmpleados_ACENTOS_OPCIONAL_20261118.sql`
+  se elimino: no contenia el cuerpo del PROCEDURE y quedo reemplazado por el aplicado.
 
-## Pendientes 2026-11-18 - Correctivos: backfill de MAQUINA_DETENIDA
+## Pendientes on-premise - backfill de MAQUINA_DETENIDA
 
-- `DBADMIN/CORRECTIVOS/20261118_MAQUINA_DETENIDA_BACKFILL_DBADMIN.sql`
-  - **Estado: NO aplicado** (mismo bloqueo de conectividad).
+- `ONPREMISE/CORRECTIVOS/20261118_MAQUINA_DETENIDA_BACKFILL_ONPREMISE.sql`
+  - **Solo on-premise.** No aplicable en DBADMIN: ahi `PdxMTTOTParoProduccion`
+    no tiene `ORDEN_TRABAJO` ni `TIPO_PARO`, asi que no se puede identificar
+    que OT genero cada paro.
   - Rellena `PdxMTTOOrdenesTrabajoMC.MAQUINA_DETENIDA = 1` en las OT que ya
-    generaron un paro `COR-xx` (`TIPO_PARO = 'CORRECTIVO'`) y quedaron en 0,
-    que es la causa de que la caratula se reabra con el switch apagado.
-  - Incluye respaldo (`_BAK_PdxMTTOOrdenesTrabajoMC_MD_20261118`) y rollback.
-  - **No toca SPs**: la lectura ya devuelve
-    `COALESCE(OT."MAQUINA_DETENIDA", 0)`. El aplicativo ahora reenvia el valor
-    real en estatus 4 (antes enviaba `NULL`).
-  - Para on-premise, mismo cuerpo cambiando el prefijo del schema.
-
-
-
+    generaron un paro `COR-xx` y quedaron en 0.
+  - Antes de ejecutar: cambiar `DBADMIN` por el schema destino y correr los
+    PASOS 0 (diagnostico). Incluye respaldo y rollback.
+  - **No toca SPs**: la lectura ya devuelve `COALESCE(OT."MAQUINA_DETENIDA", 0)`
+    y el aplicativo ahora reenvia el valor real en estatus 4 (antes `NULL`).
 ## Contenido actual
 
 **Ninguno.** Todo esta aplicado y movido a `../APLICADOS/`.
