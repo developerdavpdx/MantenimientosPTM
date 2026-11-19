@@ -1579,12 +1579,14 @@ Antes: `VICTOR` → 0 filas. Ahora: `VICTOR`, `victor` y `AGUILERA` → empleado
 2. **La etiqueta del botón no se restaura tras una validación fallida.** Después de un intento fallido queda como **"Guardar"** en lugar de **"Finalizar"** (`mantenimientos_preventivos_refactor.js:3753, 3772, 3801, 3819`). → Restaurar el texto al terminar la validación.
 3. **El aviso "Debe asignar al menos un técnico" se autodestruye a los 4 s** (`AlertManager.mostrar` → `Global.js:3230`). Es fácil de perder. → Alargar su duración o dejarlo hasta que el usuario lo cierre.
 
-**Dato a limpiar en TEST:** `OTMP-009` quedó en **estatus 4** con `HORA_CIERRE = 19/11/2026 14:26:39` y **`Tiempo Invertido = 981.55 HRS`** (es de octubre, se cerró en noviembre). Infla Métricas/Bitácoras. Revertir con:
-```sql
-DELETE FROM "TEST_JUNIO_2026"."PdxMTTOOrdenesTrabajoMP" WHERE "NUMERO_ORDEN"='OTMP-009';
-UPDATE "TEST_JUNIO_2026"."PdxMTTOMPGenerados" SET "ESTATUS"=2, "HORA_CIERRE"=NULL WHERE "NUMERO_ORDEN"='OTMP-009';
-COMMIT;
-```
+**Dato a limpiar en TEST:** ✅ **RESUELTO el 19/11/2026.** `OTMP-009` quedó en **estatus 4** con `Tiempo Invertido = 981.55 HRS` tras la prueba de la botonera. Se revirtió:
+- `PdxMTTOOrdenesTrabajoMP` → **0** filas (DELETE).
+- `PdxMTTOMPGenerados` → **ESTATUS = 2**, `HORA_CIERRE = NULL`.
+- `PdxMTTORutinasMP` (ID_RUTINA **33**, comentario `QA 2026-11-19`) → **eliminada**.
+- `PdxMTTOActividadesRutinasMP` (16 filas de esa rutina) → **eliminadas**.
+- Verificado por el usuario: **0 y 0**.
+
+> No se hicieron tablas de respaldo (era dato de prueba). `ID_MANTENIMIENTO = 48` **no se tocó**: es el MP de OTMP-009 y ya existía.
 
 ### I. Almacén — columnas de costo ocultas en "Artículos a Devolver"
 
