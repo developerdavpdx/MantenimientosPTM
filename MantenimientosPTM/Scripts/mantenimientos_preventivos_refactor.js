@@ -2728,6 +2728,14 @@ class MantenimientoManager {
             $("#formOrdenMantenimiento")[0].reset();
             ValidationManager.limpiarValidacion('#formOrdenMantenimiento');
 
+            // 🔥 LIMPIAR LOS AVISOS DE LA OT ANTERIOR
+            // Las alertas críticas (p. ej. "Debe asignar al menos un técnico")
+            // ya NO se autocierran, así que sin este reset se quedaban visibles
+            // al abrir otra OT y mostraban un mensaje que no correspondía.
+            // Se limpian AL ABRIR (nunca al cerrar) para que el usuario alcance
+            // a leer el aviso de la OT que está trabajando.
+            $('#alertOrdenContainer').empty();
+
             $("#btnGuardarOT").prop("disabled", false);
             $("#btnGuardarOT").removeClass("btn_disabled");
 

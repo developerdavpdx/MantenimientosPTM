@@ -844,6 +844,15 @@
      ValidationManager.validarFormulario con el mensaje generico "Por favor,
      complete correctamente todos los campos". El sintoma reportado era real,
      solo que enmascarado.
+   - QA en el servidor de pruebas (:8081, TEST_JUNIO_2026) con el tecnico
+     p1tecmantto1@ptm.com sobre OTMP-007: 3/3 APROBADO. 0 errores de consola,
+     todas las respuestas 200, sin escrituras en BD.
+   - FIX POSTERIOR (fuga de la alerta persistente): al abrir otra OT seguia
+     visible el aviso "Debe asignar al menos un tecnico" de la OT anterior. Se
+     agrego $('#alertOrdenContainer').empty() en el bloque RESET de
+     abrirModalCaratulaOnline (se limpia AL ABRIR, nunca al cerrar). Verificado
+     en local: tras cancelar sigue la alerta; al abrir OTMP-002 el contenedor
+     queda en 0.
 
 ================================================================================
  FIN DEL RESUMEN

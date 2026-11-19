@@ -1633,9 +1633,7 @@ Cerrar los 3 ajustes de UX pendientes que quedaron abiertos en la sección 31.H.
 
 **`AGENTS.md`** — 2 reglas nuevas en "Flujos esperados → Mantenimientos Preventivos".
 
-Sin cambios en BD, SPs, vistas ni `Web.config`.
-
-### Corrección de diagnóstico
+Sin cambios en BD, SPs, vistas ni `Web.config`.### Corrección de diagnóstico
 
 El `<form id="formOrdenMantenimiento">` tiene **`novalidate`**, así que **el globo nativo del navegador nunca aparecía**. Lo que el usuario veía era: `required` → `ValidationManager.validarFormulario` falla → mensaje genérico *"Por favor, complete correctamente todos los campos"* → `return false` sin petición. El síntoma reportado era real, solo que enmascarado.
 
@@ -1650,6 +1648,27 @@ El `<form id="formOrdenMantenimiento">` tiene **`novalidate`**, así que **el gl
 **Limpieza:** no se guardó nada (los 3 casos fallan antes de cualquier POST). Solo hubo 2 POST de `GetMantenimientosPorRango` (consulta del grid).
 
 **Código 0 POST verificado** en Network; 0 errores de consola propios (solo el WebSocket de SignalR preexistente).
+
+### QA en el servidor de pruebas (`:8081`, TEST_JUNIO_2026)
+
+Validado por `@qa-explorador` tras el despliegue, con el técnico `p1tecmantto1@ptm.com` sobre **OTMP-007** (Liberado, 13 actividades).
+
+| Caso | Resultado |
+|---|---|
+| **A** — comentarios vacíos | **APROBADO.** Alerta exacta, `is-invalid` + borde `rgb(220,53,69)`, foco, botón "Finalizar", **0 POST**, sin mensaje genérico |
+| **B** — etiqueta del botón | **APROBADO** con Hora Fin vacía **y** con firma borrada |
+| **C** — aviso de técnicos | **APROBADO.** Visible a **24.3 s**; la alerta de contraste se cerró a **5.0 s** |
+
+0 errores de consola, todas las respuestas 200. Sin escrituras en BD (verificado reabriendo la OT).
+
+### Fix posterior — la alerta persistente se "fugaba" a otra OT
+
+**Problema detectado por el QA:** al abrir otra OT, la alerta *"Debe asignar al menos un técnico…"* seguía visible (consecuencia de hacerla persistente: antes se autodestruía a los 4 s y nadie lo notaba).
+
+**Corrección:** en `abrirModalCaratulaOnline`, bloque **RESET** (junto a `formOrdenMantenimiento.reset()` y `ValidationManager.limpiarValidacion`), se agregó `$('#alertOrdenContainer').empty();`.
+
+- Se limpia **al abrir**, nunca al cerrar → el usuario alcanza a leer el aviso de la OT que está trabajando.
+- Verificado en local: tras Finalizar sin técnicos hay 1 alerta; tras Cancelar sigue; **al abrir OTMP-002 el contenedor queda en 0**.
 
 ### Nota de entorno
 
