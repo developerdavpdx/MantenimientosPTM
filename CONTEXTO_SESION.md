@@ -1603,3 +1603,51 @@ En el modal **Artículos a Devolver** de `Almacen/SolicitudRefacciones` se quita
 - Archivos: `Views/Almacen/SolicitudRefacciones.cshtml`, `Scripts/solicitud_refacciones_refactor.js`.
 - Validado: `node --check` OK y build 0 errores.
 - Commit `40dc7f6`.
+
+## 32. Sesión 19/11/2026 — Preventivos: 3 ajustes de UX (comentarios y botonera)
+
+**Estado:** **COMPLETADO** — implementado, validado en código (MSBuild + `node --check`) y **QA en portal APROBADO (3/3)**.
+
+### Solicitud
+
+Cerrar los 3 ajustes de UX pendientes que quedaron abiertos en la sección 31.H.
+
+### Cambios aplicados
+
+**`MantenimientosPTM/Scripts/mantenimientos_preventivos_refactor.js`**
+
+1. **Comentarios de la rutina sin `required` nativo** (vista técnico y vista readonly). La obligatoriedad se valida **en el portal** y **solo al finalizar**, dentro de `guardarRutina` (después de los dos early-return `esRutinaDefault && tienePdf` y `EstatusOrden == "Cerrado"`, junto a la validación de `sinResponder`):
+   - mensaje `Captura los comentarios de la rutina antes de finalizar la orden de trabajo`;
+   - `is-invalid` + `scrollIntoView` + `focus` sobre `#ComentariosRutina`;
+   - el `is-invalid` se limpia al escribir (`input`/`keyup`);
+   - `guardarRutinaParaBorrador` **intacto** → el borrador sigue sin exigir comentarios.
+2. **Helper `_restaurarBotonGuardarOT()`**: captura el HTML original del botón una sola vez en el constructor (fallback `<i class="bi bi-floppy-fill me-1"></i> Finalizar`) y lo restaura en las **10** salidas tempranas. Ninguna validación fallida deja ya el botón como "Guardar".
+3. **`#btnGuardarBorrador` alineado** a su icono original (`bi-cloud-upload`); una restauración usaba `bi-pencil-square`.
+
+**`MantenimientosPTM/Scripts/Global.js`**
+
+4. **`AlertManager.mostrar` acepta un 4º parámetro opcional `duracionMs`** (default `4000`, retrocompatible con los ~40 llamadores). Con `null`/`0`/negativo la alerta **no se autocierra**. El aviso *"Debe asignar al menos un técnico a la orden de trabajo"* pasa `null` → queda hasta que el usuario la cierre. Blindaje: el `setTimeout` verifica que la alerta siga en el DOM.
+
+**`AGENTS.md`** — 2 reglas nuevas en "Flujos esperados → Mantenimientos Preventivos".
+
+Sin cambios en BD, SPs, vistas ni `Web.config`.
+
+### Corrección de diagnóstico
+
+El `<form id="formOrdenMantenimiento">` tiene **`novalidate`**, así que **el globo nativo del navegador nunca aparecía**. Lo que el usuario veía era: `required` → `ValidationManager.validarFormulario` falla → mensaje genérico *"Por favor, complete correctamente todos los campos"* → `return false` sin petición. El síntoma reportado era real, solo que enmascarado.
+
+### QA en portal (DBADMIN, técnico `p1tecmantto1@ptm.com`, OTMP-100 estatus 2)
+
+| Caso | Resultado |
+|---|---|
+| **A** — comentarios vacíos al finalizar (20 actividades marcadas + firma) | Alerta correcta, `is-invalid`, foco en el textarea, botón "Finalizar", **0 POST** a `GuardarRutina`/`InsertarOrdenTrabajoMP` |
+| **B** — Hora Fin vacía | "Por favor, complete correctamente todos los campos" y el botón **sigue** en "Finalizar" |
+| **C** — sin técnicos | El aviso **persistió más de 12 s**; una alerta de contraste sí se cerró a los ~4 s |
+
+**Limpieza:** no se guardó nada (los 3 casos fallan antes de cualquier POST). Solo hubo 2 POST de `GetMantenimientosPorRango` (consulta del grid).
+
+**Código 0 POST verificado** en Network; 0 errores de consola propios (solo el WebSocket de SignalR preexistente).
+
+### Nota de entorno
+
+El arranque local del módulo requiere IIS Express con el `applicationhost.config` de `.vs\MantenimientosPTM\config` (sitio `MantenimientosPTM`, puerto **52538**). El `Web.config` se mantiene en `DBADMIN` y **no se commitea** (se cambia a mano al publicar, por decisión del usuario).

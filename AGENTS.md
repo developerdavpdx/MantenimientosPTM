@@ -93,6 +93,8 @@
 - **Secuencia real de firmas:** técnico firma → pulsa **Finalizar** → la OT pasa a **estatus 4** → **supervisor de producción** firma → **administrador de mantenimiento** firma → queda cerrada.
   - Supervisor y administrador **solo** pueden firmar cuando la OT está en estatus 4.
 - **Guardar Borrador NO cambia el estatus** y **no debe ocultar los botones**: el usuario debe poder seguir avanzando después de guardar un borrador.
+- **Comentarios de la rutina: obligatorios SOLO al finalizar la OT** (validación del portal en `guardarRutina`, mensaje *"Captura los comentarios de la rutina antes de finalizar la orden de trabajo"*). En **borrador** siguen siendo opcionales (`guardarRutinaParaBorrador`). **No** se usa `required` nativo en el `textarea` `#ComentariosRutina`.
+- El botón `#btnGuardarOT` se etiqueta **"Finalizar"**; ninguna validación fallida debe dejarlo como "Guardar" (helper `_restaurarBotonGuardarOT`).
 - **Cumplimiento PM** = MP **liberadas** con las **3 firmas** ÷ MP **liberadas** del periodo. Una MP sin las 3 firmas **no** cuenta.
 - Las marcas de "Realizado" de la rutina solo se ven en la vista del técnico mientras la OT está en captura; en las vistas de supervisor/admin la rutina se muestra como texto.
 

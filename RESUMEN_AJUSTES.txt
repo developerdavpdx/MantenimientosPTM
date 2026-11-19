@@ -807,6 +807,43 @@
      sentencia por schema (sin tablas temporales) para que el cliente JDBC no la
      parta.
 
+33) PREVENTIVOS - 3 AJUSTES DE UX EN BOTONERA Y COMENTARIOS (2026-11-19)
+   - Scripts/mantenimientos_preventivos_refactor.js
+     a) Comentarios de la rutina: se quito el `required` nativo del textarea
+        #ComentariosRutina (vista tecnico y vista readonly). La obligatoriedad se
+        valida ahora en el portal y SOLO al finalizar (guardarRutina), con
+        mensaje visible "Captura los comentarios de la rutina antes de finalizar
+        la orden de trabajo", borde rojo (is-invalid), foco y scroll. El borrador
+        (guardarRutinaParaBorrador) sigue sin exigirlos.
+     b) Etiqueta del boton: nuevo helper _restaurarBotonGuardarOT() que restaura
+        el HTML original capturado en el constructor. Las 10 salidas tempranas
+        (validacion de formulario, tecnicos, firmas, horas, rutina, PDF) ya no
+        dejan el boton como "Guardar": vuelve a "Finalizar" con bi-floppy-fill.
+     c) Se alineo #btnGuardarBorrador al icono original (bi-cloud-upload); una de
+        las restauraciones usaba bi-pencil-square.
+   - Scripts/Global.js
+     d) AlertManager.mostrar acepta un 4o parametro opcional duracionMs (default
+        4000, retrocompatible). Con null/0/negativo la alerta NO se autocierra.
+        El aviso "Debe asignar al menos un tecnico a la orden de trabajo" ahora
+        es persistente (se cierra solo con la X). Blindaje: el setTimeout verifica
+        que la alerta siga en el DOM antes de cerrarla.
+   - AGENTS.md: 2 reglas nuevas en "Flujos esperados -> Mantenimientos Preventivos".
+   - Sin cambios de BD, SPs, vistas ni Web.config.
+   - Validacion: MSBuild Debug 0 errores / 0 warnings; node --check OK en ambos JS.
+   - QA en portal (DBADMIN, tecnico p1tecmantto1@ptm.com, OTMP-100 estatus 2):
+       * Caso A: 20 actividades marcadas + firma + comentarios vacios -> alerta
+         correcta, campo con is-invalid, foco en #ComentariosRutina, boton
+         "Finalizar" y 0 POST a GuardarRutina / InsertarOrdenTrabajoMP. El
+         is-invalid se limpia al escribir.
+       * Caso B: Hora Fin vacia -> "Por favor, complete correctamente todos los
+         campos" y el boton sigue en "Finalizar" (antes quedaba en "Guardar").
+       * Caso C: sin tecnicos -> el aviso siguio visible mas de 12 s; una alerta
+         normal de contraste si se cerro a los ~4 s.
+   - Nota de diagnostico: el <form> tiene `novalidate`, asi que el globo nativo
+     del navegador nunca aparecia; el `required` bloqueaba via
+     ValidationManager.validarFormulario con el mensaje generico "Por favor,
+     complete correctamente todos los campos". El sintoma reportado era real,
+     solo que enmascarado.
 
 ================================================================================
  FIN DEL RESUMEN

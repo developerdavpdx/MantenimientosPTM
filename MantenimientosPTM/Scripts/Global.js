@@ -3214,8 +3214,20 @@ class SessionManager {
 // GESTOR DE ALERTAS GLOBAL
 // ========================================
 class AlertManager {
-    static mostrar(mensaje, tipo = 'success', containerId = 'alertContainer') {
-        const alertId = 'alert-' + Date.now();
+    /**
+     * Muestra una alerta en el contenedor indicado.
+     * @param {string} mensaje        Texto de la alerta.
+     * @param {string} tipo           success | warning | danger | info ...
+     * @param {string} containerId    Contenedor destino.
+     * @param {number|null} duracionMs Tiempo antes de cerrarse automáticamente.
+     *                                 null / 0 / negativo => NO se cierra sola
+     *                                 (el usuario debe cerrarla con la X).
+     *                                 Por defecto 4000 ms (comportamiento previo).
+     */
+    static mostrar(mensaje, tipo = 'success', containerId = 'alertContainer', duracionMs = 4000) {
+        // 🔒 Contador: dos alertas en el mismo milisegundo no deben compartir id
+        AlertManager._secuencia = (AlertManager._secuencia || 0) + 1;
+        const alertId = 'alert-' + Date.now() + '-' + AlertManager._secuencia;
         const emoji = (tipo == "success" ? '<img src="/Content/Images/ok.gif" width="24" class"me-3">' : (tipo == "warning" ? '<img src="/Content/Images/alerta.gif" width="24" class"me-3">' : ''));
         const alertHtml = `
             <div id="${alertId}" class="d-flex align-items-center alert alert-${tipo} alert-dismissible fade show" role="alert">
@@ -3227,9 +3239,16 @@ class AlertManager {
 
         $(`#${containerId}`).append(alertHtml);
 
+        // ✅ Avisos críticos: permanecen hasta que el usuario los cierre
+        if (duracionMs === null || duracionMs === undefined || Number(duracionMs) <= 0) return;
+
         setTimeout(() => {
-            $(`#${alertId}`).alert('close');
-        }, 4000);
+            const $alerta = $(`#${alertId}`);
+            // 🔒 Blindaje: si ya se cerró manualmente (o se recargó la vista)
+            // el elemento no existe y .alert('close') fallaría.
+            if ($alerta.length === 0) return;
+            $alerta.alert('close');
+        }, Number(duracionMs));
     }
 }
 

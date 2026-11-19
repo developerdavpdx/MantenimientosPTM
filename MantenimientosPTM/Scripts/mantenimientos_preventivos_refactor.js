@@ -1150,6 +1150,15 @@ class MantenimientoManager {
         this.TOKEN_RUTINA_EXISTE = false;
         this.TOKENES_CARGADOS = false;
         this._conflictoGuardado = false;      // ya se mostro el aviso de edicion concurrente
+        this._avisoValidacionRutina = false;  // guardarRutina ya mostro su propio aviso
+
+        // ✅ HTML original del botón "Finalizar" (el submit). Se captura UNA
+        // sola vez para restaurarlo en cada salida temprana; el fallback evita
+        // que quede vacío si el DOM todavía no está disponible.
+        const htmlBotonOT = $('#btnGuardarOT').html();
+        this._htmlBotonGuardarOT = (htmlBotonOT && htmlBotonOT.indexOf('Finalizar') !== -1)
+            ? htmlBotonOT.trim()
+            : '<i class="bi bi-floppy-fill me-1"></i> Finalizar';
     }
     // ============================
     // GUARDAR DATOS DEL BOTÓN
@@ -3074,6 +3083,14 @@ class MantenimientoManager {
         );
     }
 
+    // Restaura la etiqueta original del botón "Finalizar" y lo habilita.
+    // Se usa en TODAS las salidas tempranas de guardarOT: antes se reescribía
+    // como "Guardar" y el botón ya no regresaba a "Finalizar" (bug reportado).
+    _restaurarBotonGuardarOT() {
+        this._htmlBotonGuardarOT = this._htmlBotonGuardarOT || '<i class="bi bi-floppy-fill me-1"></i> Finalizar';
+        $('#btnGuardarOT').html(this._htmlBotonGuardarOT).prop('disabled', false);
+    }
+
     // ========================================
     // 🔧 CONFIGURAR VISTA TÉCNICO (CORRECTIVO)
     // ========================================
@@ -3743,14 +3760,18 @@ class MantenimientoManager {
         }
 
         // ✅ Validar técnicos
+        // ⚠️ Este aviso NO debe autodestruirse: si desaparece en 4 s el usuario
+        // percibe que "el botón no hizo nada". duracionMs = null => queda hasta
+        // que el usuario la cierre con la X.
         if (this.gestionTecnicos.tecnicosAsignados.length === 0) {
             AlertManager.mostrar(
                 'Debe asignar al menos un técnico a la orden de trabajo',
                 'warning',
-                "alertOrdenContainer"
+                "alertOrdenContainer",
+                null
             );
             $('#BuscarTecnico').focus();
-            $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+            this._restaurarBotonGuardarOT();
             return false;
         }
 
@@ -3769,7 +3790,7 @@ class MantenimientoManager {
         // 🔥 VALIDAR FIRMAS (solo si la sección está visible)
         if ($('#SeccionFirmas').is(':visible')) {
             if (!this.gestionFirmas.validarFirmas(FirmaRequerida)) {
-                $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                this._restaurarBotonGuardarOT();
                 return false;
             }
 
@@ -3786,6 +3807,7 @@ class MantenimientoManager {
             return false;
         }
         this._conflictoGuardado = false;
+        this._avisoValidacionRutina = false;
         this._guardandoOT = true;
 
         try {
@@ -3798,13 +3820,13 @@ class MantenimientoManager {
             // Validar que las fechas de inicio y fin no estén vacías
             if (!datos.HoraInicio || datos.HoraInicio.trim() === '') {
                 AlertManager.mostrar('La hora de inicio se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
-                $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                this._restaurarBotonGuardarOT();
                 return false;
             }
 
             if (!datos.HoraFin || datos.HoraFin.trim() === '') {
                 AlertManager.mostrar('La hora de fin se debe llenar correctamente seleccionando a.m. o p.m.', 'warning');
-                $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                this._restaurarBotonGuardarOT();
                 return false;
             }
 
@@ -3813,10 +3835,12 @@ class MantenimientoManager {
 
             if (!rutinaGuardada) {
                 // Si fue conflicto de concurrencia, ya se mostro el aviso correspondiente
-                if (!this._conflictoGuardado) {
+                // Si guardarRutina ya mostro su propio aviso (validacion de comentarios
+                // o de actividades), no se agrega el generico para no confundir.
+                if (!this._conflictoGuardado && !this._avisoValidacionRutina) {
                     AlertManager.mostrar('Complete las actividades pendientes antes de guardar continuar.', 'info', "alertOrdenContainer");
                 }
-                $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                this._restaurarBotonGuardarOT();
                 return false;
             }
 
@@ -3828,7 +3852,7 @@ class MantenimientoManager {
                 const pdfSubido = await this.SubirPdfRutinaAsync(this.pdfTemporalRutina);
                 if (!pdfSubido) {
                     AlertManager.mostrar('Error al guardar el PDF de la rutina. No se puede continuar.', 'warning', "alertOrdenContainer");
-                    $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                    this._restaurarBotonGuardarOT();
                     return false;
                 }
                 console.log('✅ PDF de rutina guardado exitosamente');
@@ -3871,7 +3895,7 @@ class MantenimientoManager {
             if (!this._conflictoGuardado) {
                 AlertManager.mostrar('No es posible guardar la orden de trabajo: ' + error, 'warning', "alertOrdenContainer");
             }
-            $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+            this._restaurarBotonGuardarOT();
         } finally {
             this._guardandoOT = false;
         }
@@ -4034,7 +4058,7 @@ class MantenimientoManager {
             const el = document.getElementById(id); // 🆕
             if (el && el.validity && el.validity.badInput) { // 🆕
                 AlertManager.mostrar(`La hora de ${etiqueta} se debe llenar correctamente seleccionando a.m. o p.m.`, 'warning'); // 🆕
-                $('#btnGuardarBorrador').html('<i class="bi bi-pencil-square me-1"></i>Guardar Borrador').prop('disabled', false); // 🆕
+                $('#btnGuardarBorrador').html('<i class="bi bi-cloud-upload me-1"></i> Guardar Borrador').prop('disabled', false); // 🆕
                 return null; // 🆕
             }
         }
@@ -4135,7 +4159,7 @@ class MantenimientoManager {
                             "alertOrdenContainer"
                         );
                         this._conflictoGuardado = true;
-                        $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                        this._restaurarBotonGuardarOT();
                         // Refrescar la tabla para ver la version mas reciente
                         if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
                             $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
@@ -4171,11 +4195,11 @@ class MantenimientoManager {
                     }
 
                     // Restaurar botón
-                    $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                    this._restaurarBotonGuardarOT();
                 },
                 error: (xhr, status, error) => {
                     AlertManager.mostrar('Error al conectar con el servidor', 'warning', "alertOrdenContainer");
-                    $('#btnGuardarOT').html('<i class="bi bi-save me-1"></i>Guardar').prop('disabled', false);
+                    this._restaurarBotonGuardarOT();
                     reject(error);
                 }
             });
@@ -4510,7 +4534,7 @@ class MantenimientoManager {
 
                     html += `<div class="mb-3">
                             <label for="Comentarios" class="form-label">Comentarios</label>
-                            <textarea class="form-control" id="ComentariosRutina" rows="3" readonly required="">${ComentariosRutina}</textarea>
+                            <textarea class="form-control" id="ComentariosRutina" rows="3" readonly>${ComentariosRutina}</textarea>
                             </div>`;
 
                     $c.fadeOut(300, () => {
@@ -4640,11 +4664,22 @@ class MantenimientoManager {
 
                     html += `<div class="mb-3">
                             <label for="ComentariosRutina" class="form-label">Comentarios</label>
-                            <textarea class="form-control" id="ComentariosRutina" rows="3" required="">${ComentariosRutina || ''}</textarea>
+                            <textarea class="form-control" id="ComentariosRutina" rows="3">${ComentariosRutina || ''}</textarea>
                             </div>`;
 
                     $c.fadeOut(300, () => {
                         $c.html(html).fadeIn(500, () => {
+
+                            // ✅ El comentario es obligatorio SOLO al finalizar
+                            // (se valida en guardarRutina, no con el `required`
+                            // nativo). Al escribir se limpia el estado de error.
+                            $('#ComentariosRutina')
+                                .off('input.rutinaComentarios keyup.rutinaComentarios')
+                                .on('input.rutinaComentarios keyup.rutinaComentarios', function () {
+                                    if (($(this).val() || '').trim() !== '') {
+                                        $(this).removeClass('is-invalid');
+                                    }
+                                });
 
                             // 🔥 CARGAR IMÁGENES EXISTENTES DE LA RUTINA EN MODO EDITABLE (PARA BORRADORES)
                             this.CargarEvidenciaRutinaBorrador(numeroOrden, Planta)
@@ -4715,9 +4750,35 @@ class MantenimientoManager {
             // Validar que todas las actividades estén respondidas
             const sinResponder = respuestas.filter(r => r.estado === null);
             if (sinResponder.length > 0) {
+                this._avisoValidacionRutina = true;
                 AlertManager.mostrar(`Faltan ${sinResponder.length} actividades por responder`, 'warning');
                 resolve(false); // ❌ Rechazar si falta algo
                 return;
+            }
+
+            // ✅ COMENTARIOS OBLIGATORIOS AL FINALIZAR (validación del PORTAL).
+            // Antes era un `required` nativo en el textarea: el navegador
+            // bloqueaba el submit sin explicar nada (el usuario percibía que el
+            // botón "no hacía nada"). El borrador NO pasa por aquí, así que
+            // ahí el comentario sigue siendo opcional.
+            const $comentariosRutina = $('#ComentariosRutina');
+            if ($comentariosRutina.length > 0) {
+                if (comentarios.trim() === '') {
+                    this._avisoValidacionRutina = true;
+                    AlertManager.mostrar(
+                        'Captura los comentarios de la rutina antes de finalizar la orden de trabajo',
+                        'warning',
+                        'alertOrdenContainer'
+                    );
+                    $comentariosRutina.addClass('is-invalid');
+                    if ($comentariosRutina[0] && typeof $comentariosRutina[0].scrollIntoView === 'function') {
+                        $comentariosRutina[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    $comentariosRutina.trigger('focus');
+                    resolve(false); // ❌ Sin comentarios no se puede finalizar
+                    return;
+                }
+                $comentariosRutina.removeClass('is-invalid');
             }
 
             //🔥 CREAR FORMDATA
