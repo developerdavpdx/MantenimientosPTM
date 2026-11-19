@@ -701,6 +701,7 @@ namespace MantenimientosPTM
                     // Se envia en "Price" para que la entrada a SAP se valore con ese costo
                     // y no con el default del articulo/documento.
                     decimal costoPromedio = 0m;
+                    decimal linetotal = 0m;
                     if (linea.ContainsKey("CostoPromedio") && linea["CostoPromedio"] != null)
                     {
                         decimal.TryParse(
@@ -712,6 +713,8 @@ namespace MantenimientosPTM
 
                     if (costoPromedio > 0)
                     {
+                        linetotal = Convert.ToDecimal(linea["CANTIDAD"]) * costoPromedio;
+                        newLine["LineTotal"] = linetotal;
                         newLine["Price"] = costoPromedio;
                         log.Info($"   💰 Costo promedio aplicado: {costoPromedio}");
                     }
