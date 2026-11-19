@@ -26,7 +26,10 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 
 ## Contenido actual
 
-**Ninguno.** Todo esta aplicado y movido a `../APLICADOS/`.
+- `TEST_JUNIO_2026/PRODUCCION/SpPdxMTTOBuscarArticulosBatch_CREATE.sql`
+  - **Pendiente.** Falta ese SP en TEST_JUNIO_2026 (detectado con
+    `../VERIFICACION/CHECK_SP_FALTANTES.sql`). Ya esta aplicado en DBADMIN y en
+    PTM_2022_FINAL. Se usa en Tiempos Muertos / NWSCALE.
 
 > **DBADMIN, TEST_JUNIO_2026 y PTM_2022_FINAL: al dia.** Lo de esos schemas se
 > aplico y se movio a `../APLICADOS/<schema>/`. Los scripts de `NWSCALE`
