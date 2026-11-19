@@ -853,6 +853,11 @@
      abrirModalCaratulaOnline (se limpia AL ABRIR, nunca al cerrar). Verificado
      en local: tras cancelar sigue la alerta; al abrir OTMP-002 el contenedor
      queda en 0.
+   - DESPLIEGUE: COMPLETADO el 2026-11-19. El usuario publico los archivos en
+     :8081 (TEST_JUNIO_2026) y :8083 (PTM_2022_FINAL). Verificado en :8081:
+     mantenimientos_preventivos_refactor.js servido con 308,183 bytes (identico
+     al local), ?v=639307065844169879 y con el fix de limpieza de avisos.
+     Commits: 5359bea (3 ajustes), 4de9c9a (docs), 1ed89d8 (fuga de alerta).
 
 ================================================================================
  FIN DEL RESUMEN

@@ -1569,7 +1569,7 @@ Antes: `VICTOR` → 0 filas. Ahora: `VICTOR`, `victor` y `AGUILERA` → empleado
 
 - **DLL publicada en `:8081`** por el usuario. Confirmado: cache-busting nuevo y **2 de 6** verificaciones aprobadas (asterisco Scrap Real, toggle Máquina detenida con `0.00 HRS`).
 - **Verificaciones en vivo: 6/6 COMPLETADAS.** El usuario confirmó (19/11/2026) que las 4 restantes —búsqueda sin acentos en portal, borrador sin ocultar botones, layout a 1034 px y aviso SignalR— **ya quedaron validadas**. No son pendientes.
-- **Pendiente único de despliegue:** subir los archivos modificados al servidor (ver sección 32, "Archivos a publicar").
+- **Pendiente único de despliegue:** ✅ **COMPLETADO el 19/11/2026.** El usuario publicó los archivos en `:8081` y `:8083`. Verificado en `:8081`: `mantenimientos_preventivos_refactor.js` servido con **308,183 bytes** (idéntico al local), `?v=639307065844169879` y contiene el fix `$('#alertOrdenContainer').empty()`.
 - **⚠️ Cadena de conexión:** el `Web.config` del repo apunta a **`DBADMIN`** (sin commitear). El `:8081` debe usar **`TEST_JUNIO_2026`** y el `:8083` **`PTM_2022_FINAL`**. **No publicar el `Web.config` del repo tal cual en producción.**
 - `:8083` (producción) **no se tocó** en toda la sesión.
 - Conexión a HANA Cloud **intermitente** (`Cannot create SSL engine`): falla el almacén de credenciales del cliente SAP; requiere regenerar el PSE.
@@ -1609,7 +1609,7 @@ En el modal **Artículos a Devolver** de `Almacen/SolicitudRefacciones` se quita
 
 ## 32. Sesión 19/11/2026 — Preventivos: 3 ajustes de UX (comentarios y botonera)
 
-**Estado:** **COMPLETADO** — implementado, validado en código (MSBuild + `node --check`) y **QA en portal APROBADO (3/3)**.
+**Estado:** ✅ **COMPLETADO Y DESPLEGADO** — implementado, validado en código (MSBuild + `node --check`), **QA en portal APROBADO (3/3)** y **publicado** en `:8081` y `:8083` (verificado en `:8081` el 19/11/2026).
 
 ### Solicitud
 
@@ -1674,9 +1674,9 @@ Validado por `@qa-explorador` tras el despliegue, con el técnico `p1tecmantto1@
 
 El arranque local del módulo requiere IIS Express con el `applicationhost.config` de `.vs\MantenimientosPTM\config` (sitio `MantenimientosPTM`, puerto **52538**). El `Web.config` se mantiene en `DBADMIN` y **no se commitea** (se cambia a mano al publicar, por decisión del usuario).
 
-### Archivos a publicar (único pendiente)
+### Archivos a publicar — ✅ PUBLICADOS (19/11/2026)
 
-Todo lo demás está validado. Solo falta copiar al servidor; los archivos son del **HEAD** (`5359bea`).
+Todo lo demás está validado. Los archivos se copiaron al servidor; los del repo son del **HEAD** (`1ed89d8`). Se conserva la lista como referencia de qué se publicó.
 
 **Requieren compilar/publicar DLL** (cambios C# de `1893c14`):
 - `bin\MantenimientosPTM.dll`
