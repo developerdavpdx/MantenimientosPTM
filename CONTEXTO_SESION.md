@@ -1506,3 +1506,69 @@ Causa raíz: `configurarAutoCompletados()` llamaba `UIManager.createAutoComplete
 - `OTMP-155` ("En espera de refacción") conserva el botón habilitado — confirmar si es intencional.
 - El **modal "Cambiar Refacción"** (`#solicitarRefAlmModal`) **no está huérfano**: su disparador es `.btn-change-ref`, un botón **por fila** de la tabla (`solicitud_refacciones_refactor.js:1738-1749`) que solo existe cuando hay solicitudes cargadas y se deshabilita si la refacción ya se surtió parcialmente.
 - El `console.error` de SignalR (`ws://…/signalr/connect` → 500) es preexistente; cae a longPolling y no afecta.
+
+## 31. Sesión 19/11/2026 — 7 correcciones de OT/bitácoras, SP de acentos y cierre de PENDIENTES
+
+**Estado:** **COMPLETADO** en código; **desplegado en TEST** (faltan 4 verificaciones en vivo).
+
+### A. Ciclo completo probado en TEST_JUNIO_2026 (18/11)
+
+| Fase | Resultado |
+|---|---|
+| **Preventivo** | **OTMP-089** cerrada con las **3 firmas** · Métricas **0 % → 50 %** (el denominador son MP **liberadas**) |
+| **Correctivo** | **OTMC-011** cerrada con 2 firmas; paro `COR-17` |
+| **Tiempos muertos** | Guardar 2× **no duplica** · OT unificadas en la fila manual |
+
+### B. 7 correcciones aplicadas (probadas en local, `DBADMIN`)
+
+| # | Fix | Archivos |
+|---|---|---|
+| **1** | **Borrador ya no oculta los botones.** Nueva política `_aplicarVisibilidadBotones` basada solo en **estatus + rol** (nunca en la firma), re-aplicada al abrir y después de guardar. Se **revirtió** el candado que bloqueaba guardar borrador con firma | `mantenimientos_preventivos_refactor.js`, `MantenimientosPreventivosController.cs` |
+| **6** | **"Asignar Técnicos" solo en guardado definitivo**, con aviso visible + `is-invalid`; el borrador no valida | `mantenimientos_correctivos_refactor.js`, `Global.js` |
+| **9** | **Búsqueda sin acentos** (SP + respaldo en C# `BusquedaEmpleadosAcentos`) | SP, 2 controllers, `Global.js` |
+| **10** | **Asterisco en Scrap Real** | `MantenimientoCorrectivo.cshtml` |
+| **14** | **Layout TM**: anchos compactos < 1440 px (área central 15 px → ~300 px) | `Global.js`, 4 JS de Producción |
+| **6b** | **Toggle "Máquina detenida" persiste**: el JS solo marcaba el switch si `estatus != 4` y enviaba `null` al guardar. Ahora se pinta siempre y se reenvía el valor real. `TIEMPO ESPERA/REPARACIÓN/MUERTO` muestran `N/A` en vez de `null HRS` | `mantenimientos_correctivos_refactor.js` |
+| **13** | **Aviso SignalR ya no cierra modales**: encola el aviso si hay captura o cambios sin guardar y **filtra por rol** | 4 JS de Producción |
+
+**Verificación:** 7/7 en portal local · build 0 errores · `node --check` OK.
+
+### C. SP de empleados sin acentos — aplicado en los 3 esquemas
+
+`SpPdxMTTOBuscarEmpleados` normaliza acentos **en ambos lados** del `LIKE`.
+Antes: `VICTOR` → 0 filas. Ahora: `VICTOR`, `victor` y `AGUILERA` → empleado encontrado.
+
+- DBADMIN: `APLICADOS/DBADMIN/SpPdxMTTOBuscarEmpleados_ACENTOS_20261118.sql`
+- On-premise: `APLICADOS/<schema>/EMPLEADOS/..._ALTER.sql`
+- Respaldo: `SQL_ORIGINALES/SpPdxMTTOBuscarEmpleados_ANTES_ACENTOS_20261118.sql`
+
+### D. `PENDIENTES/` cerrado
+
+- Se agregó a **TEST_JUNIO_2026** el SP que faltaba: `SpPdxMTTOBuscarArticulosBatch` (NWSCALE).
+- **`PENDIENTES/` ya no tiene scripts SQL.** Los 3 esquemas tienen el mismo conjunto.
+- Único faltante en los 3: `SpPdxMTTOAceptarReprogramacion` → **código muerto** (el flujo se retiró de la UI).
+- Verificador nuevo: `SQL_MIGRACION/VERIFICACION/CHECK_SP_FALTANTES.sql` (una sentencia por schema, sin tablas temporales).
+
+### E. Hallazgos DESCARTADOS (no eran bugs)
+
+| Hallazgo inicial | Realidad |
+|---|---|
+| "El paro COR no se integra a la bitácora" | Los **correctivos llegan por la ruta de la OT**; `FiltroIncluirCorrectivo=null` es **intencional** para evitar doble conteo |
+| "Backfill de MAQUINA_DETENIDA" | **Premisa inválida**: `PdxMTTOTParoProduccion` no tiene vínculo con las OT y sus paros `COR` se registran **a mano**. Script eliminado |
+| "Filas manual vs NWSCALE" | El paro se captura en la fila del producto/turno; el total de línea es la suma (decisión A) |
+| "Métricas no cuenta el correctivo" | Depende de **guardar la bitácora** de tiempos muertos |
+| Hora sobrescrita por el servidor | Así lo pidieron |
+
+### F. Contexto para agentes (mejora de proceso)
+
+- `AGENTS.md` → nueva sección **"Flujos esperados por módulo"** (reglas de negocio que distinguen bug de diseño).
+- `qa-explorador` ya **no** tiene la regla "cero exploración": ahora abre primero y consulta mapa + flujos. Se agregó la **"regla de oro"**: no declarar un bug sin una regla de negocio que lo sustente; si no está documentada → *"requiere confirmación"*.
+- `dev-ajustes` y `analista-flujo` apuntan a ambas secciones.
+
+### G. Despliegue y pendientes
+
+- **DLL publicada en `:8081`** por el usuario. Confirmado: cache-busting nuevo y **2 de 6** verificaciones aprobadas (asterisco Scrap Real, toggle Máquina detenida con `0.00 HRS`).
+- **Pendiente de verificar en vivo** (requieren rol técnico): búsqueda sin acentos en portal, borrador sin ocultar botones, layout a 1034 px, aviso SignalR.
+- **⚠️ Cadena de conexión:** el `Web.config` del repo apunta a **`DBADMIN`** (sin commitear). El `:8081` debe usar **`TEST_JUNIO_2026`** y el `:8083` **`PTM_2022_FINAL`**. **No publicar el `Web.config` del repo tal cual en producción.**
+- `:8083` (producción) **no se tocó** en toda la sesión.
+- Conexión a HANA Cloud **intermitente** (`Cannot create SSL engine`): falla el almacén de credenciales del cliente SAP; requiere regenerar el PSE.

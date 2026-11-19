@@ -754,6 +754,58 @@
      aborta el XHR en vuelo (condicion de carrera, mejora pendiente). Si
      GrupoArticulos llega con tokens no numericos el controller cae a "sin filtro"
      y devuelve todos los grupos (solo alcanzable manipulando la URL).
+31) OT Y BITACORAS - 7 CORRECCIONES, SP DE ACENTOS Y CIERRE DE PENDIENTES (2026-11-19)
+   - Ciclo completo probado en TEST_JUNIO_2026: preventivo OTMP-089 cerrado con las
+     3 firmas (Metricas 0 % -> 50 %, el denominador son MP liberadas), correctivo
+     OTMC-011 cerrado con 2 firmas, y tiempos muertos guardados dos veces sin
+     duplicar con las OT unificadas en la fila manual.
+   - 7 correcciones (probadas en local, DBADMIN):
+       1) Borrador ya NO oculta los botones: nueva politica
+          _aplicarVisibilidadBotones basada solo en estatus + rol (nunca en la
+          firma), re-aplicada al abrir y despues de guardar. Se revirtio el candado
+          que bloqueaba guardar borrador con firma.
+       6) "Asignar Tecnicos" se valida solo en el guardado definitivo, con aviso
+          visible y campo marcado; el borrador no valida.
+       9) Busqueda de empleados sin acentos (ver punto 32).
+      10) Asterisco en "Scrap Real".
+      14) Layout de Tiempos Muertos: anchos compactos por debajo de 1440 px (el
+          area central pasa de ~15 px a ~300 px a 1034 px).
+      6b) Toggle "Maquina detenida" persiste: el JS solo marcaba el switch si el
+          estatus era distinto de 4 y enviaba null al guardar. Ahora se pinta
+          siempre y se reenvia el valor real. TIEMPO ESPERA / REPARACION / MUERTO
+          muestran N/A en vez de "null HRS".
+      13) El aviso SignalR de bitacoras ya no cierra modales: encola el aviso si
+          hay captura o cambios sin guardar y filtra por rol. Aplicado en los 4
+          procesos de Produccion.
+   - Hallazgos DESCARTADOS (no eran bugs): el paro COR no debe integrarse a la
+     bitacora porque los correctivos llegan por la ruta de la OT
+     (FiltroIncluirCorrectivo = null es intencional, evita doble conteo); el
+     backfill de MAQUINA_DETENIDA se elimino por premisa invalida
+     (PdxMTTOTParoProduccion no tiene vinculo con las OT); las filas manual vs
+     NWSCALE son por diseno; Metricas depende de guardar la bitacora; la hora de
+     cierre la pone el servidor por decision de negocio.
+   - Despliegue: DLL publicada en :8081. Confirmado cache-busting nuevo y 2 de 6
+     verificaciones en vivo aprobadas (asterisco Scrap Real y toggle Maquina
+     detenida con 0.00 HRS). Faltan por verificar con rol tecnico: busqueda sin
+     acentos en portal, borrador sin ocultar botones, layout a 1034 px y aviso
+     SignalR. :8083 no se toco.
+   - AVISO: el Web.config del repo apunta a DBADMIN (sin commitear). El :8081 debe
+     usar TEST_JUNIO_2026 y el :8083 PTM_2022_FINAL. No publicar el Web.config del
+     repo tal cual en produccion.
+
+32) SPs - BUSQUEDA DE EMPLEADOS SIN ACENTOS Y CIERRE DE PENDIENTES (2026-11-19)
+   - SpPdxMTTOBuscarEmpleados normaliza acentos en AMBOS lados del LIKE.
+     Antes: 'VICTOR' devolvia 0 filas. Ahora: 'VICTOR', 'victor' y 'AGUILERA'
+     encuentran al empleado. Aplicado en DBADMIN, TEST_JUNIO_2026 y PTM_2022_FINAL.
+     Respaldo: SQL_ORIGINALES\SpPdxMTTOBuscarEmpleados_ANTES_ACENTOS_20261118.sql
+   - Se agrego a TEST_JUNIO_2026 el SP que faltaba: SpPdxMTTOBuscarArticulosBatch
+     (lo usa Tiempos Muertos / NWSCALE).
+   - PENDIENTES/ quedo SIN scripts SQL. Los 3 esquemas tienen el mismo conjunto;
+     el unico faltante es SpPdxMTTOAceptarReprogramacion, que es codigo muerto.
+   - Nuevo verificador SQL_MIGRACION\VERIFICACION\CHECK_SP_FALTANTES.sql: lista,
+     por schema, los SPs que el codigo referencia y no existen. Es una sola
+     sentencia por schema (sin tablas temporales) para que el cliente JDBC no la
+     parta.
 
 
 ================================================================================
