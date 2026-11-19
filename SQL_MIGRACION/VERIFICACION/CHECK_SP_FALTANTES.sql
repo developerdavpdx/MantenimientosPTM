@@ -1,245 +1,259 @@
 ﻿-- ============================================================================
---  CHECK: SPs referenciados por la aplicacion que FALTAN en cada schema
+--  CHECK: SPs que la aplicacion referencia y NO existen en el schema
 --  Generado el 2026-11-19 desde el codigo C# (112 SPs distintos)
---  Ejecutar POR BLOQUES o con hdbsql (el cliente JDBC corta en cada ';').
---  Solo lectura: no modifica nada.
+--
+--  COMO EJECUTARLO
+--    Cada bloque es UNA SOLA sentencia (SELECT ... UNION ALL), asi que el
+--    cliente JDBC no lo parte y no depende de tablas temporales ni de sesion.
+--    Ejecutar bloque por bloque. Solo lectura: no modifica nada.
+--
+--  RESULTADO ESPERADO
+--    Vacio = no falta nada. Si aparece SpPdxMTTOAceptarReprogramacion es
+--    normal: es codigo muerto (el flujo de aceptar reprogramacion se retiro
+--    de la UI y el flujo vivo usa SpPdxMTTOSolicitarReprogramacion).
 -- ============================================================================
 
--- ---------- TEST_JUNIO_2026 ----------
-CREATE TEMPORARY TABLE "TMP_SP_REQ" ("SP_NAME" NVARCHAR(100));
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOAceptarReprogramacion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizaEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizaEstatusEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizaMC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizaMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizarCabeceraSolicitudCompraMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizarPlanProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizarSolicitudCompraDetalleMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizarSolicitudRefaccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOBuscarArticulos');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOBuscarArticulosBatch');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOBuscarEmpleados');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOBuscarProveedores');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOCalcularMantenimientoAnual');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOCantidadesRequisicionXAlmacen');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaArticulosPorOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaBajaEquipos');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaDatosSolicitante');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaEquipos');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaOrdenesFabricacion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarLineasPorPlanta');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarPeriodicidadesXEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarPeriodicidadMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarProcesosPorPlanta');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarTiemposMuertosCorrugado');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarTiemposMuertosINY');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarTiemposMuertosPeadLiso');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarTiemposMuertosPVC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarTiposEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaSolicitudesRefaccionesMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTODesactivarPeriodicidadEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminaParoProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarArea');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarBitacoraPlanProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarLinea');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarPeriodicidadesEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarPlanProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarTiemposMuertosCorrugado');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarTiemposMuertosINY');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarTiemposMuertosPeadLiso');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarTiemposMuertosPVC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarTipoEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetArticuloSalidaM');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetBalanceOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetCategoriasParo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetCostCenters');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetDepSucursal');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetDetallesSolicitudCompraMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetDevolucionesPorOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetDevoPorOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetEmpleadosAlmacenPorRol');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetEstautsAuthSC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetLastSalidaInventario');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetLineasOC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetMovimientoSalidaPorSolicitud');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetOrdenesCompraAbiertas');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetOrdenesCompraByDocNum');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetProveedorArticulo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetSalidasPorOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetSeriesByName');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetSolicitudesCompraMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetUsuariosCompras');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetUsuariosXPlanta');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGuardarRutinaMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGuardarTiemposMuertosCorrugado');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGuardarTiemposMuertosINY');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGuardarTiemposMuertosPeadLiso');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGuardarTiemposMuertosPVC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertaEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertaOrdenTrabajoMC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertaOrdenTrabajoMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarArea');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarLinea');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarMC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarParoProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarPeriodicidadEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarPlanProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarSolicitudCompraDetalleMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarSolicitudCompraMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarSolicitudMC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarSolicitudRefaccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarTipoEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertaSolicitudBaja');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertCategoriaParo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertMovimientoAlmacen');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertRechazoDevolucion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOMetricasOEE_Corrugado');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOMetricasOEE_INY');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOMetricasOEE_PeadLiso');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOMetricasOEE_PVC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerActividadesPorOTMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerMantenimientosCompletados');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerMantenimientosCorrectivos');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerMantenimientosPorRango');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerParosProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerPlanesProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerTecnicosOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerTokensOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOReanudarParoProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOSolicitarReprogramacion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateEstatusAuthSC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateEstatusComAuthSC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateEstatusSolicitud');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateStatusOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateUDFEntrada');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateUDFSalida');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOValidarOTCorrectivoFinalizada');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOValidarOTFinalizada');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOValidarProductosTerminadosExistentes');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOValidarTokenGuardado');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOValidarTokenOTCorrectivo');
-SELECT R."SP_NAME" AS FALTA FROM "TMP_SP_REQ" R
-LEFT JOIN SYS.PROCEDURES P ON P."SCHEMA_NAME" = 'TEST_JUNIO_2026' AND P."PROCEDURE_NAME" = R."SP_NAME"
-WHERE P."PROCEDURE_NAME" IS NULL ORDER BY 1;
-DROP TABLE "TMP_SP_REQ";
+-- ============================ TEST_JUNIO_2026 ============================
+SELECT R."SP_NAME" AS FALTA
+FROM (
+      SELECT 'SpPdxMTTOAceptarReprogramacion' AS "SP_NAME" FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizaEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizaEstatusEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizaMC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizaMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizarCabeceraSolicitudCompraMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizarPlanProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizarSolicitudCompraDetalleMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizarSolicitudRefaccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOBuscarArticulos' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOBuscarArticulosBatch' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOBuscarEmpleados' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOBuscarProveedores' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOCalcularMantenimientoAnual' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOCantidadesRequisicionXAlmacen' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaArticulosPorOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaBajaEquipos' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaDatosSolicitante' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaEquipos' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaOrdenesFabricacion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarLineasPorPlanta' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarPeriodicidadesXEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarPeriodicidadMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarProcesosPorPlanta' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarTiemposMuertosCorrugado' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarTiemposMuertosINY' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarTiemposMuertosPeadLiso' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarTiemposMuertosPVC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarTiposEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaSolicitudesRefaccionesMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTODesactivarPeriodicidadEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminaParoProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarArea' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarBitacoraPlanProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarLinea' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarPeriodicidadesEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarPlanProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarTiemposMuertosCorrugado' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarTiemposMuertosINY' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarTiemposMuertosPeadLiso' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarTiemposMuertosPVC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarTipoEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetArticuloSalidaM' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetBalanceOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetCategoriasParo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetCostCenters' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetDepSucursal' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetDetallesSolicitudCompraMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetDevolucionesPorOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetDevoPorOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetEmpleadosAlmacenPorRol' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetEstautsAuthSC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetLastSalidaInventario' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetLineasOC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetMovimientoSalidaPorSolicitud' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetOrdenesCompraAbiertas' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetOrdenesCompraByDocNum' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetProveedorArticulo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetSalidasPorOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetSeriesByName' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetSolicitudesCompraMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetUsuariosCompras' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetUsuariosXPlanta' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGuardarRutinaMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGuardarTiemposMuertosCorrugado' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGuardarTiemposMuertosINY' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGuardarTiemposMuertosPeadLiso' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGuardarTiemposMuertosPVC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertaEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertaOrdenTrabajoMC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertaOrdenTrabajoMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarArea' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarLinea' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarMC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarParoProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarPeriodicidadEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarPlanProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarSolicitudCompraDetalleMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarSolicitudCompraMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarSolicitudMC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarSolicitudRefaccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarTipoEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertaSolicitudBaja' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertCategoriaParo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertMovimientoAlmacen' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertRechazoDevolucion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOMetricasOEE_Corrugado' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOMetricasOEE_INY' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOMetricasOEE_PeadLiso' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOMetricasOEE_PVC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerActividadesPorOTMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerMantenimientosCompletados' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerMantenimientosCorrectivos' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerMantenimientosPorRango' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerParosProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerPlanesProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerTecnicosOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerTokensOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOReanudarParoProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOSolicitarReprogramacion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateEstatusAuthSC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateEstatusComAuthSC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateEstatusSolicitud' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateStatusOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateUDFEntrada' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateUDFSalida' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOValidarOTCorrectivoFinalizada' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOValidarOTFinalizada' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOValidarProductosTerminadosExistentes' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOValidarTokenGuardado' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOValidarTokenOTCorrectivo' FROM DUMMY
+     ) R
+LEFT JOIN SYS.PROCEDURES P
+       ON P."SCHEMA_NAME" = 'TEST_JUNIO_2026'
+      AND P."PROCEDURE_NAME" = R."SP_NAME"
+WHERE P."PROCEDURE_NAME" IS NULL
+ORDER BY 1;
 
--- ---------- PTM_2022_FINAL ----------
-CREATE TEMPORARY TABLE "TMP_SP_REQ" ("SP_NAME" NVARCHAR(100));
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOAceptarReprogramacion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizaEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizaEstatusEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizaMC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizaMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizarCabeceraSolicitudCompraMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizarPlanProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizarSolicitudCompraDetalleMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOActualizarSolicitudRefaccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOBuscarArticulos');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOBuscarArticulosBatch');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOBuscarEmpleados');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOBuscarProveedores');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOCalcularMantenimientoAnual');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOCantidadesRequisicionXAlmacen');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaArticulosPorOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaBajaEquipos');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaDatosSolicitante');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaEquipos');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaOrdenesFabricacion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarLineasPorPlanta');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarPeriodicidadesXEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarPeriodicidadMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarProcesosPorPlanta');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarTiemposMuertosCorrugado');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarTiemposMuertosINY');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarTiemposMuertosPeadLiso');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarTiemposMuertosPVC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultarTiposEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOConsultaSolicitudesRefaccionesMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTODesactivarPeriodicidadEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminaParoProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarArea');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarBitacoraPlanProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarLinea');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarPeriodicidadesEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarPlanProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarTiemposMuertosCorrugado');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarTiemposMuertosINY');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarTiemposMuertosPeadLiso');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarTiemposMuertosPVC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOEliminarTipoEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetArticuloSalidaM');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetBalanceOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetCategoriasParo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetCostCenters');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetDepSucursal');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetDetallesSolicitudCompraMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetDevolucionesPorOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetDevoPorOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetEmpleadosAlmacenPorRol');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetEstautsAuthSC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetLastSalidaInventario');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetLineasOC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetMovimientoSalidaPorSolicitud');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetOrdenesCompraAbiertas');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetOrdenesCompraByDocNum');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetProveedorArticulo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetSalidasPorOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetSeriesByName');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetSolicitudesCompraMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetUsuariosCompras');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGetUsuariosXPlanta');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGuardarRutinaMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGuardarTiemposMuertosCorrugado');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGuardarTiemposMuertosINY');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGuardarTiemposMuertosPeadLiso');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOGuardarTiemposMuertosPVC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertaEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertaOrdenTrabajoMC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertaOrdenTrabajoMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarArea');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarLinea');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarMC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarParoProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarPeriodicidadEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarPlanProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarSolicitudCompraDetalleMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarSolicitudCompraMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarSolicitudMC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarSolicitudRefaccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertarTipoEquipo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertaSolicitudBaja');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertCategoriaParo');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertMovimientoAlmacen');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOInsertRechazoDevolucion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOMetricasOEE_Corrugado');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOMetricasOEE_INY');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOMetricasOEE_PeadLiso');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOMetricasOEE_PVC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerActividadesPorOTMP');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerMantenimientosCompletados');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerMantenimientosCorrectivos');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerMantenimientosPorRango');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerParosProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerPlanesProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerTecnicosOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOObtenerTokensOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOReanudarParoProduccion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOSolicitarReprogramacion');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateEstatusAuthSC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateEstatusComAuthSC');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateEstatusSolicitud');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateStatusOT');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateUDFEntrada');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOUpdateUDFSalida');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOValidarOTCorrectivoFinalizada');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOValidarOTFinalizada');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOValidarProductosTerminadosExistentes');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOValidarTokenGuardado');
-INSERT INTO "TMP_SP_REQ" VALUES ('SpPdxMTTOValidarTokenOTCorrectivo');
-SELECT R."SP_NAME" AS FALTA FROM "TMP_SP_REQ" R
-LEFT JOIN SYS.PROCEDURES P ON P."SCHEMA_NAME" = 'PTM_2022_FINAL' AND P."PROCEDURE_NAME" = R."SP_NAME"
-WHERE P."PROCEDURE_NAME" IS NULL ORDER BY 1;
-DROP TABLE "TMP_SP_REQ";
+-- ============================ PTM_2022_FINAL ============================
+SELECT R."SP_NAME" AS FALTA
+FROM (
+      SELECT 'SpPdxMTTOAceptarReprogramacion' AS "SP_NAME" FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizaEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizaEstatusEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizaMC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizaMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizarCabeceraSolicitudCompraMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizarPlanProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizarSolicitudCompraDetalleMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOActualizarSolicitudRefaccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOBuscarArticulos' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOBuscarArticulosBatch' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOBuscarEmpleados' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOBuscarProveedores' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOCalcularMantenimientoAnual' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOCantidadesRequisicionXAlmacen' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaArticulosPorOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaBajaEquipos' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaDatosSolicitante' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaEquipos' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaOrdenesFabricacion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarLineasPorPlanta' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarPeriodicidadesXEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarPeriodicidadMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarProcesosPorPlanta' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarTiemposMuertosCorrugado' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarTiemposMuertosINY' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarTiemposMuertosPeadLiso' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarTiemposMuertosPVC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultarTiposEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOConsultaSolicitudesRefaccionesMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTODesactivarPeriodicidadEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminaParoProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarArea' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarBitacoraPlanProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarLinea' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarPeriodicidadesEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarPlanProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarTiemposMuertosCorrugado' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarTiemposMuertosINY' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarTiemposMuertosPeadLiso' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarTiemposMuertosPVC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOEliminarTipoEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetArticuloSalidaM' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetBalanceOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetCategoriasParo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetCostCenters' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetDepSucursal' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetDetallesSolicitudCompraMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetDevolucionesPorOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetDevoPorOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetEmpleadosAlmacenPorRol' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetEstautsAuthSC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetLastSalidaInventario' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetLineasOC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetMovimientoSalidaPorSolicitud' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetOrdenesCompraAbiertas' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetOrdenesCompraByDocNum' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetProveedorArticulo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetSalidasPorOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetSeriesByName' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetSolicitudesCompraMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetUsuariosCompras' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGetUsuariosXPlanta' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGuardarRutinaMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGuardarTiemposMuertosCorrugado' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGuardarTiemposMuertosINY' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGuardarTiemposMuertosPeadLiso' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOGuardarTiemposMuertosPVC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertaEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertaOrdenTrabajoMC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertaOrdenTrabajoMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarArea' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarLinea' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarMC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarParoProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarPeriodicidadEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarPlanProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarSolicitudCompraDetalleMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarSolicitudCompraMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarSolicitudMC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarSolicitudRefaccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertarTipoEquipo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertaSolicitudBaja' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertCategoriaParo' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertMovimientoAlmacen' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOInsertRechazoDevolucion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOMetricasOEE_Corrugado' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOMetricasOEE_INY' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOMetricasOEE_PeadLiso' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOMetricasOEE_PVC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerActividadesPorOTMP' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerMantenimientosCompletados' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerMantenimientosCorrectivos' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerMantenimientosPorRango' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerParosProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerPlanesProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerTecnicosOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOObtenerTokensOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOReanudarParoProduccion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOSolicitarReprogramacion' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateEstatusAuthSC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateEstatusComAuthSC' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateEstatusSolicitud' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateStatusOT' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateUDFEntrada' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOUpdateUDFSalida' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOValidarOTCorrectivoFinalizada' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOValidarOTFinalizada' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOValidarProductosTerminadosExistentes' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOValidarTokenGuardado' FROM DUMMY
+      UNION ALL SELECT 'SpPdxMTTOValidarTokenOTCorrectivo' FROM DUMMY
+     ) R
+LEFT JOIN SYS.PROCEDURES P
+       ON P."SCHEMA_NAME" = 'PTM_2022_FINAL'
+      AND P."PROCEDURE_NAME" = R."SP_NAME"
+WHERE P."PROCEDURE_NAME" IS NULL
+ORDER BY 1;
 
