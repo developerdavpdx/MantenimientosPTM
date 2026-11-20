@@ -2239,6 +2239,26 @@ class MantenimientoManager {
             const datos = GlobalUtil.obtenerDatosAnyFormulario("formOrdenMantenimiento");
             datos.Usuario = this.datos_usuario[0].EMAIL;
             datos.TipoOperacion = this.TIPO_OPERACION;
+
+            // 🔴 FIX: el input se llama "HoraInicioTrabajo" pero el DTO espera
+            // "HoraInicio". Sin esta asignación el guardado DEFINITIVO enviaba
+            // HORA_INICIO = NULL (el borrador ya lo hacía, por eso solo fallaba
+            // al finalizar). Provocaba que el supervisor no pudiera firmar.
+            datos.HoraInicio = datos.HoraInicioTrabajo;
+
+            // 🔒 Candado extra: si el técnico puede editar la hora y aun así no
+            // llega un valor mapeado, no se permite guardar (así este bug no
+            // vuelve a pasar en silencio).
+            if (!$('#HoraInicioTrabajo').prop('readonly') && !datos.HoraInicio) {
+                $('#HoraInicioTrabajo').addClass('is-invalid').focus();
+                AlertManager.mostrar(
+                    'Debe capturar la fecha y hora de inicio del trabajo antes de guardar.',
+                    'warning',
+                    "alertOrdenContainer"
+                );
+                return false;
+            }
+
             // ✅ Convertir horas de 12h (10:00 AM) a 24h (10:00:00)
             // if (datos.HoraInicioTrabajo) {
             //     datos.HoraInicio = this.convertirA24Horas(datos.HoraInicioTrabajo);
