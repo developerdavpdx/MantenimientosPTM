@@ -1665,7 +1665,11 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         headerName: 'TR LIBERADOS',
                         width: 135,
                         ...this.getColumnaNumerica('celda-blanca'),
-                        editable: true
+                        // 🔒 En filas de producto terminado el dato viene de NWSCALE
+                        editable: params => !this.esFilaProductoTerminado(params.data),
+                        cellClass: params => this.esFilaProductoTerminado(params.data)
+                            ? 'celda-gris'
+                            : 'celda-blanca'
                     },
 
                     {
@@ -1673,7 +1677,11 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         headerName: 'PRODUCCIÓN NETA',
                         width: 135,
                         ...this.getColumnaNumerica('celda-blanca'),
-                        editable: true
+                        // 🔒 En filas de producto terminado el dato viene de NWSCALE
+                        editable: params => !this.esFilaProductoTerminado(params.data),
+                        cellClass: params => this.esFilaProductoTerminado(params.data)
+                            ? 'celda-gris'
+                            : 'celda-blanca'
                     },
 
                     {
@@ -1701,7 +1709,11 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         headerName: 'TOTAL SCRAP',
                         width: 130,
                         ...this.getColumnaNumerica('celda-blanca'),
-                        editable: true
+                        // 🔒 En filas de producto terminado el dato viene de NWSCALE
+                        editable: params => !this.esFilaProductoTerminado(params.data),
+                        cellClass: params => this.esFilaProductoTerminado(params.data)
+                            ? 'celda-gris'
+                            : 'celda-blanca'
                     },
 
                     {
@@ -2399,6 +2411,17 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             },
             valueFormatter: params => this.formatearNumero(params.value)
         };
+    }
+
+    // 🔒 ¿La fila es de producto terminado (NWSCALE)?
+    // Para producto terminado NWSCALE es la fuente oficial: TR Liberados,
+    // Producción Neta y Scrap NO se capturan a mano (se pisarían en cada
+    // recarga). Se detecta por ORIGEN (filas que vienen de BD) o por
+    // _origen (filas que acaba de insertar la fusión de NWSCALE).
+    esFilaProductoTerminado(data) {
+        if (!data) return false;
+        return data._origen === 'PRODUCTO_TERMINADO'
+            || String(data.ORIGEN || '').toUpperCase() === 'NWSCALE';
     }
 
     getColumnaPorcentaje(cellClass = '') {

@@ -1701,3 +1701,151 @@ Todo lo demás está validado. Los archivos se copiaron al servidor; los del rep
 - `AGENTS.md`, `CONTEXTO_SESION.md`, `RESUMEN_AJUSTES.txt` → documentación, no se sirven.
 
 Después de copiar los `.js`, basta con **Ctrl+F5**: el cache-busting usa los ticks de `GetLastWriteTime`, así que el navegador pedirá la versión nueva automáticamente.
+
+---
+
+## 33. Sesión 20/11/2026 — Hallazgos abiertos (sin cambios aplicados)
+
+### A. Correctivos — "Jesús Alamilla no aparece en Solicitante"
+
+**Estado:** diagnóstico, pendiente confirmar con datos.
+
+El autocomplete `#Solicitante` (`Global.js:723` → `GET /MantenimientosCorrectivos/BuscarEmpleados`) usa el SP **`SpPdxMTTOBuscarEmpleados`**, que **no** lista a todos los empleados. Filtra por:
+
+```sql
+E."Active" = 'Y'
+AND E."U_Pdx_Nw_Planta" = :P_PLANTA
+AND (:P_USUARIOWEB IS NULL OR E."U_Pbx_Nw_Usuario" = :P_USUARIOWEB)
+```
+
+El JS (`Global.js:770-778`) envía `planta` y **`usuarioWeb`**; en cambio `posicionId` y `tipoUsuario` fueron deshabilitados a propósito. El único filtro "raro" que sobrevive es `usuarioWeb`.
+
+**Sospechoso principal:** `OHEM.U_Pbx_Nw_Usuario` inconsistente. En la captura de SAP el empleado **109 — JESUS ALAMILLA GUERRE** tiene **Usuario = `Si`**, mientras que el portal recibe `USUARIOWEB = "s"` (verificado en logins de DBADMIN: admin y técnico). Una diferencia `Si` vs `s` lo excluye por igualdad exacta y deja pasar al resto.
+
+**Consultas de confirmación (pendientes):**
+
+```sql
+SELECT "Code","firstName","lastName","U_Pdx_Nw_Planta","U_Pbx_Nw_Usuario","Active"
+FROM "PTM_2022_FINAL"."OHEM" WHERE "Code" = 109;
+
+SELECT "U_Pbx_Nw_Usuario", COUNT(*) FROM "PTM_2022_FINAL"."OHEM"
+WHERE "Active"='Y' AND "U_Pdx_Nw_Planta"=1 GROUP BY "U_Pbx_Nw_Usuario";
+```
+
+Y en el navegador: `JSON.parse(sessionStorage.getItem('userData'))[0].USUARIOWEB`.
+
+**Datos del empleado:** código 109, posición `COOR DE PRO P`, depto `PRODUCCION P1`, sucursal `CORP`, correo `alamillag@ptmexico.com`, `SupervisorProduccion`, planta 1.
+
+### B. Producción / Tiempos Muertos — NWSCALE sobreescribe lo guardado
+
+**Estado:** causa raíz identificada; **pendiente decisión de negocio**.
+
+**Síntoma reportado (Esthela Martínez):** al actualizar datos desde el 01/11 en el módulo de TM, al guardar no respeta **TR Fabricados, Producción Neta Real, Scrap y Horas Programadas**.
+
+**Causa raíz confirmada** (`consultarDatos()` en los 4 procesos):
+
+1. `GET /Produccion/GetTiemposMuertos*` → se pintan las filas de **BD** (`setRowData`).
+2. **Inmediatamente después** se llama `agregarProductosTerminadosAlGrid(...)` (NWSCALE).
+3. En la fusión, si la fila ya existe, **sobrescribe**:
+
+```js
+dataActualizada.TRFabricados       = parseFloat(item.NumTubos) || 0;
+dataActualizada.ProduccionNetaReal = parseFloat(item.PesoTotal) || 0;
+dataActualizada.TotalScrapKg       = parseFloat(item.ScrapTotal) || 0;
+```
+
+Ubicaciones: PVC `1360`, PEAD Liso `2157`, INY `1443`, Corrugado `1681`.
+
+Como el guardado termina con `await this.consultarDatos()` (PVC `2889`), la tabla se repinta con los valores de NWSCALE **justo después de guardar** → el usuario percibe que "no guardó".
+
+**Dato de BD (`DBADMIN`, 2026-11-01):** las filas son `ORIGEN = NWSCALE` con `HORAS_PROGRAMADAS = 12.00`. `HORAS_PROGRAMADAS` **no** la pisa esta fusión → si tampoco se respeta, hay que revisar si la fila no empata por clave y se recrea.
+
+**Decisión pendiente (3 opciones):**
+
+1. Lo guardado manda; NWSCALE solo rellena filas nuevas/vacías. *(1 línea × 4 archivos, sin BD)*
+2. Igual, pero NWSCALE rellena solo si el valor está en 0/vacío.
+3. Columna `EDITADO_MANUAL`: NWSCALE refresca lo automático y nunca pisa lo tocado por una persona. *(requiere migración en los 3 esquemas + SPs)*
+
+**Pregunta abierta para negocio:** ¿las 4 columnas deben ser editables, o NWSCALE es la única fuente y deberían ser de solo lectura?
+
+### C. NWSCALE — cómo entrega los datos ✅ RESUELTO
+
+**Estado:** investigado a fondo (definición real del SP + datos). Conclusión: **NWSCALE es la fuente oficial para producto terminado**.
+
+#### C.1 Tabla base: una fila por pesaje
+
+`PtmNwScale2.dbo.ProductoTerminados` guarda **una fila por cada pesaje**:
+
+```
+Id | Id_Linea | Codigo | FechaPesaje | NumTubos | PesoTotal | TurnoPT | Planta | Desactivado
+```
+
+Evidencia real (planta 1) — sí hay muchos pesajes por producto/línea en un mismo día:
+
+| Fecha | Línea | Código | Turno | Pesajes | TR | Kg |
+|---|---|---|---|---|---|---|
+| 2026-09-14 | 14 | 1MT50800 | 1 | **35** | 35 | 10,841 |
+| 2026-10-01 | 14 | 1MT50800 | 2 | **34** | 34 | 10,660 |
+| 2026-09-25 | 11 | 1MT50500 | 2 | **32** | 126 | 16,126 |
+
+#### C.2 El SP SÍ fusiona: una fila por Línea + Código
+
+`Sppdx_FiltradoProductosTerminados` (SQL Server, `PtmNwScale2`):
+
+1. Filtra `FechaPesaje BETWEEN @FechaTurnoInicio AND @FechaTurnoFin`, `Planta`, `TurnoPT` (o ambos si `@turno` es NULL) y `Desactivado = 0 OR NULL`.
+2. Calcula **agregados sobre todos los pesajes de la ventana**:
+   - `SUM(NumTubos)` → **TR Fabricados**
+   - `SUM(PesoTotal)` → **Producción Neta**
+   - `SUM(PesoTotal)/SUM(NumTubos)` → peso unitario real
+   - `COUNT(Codigo)` → atados/tarimas
+   - Scrap desde `ScrapMolinos` y `EnvioScraps`
+   - `SUM(PesoTotal)/(KgxHrbyPt * @Horas) * 100` → eficiencia
+3. Colapsa al final:
+
+```sql
+ROW_NUMBER() OVER (PARTITION BY Id_Linea, Codigo ORDER BY FechaPesaje DESC) ... WHERE rn = 1
+```
+
+> **Resultado: una fila por Línea + Código.** Los números son la **suma de todos los pesajes** del turno; los metadatos (`Id`, `FechaPesaje`) son del **pesaje más reciente**.
+
+#### C.3 ¿Es confiable al final del turno?
+
+**Sí, al cerrar el turno la suma es definitiva.** Matices importantes:
+
+| Matiz | Efecto |
+|---|---|
+| Durante el turno el valor es **parcial y creciente** | Cada pesaje nuevo aumenta TR y kg; la fila "se mueve" hasta que cierra el turno |
+| `@Horas` usa `GETDATE()` | Para el día en curso la eficiencia se calcula con horas transcurridas; para días pasados usa el turno completo (11.5 h / 12 h) |
+| `Desactivado = 1` | Desactivar un pesaje **cambia la suma retroactivamente**, incluso en días cerrados |
+| El `Id` devuelto es el del **último pesaje** | Cambia durante el día; el portal lo usa como `ID_PRODUCTO_TERMINADO`, así que deja de empatar por Id y cae al emparejamiento por clave |
+
+#### C.4 Decisión tomada (2026-11-20)
+
+**Para producto terminado, NWSCALE manda.** Por lo tanto, en las filas de producto terminado (`ORIGEN = 'NWSCALE'` o `_origen = 'PRODUCTO_TERMINADO'`) los campos que NWSCALE alimenta dejan de ser capturables a mano:
+
+| Módulo | Campos que NWSCALE escribe | Se bloquean |
+|---|---|---|
+| PVC | `TRFabricados`, `ProduccionNetaReal`, `TotalScrapKg` | los 3 |
+| PEAD Liso | `TRLiberados`, `ProduccionNeta`, `TotalScrap` | los 3 |
+| INY | `TRLiberados`, `ProduccionNeta`, `ScrapSinColada`, `ScrapColada` | TR y Prod. Neta (ver nota) |
+| Corrugado | `TRLiberados`, `ProduccionNeta`, `ScrapSinCorteSierra`, `ScrapCorteSierra` | TR y Prod. Neta (ver nota) |
+
+> **Nota scrape en INY/Corrugado:** NWSCALE solo aporta el total en `ScrapSinColada` / `ScrapSinCorteSierra` y pone `0` en `ScrapColada` / `ScrapCorteSierra`. Esas dos últimas son captura manual legítima y **se dejan editables**.
+>
+> **`HorasProgramadas` NO lo toca NWSCALE** y el usuario confirmó que **sí guarda correctamente** → se queda editable.
+
+**Esto sustituye las 3 opciones de la sección B:** no se implementa "respetar lo capturado" ni `EDITADO_MANUAL`; se bloquea la captura y NWSCALE queda como única fuente.
+
+**Implementación:** helper `esFilaProductoTerminado(data)` + `editable`/`cellClass` condicionales por fila.
+- ✅ PVC, PEAD Liso, INY y Corrugado (`produccion_*_refactor.js`), `node --check` OK en los 4.
+- ✅ Verificado en portal (DBADMIN, `:52538`):
+  - PVC 01/11/2026 (11 filas `ORIGEN = NWSCALE`): TR, Prod. Neta y Scrap en **`celda-gris`**; doble clic en Scrap **no abre editor**; Horas Programadas **abre editor**.
+  - Corrugado 05/11/2026 (11 filas no-producto-terminado): TR **`celda-blanca`** y editable.
+  - 0 errores de JavaScript en ambos módulos.
+
+### D. Entorno
+
+- La conexión a **HANA Cloud ya responde** (`SELECT 1` OK) tras el ajuste del PSE.
+- `hdbsql` requiere SQL por archivo (`-I`) porque PowerShell se come las comillas dobles de los identificadores.
+- `SQLConnection` apunta a **`DEVELOPER-FER\MSSQLSERVER2022` / `PtmNwScale2`** (la de `SAP-PLASTIC-INT` está comentada).
+- IIS Express corriendo en `:52538` con `Database = DBADMIN`.

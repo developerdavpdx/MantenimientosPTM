@@ -2069,7 +2069,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         headerName: 'TR FABRICADOS',
                         width: 120,
                         ...this.getColumnaNumerica('celda-blanca'),
-                        editable: true
+                        // 🔒 En filas de producto terminado el dato viene de NWSCALE
+                        editable: params => !this.esFilaProductoTerminado(params.data),
+                        cellClass: params => this.esFilaProductoTerminado(params.data)
+                            ? 'celda-gris'
+                            : 'celda-blanca'
                     },
 
                     {
@@ -2077,7 +2081,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         headerName: 'PRODUCCIÓN NETA REAL',
                         width: 150,
                         ...this.getColumnaNumerica('celda-blanca'),
-                        editable: true
+                        // 🔒 En filas de producto terminado el dato viene de NWSCALE
+                        editable: params => !this.esFilaProductoTerminado(params.data),
+                        cellClass: params => this.esFilaProductoTerminado(params.data)
+                            ? 'celda-gris'
+                            : 'celda-blanca'
                     },
 
                     {
@@ -2103,7 +2111,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
                         headerName: 'Total Scrap (Kg)',
                         width: 130,
                         ...this.getColumnaNumerica('celda-blanca'),
-                        editable: true
+                        // 🔒 En filas de producto terminado el dato viene de NWSCALE
+                        editable: params => !this.esFilaProductoTerminado(params.data),
+                        cellClass: params => this.esFilaProductoTerminado(params.data)
+                            ? 'celda-gris'
+                            : 'celda-blanca'
                     },
 
                     {
@@ -3266,6 +3278,17 @@ class GestionProduccionPVC extends GestionProduccionBase {
             },
             valueFormatter: params => this.formatearNumero(params.value)
         };
+    }
+
+    // 🔒 ¿La fila es de producto terminado (NWSCALE)?
+    // Para producto terminado NWSCALE es la fuente oficial: TR Fabricados,
+    // Producción Neta y Scrap NO se capturan a mano (se pisarían en cada
+    // recarga). Se detecta por ORIGEN (filas que vienen de BD) o por
+    // _origen (filas que acaba de insertar la fusión de NWSCALE).
+    esFilaProductoTerminado(data) {
+        if (!data) return false;
+        return data._origen === 'PRODUCTO_TERMINADO'
+            || String(data.ORIGEN || '').toUpperCase() === 'NWSCALE';
     }
 
     getColumnaPorcentaje(cellClass = '') {

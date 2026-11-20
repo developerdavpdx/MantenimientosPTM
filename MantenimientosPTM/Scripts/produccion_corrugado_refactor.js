@@ -2013,11 +2013,20 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 headerClass: 'header-grupo-amarillo',
                 children: [
                     { field: 'PesoMinimo', headerName: 'PESO MÍNIMO', editable: false, width: 120, cellClass: 'celda-gris', valueFormatter: params => this.formatearNumero(params.value) },
-                    { field: 'TRLiberados', headerName: 'TR LIBERADOS', width: 120, ...this.getColumnaNumerica('celda-blanca'), editable: true },
-                    { field: 'ProduccionNeta', headerName: 'PRODUCCIÓN NETA', width: 140, ...this.getColumnaNumerica('celda-blanca'), editable: true },
+                    { field: 'TRLiberados', headerName: 'TR LIBERADOS', width: 120, ...this.getColumnaNumerica('celda-blanca'),
+                        // 🔒 En filas de producto terminado el dato viene de NWSCALE
+                        editable: params => !this.esFilaProductoTerminado(params.data),
+                        cellClass: params => this.esFilaProductoTerminado(params.data) ? 'celda-gris' : 'celda-blanca' },
+                    { field: 'ProduccionNeta', headerName: 'PRODUCCIÓN NETA', width: 140, ...this.getColumnaNumerica('celda-blanca'),
+                        // 🔒 En filas de producto terminado el dato viene de NWSCALE
+                        editable: params => !this.esFilaProductoTerminado(params.data),
+                        cellClass: params => this.esFilaProductoTerminado(params.data) ? 'celda-gris' : 'celda-blanca' },
                     { field: 'PesoEstandar', headerName: 'PESO ESTÁNDAR', editable: false, width: 140, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
                     { field: 'PorcentajeSobrepeso', headerName: '% SOBREPESO', editable: false, width: 120, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearPorcentaje(params.value) },
-                    { field: 'ScrapSinCorteSierra', headerName: 'SCRAP S/CORTES SIERRA', width: 150, ...this.getColumnaNumerica('celda-blanca'), editable: true },
+                    { field: 'ScrapSinCorteSierra', headerName: 'SCRAP S/CORTES SIERRA', width: 150, ...this.getColumnaNumerica('celda-blanca'),
+                        // 🔒 En filas de producto terminado el dato viene de NWSCALE
+                        editable: params => !this.esFilaProductoTerminado(params.data),
+                        cellClass: params => this.esFilaProductoTerminado(params.data) ? 'celda-gris' : 'celda-blanca' },
                     { field: 'ScrapCorteSierra', headerName: 'SCRAP CORTES SIERRA', width: 150, ...this.getColumnaNumerica('celda-blanca'), editable: true },
                     { field: 'ScrapTotal', headerName: 'SCRAP TOTAL', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearNumero(params.value) },
                     { field: 'PorcentajeScrapSinCorte', headerName: '% SCRAP S/CORTE', editable: false, width: 130, cellClass: 'celda-verde-formula', valueFormatter: params => this.formatearPorcentaje(params.value) },
@@ -2953,6 +2962,16 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             },
             valueFormatter: params => this.formatearNumero(params.value)
         };
+    }
+
+    // 🔒 ¿La fila es de producto terminado (NWSCALE)?
+    // Para producto terminado NWSCALE es la fuente oficial: TR Liberados,
+    // Producción Neta y Scrap Sin Cortes NO se capturan a mano (se pisarían
+    // en cada recarga). Scrap Cortes Sierra SÍ queda editable: NWSCALE lo deja en 0.
+    esFilaProductoTerminado(data) {
+        if (!data) return false;
+        return data._origen === 'PRODUCTO_TERMINADO'
+            || String(data.ORIGEN || '').toUpperCase() === 'NWSCALE';
     }
 
     getColumnaPorcentaje(cellClass = '') {
