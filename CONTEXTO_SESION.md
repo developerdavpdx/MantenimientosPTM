@@ -2039,6 +2039,22 @@ Entorno: `http://129.80.97.150:8081`. Todos los escenarios del apartado D se rep
 - **Sin cambios de BD, SP ni tablas** → el rollback es restaurar los 2 `.js` anteriores.
 - ⚠️ **Riesgo a vigilar en productivo:** todo el blindaje de firmas depende de que los SP de `PTM_2022_FINAL` conserven la columna cuando reciben vacío/NULL (`WHEN :P_FIRMA… IS NULL OR = '' THEN T."FIRMA…"`). Verificarlo en `SpPdxMTTOInsertaOrdenTrabajoMC` y `SpPdxMTTOInsertaOrdenTrabajoMP`, y hacer la prueba de humo: **que el supervisor firme una OT y la firma del técnico siga visible**.
 
+### I. Verificación en productivo (`:8083`) — solo lectura
+
+Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo lecturas):
+
+| Comprobación | Resultado |
+|---|---|
+| Versión desplegada (JS + vista) | ✅ contiene `_firmaSoloDelRol`, el candado y `btnActualizarDatosOT` |
+| Correctivos `OTMC-004` (estatus 4, sin `FIRMA_SUPERVISO`) | ✅ editable (horas/cierre/texto/scrap) + **Guardar**; firma del técnico carga (200) con su nombre |
+| Correctivos `OTMC-005` (2 firmas) | ✅ solo lectura, sin botón |
+| Preventivos `OTMP-001` (estatus 4, falta supervisor y mantenimiento) | ✅ editable + **Finalizar** + **Solo actualizar datos** |
+| Preventivos `OTMP-050` (3 firmas) | ✅ solo lectura, sin botones |
+| Errores JS / POST al abrir | ✅ 0 |
+
+**Datos productivos útiles:** 57 OTMC en estatus 4, **8 sin firma de supervisor** (de las cuales **`OTMC-004`, `OTMC-009`, `OTMC-080`, `OTMC-081` tienen `HORA_INICIO` NULL** → son las que el administrador debe corregir). En Preventivos hay **11 OTMP en estatus 4** con firma pendiente (`OTMP-001` … `OTMP-011`).
+
+
 
 
 
