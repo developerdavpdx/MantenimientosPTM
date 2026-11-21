@@ -2028,7 +2028,7 @@ Entorno: `http://129.80.97.150:8081`. Todos los escenarios del apartado D se rep
 | 6 | Admin | Reabre `OTMP-006` (3 firmas) | ✅ Bloqueado: solo lectura, sin botones |
 | 7 | Técnico (VÍCTOR A. AGUILERA) | Abre `OTMC-013` y `OTMP-006` | ✅ Sus firmas cargan (200) y ve los datos corregidos; sin poderes de edición |
 
-**Hallazgo (previo, no introducido aquí):** al **firmar**, el front reenvía todas las firmas cargadas y el controlador **recodifica** el PNG ya guardado (p. ej. `Firma_Realizo.png` 9,714 → 12,331 B). Con **"Solo actualizar datos" no ocurre** (los bytes quedan idénticos, verificado con hash FNV). Pendiente decidir si se blinda (que cada rol envíe solo su propia firma).
+**Hallazgo → corregido (`ea36e36`):** al **firmar**, el front reenviaba las 3 firmas y el controlador **recodificaba** el PNG ya guardado (`Firma_Realizo.png` 9,714 → 12,331 B). Ahora cada rol envía **solo su propia firma**; las demás viajan vacías y el SP las conserva. Validado en DBADMIN (`OTMP-173`): el payload del administrador lleva únicamente `FirmaMantenimiento` y `Firma_Realizo.png` queda **byte por byte idéntico** (2,976 B, mismo hash FNV), con `FIRMA_REALIZO`/`NOMBRE_REALIZO` intactos. Efecto colateral bueno: `NOMBRE_SUPERVISO` ya no se pisa con el nombre del administrador. Con "Solo actualizar datos" tampoco ocurre (ya enviaba todo vacío).
 
 **Estado final de los datos de prueba:** `OTMC-012` restaurado (editable); `OTMC-013` cerrado con las 2 firmas y `OTMP-006` con las 3 (necesario para probar los bloqueos). Para devolverlos a "en proceso de firmas" hace falta SQL (limpiar `FIRMA_*`/`NOMBRE_*` y `HORA_INICIO`/`TEXTO_SECUENCIA` si se desea).
 

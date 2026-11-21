@@ -103,6 +103,7 @@
 ### Mantenimientos Correctivos
 - **PROGMC** genera la solicitud **y** la OT en un solo paso, con estatus **Liberado**.
 - Requiere **2 firmas**: técnico (Realizó) + supervisor de producción (Supervisó).
+- **Solo se envía al servidor la firma del rol que guarda.** Las demás viajan vacías para que el SP conserve su PNG (si se reenviaran, el servidor las recodificaría). Aplica a Correctivos y Preventivos (`_firmaSoloDelRol`).
 - **Si "Máquina detenida" está encendido** al cerrar, se genera un **paro `COR-xx`** (`TIPO_PARO = CORRECTIVO`) en `PdxMTTOTParoProduccion`.
 - **Si está apagado**, no debería generar paro.
 - La hora de cierre se toma del **reloj del servidor** (decisión de negocio); la hora capturada por el técnico puede diferir del `TIEMPO INVERTIDO`.
