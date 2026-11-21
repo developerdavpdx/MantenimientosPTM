@@ -1934,7 +1934,7 @@ Ver sección **33.A**. Falta confirmar con las consultas a `OHEM` (`U_Pbx_Nw_Usu
 
 ## 35. Sesión 20/11/2026 — Regla del administrador implementada (Correctivos + Preventivos)
 
-**Estado:** implementado y probado en portal (DBADMIN local, `:52538`). **Sin commit / sin publicar.**
+**Estado:** **implementado, probado y PUBLICADO** en `TEST_JUNIO_2026` (`:8081`) y `PTM_2022_FINAL` (`:8083`) con los commits `a979f6a` → `1d9c7a2` (rama `david_reyes`, ya en `origin`). Verificado en productivo en modo lectura (§I). Pendiente: prueba de humo con la primera firma real en productivo.
 
 ### A. Regla implementada
 
@@ -2053,6 +2053,18 @@ Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo le
 | Errores JS / POST al abrir | ✅ 0 |
 
 **Datos productivos útiles:** 57 OTMC en estatus 4, **8 sin firma de supervisor** (de las cuales **`OTMC-004`, `OTMC-009`, `OTMC-080`, `OTMC-081` tienen `HORA_INICIO` NULL** → son las que el administrador debe corregir). En Preventivos hay **11 OTMP en estatus 4** con firma pendiente (`OTMP-001` … `OTMP-011`).
+
+### J. Cierre de la sesión
+
+**Entregado:** la regla del administrador (corregir mientras falte una firma) en Correctivos y Preventivos, el fix del candado de Hora Inicio, el blindaje de firmas (cada rol envía solo la suya) y el aviso de validaciones dentro del modal. Todo publicado en TEST y producción y verificado en el portal.
+
+**Pendiente (no bloquea la operación):**
+1. **Prueba de humo en productivo:** que el supervisor firme una OT corregida por el admin (sugerido `OTMC-004`) y confirmar que la firma del técnico sigue visible → valida el `CASE` del SP en `PTM_2022_FINAL`.
+2. Seguimiento operativo de las 4 OTMC con `HORA_INICIO` NULL y de las 11 OTMP pendientes de firma.
+3. Si se quiere, en otra iteración: que el Supervisor de Mantenimiento también vea "Solo actualizar datos" (hoy exclusivo del administrador).
+
+**Resumen funcional entregado al usuario** (para reenviar): el administrador corrige horas, cierre, texto y scrap mientras falte una firma; en Preventivos con el botón **"Solo actualizar datos"** (no firma ni cambia estatus) y **"Finalizar"** intacto; cada quien registra solo su firma, por lo que las firmas existentes nunca se pierden; con todas las firmas la OT queda bloqueada; mismas validaciones de horas dentro del modal.
+
 
 
 
