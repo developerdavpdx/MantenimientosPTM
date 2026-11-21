@@ -2264,6 +2264,11 @@ class MantenimientoManager {
             // vuelve a pasar en silencio).
             if (!$('#HoraInicioTrabajo').prop('readonly') && !datos.HoraInicio) {
                 $('#HoraInicioTrabajo').addClass('is-invalid').focus();
+                // Restaurar el botón: el candado corre después de poner el
+                // loading, así que sin esto quedaba girando en "Guardando OT...".
+                $('#btnGuardarOT')
+                    .html('<i class="bi bi-save me-1"></i>Guardar')
+                    .prop('disabled', false);
                 AlertManager.mostrar(
                     'Debe capturar la fecha y hora de inicio del trabajo antes de guardar.',
                     'warning',
