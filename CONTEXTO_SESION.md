@@ -2032,5 +2032,13 @@ Entorno: `http://129.80.97.150:8081`. Todos los escenarios del apartado D se rep
 
 **Estado final de los datos de prueba:** `OTMC-012` restaurado (editable); `OTMC-013` cerrado con las 2 firmas y `OTMP-006` con las 3 (necesario para probar los bloqueos). Para devolverlos a "en proceso de firmas" hace falta SQL (limpiar `FIRMA_*`/`NOMBRE_*` y `HORA_INICIO`/`TEXTO_SECUENCIA` si se desea).
 
+### H. Despliegue (21/11)
+
+- **Publicado en `TEST_JUNIO_2026` y `PTM_2022_FINAL`** con los commits `a979f6a` → `38914a3` (rama `david_reyes`, ya en `origin`).
+- Archivos desplegados en la última ronda: `Scripts/mantenimientos_correctivos_refactor.js` y `Scripts/mantenimientos_preventivos_refactor.js`. En la ronda previa: `Views/MantenimientosPreventivos/MantenimientoPreventivo.cshtml` y la DLL (`MantenimientosCorrectivosController.cs`).
+- **Sin cambios de BD, SP ni tablas** → el rollback es restaurar los 2 `.js` anteriores.
+- ⚠️ **Riesgo a vigilar en productivo:** todo el blindaje de firmas depende de que los SP de `PTM_2022_FINAL` conserven la columna cuando reciben vacío/NULL (`WHEN :P_FIRMA… IS NULL OR = '' THEN T."FIRMA…"`). Verificarlo en `SpPdxMTTOInsertaOrdenTrabajoMC` y `SpPdxMTTOInsertaOrdenTrabajoMP`, y hacer la prueba de humo: **que el supervisor firme una OT y la firma del técnico siga visible**.
+
+
 
 
