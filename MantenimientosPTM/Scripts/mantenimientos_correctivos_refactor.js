@@ -285,9 +285,15 @@ class MantenimientosCorrectivosApp {
 
         // Devuelve true si el rango es válido. Si no, marca el campo y (opcional) alerta.
         const validarRangoHoras = (mostrarAlerta = true) => {
+            // Con el modal abierto el aviso debe verse dentro de la orden:
+            // #alertContainer vive en la página y queda tapado por el modal.
+            const contenedorAlerta = $('#modalOrdenMantenimiento').is(':visible')
+                ? 'alertOrdenContainer'
+                : 'alertContainer';
+
             const fallar = (sel, msg) => {
                 $(sel).addClass('is-invalid');
-                if (mostrarAlerta) AlertManager.mostrar(msg, 'warning');
+                if (mostrarAlerta) AlertManager.mostrar(msg, 'warning', contenedorAlerta);
                 return false;
             };
 
@@ -987,6 +993,10 @@ class MantenimientoManager {
         this.ID_SOLICITUD = "";
         this.TIPO_OPERACION = "";
         this.EstatusOrden = null;
+
+        // 🔓 Corrección de datos por el administrador: solo aplica mientras
+        // falte al menos una firma (ver configurarVistaAdministrador).
+        this.correccionAdministrador = false;
     }
 
     inicializar() {
@@ -1859,6 +1869,9 @@ class MantenimientoManager {
             $("#btnGuardarOT").prop("disabled", false);
             $("#btnGuardarOT").removeClass("btn_disabled");
 
+            // 🔓 Se recalcula al configurar la vista según el rol
+            this.correccionAdministrador = false;
+
             this.gestionFirmas.limpiarTodasLasFirmas();
             this.gestionTecnicos.tecnicosAsignados = [];
 
@@ -2284,13 +2297,27 @@ class MantenimientoManager {
             // 🔥 OBTENER Y AGREGAR FIRMAS DIGITALES
             const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
 
-            // 🔥 AGREGAR DATOS DE FIRMAS AL OBJETO
-            datos.FirmaRealizo = firmas.realizo.firma || '';        // Base64 PNG
-            datos.NombreRealizo = firmas.realizo.nombre || '';
-            datos.FirmaSuperviso = firmas.superviso.firma || '';    // Base64 PNG
-            datos.NombreSuperviso = firmas.superviso.nombre || '';
-            datos.FirmaMantenimiento = firmas.mantenimiento.firma || ''; // Base64 PNG
-            datos.NombreMantenimiento = firmas.mantenimiento.nombre || '';
+            if (this.correccionAdministrador) {
+                // 🔓 Corrección del administrador: NO se reenvían las firmas ya
+                // guardadas. El modal solo las muestra desde su archivo; si se
+                // reenviaran se regeneraría el PNG y se alteraría el trazo
+                // almacenado. Con valores vacíos el SP conserva las firmas
+                // existentes (FIRMA_REALIZO / FIRMA_SUPERVISO).
+                datos.FirmaRealizo = '';
+                datos.NombreRealizo = '';
+                datos.FirmaSuperviso = '';
+                datos.NombreSuperviso = '';
+                datos.FirmaMantenimiento = '';
+                datos.NombreMantenimiento = '';
+            } else {
+                // 🔥 AGREGAR DATOS DE FIRMAS AL OBJETO
+                datos.FirmaRealizo = firmas.realizo.firma || '';        // Base64 PNG
+                datos.NombreRealizo = firmas.realizo.nombre || '';
+                datos.FirmaSuperviso = firmas.superviso.firma || '';    // Base64 PNG
+                datos.NombreSuperviso = firmas.superviso.nombre || '';
+                datos.FirmaMantenimiento = firmas.mantenimiento.firma || ''; // Base64 PNG
+                datos.NombreMantenimiento = firmas.mantenimiento.nombre || '';
+            }
 
             // 🔥 GUARDAR LA ORDEN DE TRABAJO
             await this.guardarOTDefinitivo(datos);
@@ -2866,6 +2893,24 @@ class MantenimientoManager {
         $("#Scrap").attr('readonly', true).prop('required', false);
         $("#HoraCierreMan").attr('readonly', true).prop('required', false);
 
+        // ========================================
+        // 🔓 REGLA DE NEGOCIO: CORRECCIÓN POR EL ADMINISTRADOR
+        // Mientras falte al menos una firma, el administrador puede corregir
+        // los datos capturados por el técnico (horas, cierre, texto y scrap).
+        // En correctivos la última firma es la del supervisor de producción:
+        // con FIRMA_SUPERVISO capturada la OT queda bloqueada.
+        // ========================================
+        const tipoUsuarioActual = this.datos_usuario[0].TIPOUSUARIO;
+        const esAdministrador = tipoUsuarioActual === 'AdminMtto' ||
+            tipoUsuarioActual === 'Administrador';
+
+        const adminPuedeEditar =
+            esAdministrador &&
+            String(EstatusOrden) === '4' &&
+            (FirmaSuperviso === '' || FirmaSuperviso === null || FirmaSuperviso === undefined);
+
+        this.correccionAdministrador = adminPuedeEditar;
+
         // 🔥 FIRMAS
         this.gestionFirmas.mostrarFirma('Realizo', true);
         this.gestionFirmas.mostrarFirma('Superviso', true);
@@ -2906,6 +2951,12 @@ class MantenimientoManager {
 
             //TEXTO DE SECUENCIA
             $("#TextoSecuencia").prop('readonly', true);
+
+            // 🔓 Mientras falte la firma del supervisor, el administrador
+            // puede corregir horas, cierre, texto y scrap del técnico.
+            if (adminPuedeEditar) {
+                this._habilitarCorreccionAdministrador();
+            }
 
             // BOTONES
             $('#btnGuardarOT').removeClass('d-none');
@@ -2951,8 +3002,16 @@ class MantenimientoManager {
             $("#btnGuardarOT").addClass("btn_disabled");
         }
 
-        // Asegurar que para Administrador el botón siga oculto
-        $('#btnGuardarOT').addClass('d-none').prop('disabled', true).addClass('btn_disabled');
+        // Asegurar que para Administrador el botón siga oculto,
+        // salvo que todavía falte una firma: entonces puede guardar sus correcciones.
+        if (adminPuedeEditar) {
+            $('#btnGuardarOT')
+                .removeClass('d-none btn_disabled')
+                .prop('disabled', false)
+                .html('<i class="bi bi-save me-1"></i>Guardar');
+        } else {
+            $('#btnGuardarOT').addClass('d-none').prop('disabled', true).addClass('btn_disabled');
+        }
 
         // 🔥 BANNER + SWITCH "MÁQUINA DETENIDA"
         // La vista de administrador no configuraba el banner, así que al reabrir
@@ -3003,6 +3062,21 @@ class MantenimientoManager {
         } else {
             $("#HoraCierreMan").attr('readonly', true).prop('required', false);
         }
+    }
+
+    // ============================
+    // Helper: habilitar la corrección de datos del administrador
+    // (solo mientras falte al menos una firma)
+    // ============================
+    _habilitarCorreccionAdministrador() {
+        // Horas capturadas por el técnico + cierre de la OT
+        $('#HoraInicioTrabajo, #HoraFin, #HoraCierreMan').prop('readonly', false);
+
+        // Texto de secuencia / actividad realizada
+        $('#TextoSecuencia').prop('readonly', false);
+
+        // Scrap real
+        $('#Scrap').prop('readonly', false);
     }
 
     // ============================

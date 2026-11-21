@@ -1929,3 +1929,63 @@ Ver sección **33.A**. Falta confirmar con las consultas a `OHEM` (`U_Pbx_Nw_Usu
 - Usuarios admin habilitados: `adminmantenimiento@ptmexico.com` / `AdminMTTO` (planta 1) y `lunatc@ptmexico.com` / `AdminMTTO` (planta 2).
 - OT Liberadas en TEST: **OTMC-002, 007 y 008**. Ojo: el técnico `p1tecmantto1@ptm.com` **no ve** la 007 (es Línea 10 PVC, fuera de su área); para probar con él hay que usar/crear una OT de su área (Línea 1 PVC).
 - `adminmantenimiento` **no** existía en TEST antes del 20/11 (el login se quedaba en la pantalla).
+
+---
+
+## 35. Sesión 20/11/2026 — Regla del administrador implementada (Correctivos + Preventivos)
+
+**Estado:** implementado y probado en portal (DBADMIN local, `:52538`). **Sin commit / sin publicar.**
+
+### A. Regla implementada
+
+El **administrador** (`AdminMtto` / `Administrador`) puede corregir lo capturado por el técnico —horas, cierre de OT, texto y scrap— **mientras falte al menos una firma**. Con todas las firmas la OT queda bloqueada. **La lógica de finalización no se tocó.**
+
+| Módulo | Condición para editar | Se bloquea cuando |
+|---|---|---|
+| Correctivos | estatus 4 **y** `FIRMA_SUPERVISO` vacía | `FIRMA_SUPERVISO = 'SI'` |
+| Preventivos | estatus 4 **y** falte ≥1 de las 3 firmas | las 3 firmas capturadas |
+
+### B. Correctivos — un solo botón ("Guardar")
+
+`mantenimientos_correctivos_refactor.js`:
+
+- `configurarVistaAdministrador`: nueva bandera `correccionAdministrador = esAdministrador && EstatusOrden==4 && FirmaSuperviso==''`. La bandera se reinicia al abrir cada OT y solo aplica a `AdminMtto`/`Administrador` (el fallback y `SupervisorMantenimiento` no la heredan).
+- Helper `_habilitarCorreccionAdministrador()` → quita `readonly` de `#HoraInicioTrabajo`, `#HoraFin`, `#HoraCierreMan`, `#TextoSecuencia` y `#Scrap`. No cambia `required` ni el switch "Máquina detenida".
+- El botón `#btnGuardarOT` (etiqueta **"Guardar"**) se muestra solo si la bandera está activa; si no, sigue oculto como antes.
+- `guardarOT`: cuando la bandera está activa **no reenvía firmas** (manda `''` en `Firma*/Nombre*`), porque el modal las muestra desde archivo y reenviarlas regeneraría el PNG del técnico. El SP conserva lo existente. El administrador nunca firma en Correctivos (solo hay 2 firmas).
+
+`MantenimientosCorrectivosController.cs` (líneas ~522 y ~747): cuando no llega firma nueva ahora se envía **`null`** en vez de `""`. Es equivalente en la práctica (`ConvertToHanaParameters` convierte `""` y `null` a `DBNull`, y el SP hace `WHEN :P_FIRMA… IS NULL OR = '' THEN T.FIRMA…`), pero deja explícita la intención de **conservar**.
+
+Mejora de UX incluida (pendiente de 34.B): `validarRangoHoras` ahora manda sus avisos a `#alertOrdenContainer` cuando el modal está abierto (antes iban a `#alertContainer`, tapado por el modal). Aplica a Correctivos y Preventivos.
+
+### C. Preventivos — se conserva "Finalizar" y se agrega "Solo actualizar datos"
+
+**Decisión de negocio (usuario, 20/11):** no se le quita al administrador su firma como **Coordinador de Mantenimiento**; en su lugar se agrega un segundo botón que guarda **solo datos**. Las 3 firmas siguen siendo técnico + supervisor de producción + (supervisor de mantenimiento / administrador).
+
+- `MantenimientoPreventivo.cshtml`: nuevo botón `#btnActualizarDatosOT` ("Solo actualizar datos", variante `draft`, `type="button"`, oculto por defecto).
+- `_aplicarVisibilidadBotones`: el botón nuevo se muestra **solo** para `AdminMtto`/`Administrador` con estatus 4 y ≥1 firma pendiente. `#btnGuardarOT` ("Finalizar") **no cambia** su política.
+- `actualizarDatosOT()` + `_guardarSoloDatos()`: validan rango de horas y formulario, y envían la OT con `TipoOperacion = "BORRADOR"` ⇒ el controlador **no exige firma** y **no ejecuta `GCActualizaMP`**, así que **el estatus no cambia**. Se mandan todas las firmas en `''` ⇒ el SP las conserva y no se reescriben los PNG.
+- `_habilitarCorreccionAdministrador()` (preventivos): habilita solo `#HoraInicio`, `#HoraFin`, `#TextoSecuencia` (el módulo no captura scrap ni cierre de OT).
+- `guardarOT` ahora valida el rango de horas también para `AdminMtto`/`Administrador`/`SupervisorMantenimiento` (antes solo `TecnicoMtto`).
+
+> ⚠️ **Por qué así:** si el administrador ya firmó "Mantenimiento" y falta otra firma, `#btnGuardarOT` está oculto por diseño. Sin el botón nuevo, los campos quedarían editables sin forma de guardarlos (caso real: `OTMP-162`).
+
+### D. Pruebas funcionales (navegador, DBADMIN)
+
+| # | Caso | Resultado |
+|---|---|---|
+| 1 | **Correctivos / `OTMC-005`** (estatus 4, `FIRMA_SUPERVISO` NULL): admin edita horas, cierre, texto y scrap → **Guardar** | ✅ `HORA_INICIO` NULL → `08:00`, `HORA_FIN` 12:30, `HORA_CIERRE_MAN` 13:00, `SCRAP` 1.50, `DURACION_HRS` 4.50; **`FIRMA_REALIZO` sigue `SI`**, `NOMBRE_REALIZO` intacto y `Firma_Realizo.png` con **el mismo hash SHA256** |
+| 2 | **Correctivos / `OTMC-005`** con Hora Inicio vacía → Guardar | ✅ Bloquea: *"Debe capturar la fecha y hora de inicio del trabajo antes de guardar."* (0 POST) |
+| 3 | **Correctivos / `OTMC-005`** con fin < inicio → Guardar | ✅ Bloquea y el aviso se ve **dentro del modal** (0 POST) |
+| 4 | **Correctivos / `OTMC-001`** (ambas firmas) | ✅ Campos `readonly`, sin botón Guardar, `correccionAdministrador=false` |
+| 5 | **Preventivos / `OTMP-173`** (falta superviso y mantenimiento): admin edita y pulsa **Finalizar** (firma Mantenimiento) | ✅ Horas y texto actualizados, `FIRMA_REALIZO`/`NOMBRE_REALIZO` intactos, PNG del técnico con **mismo hash**, `NOMBRE_SUPERVISO` ya **no** se pisa con el nombre del admin |
+| 6 | **Preventivos / `OTMP-162`** (`FIRMA_MANTENIMIENTO='SI'`, falta superviso): **Solo actualizar datos** | ✅ Payload `TipoOperacion="BORRADOR"`, firmas `''`; horas 14:50/18:00 y duración 3.17 guardadas; las 3 firmas y sus nombres intactos; **estatus sigue 4** |
+| 7 | **Preventivos / `OTMP-163`** (3 firmas) | ✅ Campos `readonly`, sin "Finalizar" ni "Solo actualizar datos" |
+
+**Datos de prueba restaurados** a su estado original (OTMC-005, OTMP-162, OTMP-173 + `Firma_Mantenimiento.png` eliminada).
+
+### E. Pendiente
+
+- Probar en **TEST_JUNIO_2026** y luego publicar (el fix `64bc76d` ya está en TEST).
+- Confirmar si el **SupervisorMantenimiento** debe ver el mismo botón "Solo actualizar datos" (hoy es exclusivo del administrador).
+

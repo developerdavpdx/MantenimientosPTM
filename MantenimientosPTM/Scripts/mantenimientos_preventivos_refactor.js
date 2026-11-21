@@ -198,6 +198,9 @@ class MantenimientosPreventivoApp {
         // 🔥 EVENT LISTENER PARA GUARDAR BORRADOR
         $('#btnGuardarBorrador').on('click', (e) => this.mantenimientoManager.guardarBorrador(e));
 
+        // 🔓 Solo Administrador: actualizar datos sin firmar ni cerrar la OT
+        $('#btnActualizarDatosOT').on('click', (e) => this.mantenimientoManager.actualizarDatosOT(e));
+
         // Guardar estatus
         $('#btnGuardarEstatus').on('click', () => this.mantenimientoManager.guardarEstatus());
 
@@ -351,9 +354,15 @@ class MantenimientosPreventivoApp {
 
         // Devuelve true si el rango es válido. Si no, marca el campo y (opcional) alerta.
         const validarRangoHoras = (mostrarAlerta = true) => {
+            // Con el modal abierto el aviso debe verse dentro de la orden:
+            // #alertContainer vive en la página y queda tapado por el modal.
+            const contenedorAlerta = $('#modalOrdenMantenimiento').is(':visible')
+                ? 'alertOrdenContainer'
+                : 'alertContainer';
+
             const fallar = (sel, msg) => {
                 $(sel).addClass('is-invalid');
-                if (mostrarAlerta) AlertManager.mostrar(msg, 'warning');
+                if (mostrarAlerta) AlertManager.mostrar(msg, 'warning', contenedorAlerta);
                 return false;
             };
 
@@ -1148,6 +1157,10 @@ class MantenimientoManager {
         this.TOKEN_OT = null;
         this.TOKEN_RUTINA = null;             // 'NUEVO' cuando la rutina aun no existe
         this.TOKEN_RUTINA_EXISTE = false;
+
+        // 🔓 Corrección de datos por el administrador: solo aplica mientras
+        // falte su firma (ver configurarVistaAdministrador).
+        this.correccionAdministrador = false;
         this.TOKENES_CARGADOS = false;
         this._conflictoGuardado = false;      // ya se mostro el aviso de edicion concurrente
         this._avisoValidacionRutina = false;  // guardarRutina ya mostro su propio aviso
@@ -2739,6 +2752,10 @@ class MantenimientoManager {
             $("#btnGuardarOT").prop("disabled", false);
             $("#btnGuardarOT").removeClass("btn_disabled");
 
+            // 🔓 Se recalcula al configurar la vista según el rol
+            this.correccionAdministrador = false;
+            $('#btnActualizarDatosOT').addClass('d-none').prop('disabled', true);
+
             this.gestionFirmas.limpiarTodasLasFirmas();
             // ✅ VARIABLE GLOBAL PARA ALMACENAR ARCHIVOS
             window.imagenesRutina = [];
@@ -3025,9 +3042,9 @@ class MantenimientoManager {
             : '';
 
         const esTecnico = tipoUsuario === 'TecnicoMtto';
-        const esAdmin = tipoUsuario === 'AdminMtto' ||
-            tipoUsuario === 'Administrador' ||
-            tipoUsuario === 'SupervisorMantenimiento';
+        const esAdministrador = tipoUsuario === 'AdminMtto' ||
+            tipoUsuario === 'Administrador';
+        const esAdmin = esAdministrador || tipoUsuario === 'SupervisorMantenimiento';
         const esProduccion = tipoUsuario === 'Produccion' ||
             tipoUsuario === 'SupervisorProduccion';
 
@@ -3037,6 +3054,11 @@ class MantenimientoManager {
             superviso: firmas.superviso || '',
             mantenimiento: firmas.mantenimiento || ''
         };
+
+        const faltaAlgunaFirma =
+            firma.realizo === '' ||
+            firma.superviso === '' ||
+            firma.mantenimiento === '';
 
         const mostrar = (selector, visible) => {
             const $el = $(selector);
@@ -3064,6 +3086,11 @@ class MantenimientoManager {
                 mostrar('#btnGuardarOT', false);
                 mostrar('#btnGuardarBorrador', false);
             }
+
+            // 🔓 "Solo actualizar datos": exclusivo del administrador, mientras
+            // falte al menos una de las 3 firmas. No firma ni cambia el estatus.
+            mostrar('#btnActualizarDatosOT', esAdministrador && faltaAlgunaFirma);
+
             return;
         }
 
@@ -3078,6 +3105,8 @@ class MantenimientoManager {
             mostrar('#btnGuardarOT', false);
             mostrar('#btnGuardarBorrador', false);
         }
+
+        mostrar('#btnActualizarDatosOT', false);
     }
 
     // Re-aplica la botonera con el último estatus/firmas conocidos.
@@ -3321,6 +3350,30 @@ class MantenimientoManager {
         $("#Scrap").attr('readonly', true).prop('required', false);
         $("#HoraCierreMan").attr('readonly', true).prop('required', false);
 
+        // ========================================
+        // 🔓 REGLA DE NEGOCIO: CORRECCIÓN POR EL ADMINISTRADOR
+        // Mientras falte al menos una de las 3 firmas, el administrador puede
+        // corregir lo capturado por el técnico (horas y texto) SIN firmar:
+        // usa el botón "Solo actualizar datos". Sus poderes de firma
+        // ("Finalizar" como Coordinador de Mantenimiento) NO se modifican.
+        // Con las 3 firmas capturadas la OT queda bloqueada.
+        // ========================================
+        const tipoUsuarioActual = this.datos_usuario[0].TIPOUSUARIO;
+        const esAdministrador = tipoUsuarioActual === 'AdminMtto' ||
+            tipoUsuarioActual === 'Administrador';
+
+        const faltaAlgunaFirma =
+            FirmaTecnico === '' ||
+            FirmaSuperviso === '' ||
+            FirmaMantenimiento === '';
+
+        const adminPuedeEditar =
+            esAdministrador &&
+            String(EstatusOrden) === '4' &&
+            faltaAlgunaFirma;
+
+        this.correccionAdministrador = adminPuedeEditar;
+
         // 🔥 FIRMAS
         this.gestionFirmas.mostrarFirma('Realizo', true);
         this.gestionFirmas.mostrarFirma('Superviso', true);
@@ -3356,6 +3409,12 @@ class MantenimientoManager {
 
             //TEXTO DE SECUENCIA
             $("#TextoSecuencia").prop('readonly', true);
+
+            // 🔓 Mientras falte la firma de Mantenimiento (la del administrador)
+            // puede corregir las horas y el texto capturados por el técnico.
+            if (adminPuedeEditar) {
+                this._habilitarCorreccionAdministrador();
+            }
 
             // BOTONES
             $('#btnGuardarOT').removeClass('d-none');
@@ -3754,11 +3813,155 @@ class MantenimientoManager {
     }
 
 
+    // ============================================================
+    // 🔓 CORRECCIÓN DE DATOS POR EL ADMINISTRADOR (PREVENTIVOS)
+    // Habilita las horas y el texto capturados por el técnico mientras
+    // falte al menos una de las 3 firmas.
+    // ============================================================
+    _habilitarCorreccionAdministrador() {
+        $('#HoraInicio, #HoraFin').prop('readonly', false);
+        $('#TextoSecuencia').prop('readonly', false);
+    }
+
+    // ============================================================
+    // 🔓 SOLO ACTUALIZAR DATOS (ADMINISTRADOR)
+    // Guarda horas / texto / duración SIN enviar firmas y SIN cambiar el
+    // estatus (viaja como "BORRADOR", que el servidor ya trata como guardado
+    // sin firmas obligatorias). El SP conserva las firmas existentes, así que
+    // nunca se pierde ni se regenera el trazo del técnico o del supervisor.
+    // "Finalizar" sigue igual: el administrador puede firmar como
+    // Coordinador de Mantenimiento cuando corresponda.
+    // ============================================================
+    async actualizarDatosOT(e) {
+        if (e) e.preventDefault();
+
+        // Solo disponible mientras falte al menos una firma
+        if (!this.correccionAdministrador) return false;
+
+        // ✅ Mismas validaciones de horas que "Finalizar"
+        if (!this.appReferencia.validarRangoHoras(true)) return false;
+
+        if (!ValidationManager.validarFormulario('#formOrdenMantenimiento')) {
+            AlertManager.mostrar('Por favor, complete correctamente todos los campos', 'warning', 'alertOrdenContainer');
+            return false;
+        }
+
+        const $btn = $('#btnActualizarDatosOT');
+        const htmlOriginal = $btn.html();
+        $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Actualizando...').prop('disabled', true);
+
+        try {
+            const datos = GlobalUtil.obtenerDatosAnyFormulario('formOrdenMantenimiento');
+
+            if (!datos.HoraInicio || datos.HoraInicio.trim() === '') {
+                AlertManager.mostrar('La hora de inicio se debe llenar correctamente seleccionando a.m. o p.m.', 'warning', 'alertOrdenContainer');
+                return false;
+            }
+
+            if (!datos.HoraFin || datos.HoraFin.trim() === '') {
+                AlertManager.mostrar('La hora de fin se debe llenar correctamente seleccionando a.m. o p.m.', 'warning', 'alertOrdenContainer');
+                return false;
+            }
+
+            datos.Usuario = this.datos_usuario[0].EMAIL;
+
+            // 🔑 "BORRADOR" => el servidor NO exige firmas y NO toca el estatus
+            datos.TipoOperacion = 'BORRADOR';
+
+            datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
+            datos.IdMantenimiento = this.ID_MANTENIMIENTO;
+            datos.Token_OT = this.TOKEN_OT;
+
+            // 🔒 No se envían firmas: el SP conserva las existentes y no se
+            // reescriben los PNG del técnico ni del supervisor.
+            datos.FirmaRealizo = '';
+            datos.NombreRealizo = '';
+            datos.FirmaSuperviso = '';
+            datos.NombreSuperviso = '';
+            datos.FirmaMantenimiento = '';
+            datos.NombreMantenimiento = '';
+
+            await this._guardarSoloDatos(datos);
+        } catch (error) {
+            console.error('Error al actualizar los datos de la OT:', error);
+            AlertManager.mostrar('No es posible actualizar los datos de la orden de trabajo.', 'warning', 'alertOrdenContainer');
+        } finally {
+            $btn.html(htmlOriginal).prop('disabled', false);
+        }
+
+        return false;
+    }
+
+    _guardarSoloDatos(datos) {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: `/${this.URLBase}/InsertarOrdenTrabajoMP`,
+                type: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Rol-Usuario': this.datos_usuario[0].TIPOUSUARIO
+                },
+                contentType: 'application/json; charset=utf-8',
+                data: JSON.stringify(datos),
+                dataType: 'json',
+                success: (response) => {
+                    if (response && response.Status === 'CONFLICTO') {
+                        AlertManager.mostrar(
+                            response.Message || 'La OT fue modificada por otro usuario. Cierra y vuelve a abrir la OT.',
+                            'warning',
+                            'alertOrdenContainer'
+                        );
+                        if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+                            $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                        }
+                        reject(false);
+                        return;
+                    }
+
+                    if (response && response.Status === 'SI') {
+                        if (response.Token) this.TOKEN_OT = response.Token;
+
+                        AlertManager.mostrar(
+                            'Datos de la orden actualizados correctamente (las firmas no se modificaron).',
+                            'success',
+                            'alertOrdenContainer'
+                        );
+
+                        if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
+                            $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
+                        }
+
+                        // La OT NO se cierra: se deja el modal abierto unos segundos
+                        setTimeout(() => {
+                            $('#modalOrdenMantenimiento').modal('hide');
+                        }, 2000);
+
+                        resolve(true);
+                        return;
+                    }
+
+                    AlertManager.mostrar(
+                        (response && response.Message) || 'No fue posible actualizar los datos de la orden de trabajo.',
+                        'warning',
+                        'alertOrdenContainer'
+                    );
+                    reject(false);
+                },
+                error: (xhr, status, error) => {
+                    AlertManager.mostrar('Error al conectar con el servidor', 'warning', 'alertOrdenContainer');
+                    reject(error);
+                }
+            });
+        });
+    }
+
     async guardarOT(e) {
         e.preventDefault();
 
-        // ✅ Candado de fechas/horas
-        if (this.datos_usuario[0].TIPOUSUARIO === "TecnicoMtto" &&
+        // ✅ Candado de fechas/horas (también para el administrador, que puede
+        // corregir las horas mientras falte su firma)
+        const ROLES_CON_VALIDACION_HORAS = ["TecnicoMtto", "AdminMtto", "Administrador", "SupervisorMantenimiento"];
+        if (ROLES_CON_VALIDACION_HORAS.includes(this.datos_usuario[0].TIPOUSUARIO) &&
             !this.appReferencia.validarRangoHoras(true)) return false;
 
         // Validar formulario

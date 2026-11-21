@@ -519,9 +519,12 @@ namespace MantenimientosPTM.Controllers
                     out firmaSuperviso
                 );
 
-                //Solo guardar la bandera
-                datos.FirmaRealizo = okFirmaRealizo && firmaRealizo != null ? "SI" : "";
-                datos.FirmaSuperviso = okFirmaSuperviso && firmaSuperviso != null ? "SI" : "";
+                // Solo guardar la bandera. Cuando no llega una firma nueva se
+                // envía NULL (no cadena vacía) para que el SP conserve la firma
+                // ya almacenada; esto es clave para que el administrador pueda
+                // corregir horas/texto/scrap sin pisar la firma del técnico.
+                datos.FirmaRealizo = okFirmaRealizo && firmaRealizo != null ? "SI" : null;
+                datos.FirmaSuperviso = okFirmaSuperviso && firmaSuperviso != null ? "SI" : null;
 
                 // Nota: Por petición temporal, la firma de "Mantenimiento" ya no es requerida
                 // y no se guarda ni se envía al stored procedure. Se deja el helper disponible
@@ -744,8 +747,9 @@ namespace MantenimientosPTM.Controllers
                     firmaSuperviso = null;
                 }
 
-                datos.FirmaRealizo = firmaRealizo != null ? "SI" : "";
-                datos.FirmaSuperviso = firmaSuperviso != null ? "SI" : "";
+                // NULL cuando no hay firma nueva: el SP conserva la existente.
+                datos.FirmaRealizo = firmaRealizo != null ? "SI" : null;
+                datos.FirmaSuperviso = firmaSuperviso != null ? "SI" : null;
 
                 // Se envían NULL para que el SP conserve la firma existente y no intente
                 // almacenar el base64 en una columna NVARCHAR(500).

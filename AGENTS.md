@@ -97,6 +97,7 @@
 - El botón `#btnGuardarOT` se etiqueta **"Finalizar"**; ninguna validación fallida debe dejarlo como "Guardar" (helper `_restaurarBotonGuardarOT`).
 - **Cumplimiento PM** = MP **liberadas** con las **3 firmas** ÷ MP **liberadas** del periodo. Una MP sin las 3 firmas **no** cuenta.
 - Las marcas de "Realizado" de la rutina solo se ven en la vista del técnico mientras la OT está en captura; en las vistas de supervisor/admin la rutina se muestra como texto.
+- **Corrección del administrador:** con estatus 4 y **al menos una de las 3 firmas pendiente**, el administrador puede editar **Hora Inicio, Hora Fin y Texto de Secuencia** y guardarlos con el botón **"Solo actualizar datos"** (exclusivo de `AdminMtto`/`Administrador`). Ese botón viaja como `TipoOperacion = "BORRADOR"`: el servidor **no exige firma** y **no cambia el estatus**; se envían las firmas en blanco y el SP conserva las existentes (no se reescriben los PNG). Con las **3 firmas** la OT queda **bloqueada**. El botón **"Finalizar"** no cambió: el administrador sigue pudiendo firmar "Mantenimiento" (Coordinador de Mantenimiento) cuando esa firma falte.
 
 ### Mantenimientos Correctivos
 - **PROGMC** genera la solicitud **y** la OT en un solo paso, con estatus **Liberado**.
@@ -104,6 +105,7 @@
 - **Si "Máquina detenida" está encendido** al cerrar, se genera un **paro `COR-xx`** (`TIPO_PARO = CORRECTIVO`) en `PdxMTTOTParoProduccion`.
 - **Si está apagado**, no debería generar paro.
 - La hora de cierre se toma del **reloj del servidor** (decisión de negocio); la hora capturada por el técnico puede diferir del `TIEMPO INVERTIDO`.
+- **Corrección del administrador:** con estatus 4 y `FIRMA_SUPERVISO` vacía, el administrador (`AdminMtto`/`Administrador`) puede editar **Hora Inicio/Fin, Hora Cierre OT, Texto de Secuencia y Scrap Real** y guardar con **"Guardar"**. No reenvía firmas: el SP conserva `FIRMA_REALIZO` y su PNG. Con `FIRMA_SUPERVISO = 'SI'` la OT queda **bloqueada** (solo lectura). El administrador **no firma** en Correctivos.
 
 ### Tiempos Muertos / Bitácoras
 - El grid mezcla **dos tipos de fila**:

@@ -955,6 +955,11 @@
                         <button type="button" class="btn-modal-guardar" id="btnGuardarBorrador">
                             <i class="bi bi-cloud-upload me-1"></i> Guardar Borrador
                         </button>
+                        <!-- 🔓 Solo Administrador: corrige datos capturados por el
+                             técnico sin firmar ni cambiar el estatus de la OT -->
+                        <button type="button" class="btn-modal-guardar draft d-none" id="btnActualizarDatosOT">
+                            <i class="bi bi-pencil-square me-1"></i> Solo actualizar datos
+                        </button>
                         <button type="submit" class="btn-modal-guardar" id="btnGuardarOT">
                             <i class="bi bi-floppy-fill me-1"></i> Finalizar
                         </button>
