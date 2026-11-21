@@ -1848,4 +1848,84 @@ ROW_NUMBER() OVER (PARTITION BY Id_Linea, Codigo ORDER BY FechaPesaje DESC) ... 
 - La conexión a **HANA Cloud ya responde** (`SELECT 1` OK) tras el ajuste del PSE.
 - `hdbsql` requiere SQL por archivo (`-I`) porque PowerShell se come las comillas dobles de los identificadores.
 - `SQLConnection` apunta a **`DEVELOPER-FER\MSSQLSERVER2022` / `PtmNwScale2`** (la de `SAP-PLASTIC-INT` está comentada).
-- IIS Express corriendo en `:52538` con `Database = DBADMIN`.
+- IIS Express corre en `:52538` con `Database = DBADMIN` (se arranca con el `applicationhost.config` de `.vs\MantenimientosPTM\config`, sitio `MantenimientosPTM`).
+
+---
+
+## 34. Sesión 20/11/2026 — Fix HORA_INICIO en Correctivos + regla pendiente del admin
+
+**Estado:** fix **COMPLETADO, probado y publicado en TEST** (`64bc76d`). Regla del administrador **aprobada pero NO implementada**.
+
+### A. Bug crítico: HORA_INICIO se guardaba en NULL
+
+**Síntoma reportado:** el técnico cierra una OT correctiva, el supervisor de producción no puede firmar (error de "diferencia en horarios") y el técnico ya no puede corregir.
+
+**Causa raíz (confirmada):** `GlobalUtil.obtenerDatosAnyFormulario` mapea los inputs **por `name`**. En la vista el campo es `name="HoraInicioTrabajo"`, pero el DTO espera **`HoraInicio`**. En `guardarOT` la asignación estaba **comentada** (solo `guardarOTBorrador` la tenía, línea 2335). Resultado: **cada "Finalizar" enviaba `HORA_INICIO = NULL`**.
+
+**Evidencia:** de 32 OT cerradas (estatus 4) en DBADMIN, **27 tenían `HORA_INICIO` NULL**.
+
+**Fix (`64bc76d`, `mantenimientos_correctivos_refactor.js`):**
+
+```js
+datos.HoraInicio = datos.HoraInicioTrabajo;
+// + candado: si el campo es editable y el valor no llega mapeado, no guarda
+```
+
+Publicado en **TEST_JUNIO_2026 (`:8081`)**, verificado por contenido (el archivo servido contiene ambas líneas).
+
+### B. Pruebas funcionales (5/5) — DBADMIN local, POST interceptado
+
+Se interceptó `$.ajax` para leer el payload **sin enviarlo** (0 escrituras).
+
+| # | Caso | Resultado |
+|---|---|---|
+| 1 | **Finalizar** con horas válidas | ✅ PASA — payload incluye `HoraInicio: "2026-11-05T10:00"` |
+| 2 | **Finalizar** con fin < inicio | ✅ BLOQUEA — *"La fecha y hora fin no puede ser menor a la de inicio."* |
+| 3 | **Finalizar** sin hora de inicio | ✅ BLOQUEA — *"Debe capturar la fecha y hora de inicio y de fin."* |
+| 4 | **Borrador** con fin < inicio | ✅ BLOQUEA (sí valida cuando están las dos) |
+| 5 | **Borrador** con solo Hora Fin | ✅ PERMITE (la comparación se salta si falta una) |
+
+**Comportamiento de la validación:** `validarRangoHoras` compara solo `if (inicio && fin && ...)` → si falta una de las dos, **no valida**. En Finalizar lo cubre el `required`; en Borrador es intencional.
+
+**Mejora pendiente (UX):** los mensajes de `validarRangoHoras` se muestran en `#alertContainer` (nivel página) y **no** en `#alertOrdenContainer` (dentro del modal), por lo que con el modal abierto pueden pasar desapercibidos.
+
+**Verificación de no-escritura:** OTMC-003 quedó intacta en BD (`HORA_INICIO 10:35`, estatus 2, firma `NULL`).
+
+### C. Reapertura de las 6 OT (PTM_2022_FINAL) — ✅ EJECUTADO POR EL USUARIO
+
+OTMC **004, 009, 037, 051, 065, 066** devueltas a **estatus 2**, `HORA_CIERRE = NULL`, firmas limpiadas (`FIRMA_*`/`NOMBRE_*`) y `FECHA_ULT_MOD = CURRENT_TIMESTAMP`. Respaldos: `BAK_MC_20261120` y `BAK_OTMC_20261120`.
+
+Las 6 tenían `HORA_INICIO` en NULL — consistente con la causa raíz.
+
+> ⚠️ Cuidado con los paros `COR-xx`: si alguna se cerró con "Máquina detenida", ya generó un paro y al re-cerrarla podría generar otro.
+
+### D. Regla del administrador — APROBADA, PENDIENTE DE IMPLEMENTAR
+
+**Regla de negocio (confirmada por el usuario):**
+
+- El **administrador** puede editar datos capturados por el técnico (horas, cierre, texto, scrap, comentarios) **mientras falte al menos una firma**:
+  - **Correctivos:** estatus 4 y `FIRMA_SUPERVISO` vacía.
+  - **Preventivos:** estatus 4 y falte al menos 1 de las 3 firmas.
+- Cuando estén **todas** las firmas → queda bloqueado.
+- **No debe afectar la lógica de finalización**: solo habilita edición.
+
+**Hallazgo que reduce el riesgo:** ya existen **8 OT con `FIRMA_REALIZO='SI'` y `FIRMA_SUPERVISO='SI'` a la vez** → el flujo actual **ya conserva** la firma del técnico cuando el supervisor firma después. El admin reutilizaría la misma ruta.
+
+**Riesgo a blindar:** al abrir la OT, el modal **no carga las imágenes de firma** (solo la bandera). Si el admin guarda, se podría enviar `''` y pisar la firma — revisar `MantenimientosCorrectivosController.cs:523-524` (`datos.FirmaRealizo = ... ? "SI" : ""`) y el comportamiento del SP.
+
+**Plan de implementación (4 archivos):**
+
+1. `mantenimientos_correctivos_refactor.js` → `configurarVistaAdministrador`: habilitar campos si `EstatusOrden == 4 && FirmaSuperviso === ''`.
+2. `mantenimientos_preventivos_refactor.js` → equivalente con "falte 1 de 3".
+3. Validar el rango de horas al guardar (reutilizar `validarRangoHoras`).
+4. **Prueba obligatoria:** admin edita → guarda → verificar en BD que `HORA_INICIO` cambió **y** `FIRMA_REALIZO` sigue en `'SI'` con su archivo intacto.
+
+### E. Pendiente: Solicitante / Jesús Alamilla
+
+Ver sección **33.A**. Falta confirmar con las consultas a `OHEM` (`U_Pbx_Nw_Usuario` = `Si` vs `s`).
+
+### F. Entorno de pruebas (TEST_JUNIO_2026)
+
+- Usuarios admin habilitados: `adminmantenimiento@ptmexico.com` / `AdminMTTO` (planta 1) y `lunatc@ptmexico.com` / `AdminMTTO` (planta 2).
+- OT Liberadas en TEST: **OTMC-002, 007 y 008**. Ojo: el técnico `p1tecmantto1@ptm.com` **no ve** la 007 (es Línea 10 PVC, fuera de su área); para probar con él hay que usar/crear una OT de su área (Línea 1 PVC).
+- `adminmantenimiento` **no** existía en TEST antes del 20/11 (el login se quedaba en la pantalla).
