@@ -4,11 +4,12 @@
 
 - **Todas las pruebas funcionales se hacen SIEMPRE en el portal (navegador)**, simulando la interacción real del usuario (login, clics, formularios, modales, guardado).
 - **No usar llamadas directas a la API como sustituto** de una prueba funcional. La API/SQL solo sirve para verificar el resultado por debajo (conteos, claves, duplicados) o para preparar datos cuando el flujo del módulo no lo permita.
-- Cuando el flujo lo requiera, usar **usuarios reales por rol** (ambiente de pruebas DBADMIN):
-  - Administrador de mantenimiento: `adminmantenimiento@ptmexico.com`
-  - Técnico de mantenimiento: usuarios `p1tecmantto*@ptm.com` / `p1techerramentales*@ptm.com`
+- Cuando el flujo lo requiera, usar **usuarios reales por rol** (ambiente de pruebas DBADMIN / TEST_JUNIO_2026):
+  - Administrador de mantenimiento: `adminmantenimiento@ptmexico.com` / `AdminMTTO`
+  - Técnico de mantenimiento: `p1tecmantto1@ptm.com` / `12345` (planta 1) y `p2tecmantto1@ptm.com` / `12345` (planta 2)
   - Supervisor de producción: `hernandezmj@ptmexico.com`
-  - Las contraseñas de prueba están en `CONTEXTO_SESION.md` y en el ambiente de pruebas.
+  - Supervisor (planta 1): `gonzalezuc@ptmexico.com` / `12345`; (planta 2): `gualitosa@ptmexico.com` / `Ptm120625Z`
+  - El resto de las contraseñas de prueba están en `CONTEXTO_SESION.md` (§34.F). **Nunca** usar estas cuentas en producción.
 - **Limpiar los datos de prueba** al terminar (filas de tiempos muertos, OTs, paros, etc.).
 - Para Tiempos Muertos, validar el ciclo completo cuando aplique:
   1. Generar/liberar la orden (correctivo o preventivo) con el rol correspondiente.

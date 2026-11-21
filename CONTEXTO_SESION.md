@@ -1989,3 +1989,48 @@ Mejora de UX incluida (pendiente de 34.B): `validarRangoHoras` ahora manda sus a
 - Probar en **TEST_JUNIO_2026** y luego publicar (el fix `64bc76d` ya está en TEST).
 - Confirmar si el **SupervisorMantenimiento** debe ver el mismo botón "Solo actualizar datos" (hoy es exclusivo del administrador).
 
+### F. Credenciales de prueba (solo TEST_JUNIO_2026 / DBADMIN)
+
+> ⚠️ **Uso exclusivo en ambientes de prueba.** Nunca en `PTM_2022_FINAL` ni en producción.
+
+**TEST_JUNIO_2026** — `http://129.80.97.150:8081` (IIS, sitio del portal)
+
+| Rol (`TIPOUSUARIO`) | Planta | Usuario | Contraseña |
+|---|---|---|---|
+| Administrador de mantenimiento (`AdminMtto`) | 1 | `adminmantenimiento@ptmexico.com` | `AdminMTTO` |
+| Administrador de mantenimiento (`AdminMtto`) | 2 | `lunatc@ptmexico.com` | `AdminMTTO` |
+| Técnico de mantenimiento (`TecnicoMtto`) | 1 | `p1tecmantto1@ptm.com` | `12345` |
+| Técnico de mantenimiento (`TecnicoMtto`) | 2 | `p2tecmantto1@ptm.com` | `12345` |
+| Supervisor | 1 | `gonzalezuc@ptmexico.com` | `12345` |
+| Supervisor | 2 | `gualitosa@ptmexico.com` | `Ptm120625Z` |
+
+**DBADMIN (local, IIS Express `:52538`)**
+
+| Rol | Usuario | Contraseña |
+|---|---|---|
+| Administrador de mantenimiento | `adminmantenimiento@ptmexico.com` | `AdminMTTO` |
+| Técnico | `p1tecmantto1@ptm.com` | `12345` |
+| Supervisor de producción | `hernandezmj@ptmexico.com` | *(ver ambiente de pruebas)* |
+
+> El `TIPOUSUARIO` real de cada cuenta se puede confirmar al iniciar sesión (`sessionStorage.userData[0].TIPOUSUARIO`); el nombre visible sale de `OHEM`.
+
+### G. Ciclo completo en TEST_JUNIO_2026 (21/11)
+
+Entorno: `http://129.80.97.150:8081`. Todos los escenarios del apartado D se repitieron aquí, más el **ciclo completo por rol**:
+
+| Paso | Rol | Acción | Resultado |
+|---|---|---|---|
+| 1 | Admin | `OTMC-013`: edita Hora Inicio 08:00 → **07:30** y el texto | ✅ Guardado; `FIRMA_REALIZO` intacta |
+| 2 | Supervisor producción (CRISTIAN GONZÁLEZ) | Abre `OTMC-013` y firma **Supervisó** | ✅ Ve la corrección, firma sin el error de "diferencia en horarios" |
+| 3 | Admin | Reabre `OTMC-013` (2 firmas) | ✅ Bloqueado: solo lectura, sin botón |
+| 4 | Admin | `OTMP-006`: **Solo actualizar datos** (16:53 → 17:05 + texto) | ✅ Estatus sigue 4, 3 firmas intactas |
+| 5 | Supervisor producción | `OTMP-006` firma **Supervisó** | ✅ Corrección visible, firma guardada |
+| 6 | Admin | Reabre `OTMP-006` (3 firmas) | ✅ Bloqueado: solo lectura, sin botones |
+| 7 | Técnico (VÍCTOR A. AGUILERA) | Abre `OTMC-013` y `OTMP-006` | ✅ Sus firmas cargan (200) y ve los datos corregidos; sin poderes de edición |
+
+**Hallazgo (previo, no introducido aquí):** al **firmar**, el front reenvía todas las firmas cargadas y el controlador **recodifica** el PNG ya guardado (p. ej. `Firma_Realizo.png` 9,714 → 12,331 B). Con **"Solo actualizar datos" no ocurre** (los bytes quedan idénticos, verificado con hash FNV). Pendiente decidir si se blinda (que cada rol envíe solo su propia firma).
+
+**Estado final de los datos de prueba:** `OTMC-012` restaurado (editable); `OTMC-013` cerrado con las 2 firmas y `OTMP-006` con las 3 (necesario para probar los bloqueos). Para devolverlos a "en proceso de firmas" hace falta SQL (limpiar `FIRMA_*`/`NOMBRE_*` y `HORA_INICIO`/`TEXTO_SECUENCIA` si se desea).
+
+
+
