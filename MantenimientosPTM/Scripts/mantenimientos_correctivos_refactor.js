@@ -2299,30 +2299,12 @@ class MantenimientoManager {
                 // SP no lo conserva, el estado se perdía al firmar supervisión/admin.
                 datos.MaquinaDetenida = (this.MaquinaDetenidaActual === 1) ? 1 : 0;
 
-            // 🔥 OBTENER Y AGREGAR FIRMAS DIGITALES
+            // 🔥 FIRMAS: solo viaja la firma del rol que está guardando.
+            // Reenviar las demás haría que el servidor recodificara sus PNG
+            // (el modal las carga desde archivo). Vacías ⇒ el SP las conserva.
             const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
-
-            if (this.correccionAdministrador) {
-                // 🔓 Corrección del administrador: NO se reenvían las firmas ya
-                // guardadas. El modal solo las muestra desde su archivo; si se
-                // reenviaran se regeneraría el PNG y se alteraría el trazo
-                // almacenado. Con valores vacíos el SP conserva las firmas
-                // existentes (FIRMA_REALIZO / FIRMA_SUPERVISO).
-                datos.FirmaRealizo = '';
-                datos.NombreRealizo = '';
-                datos.FirmaSuperviso = '';
-                datos.NombreSuperviso = '';
-                datos.FirmaMantenimiento = '';
-                datos.NombreMantenimiento = '';
-            } else {
-                // 🔥 AGREGAR DATOS DE FIRMAS AL OBJETO
-                datos.FirmaRealizo = firmas.realizo.firma || '';        // Base64 PNG
-                datos.NombreRealizo = firmas.realizo.nombre || '';
-                datos.FirmaSuperviso = firmas.superviso.firma || '';    // Base64 PNG
-                datos.NombreSuperviso = firmas.superviso.nombre || '';
-                datos.FirmaMantenimiento = firmas.mantenimiento.firma || ''; // Base64 PNG
-                datos.NombreMantenimiento = firmas.mantenimiento.nombre || '';
-            }
+            const firmaPropia = this.correccionAdministrador ? '' : FirmaRequerida;
+            Object.assign(datos, this._firmaSoloDelRol(firmas, firmaPropia));
 
             // 🔥 GUARDAR LA ORDEN DE TRABAJO
             await this.guardarOTDefinitivo(datos);
@@ -2393,15 +2375,10 @@ class MantenimientoManager {
             // Estado de máquina detenida
             datos.MaquinaDetenida = $('#MaquinaDetenidaToggle').is(':checked') ? 1 : 0;
 
-            // 🔥 OBTENER Y AGREGAR FIRMAS DIGITALES (sin validar)
+            // 🔥 FIRMAS: el borrador solo lo guarda el técnico, así que solo
+            // se envía "Realizo". Las demás se conservan tal cual en la BD.
             const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
-
-            datos.FirmaRealizo = firmas.realizo.firma || '';
-            datos.NombreRealizo = firmas.realizo.nombre || '';
-            datos.FirmaSuperviso = firmas.superviso.firma || '';
-            datos.NombreSuperviso = firmas.superviso.nombre || '';
-            datos.FirmaMantenimiento = firmas.mantenimiento.firma || '';
-            datos.NombreMantenimiento = firmas.mantenimiento.nombre || '';
+            Object.assign(datos, this._firmaSoloDelRol(firmas, "Realizo"));
 
             // Guardar el borrador
             await this.guardarOTBorradorDefinitivo(datos);
@@ -3067,6 +3044,27 @@ class MantenimientoManager {
         } else {
             $("#HoraCierreMan").attr('readonly', true).prop('required', false);
         }
+    }
+
+    // ============================================================
+    // 🔒 PAYLOAD DE FIRMAS: solo la del rol que está guardando
+    // Las firmas que no corresponden al rol viajan vacías; el SP conserva
+    // la columna (P_FIRMA… vacío/NULL ⇒ no la pisa) y así el PNG ya
+    // almacenado nunca se vuelve a escribir ni se recodifica.
+    // ============================================================
+    _firmaSoloDelRol(firmas, tipoFirma) {
+        const esRealizo = tipoFirma === 'Realizo';
+        const esSuperviso = tipoFirma === 'Superviso';
+        const esMantenimiento = tipoFirma === 'Mantenimiento';
+
+        return {
+            FirmaRealizo: esRealizo ? (firmas.realizo.firma || '') : '',
+            NombreRealizo: esRealizo ? (firmas.realizo.nombre || '') : '',
+            FirmaSuperviso: esSuperviso ? (firmas.superviso.firma || '') : '',
+            NombreSuperviso: esSuperviso ? (firmas.superviso.nombre || '') : '',
+            FirmaMantenimiento: esMantenimiento ? (firmas.mantenimiento.firma || '') : '',
+            NombreMantenimiento: esMantenimiento ? (firmas.mantenimiento.nombre || '') : ''
+        };
     }
 
     // ============================

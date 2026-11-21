@@ -3814,6 +3814,27 @@ class MantenimientoManager {
 
 
     // ============================================================
+    // 🔒 PAYLOAD DE FIRMAS: solo la del rol que está guardando
+    // Las firmas que no corresponden al rol viajan vacías; el SP conserva
+    // la columna (P_FIRMA… vacío/NULL ⇒ no la pisa) y así el PNG ya
+    // almacenado nunca se vuelve a escribir ni se recodifica.
+    // ============================================================
+    _firmaSoloDelRol(firmas, tipoFirma) {
+        const esRealizo = tipoFirma === 'Realizo';
+        const esSuperviso = tipoFirma === 'Superviso';
+        const esMantenimiento = tipoFirma === 'Mantenimiento';
+
+        return {
+            FirmaRealizo: esRealizo ? (firmas.realizo.firma || '') : '',
+            NombreRealizo: esRealizo ? (firmas.realizo.nombre || '') : '',
+            FirmaSuperviso: esSuperviso ? (firmas.superviso.firma || '') : '',
+            NombreSuperviso: esSuperviso ? (firmas.superviso.nombre || '') : '',
+            FirmaMantenimiento: esMantenimiento ? (firmas.mantenimiento.firma || '') : '',
+            NombreMantenimiento: esMantenimiento ? (firmas.mantenimiento.nombre || '') : ''
+        };
+    }
+
+    // ============================================================
     // 🔓 CORRECCIÓN DE DATOS POR EL ADMINISTRADOR (PREVENTIVOS)
     // Habilita las horas y el texto capturados por el técnico mientras
     // falte al menos una de las 3 firmas.
@@ -4086,16 +4107,19 @@ class MantenimientoManager {
             datos.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
             datos.IdMantenimiento = this.ID_MANTENIMIENTO;
 
-            // 🔥 OBTENER Y AGREGAR FIRMAS DIGITALES
+            // 🔥 FIRMAS: solo viaja la firma del rol que está guardando.
+            // Reenviar las demás haría que el servidor recodificara sus PNG
+            // (el modal las carga desde archivo). Vacías ⇒ el SP las conserva.
             const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
 
-            // 🔥 AGREGAR DATOS DE FIRMAS AL OBJETO
-            datos.FirmaRealizo = firmas.realizo.firma || '';        // Base64 PNG
-            datos.NombreRealizo = firmas.realizo.nombre || '';
-            datos.FirmaSuperviso = firmas.superviso.firma || '';    // Base64 PNG
-            datos.NombreSuperviso = firmas.superviso.nombre || '';
-            datos.FirmaMantenimiento = firmas.mantenimiento.firma || ''; // Base64 PNG
-            datos.NombreMantenimiento = firmas.mantenimiento.nombre || '';
+            // En Preventivos el Supervisor de Mantenimiento firma "Mantenimiento"
+            // (no está en FirmaRequerida porque no se le exige, pero sí firma).
+            let tipoFirmaPropia = FirmaRequerida;
+            if (this.datos_usuario[0].TIPOUSUARIO === 'SupervisorMantenimiento') {
+                tipoFirmaPropia = 'Mantenimiento';
+            }
+
+            Object.assign(datos, this._firmaSoloDelRol(firmas, tipoFirmaPropia));
 
             // 🔥 GUARDAR LA ORDEN DE TRABAJO
             await this.guardarOTDefinitivo(datos);
@@ -4192,21 +4216,13 @@ class MantenimientoManager {
                     datosBorrador.TecnicosAsignados = this.gestionTecnicos.obtenerNominasComoString();
                 }
 
-                // 🔥 GUARDAR LAS FIRMAS (si existen) - SIN VALIDAR QUE SEAN OBLIGATORIAS
+                // 🔥 FIRMAS: el borrador solo lo guarda el técnico, así que solo
+                // se envía "Realizo". Las demás se conservan tal cual en la BD.
                 if ($('#SeccionFirmas').is(':visible')) {
-                    // Guardar firmas en los campos ocultos si están disponibles
                     this.gestionFirmas.guardarTodasLasFirmas();
 
-                    // Obtener las firmas
                     const firmas = this.gestionFirmas.obtenerTodasLasFirmas();
-
-                    // Agregar datos de firmas al objeto (aunque estén vacías, va)
-                    datosBorrador.FirmaRealizo = firmas.realizo.firma || '';
-                    datosBorrador.NombreRealizo = firmas.realizo.nombre || '';
-                    datosBorrador.FirmaSuperviso = firmas.superviso.firma || '';
-                    datosBorrador.NombreSuperviso = firmas.superviso.nombre || '';
-                    datosBorrador.FirmaMantenimiento = firmas.mantenimiento.firma || '';
-                    datosBorrador.NombreMantenimiento = firmas.mantenimiento.nombre || '';
+                    Object.assign(datosBorrador, this._firmaSoloDelRol(firmas, 'Realizo'));
                 }
 
                 // ✅ Guardar el borrador
