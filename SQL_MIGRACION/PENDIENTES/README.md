@@ -24,13 +24,12 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 - **Verificacion de SPs faltantes:** `../VERIFICACION/CHECK_SP_FALTANTES.sql` lista,
   por schema, los SPs que el codigo referencia y no existen.
 
-## Pendiente 2026-11-23 - Almacén: centros de costos solo activos (SP)
+## Aplicado 2026-11-23 - Almacén: centros de costos solo activos (SP)
 
-- DBADMIN: aplicado y validado en portal (dropdown de Proceso ya no lista PPEA "CODIGO ERRONEO").
-- TEST_JUNIO_2026 y PTM_2022_FINAL: falta aplicar `ALTER PROCEDURE SpPdxMTTOGetCostCenters`
-  de `ALMACEN/20261123_ALMACEN_COSTCENTERS_ACTIVOS_<schema>.sql` y publicar el JS
-  `solicitud_refacciones_refactor.js` (mismo pase). El JS bloquea la salida si falta
-  alguna dimensión de costeo y avisa cuando el solicitante no tiene dept en SAP.
+- Los 3 schemas aplicados y validados. En TEST/PTM se requirió re-aplicar con la
+  tabla `OPRC` **calificada con el schema** (el `ALTER` sin calificar fallaba en
+  on-premise con "invalid table name: OPRC" según el currentSchema del ejecutor).
+- El JS `solicitud_refacciones_refactor.js` publicado en 8081 y 8083 el mismo día.
 ## Contenido actual
 
 **Ninguno.** Todo está aplicado y movido a `../APLICADOS/<schema>/`.
@@ -157,6 +156,7 @@ Aplicado en `DBADMIN`, `TEST_JUNIO_2026` y `PTM_2022_FINAL` (2026-11-18).
 - Antes de aplicar, respaldar `SYS.PROCEDURES.DEFINITION` de los 4 SP (la consulta viene incluida en el script).
 - Version previa respaldada en `../../SQL_ORIGINALES/SpPdxMTTOMetricasOEE_*_ANTES_3_FIRMAS_20261118.sql`.
 - Detalle en `../MIGRACIONES_APLICADAS.md` (seccion 9).
+
 
 
 

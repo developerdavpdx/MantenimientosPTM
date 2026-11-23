@@ -49,6 +49,8 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 23/11/2026 | TEST_JUNIO_2026 | Saneamiento de bitácoras (Fix 3 opción B) | Aplicado | PVC 29 filas saneadas, paradas 0 (sin OTs con paro guardadas). `APLICADOS/TEST_JUNIO_2026/PRODUCCION/20261123_SANEAMIENTO_BITACORAS_OTMC_MAQUINA_DETENIDA_TEST_JUNIO_2026.sql` |
 | 23/11/2026 | PTM_2022_FINAL | Saneamiento de bitácoras (Fix 3 opción B) | Aplicado | De 32 OTs en bitácora PVC, 3 con paro real. Rollback: respaldo externo + `TMP_BAK_*_20261123` del schema. `APLICADOS/PTM_2022_FINAL/PRODUCCION/20261123_SANEAMIENTO_BITACORAS_OTMC_MAQUINA_DETENIDA_PTM_2022_FINAL.sql` |
 | 23/11/2026 | DBADMIN | Almacén: dropdowns de centros de costos solo activos | Aplicado/validado en portal | `SpPdxMTTOGetCostCenters` filtra `Active = 'Y'` (antes ofrecía PPEA "CODIGO ERRONEO"). Junto con el JS que bloquea salidas sin las 4 dimensiones de costeo. `APLICADOS/DBADMIN/ALMACEN/20261123_ALMACEN_COSTCENTERS_ACTIVOS_DBADMIN.sql` |
+| 23/11/2026 | TEST_JUNIO_2026 | Almacén: dropdowns de centros de costos solo activos | Aplicado/validado (8081) | Se requirió re-aplicar con la tabla `OPRC` calificada (ver nota del fix). El catálogo dim 2 ya no devuelve PPEA. `APLICADOS/TEST_JUNIO_2026/ALMACEN/20261123_ALMACEN_COSTCENTERS_ACTIVOS_TEST_JUNIO_2026.sql` |
+| 23/11/2026 | PTM_2022_FINAL | Almacén: dropdowns de centros de costos solo activos | Aplicado/validado (`CALL` dim 2 = 10 centros sin PPEA) | `APLICADOS/PTM_2022_FINAL/ALMACEN/20261123_ALMACEN_COSTCENTERS_ACTIVOS_PTM_2022_FINAL.sql` |
 
 ## Detalle de los cambios clave
 
@@ -223,5 +225,6 @@ Motivo: contienen versiones anteriores del SP de rango. La versión vigente est�
   (`DBADMIN`, `TEST_JUNIO_2026`, `PTM_2022_FINAL` y `NWSCALE`).
 - Al aplicarse en el servidor, moverlos a `APLICADOS/<schema>/` y actualizar esta bitácora.
 - Regla general: si `PENDIENTES/` no tiene scripts SQL, todo está al día.
+
 
 
