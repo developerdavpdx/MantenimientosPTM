@@ -1,10 +1,12 @@
 ﻿-- Saneamiento de bitacoras (Fix 3, opcion B): OTMC + horas de paro + derivados.
+-- Cada sentencia termina en punto y coma para ejecutar el archivo completo de corrido.
 -- Solo dejan de contar las OTs con MAQUINA_DETENIDA = 0 (y las ordenes sin fila de OT).
 -- Horas nuevas = Hora Inicio tecnico -> Hora Fin tecnico (ROUND 4 por orden).
 -- Derivados: TiempoProductivo, KgNetosHrReales, Rendimiento, EficienciaProducto,
 --            Disponibilidad y OEE, con las mismas formulas del front (redondeo a 2 al guardar).
 -- TiempoDisponible, KgPorTiempoDisponible, EficienciaOperativa y Calidad NO cambian.
 -- FECHA_ACTUALIZACION se refresca para invalidar tokens viejos (evita pisar el saneo).
+-- INY usa PORCENTAJE_DISPONIBILIDAD (las otras 3 tablas usan DISPONIBILIDAD_PORCENTAJE).
 -- Rollback: restaurar las filas desde TMP_BAK_<T>_20261123 (se conservan).
 -- Re-ejecutar: renombrar o borrar antes las tablas TMP_BAK_*/TMP_STAGE_* del dia.
 -- Solo toca filas con ESTATUS = A y OTMC con contenido.
@@ -13,7 +15,7 @@ SELECT 'ANTES' AS FASE, 'PVC' AS PROCESO,
        ROUND(SUM(IFNULL("MTTO_CORRECTIVOS",0)+IFNULL("HERRAMENTAL",0)),2) AS HRS_PARO,
        ROUND(SUM(IFNULL("TIEMPO_PRODUCTIVO",0)),2) AS TP
 FROM "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionPVC"
-WHERE IFNULL("ESTATUS",'A')='A' AND TO_NVARCHAR("OTMC") LIKE '%OTMC-%'
+WHERE IFNULL("ESTATUS",'A')='A' AND TO_NVARCHAR("OTMC") LIKE '%OTMC-%';
 -- @@
 
 
@@ -28,7 +30,7 @@ WHERE IFNULL("ESTATUS",'A')='A' AND TO_NVARCHAR("OTMC") LIKE '%OTMC-%'
 CREATE COLUMN TABLE "TEST_JUNIO_2026"."TMP_BAK_PVC_20261123" AS (
     SELECT * FROM "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionPVC"
     WHERE IFNULL("ESTATUS",'A') = 'A' AND TO_NVARCHAR("OTMC") LIKE '%OTMC-%'
-)
+);
 -- @@
 
 -- (2) Stage: nuevos OTMC/horas/derivados por fila afectada
@@ -90,7 +92,7 @@ CREATE COLUMN TABLE "TEST_JUNIO_2026"."TMP_STAGE_PVC_20261123" AS (
             GROUP BY P."ID_REGISTRO"
         ) AGG ON AGG."ID_REGISTRO" = AF."ID_REGISTRO"
     ) X
-)
+);
 -- @@
 
 -- (3) Aplicar cambios y refrescar el token de concurrencia
@@ -107,7 +109,7 @@ WHEN MATCHED THEN UPDATE SET
     "PORCENTAJE_EFICIENCIA_PRODUCTO" = S."NUEVO_REND",
     "DISPONIBILIDAD_PORCENTAJE" = S."NUEVO_DISP",
     "PORCENTAJE_OEE" = S."NUEVO_OEE",
-    "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP
+    "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP;
 -- @@
 
 -- (4) Verificacion fila por fila
@@ -118,7 +120,7 @@ SELECT T."ID_REGISTRO", T."FECHA", T."LINEA",
        IFNULL(B."PORCENTAJE_OEE",0) AS OEE_ANTES, IFNULL(T."PORCENTAJE_OEE",0) AS OEE_DESPUES
 FROM "TEST_JUNIO_2026"."TMP_BAK_PVC_20261123" B
 JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionPVC" T ON T."ID_REGISTRO" = B."ID_REGISTRO"
-ORDER BY T."ID_REGISTRO"
+ORDER BY T."ID_REGISTRO";
 -- @@
 
 -- (5) Resumen del proceso
@@ -128,7 +130,7 @@ SELECT COUNT(*) AS FILAS_SANEADAS,
        ROUND(SUM(IFNULL(B."TIEMPO_PRODUCTIVO",0)), 2) AS TP_ANTES,
        ROUND(SUM(IFNULL(T."TIEMPO_PRODUCTIVO",0)), 2) AS TP_DESPUES
 FROM "TEST_JUNIO_2026"."TMP_BAK_PVC_20261123" B
-JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionPVC" T ON T."ID_REGISTRO" = B."ID_REGISTRO"
+JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionPVC" T ON T."ID_REGISTRO" = B."ID_REGISTRO";
 -- @@
 -- ============================================================
 -- PEADLISO: saneamiento de OTMC + horas de paro + derivados (opcion B)
@@ -141,7 +143,7 @@ JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionPVC" T ON T."ID_REGISTRO"
 CREATE COLUMN TABLE "TEST_JUNIO_2026"."TMP_BAK_PEADLISO_20261123" AS (
     SELECT * FROM "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionPeadLiso"
     WHERE IFNULL("ESTATUS",'A') = 'A' AND TO_NVARCHAR("OTMC") LIKE '%OTMC-%'
-)
+);
 -- @@
 
 -- (2) Stage: nuevos OTMC/horas/derivados por fila afectada
@@ -203,7 +205,7 @@ CREATE COLUMN TABLE "TEST_JUNIO_2026"."TMP_STAGE_PEADLISO_20261123" AS (
             GROUP BY P."ID_REGISTRO"
         ) AGG ON AGG."ID_REGISTRO" = AF."ID_REGISTRO"
     ) X
-)
+);
 -- @@
 
 -- (3) Aplicar cambios y refrescar el token de concurrencia
@@ -220,7 +222,7 @@ WHEN MATCHED THEN UPDATE SET
     "PORCENTAJE_EFICIENCIA_PRODUCTO" = S."NUEVO_REND",
     "DISPONIBILIDAD_PORCENTAJE" = S."NUEVO_DISP",
     "PORCENTAJE_OEE" = S."NUEVO_OEE",
-    "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP
+    "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP;
 -- @@
 
 -- (4) Verificacion fila por fila
@@ -231,7 +233,7 @@ SELECT T."ID_REGISTRO", T."FECHA", T."LINEA",
        IFNULL(B."PORCENTAJE_OEE",0) AS OEE_ANTES, IFNULL(T."PORCENTAJE_OEE",0) AS OEE_DESPUES
 FROM "TEST_JUNIO_2026"."TMP_BAK_PEADLISO_20261123" B
 JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionPeadLiso" T ON T."ID_REGISTRO" = B."ID_REGISTRO"
-ORDER BY T."ID_REGISTRO"
+ORDER BY T."ID_REGISTRO";
 -- @@
 
 -- (5) Resumen del proceso
@@ -241,7 +243,7 @@ SELECT COUNT(*) AS FILAS_SANEADAS,
        ROUND(SUM(IFNULL(B."TIEMPO_PRODUCTIVO",0)), 2) AS TP_ANTES,
        ROUND(SUM(IFNULL(T."TIEMPO_PRODUCTIVO",0)), 2) AS TP_DESPUES
 FROM "TEST_JUNIO_2026"."TMP_BAK_PEADLISO_20261123" B
-JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionPeadLiso" T ON T."ID_REGISTRO" = B."ID_REGISTRO"
+JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionPeadLiso" T ON T."ID_REGISTRO" = B."ID_REGISTRO";
 -- @@
 -- ============================================================
 -- CORRUGADO: saneamiento de OTMC + horas de paro + derivados (opcion B)
@@ -254,7 +256,7 @@ JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionPeadLiso" T ON T."ID_REGI
 CREATE COLUMN TABLE "TEST_JUNIO_2026"."TMP_BAK_CORRUGADO_20261123" AS (
     SELECT * FROM "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionCorrugado"
     WHERE IFNULL("ESTATUS",'A') = 'A' AND TO_NVARCHAR("OTMC") LIKE '%OTMC-%'
-)
+);
 -- @@
 
 -- (2) Stage: nuevos OTMC/horas/derivados por fila afectada
@@ -316,7 +318,7 @@ CREATE COLUMN TABLE "TEST_JUNIO_2026"."TMP_STAGE_CORRUGADO_20261123" AS (
             GROUP BY P."ID_REGISTRO"
         ) AGG ON AGG."ID_REGISTRO" = AF."ID_REGISTRO"
     ) X
-)
+);
 -- @@
 
 -- (3) Aplicar cambios y refrescar el token de concurrencia
@@ -333,7 +335,7 @@ WHEN MATCHED THEN UPDATE SET
     "PORCENTAJE_EFICIENCIA_PRODUCTO" = S."NUEVO_REND",
     "DISPONIBILIDAD_PORCENTAJE" = S."NUEVO_DISP",
     "PORCENTAJE_OEE" = S."NUEVO_OEE",
-    "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP
+    "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP;
 -- @@
 
 -- (4) Verificacion fila por fila
@@ -344,7 +346,7 @@ SELECT T."ID_REGISTRO", T."FECHA", T."LINEA",
        IFNULL(B."PORCENTAJE_OEE",0) AS OEE_ANTES, IFNULL(T."PORCENTAJE_OEE",0) AS OEE_DESPUES
 FROM "TEST_JUNIO_2026"."TMP_BAK_CORRUGADO_20261123" B
 JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionCorrugado" T ON T."ID_REGISTRO" = B."ID_REGISTRO"
-ORDER BY T."ID_REGISTRO"
+ORDER BY T."ID_REGISTRO";
 -- @@
 
 -- (5) Resumen del proceso
@@ -354,7 +356,7 @@ SELECT COUNT(*) AS FILAS_SANEADAS,
        ROUND(SUM(IFNULL(B."TIEMPO_PRODUCTIVO",0)), 2) AS TP_ANTES,
        ROUND(SUM(IFNULL(T."TIEMPO_PRODUCTIVO",0)), 2) AS TP_DESPUES
 FROM "TEST_JUNIO_2026"."TMP_BAK_CORRUGADO_20261123" B
-JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionCorrugado" T ON T."ID_REGISTRO" = B."ID_REGISTRO"
+JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionCorrugado" T ON T."ID_REGISTRO" = B."ID_REGISTRO";
 -- @@
 -- ============================================================
 -- INY: saneamiento de OTMC + horas de paro + derivados (opcion B)
@@ -367,7 +369,7 @@ JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionCorrugado" T ON T."ID_REG
 CREATE COLUMN TABLE "TEST_JUNIO_2026"."TMP_BAK_INY_20261123" AS (
     SELECT * FROM "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionINY"
     WHERE IFNULL("ESTATUS",'A') = 'A' AND TO_NVARCHAR("OTMC") LIKE '%OTMC-%'
-)
+);
 -- @@
 
 -- (2) Stage: nuevos OTMC/horas/derivados por fila afectada
@@ -429,7 +431,7 @@ CREATE COLUMN TABLE "TEST_JUNIO_2026"."TMP_STAGE_INY_20261123" AS (
             GROUP BY P."ID_REGISTRO"
         ) AGG ON AGG."ID_REGISTRO" = AF."ID_REGISTRO"
     ) X
-)
+);
 -- @@
 
 -- (3) Aplicar cambios y refrescar el token de concurrencia
@@ -446,7 +448,7 @@ WHEN MATCHED THEN UPDATE SET
     "PORCENTAJE_EFICIENCIA_PRODUCTO" = S."NUEVO_REND",
     "PORCENTAJE_DISPONIBILIDAD" = S."NUEVO_DISP",
     "PORCENTAJE_OEE" = S."NUEVO_OEE",
-    "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP
+    "FECHA_ACTUALIZACION" = CURRENT_TIMESTAMP;
 -- @@
 
 -- (4) Verificacion fila por fila
@@ -457,7 +459,7 @@ SELECT T."ID_REGISTRO", T."FECHA", T."LINEA",
        IFNULL(B."PORCENTAJE_OEE",0) AS OEE_ANTES, IFNULL(T."PORCENTAJE_OEE",0) AS OEE_DESPUES
 FROM "TEST_JUNIO_2026"."TMP_BAK_INY_20261123" B
 JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionINY" T ON T."ID_REGISTRO" = B."ID_REGISTRO"
-ORDER BY T."ID_REGISTRO"
+ORDER BY T."ID_REGISTRO";
 -- @@
 
 -- (5) Resumen del proceso
@@ -467,6 +469,5 @@ SELECT COUNT(*) AS FILAS_SANEADAS,
        ROUND(SUM(IFNULL(B."TIEMPO_PRODUCTIVO",0)), 2) AS TP_ANTES,
        ROUND(SUM(IFNULL(T."TIEMPO_PRODUCTIVO",0)), 2) AS TP_DESPUES
 FROM "TEST_JUNIO_2026"."TMP_BAK_INY_20261123" B
-JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionINY" T ON T."ID_REGISTRO" = B."ID_REGISTRO"
-
+JOIN "TEST_JUNIO_2026"."PdxMTTOTiemposMuertosProduccionINY" T ON T."ID_REGISTRO" = B."ID_REGISTRO";
 
