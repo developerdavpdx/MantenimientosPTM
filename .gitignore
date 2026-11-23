@@ -67,3 +67,6 @@ graphify-out/
 
 # Archivos temporales de Playwright MCP
 .playwright-mcp/
+
+# Carpeta local de migracion rapida (bandeja de JS pendientes de copiar al servidor)
+SCRIPTJS_MIGRACION_RAPIDA/
