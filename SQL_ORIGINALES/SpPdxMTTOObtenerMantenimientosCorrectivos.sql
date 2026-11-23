@@ -206,6 +206,9 @@ BEGIN
         AND (:P_FILTRO_ORDEN IS NULL OR MCG."NUMERO_ORDEN" = :P_FILTRO_ORDEN)
         AND (:P_FILTRO_PLANTA IS NULL OR E."PLANTA" = :P_FILTRO_PLANTA)
         AND (:P_LINEA_PROD IS NULL OR LE."PRODUCCION" = :P_LINEA_PROD)
+        -- Bitacora de Produccion: solo sincronizar OTs donde el equipo estuvo detenido.
+        -- P_LINEA_PROD se envia con 1 unicamente en consultas desde bitacoras.
+        AND (:P_LINEA_PROD IS NULL OR IFNULL(OT."MAQUINA_DETENIDA", 0) = 1)
         AND (
             :P_FILTRO_ESTATUS IS NULL
             OR LOCATE(:P_FILTRO_ESTATUS, CAST(MCG."ESTATUS" AS NVARCHAR)) > 0
