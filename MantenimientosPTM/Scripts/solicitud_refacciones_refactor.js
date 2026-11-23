@@ -365,6 +365,18 @@ class SolicitudRefaccionesApp {
                 nombre: objDepSucursal?.Nombre || ''
             };
 
+            // Solicitante sin centro de costos en SAP: avisar y forzar eleccion manual.
+            // Antes el select de Departamento quedaba en la primera opcion y la salida
+            // se enviaba con ese centro, que SAP rechazaba como invalido.
+            if (!this.solicitudManager.datosUsuarioSalida.dept) {
+                AlertManager.mostrar(
+                    'El solicitante no tiene centro de costos (departamento) asignado en SAP. ' +
+                    'Seleccione uno valido en la columna "Depto." antes de guardar la salida; ' +
+                    'de lo contrario SAP rechazara el documento.',
+                    'warning'
+                );
+            }
+
             // Renderizar tabla
             this.solicitudManager.renderTablaArticulosSalida(articulos, salidas);
 
@@ -602,14 +614,35 @@ class SolicitudRefaccionesApp {
                     return;
                 }
 
+                // Ninguna dimension de costeo puede ir vacia: SAP rechaza el documento
+                // con "centro de costos invalido" (caso real: solicitante sin dept asignado).
+                const Departamento = ($fila.find('.departamento').val() || '').trim();
+                const Proceso = ($fila.find('.proceso').val() || '').trim();
+                const Gastos = ($fila.find('.gastos').val() || '').trim();
+                const Cedis = ($fila.find('.cedis').val() || '').trim();
+
+                const faltante = [['Departamento', Departamento], ['Proceso', Proceso], ['Gastos', Gastos], ['Cedis', Cedis]]
+                    .find(par => !par[1]);
+
+                if (faltante) {
+                    AlertManager.mostrar(
+                        `No se puede guardar la salida: falta seleccionar el centro de costos "${faltante[0]}" en la fila de ${$chk.data('codigo') || 'un articulo'}. ` +
+                        'Verifique que el solicitante tenga departamento asignado en SAP o elijalo manualmente.',
+                        'warning'
+                    );
+                    $btn.prop('disabled', false).html('<i class="bi bi-save me-2"></i>Guardar');
+                    articulosValidos = false;
+                    return;
+                }
+
                 articulosSeleccionados.push({
                     IdSolicitud: $chk.data('idsolicitud'),
                     ItemCode: $chk.data('codigo'),
                     Cantidad: Cantidad,
-                    Departamento: $fila.find('.departamento').val(),
-                    Proceso: $fila.find('.proceso').val(),
-                    Gastos: $fila.find('.gastos').val(),
-                    Cedis: $fila.find('.cedis').val(),
+                    Departamento: Departamento,
+                    Proceso: Proceso,
+                    Gastos: Gastos,
+                    Cedis: Cedis,
                     AddAlm: $chk.data('addalm')
                 });
 
@@ -1647,7 +1680,11 @@ class SolicitudManager {
         const nombreEmpleado = this.datosUsuarioSalida.nombre || '';
 
         // ✅ Obtener opciones de selects
-        const departamentosHtml = this.buildOptions(this.ListDepartamentos, 'PrcCode', dept);
+        // Sin dept del solicitante se antepone una opcion vacia para forzar la
+        // eleccion manual; antes el navegador preseleccionaba la primera opcion
+        // y la salida se enviaba con ese centro de costos.
+        const placeholderDept = dept ? '' : '<option value="" selected disabled>— Elija el centro de costos —</option>';
+        const departamentosHtml = placeholderDept + this.buildOptions(this.ListDepartamentos, 'PrcCode', dept);
         const procesosHtml = this.buildOptions(this.ListProcesos, 'PrcCode', 'PPVC');
         const gastosHtml = this.buildOptions(this.ListGastos, 'PrcCode', 'GIF');
         const cedisHtml = this.buildOptions(this.ListCedis, 'PrcCode', this.datos_usuario[0].PLANTA == "1" ? 'CCOR' : 'PLANTA2');
@@ -3768,6 +3805,7 @@ $(document).ready(function () {
 
 
 });
+
 
 
 
