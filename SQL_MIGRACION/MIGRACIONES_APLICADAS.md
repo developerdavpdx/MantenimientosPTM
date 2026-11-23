@@ -1,6 +1,6 @@
 ﻿# Bitácora de migraciones aplicadas
 
-Última actualización: 17/11/2026
+Última actualización: 23/11/2026
 Responsable de la reorganización: sesión OpenCode
 Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/validación en el ambiente correspondiente.
 
@@ -39,8 +39,31 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 18/11/2026 | DBADMIN | Métricas OEE: cumplimiento PM con las 3 firmas | Aplicado/validado | 4 SP `SpPdxMTTOMetricasOEE_*`; el numerador solo cuenta PM cerrados con 3 firmas. `APLICADOS/DBADMIN/METRICAS/20261118_METRICAS_OEE_CUMPLIMIENTO_PM_3_FIRMAS_DBADMIN.sql` |
 | 18/11/2026 | TEST_JUNIO_2026 | Metricas OEE: cumplimiento PM con las 3 firmas | Aplicado/validado | 4 ALTER PROCEDURE aplicados el 18/11/2026. `APLICADOS/TEST_JUNIO_2026/METRICAS/` |
 | 18/11/2026 | PTM_2022_FINAL | Metricas OEE: cumplimiento PM con las 3 firmas | Aplicado/validado | 4 ALTER PROCEDURE aplicados el 18/11/2026. `APLICADOS/PTM_2022_FINAL/METRICAS/` |
+| 23/11/2026 | DBADMIN | Correctivos: bitácoras excluyen OTs con máquina operando | Aplicado/validado en portal | `P_LINEA_PROD=1` requiere `MAQUINA_DETENIDA=1`; la pantalla Correctivos no cambia. `APLICADOS/DBADMIN/CORRECTIVOS/20261123_CORRECTIVOS_SOLO_MAQUINA_DETENIDA_DBADMIN.sql` |
+| 23/11/2026 | DBADMIN | Métricas: N° de paradas no cuenta filas con 0 horas y clasificación NULL | Aplicado/validado en portal | Rama `P_CLASIFICACION IS NULL` en los 4 SPs; solo cambia el conteo, no horas/OEE. `APLICADOS/DBADMIN/METRICAS/20261123_METRICAS_NPARADAS_NULL_DBADMIN.sql` |
+| 23/11/2026 | DBADMIN | Saneamiento de bitácoras (Fix 3 opción B) | Aplicado/validado en portal | Filas con OTs sin paro quedan con OTMC NULL; horas recalculadas inicio→fin técnico; derivados recalculados. Rollback en `TMP_BAK_*_20261123`. `APLICADOS/DBADMIN/PRODUCCION/20261123_SANEAMIENTO_BITACORAS_OTMC_MAQUINA_DETENIDA_DBADMIN.sql` |
 
 ## Detalle de los cambios clave
+
+### Correctivos - filtrar OTs sin paro al alimentar bitácoras (2026-11-23)
+- El SP `SpPdxMTTOObtenerMantenimientosCorrectivos` ahora requiere `OT.MAQUINA_DETENIDA = 1` cuando `P_LINEA_PROD` no es NULL. El controller manda `P_LINEA_PROD = 1` solo para llamadas desde bitácoras.
+- La consulta de la pantalla de Correctivos manda `P_LINEA_PROD = NULL`, por lo que conserva las OTs donde la máquina operó normalmente.
+- DBADMIN: aplicado y validado desde el portal (la OT QA con `MAQUINA_DETENIDA=0` no entra a bitácora; la de `=1` sí; la pantalla normal sigue mostrando la OT sin paro). Seeds temporales limpiados.
+- Para TEST/PTM: paquetes `PENDIENTES/<schema>/CORRECTIVOS/20261123_CORRECTIVOS_SOLO_MAQUINA_DETENIDA_<schema>.sql`. PTM_2022_FINAL no es accesible desde este host.
+
+### Métricas - N° de paradas sin horas no cuenta (2026-11-23)
+- Los 4 SPs `SpPdxMTTOMetricasOEE_*` agregaron la rama `WHEN :P_CLASIFICACION IS NULL AND (suma de horas de paro) = 0 THEN 0` en el CASE de `N_OTMC`. Antes, con "Todas las clasificaciones", el ELSE contaba todas las `OTMC-` del string aunque la fila tuviera 0 horas (caso OTMC-113/OTMC-037).
+- Solo cambia el conteo: horas de paro, OEE y disponibilidad no se tocan.
+- Validación funcional: dos filas sembradas (0.00 h y 0.75 h) en PVC 21/11 → antes 2 paradas / MTTR 0.38 / MTBF 7.63; después 1 parada / MTTR 0.75 / MTBF 15.25. `CALL` a los 4 SPs OK; `MANTENIMIENTO` → 1 y `HERRAMENTALES` → 0 (ramas previas intactas). Seeds limpiados.
+- Para TEST/PTM: paquetes `PENDIENTES/<schema>/METRICAS/20261123_METRICAS_NPARADAS_NULL_<schema>.sql`.
+- Pendiente conocido: filas históricas con horas > 0 provenientes de OTs que no pararon (p. ej. 21.55 h) siguen contando 1 parada; eso lo resuelve el saneamiento (Fix 3).
+
+### Saneamiento de bitácoras - Fix 3 opción B (2026-11-23)
+- Reescribió `OTMC`/horas de paro/derivados de las filas con OTMC en las 4 tablas: se conservan solo las OTs con `MAQUINA_DETENIDA = 1` (las sin paro y las órdenes sin fila de OT quedan fuera); horas con el criterio nuevo inicio→fin técnico; `TIEMPO_PRODUCTIVO`, `KG_NETOS_HR_REALES`, `Rendimiento`, `EficienciaProducto`, `Disponibilidad` y `OEE` recalculados con las fórmulas del front. `FECHA_ACTUALIZACION` refrescada para invalidar tokens viejos.
+- **INY usa `PORCENTAJE_DISPONIBILIDAD`** (invertido respecto a `DISPONIBILIDAD_PORCENTAJE` de las otras 3 tablas), igual que su mapeo en `produccion_iny_refactor.js`.
+- Resultado DBADMIN: PVC 10 filas saneadas, horas de paro 71.87 → 2.59 (solo OTMC-001 y OTMC-017); PeadLiso 1 fila (0.20→0); Corrugado 1 fila (0.13→0); INY 0 filas. Métricas P1 noviembre en portal: paradas 13→2, T. inactividad 72.5→2.89 h (2.59 de OTs + 0.30 de una captura manual legítima sin OT, que se respeta), MTTR 5.58→1.45, MTBF 238.95→1587.96. OEE sin cambio en DBADMIN porque las filas saneadas no tenían producción; en PTM (filas mixtas) el OEE histórico sí se moverá — es el objetivo de la opción B.
+- Rollback: filas en `TMP_BAK_{PVC|PEADLISO|CORRUGADO|INY}_20261123` (se conservan).
+- Para TEST/PTM: `PENDIENTES/<schema>/PRODUCCION/20261123_SANEAMIENTO_BITACORAS_OTMC_MAQUINA_DETENIDA_<schema>.sql` (MERGE INTO + CREATE ... AS (SELECT)). En on-premise ejecutar completo tras el respaldo de tablas/SPs.
 
 ### 1. Columna `TIEMPO_MUERTO_HERRAMENTALES`
 - Tabla: `PdxMTTOTiemposMuertosProduccionCorrugado`

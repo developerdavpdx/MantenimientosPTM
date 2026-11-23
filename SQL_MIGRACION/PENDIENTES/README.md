@@ -24,9 +24,14 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 - **Verificacion de SPs faltantes:** `../VERIFICACION/CHECK_SP_FALTANTES.sql` lista,
   por schema, los SPs que el codigo referencia y no existen.
 
-## Contenido actual
+## Pendiente 2026-11-23 - Correctivos/Métricas/Bitácoras: aplicar en TEST y PTM
 
-**Ninguno.** Todo esta aplicado y movido a `../APLICADOS/`.
+- DBADMIN: los tres cambios aplicados y probados funcionalmente en portal (filtro de bitácora, conteo de paradas y saneamiento).
+- TEST_JUNIO_2026 y PTM_2022_FINAL: falta aplicar en cada ambiente, en este orden:
+  1. `CORRECTIVOS/20261123_CORRECTIVOS_SOLO_MAQUINA_DETENIDA_<schema>.sql` (SP de consulta).
+  2. `METRICAS/20261123_METRICAS_NPARADAS_NULL_<schema>.sql` (4 SPs de métricas).
+  3. Respaldar tablas de bitácoras + SPs y luego `PRODUCCION/20261123_SANEAMIENTO_BITACORAS_OTMC_MAQUINA_DETENIDA_<schema>.sql` (saneamiento; crea `TMP_BAK_*` locales como rollback adicional).
+- No publicar el cambio completo hasta aplicar/verificar los SPs en sus respectivos ambientes.
 
 > El SP `SpPdxMTTOBuscarArticulosBatch` se agrego a TEST_JUNIO_2026 el 2026-11-19
 > y quedo en `../APLICADOS/TEST_JUNIO_2026/PRODUCCION/`. Con eso los 3 esquemas

@@ -2065,6 +2065,42 @@ Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo le
 
 **Resumen funcional entregado al usuario** (para reenviar): el administrador corrige horas, cierre, texto y scrap mientras falte una firma; en Preventivos con el botón **"Solo actualizar datos"** (no firma ni cambia estatus) y **"Finalizar"** intacto; cada quien registra solo su firma, por lo que las firmas existentes nunca se pierden; con todas las firmas la OT queda bloqueada; mismas validaciones de horas dentro del modal.
 
+---
+
+## 36. Sesión 23/11/2026 — Tiempos muertos: paradas reales en bitácoras y métricas
+
+**Estado:** implementado, probado en portal y **aprobado por QA** en `DBADMIN`. Paquetes listos para `TEST_JUNIO_2026` y `PTM_2022_FINAL` (el usuario ya tiene respaldos del on-premise: tablas + SPs). Commits y push al cierre de esta sesión (rama `david_reyes`).
+
+**Problema (reportado en producción):** el KPI **"N° de paradas"** de Métricas contaba OTs correctivas donde la máquina operó normalmente (caso `OTMC-113`, "El equipo operó normalmente" pero contaba como parada). Medición en PTM: 32 OTs en bitácora PVC, **solo 3** con `MAQUINA_DETENIDA = 1`.
+
+**Causas raíz encontradas (4):**
+1. La bitácora agregaba **todas** las OTs correctivas cerradas y sumaba `HORA_APERTURA → HORA_FIN` como tiempo muerto (PeadLiso/INY/Corrugado usaban `HORA_CIERRE_MAN`). El registro puede ser posterior al fin del trabajo → 0 h o duraciones absurdas (21-24 h).
+2. `GlobalUtil.calcularDiferenciaHoras` devolvía el string `"H.MM"` y los consumidores hacían `Number("0.30") = 0.3` (18 min por 30).
+3. El KPI contaba todas las `OTMC-` del string JSON con clasificación "Todas" (`P_CLASIFICACION = NULL`), aunque la fila tuviera 0 horas.
+4. Doble etiqueta: listado "En proceso de firmas" vs carátula "Cerrado" en la misma OT.
+
+**Cambios (JS, sin DLL):**
+- Helper → horas decimales reales; los 4 procesos calculan `HoraInicio técnico → HoraFin técnico` (fallback a apertura).
+- Carátula de Correctivos: TM/TR alineados al mismo criterio + estado derivado **"En proceso de firmas (falta supervisor)"** cuando `ESTATUS=4` y `OrdenTrabajoFinalizada='NO'` (el botón ahora viaja con `data-ordenfinalizada`); "Cerrado" solo con las 2 firmas.
+- INY: carga de líneas sin datos → `console.warn` + blindaje de `listaLineas`.
+
+**Cambios (BD, aplicados en `DBADMIN`):**
+- `SpPdxMTTOObtenerMantenimientosCorrectivos`: con `P_LINEA_PROD = 1` (llamadas de bitácora) exige `MAQUINA_DETENIDA = 1`. La pantalla de Correctivos no cambia.
+- 4 SPs `SpPdxMTTOMetricasOEE_*`: rama `P_CLASIFICACION IS NULL` — filas sin horas de paro no cuentan paradas.
+- **Saneamiento (opción B)** de las 4 tablas de bitácora: `OTMC` solo con OTs con paro, horas recalculadas, derivados y OEE recalculados con las fórmulas del front, `FECHA_ACTUALIZACION` refrescada (invalida tokens viejos). ⚠️ **INY usa `PORCENTAJE_DISPONIBILIDAD`** (invertido respecto a `DISPONIBILIDAD_PORCENTAJE` de las otras 3 tablas).
+
+**Pruebas:** helper en Node (0.50 h); portal con `OTMC-900` (apertura 01:24, inicio 00:00, fin 00:30) → bitácora guardó 0.50 y carátula TM 0.50; Fix 1: la OT sin paro no entra a bitácora pero sí al listado; Fix 2: Métricas 2→1 parada con semillas; saneo: PVC horas 71.87→2.59, Métricas P1 noviembre **13→2 paradas**, T. inactividad 72.5→2.89 h (incluye 0.30 de una captura manual legítima), MTTR 5.58→1.45, MTBF 238.95→1587.96. **QA (subagente qa-explorador): APROBADO** — 4 cambios verificados en los 4 procesos, con casos discriminantes (11/11 `recordsTotal=0` porque OTMC-017 ya estaba sincronizada; 12/11 solo OTMC-026).
+
+**Artefactos:** `APLICADOS/DBADMIN/{CORRECTIVOS,METRICAS,PRODUCCION}/20261123_*.sql` + `PENDIENTES/{TEST_JUNIO_2026,PTM_2022_FINAL}/{CORRECTIVOS,METRICAS,PRODUCCION}/20261123_*.sql` (orden de aplicación en `PENDIENTES/README.md`). Rollback DBADMIN: `TMP_BAK_{PVC|PEADLISO|CORRUGADO|INY}_20261123` (se conservan).
+
+**Reglas nuevas (AGENTS.md):** bitácoras solo incorporan OTs con `MAQUINA_DETENIDA=1`; N° de paradas solo filas con horas de paro; tiempo muerto correctivo = inicio→fin técnico; etiqueta de estado derivada igual en listado y carátula.
+
+**Pendientes:**
+1. Aplicar los 3 paquetes SQL en TEST (8081) y PTM (8083) y publicar los 6 JS (mismo pase; **sin DLL**). Prueba de humo: bitácora del 23/11 sin el correctivo de OTMC-113; Métricas nov ≈ 3 paradas PVC; carátula de una OT sin firma superviso; INY con usuario P1 sin `[ERROR]` en consola.
+2. Observaciones QA abiertas: OEE 134.65 % en P2 (Rendimiento > 100 %, revisar capacidades `@PDX_CAPPROD`); PNGs de firmas 404 (omitido: ambiente, no código); **Preventivos tiene el mismo patrón de doble etiqueta** (decidir el texto derivado con 3 firmas).
+3. Los KPI históricos cambiarán al aplicar el saneo en cada ambiente (es el objetivo).
+
+
 
 
 

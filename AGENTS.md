@@ -106,8 +106,10 @@
 - **Solo se envía al servidor la firma del rol que guarda.** Las demás viajan vacías para que el SP conserve su PNG (si se reenviaran, el servidor las recodificaría). Aplica a Correctivos y Preventivos (`_firmaSoloDelRol`).
 - **Si "Máquina detenida" está encendido** al cerrar, se genera un **paro `COR-xx`** (`TIPO_PARO = CORRECTIVO`) en `PdxMTTOTParoProduccion`.
 - **Si está apagado**, no debería generar paro.
+- **Bitácoras de tiempos muertos** solo incorporan OTs correctivas con `MAQUINA_DETENIDA = 1`. La búsqueda común distingue la llamada de bitácora por `P_LINEA_PROD = 1`; las pantallas de Correctivos no aplican ese filtro y siguen mostrando todas las OTs.
 - La hora de cierre se toma del **reloj del servidor** (decisión de negocio); la hora capturada por el técnico puede diferir del `TIEMPO INVERTIDO`.
 - **Corrección del administrador:** con estatus 4 y `FIRMA_SUPERVISO` vacía, el administrador (`AdminMtto`/`Administrador`) puede editar **Hora Inicio/Fin, Hora Cierre OT, Texto de Secuencia y Scrap Real** y guardar con **"Guardar"**. No reenvía firmas: el SP conserva `FIRMA_REALIZO` y su PNG. Con `FIRMA_SUPERVISO = 'SI'` la OT queda **bloqueada** (solo lectura). El administrador **no firma** en Correctivos.
+- **Etiqueta de estatus (listado y carátula deben coincidir):** el listado y el modal muestran el **estado derivado**: con `ESTATUS = 4` y `OrdenTrabajoFinalizada = 'NO'` (falta la firma del supervisor) se muestra **"En proceso de firmas (falta supervisor)"**; **"Cerrado"** solo con las 2 firmas completas. El botón de la carátula viaja con `data-ordenfinalizada`.
 
 ### Tiempos Muertos / Bitácoras
 - El grid mezcla **dos tipos de fila**:
@@ -121,6 +123,7 @@
 
 ### Métricas (OEE)
 - **Cumplimiento PM** solo cuenta las MP cerradas con **las 3 firmas**.
+- **N° de paradas** cuenta solo filas de bitácora **con horas de paro**. Con clasificación "Todas" (`NULL`), una fila con `MTTO_CORRECTIVOS + HERRAMENTAL = 0` (o su equivalente `TIEMPO_MUERTO_*` según proceso) no aporta paradas; lo mismo aplicaba ya con los filtros por clasificación.
 - El **denominador** son las MP **liberadas** del periodo, no el total de equipos programados.
 - `HORAS_PARO` / **MTTR** dependen de la **bitácora de tiempos muertos guardada**, no solo del cierre de la OT: si no se guarda la bitácora, el indicador no se mueve.
 - La **planta** se toma de `sessionStorage.userData[0].PLANTA`, **no** del combo "Planta" (que es cosmético en este módulo).
