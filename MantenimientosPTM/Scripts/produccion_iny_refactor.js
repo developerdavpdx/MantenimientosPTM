@@ -702,7 +702,12 @@ class GestionProduccionINY extends GestionProduccionBase {
                 };
             }
 
-            const tiempoCalculado = Number(GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraCierreMan)) || 0;
+            // ✅ Tiempo muerto = Hora Inicio Técnico → Hora Fin Técnico.
+            //    No usar HORA_APERTURA (momento en que se registró la OT) ni
+            //    HORA_CIERRE_MAN: el técnico puede capturar la orden después de
+            //    terminar y el helper la recorta a 0. Si la OT no trae hora inicio
+            //    del técnico se usa la apertura como respaldo.
+            const tiempoCalculado = Number(GlobalUtil.calcularDiferenciaHoras(item.HoraInicio || item.HoraApertura, item.HoraFin)) || 0;
             grupos[clave].tiempoTotal += tiempoCalculado;
             grupos[clave].otmcList.push(item.NumeroOrden);
             grupos[clave].items.push(item);
@@ -2953,7 +2958,10 @@ class GestionProduccionINY extends GestionProduccionBase {
             );
             this.listaLineas = lineas;
         } catch (error) {
-            console.error(error);
+            // No es un error de la bitácora: plantas sin líneas de inyección
+            // (p. ej. cualquier usuario de planta 1) no tienen nada que cargar.
+            console.warn('No se pudieron cargar las líneas INY para la planta actual:', error?.message || error);
+            this.listaLineas = this.listaLineas || [];
         }
     }
 

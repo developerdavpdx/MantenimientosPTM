@@ -1583,6 +1583,7 @@ class MantenimientoManager {
 
             estatusorden: row.EstatusOrden,
             descestatusorden: row.DescEstatusOrden,
+            ordenfinalizada: row.OrdenTrabajoFinalizada,
             idmantenimiento: row.IdMantenimiento,
             token: row.TOKEN,
 
@@ -1889,7 +1890,15 @@ class MantenimientoManager {
             $('#NombreEquipo').val(data.nombreEquipo || '');
             $('#DescEquipo').val(data.descripcionEquipo || '');
             $('#TextoCorto').val(data.textoCorto || '');
-            $("#EstatusOrden").val(data.descEstatusOrden || '');
+            // ✅ Estado derivado, igual que el listado: una OT en estatus 4 cuyas
+            //    firmas no están completas (OrdenTrabajoFinalizada = 'NO') se
+            //    muestra como "En proceso de firmas (falta supervisor)" y no como
+            //    "Cerrado", que sugería que ya no se podía corregir.
+            let estatusOrdenMostrar = data.descEstatusOrden || '';
+            if (String(data.estatusOrden) === '4' && String(data.ordenTrabajoFinalizada).toUpperCase() === 'NO') {
+                estatusOrdenMostrar = 'En proceso de firmas (falta supervisor)';
+            }
+            $("#EstatusOrden").val(estatusOrdenMostrar);
 
             // Convierte "dd/MM/yyyy HH:mm[:ss]" o ISO -> "yyyy-MM-ddTHH:mm"
             const aDateTimeLocal = (texto) => {
@@ -2593,6 +2602,7 @@ class MantenimientoManager {
 
             estatusOrden: d.estatusorden,
             descEstatusOrden: d.descestatusorden,
+            ordenTrabajoFinalizada: d.ordenfinalizada || '',
             idMantenimiento: d.idmantenimiento,
             TOKEN: d.token,
 
@@ -3221,14 +3231,16 @@ class MantenimientoManager {
         let teTexto = formatoHoras(TE);
         $('#TiempoEspera').val(teTexto === 'N/A' ? 'N/A' : teTexto + ' HRS');
 
-        // Tiempo reparación
-        let TR = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraFinTrabajo);
+        // Tiempo reparación: mismo criterio que el tiempo muerto (trabajo del técnico).
+        // Con apertura→fin daba 0 cuando la OT se registró después de terminar.
+        let TR = GlobalUtil.calcularDiferenciaHoras(HoraInicioTrabajo || HoraAperturaOT, HoraFinTrabajo);
         let trTexto = formatoHoras(TR);
         $('#TiempoReparacion').val(trTexto === 'N/A' ? 'N/A' : trTexto + ' HRS');
 
-        // Tiempo muerto
+        // Tiempo muerto: arranca cuando el técnico inicia el trabajo, no cuando
+        // se registró la OT (la captura puede ser posterior al fin del trabajo).
         if (MaquinaDetenida) {
-            let TM = GlobalUtil.calcularDiferenciaHoras(HoraAperturaOT, HoraFinTrabajo);
+            let TM = GlobalUtil.calcularDiferenciaHoras(HoraInicioTrabajo || HoraAperturaOT, HoraFinTrabajo);
             let tmTexto = formatoHoras(TM);
             $('#TiempoMuerto').val(tmTexto === 'N/A' ? 'N/A' : tmTexto + ' HRS');
         }

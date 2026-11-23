@@ -2141,7 +2141,11 @@ class GlobalUtil {
         const horas = Math.floor(diferencia / 60);
         const minutos = diferencia % 60;
 
-        return `${horas}.${String(minutos).padStart(2, '0')}`;
+        // ✅ Se devuelve el total en HORAS DECIMALES (0.5 = 30 min, 1.8 = 1 h 48 min).
+        //    Antes se devolvía un string "H.MM" y los consumidores hacían Number(...),
+        //    por lo que "0.30" se interpretaba como 0.3 h (18 min) en vez de 0.5 h.
+        //    El formateo de presentación es responsabilidad de cada pantalla.
+        return Math.round((horas + minutos / 60) * 10000) / 10000;
     }
 
 }

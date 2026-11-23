@@ -769,8 +769,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
                 };
             }
 
-            // ✅ IMPORTANTE: Convertir a número para evitar concatenación de strings
-            const tiempoCalculado = Number(GlobalUtil.calcularDiferenciaHoras(item.HoraApertura, item.HoraFin)) || 0;
+            // ✅ Tiempo muerto = Hora Inicio Técnico → Hora Fin Técnico.
+            //    No usar HORA_APERTURA (momento en que se registró la OT): el técnico
+            //    puede capturar la orden después de terminar y el helper la recorta a 0.
+            //    Si la OT no trae hora inicio del técnico se usa la apertura como respaldo.
+            const tiempoCalculado = Number(GlobalUtil.calcularDiferenciaHoras(item.HoraInicio || item.HoraApertura, item.HoraFin)) || 0;
             grupos[clave].tiempoTotal += tiempoCalculado;
             grupos[clave].otmcList.push(item.NumeroOrden);
             grupos[clave].items.push(item);
