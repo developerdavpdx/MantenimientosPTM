@@ -1,4 +1,4 @@
-# Contexto de sesión — MantenimientosPTM
+﻿# Contexto de sesión — MantenimientosPTM
 
 **Fecha:** 18/11/2026  
 **Repositorio:** `C:\Paradox\DEVELOPMENT\MantenimientosPTM`
@@ -2095,10 +2095,12 @@ Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo le
 
 **Reglas nuevas (AGENTS.md):** bitácoras solo incorporan OTs con `MAQUINA_DETENIDA=1`; N° de paradas solo filas con horas de paro; tiempo muerto correctivo = inicio→fin técnico; etiqueta de estado derivada igual en listado y carátula.
 
+**Despliegue cerrado (23/11, commits e02c571 → d154762):** los 3 paquetes SQL aplicados y los 6 JS publicados en TEST (8081) y PTM (8083), tras respaldo de tablas+SPs del on-premise; scripts movidos a `APLICADOS/<schema>/`. Validación funcional completa en TEST: endpoint solo devolvió OTMC-012 (con paro), acumulado 15.3667 h decimales, carátula con estado derivado, INY sin `[ERROR]`, Métricas 0 paradas (coherente: sin OTs con paro guardadas). **Verificación de PTM en lectura:** Métricas P2 noviembre **18 → 0 paradas** y **127.47 → 38 h** de inactividad; bitácora del 23/11 sin OTMC-113 y endpoint de pendientes en 0; carátula OTMC-001 con `data-ordenfinalizada` y TM=TR=0.80 HRS; INY P1 sin `[ERROR]`. El "0 paradas" es correcto: las 18 de la captura original eran OTs sin paro; las OTs con paro real contarán cuando producción las sincronice a bitácora. Las 38 h restantes son capturas manuales legítimas (paros sin OT).
+
 **Pendientes:**
-1. Aplicar los 3 paquetes SQL en TEST (8081) y PTM (8083) y publicar los 6 JS (mismo pase; **sin DLL**). Prueba de humo: bitácora del 23/11 sin el correctivo de OTMC-113; Métricas nov ≈ 3 paradas PVC; carátula de una OT sin firma superviso; INY con usuario P1 sin `[ERROR]` en consola.
-2. Observaciones QA abiertas: OEE 134.65 % en P2 (Rendimiento > 100 %, revisar capacidades `@PDX_CAPPROD`); PNGs de firmas 404 (omitido: ambiente, no código); **Preventivos tiene el mismo patrón de doble etiqueta** (decidir el texto derivado con 3 firmas).
-3. Los KPI históricos cambiarán al aplicar el saneo en cada ambiente (es el objetivo).
+1. Observaciones abiertas: OEE 134.65 % en P2 de TEST (Rendimiento > 100 %, revisar capacidades `@PDX_CAPPROD`); PNGs de firmas 404 (omitido: ambiente, no código); **Preventivos tiene el mismo patrón de doble etiqueta** (decidir el texto derivado con 3 firmas); menor: `OnboardingTour._positionSpotlight` lanza TypeError si el tour se cierra antes de posicionarse (visto en 8083).
+2. Con negocio: **transforms de `Web.config` por ambiente** (`Web.Test.config` / `Web.Prod.config`) + sello del login por `appSetting`, para eliminar la edición manual de cadenas al publicar.
+
 
 
 
