@@ -1,4 +1,4 @@
-# Reglas del proyecto — MantenimientosPTM
+﻿# Reglas del proyecto — MantenimientosPTM
 
 ## Pruebas funcionales
 
@@ -132,7 +132,9 @@
 ### Almacén
 - Las refacciones solicitadas desde una OT se consultan en **Almacén → Solicitud de Refacciones**, no dentro de la OT.
 - El modal **"Cambiar Refacción"** (`#solicitarRefAlmModal`) es una acción **por fila** (`.btn-change-ref`): necesita registros cargados y se deshabilita si la refacción ya se surtió parcialmente.
+- **Salidas de mercancía — centros de costeo:** el guardado se **bloquea si falta alguna de las 4 dimensiones** (Departamento/Proceso/Gastos/Cedis); SAP rechaza el documento si viaja una vacía. El Departamento se preselecciona con el del **solicitante** (`SpPdxMTTOGetDepSucursal` por email; join `OUDP.Name = OPRC.PrcName`, hoy solo coinciden MANTENIMIENTO/HERRAMENTAL/CALIDAD — 20 de 23 departamentos resuelven NULL). Si el solicitante no tiene centro, el select arranca vacío con "— Elija el centro de costos —" y se elige a mano. Los dropdowns solo ofrecen centros **activos** (`SpPdxMTTOGetCostCenters` filtra `Active='Y'`). Proceso ('PPVC') y Gastos ('GIF') siguen preseleccionados fijos y Cedis por planta del conectado ('CCOR'/'PLANTA2') hasta que negocio defina el mapeo.
 - La búsqueda de artículos del módulo de refacciones incluye **REFACCIONES (104) + INSUMOS (102)**.
 
 ### Cómo mantener esta sección
 - Al cambiar una regla de negocio (flujo de firmas, cálculo de un KPI, origen de un dato), actualizar aquí en el mismo commit. **Esta sección es la que usan los agentes de QA para decidir si algo es un bug.**
+

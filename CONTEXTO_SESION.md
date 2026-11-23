@@ -2108,3 +2108,27 @@ Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo le
 
 
 
+
+---
+
+## 37. Sesión 23/11/2026 — Almacén: salidas rechazadas por "centro de costos inválido"
+
+**Reporte (producción):** al ejecutar una salida de mercancía (Almacén → Solicitud de Refacciones) SAP la rechazaba por centro de costos inválido. La usuaria pidió verificar si el centro iba vinculado al usuario solicitante.
+
+**Diagnóstico (4 causas):**
+1. `SpPdxMTTOGetDepSucursal` resuelve el PrcCode del solicitante con `OPRC.PrcName = OUDP.Name` (match por nombre, sin DimCode): solo MANTENIMIENTO/HERRAMENTAL/CALIDAD calzan; **20 de 23 departamentos devuelven NULL** (PRODUCCION PVC, SERVICIO TECNICO, MATERIALES, etc.).
+2. Con dept vacío, `buildOptions` no seleccionaba nada y el navegador mandaba la **primera opción** ('Centr_z') sin que nadie lo notara.
+3. `SpPdxMTTOGetCostCenters` no filtraba `Active='Y'` → el dropdown ofrecía centros deshabilitados (PPEA "CODIGO ERRONEO", dim 2).
+4. Proceso ('PPVC') y Gastos ('GIF') hardcodeados; Cedis preseleccionado por planta del conectado ('CCOR'/'PLANTA2'). `OHEM` no tiene UDFs de Proceso/Gastos.
+
+**Cambios:**
+- SP `SpPdxMTTOGetCostCenters`: solo `Active = 'Y'` (aplicado en DBADMIN; paquetes en `PENDIENTES/<schema>/ALMACEN/`).
+- `solicitud_refacciones_refactor.js`: aviso al abrir el modal si el solicitante no tiene dept; placeholder "— Elija el centro de costos —" en el select; el guardado se bloquea si falta cualquiera de las 4 dimensiones (0 POST a SAP).
+
+**Pruebas (portal, DBADMIN):** OTMC-033 (MANTENIMIENTO) → preselecciona DMAN y el dropdown de Proceso ya no lista PPEA; OTMC-028 con solicitante de MATERIALES (prestado temporalmente) → aviso + placeholder + **guardado bloqueado con mensaje claro y 0 POST al servidor**. Dato de prueba restaurado.
+
+**Pendientes:**
+1. Aplicar `PENDIENTES/<schema>/ALMACEN/20261123_ALMACEN_COSTCENTERS_ACTIVOS_<schema>.sql` en TEST/PTM y publicar el JS en el mismo pase.
+2. **Fondo (decisión de negocio/contabilidad):** mapear los 20 departamentos sin centro (dim 1) a PrcCodes válidos; definir de dónde salen Proceso (dim 2) y Gastos (dim 3) — OHEM no tiene esos datos. El Cedis por planta se mantiene como preselección porque la sucursal del empleado (OUBR: CORP, PII…) **no cuadra** con los centros dim 4 (CORPORATIVO, PLANTA 2 (P2)) ni por nombre ni por código → requiere mapeo explícito.
+3. Verificar en PTM al usuario de la falla:
+   `SELECT T0."email", T0."dept", T1."Name", T3."PrcCode" FROM "PTM_2022_FINAL"."OHEM" T0 LEFT JOIN "PTM_2022_FINAL"."OUDP" T1 ON T0."dept" = T1."Code" LEFT JOIN "PTM_2022_FINAL"."OPRC" T3 ON T3."PrcName" = T1."Name" WHERE T0."email" = '<correo del solicitante>';`
