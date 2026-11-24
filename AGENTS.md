@@ -9,7 +9,8 @@
   - Técnico de mantenimiento: `p1tecmantto1@ptm.com` / `12345` (planta 1) y `p2tecmantto1@ptm.com` / `12345` (planta 2)
   - Supervisor de producción: `hernandezmj@ptmexico.com`
   - Supervisor (planta 1): `gonzalezuc@ptmexico.com` / `12345`; (planta 2): `gualitosa@ptmexico.com` / `Ptm120625Z`
-  - El resto de las contraseñas de prueba están en `CONTEXTO_SESION.md` (§34.F). **Nunca** usar estas cuentas en producción.
+  - El resto de las contraseñas de prueba están en `CONTEXTO_SESION.md` (§34.F).
+- **Uso en producción:** estas cuentas **sí se pueden usar en `PTM_2022_FINAL` / producción SOLO en modo consulta** (navegar, filtrar, abrir modales y leer datos). **Nunca** ejecutar acciones que guarden, autoricen, firmen, cierren, eliminen o generen documentos en producción con ellas.
 - **Limpiar los datos de prueba** al terminar (filas de tiempos muertos, OTs, paros, etc.).
 - Para Tiempos Muertos, validar el ciclo completo cuando aplique:
   1. Generar/liberar la orden (correctivo o preventivo) con el rol correspondiente.
@@ -112,6 +113,17 @@
 - **Corrección del administrador:** con estatus 4 y `FIRMA_SUPERVISO` vacía, el administrador (`AdminMtto`/`Administrador`) puede editar **Hora Inicio/Fin, Hora Cierre OT, Texto de Secuencia y Scrap Real** y guardar con **"Guardar"**. No reenvía firmas: el SP conserva `FIRMA_REALIZO` y su PNG. Con `FIRMA_SUPERVISO = 'SI'` la OT queda **bloqueada** (solo lectura). El administrador **no firma** en Correctivos.
 - **Etiqueta de estatus (listado y carátula deben coincidir):** el listado y el modal muestran el **estado derivado**: con `ESTATUS = 4` y `OrdenTrabajoFinalizada = 'NO'` (falta la firma del supervisor) se muestra **"En proceso de firmas (falta supervisor)"**; **"Cerrado"** solo con las 2 firmas completas. El botón de la carátula viaja con `data-ordenfinalizada`.
 
+### Refacciones desde la OT (Preventivos y Correctivos)
+- En el modal **"Refacciones de la Orden de Trabajo"** las acciones **Autorizar**, **Rechazar** y **Cerrar solicitud** ya **no cierran el modal**: el botón de la fila cambia de estado (`Autorizada` / `Rechazada` / `Cerrada`) y se puede seguir con las demás refacciones de la misma OT. El usuario cierra con el botón **Cerrar**.
+- Antes cada acción cerraba el modal a los 2 s (había que volver a abrirlo desde el listado por cada refacción).
+- La autorización no toca la sesión: `POST /Almacen/AutorizarRefaccion` responde JSON y solo dispara el aviso SignalR a los demás roles.
+
+### Estatus de la OT y refacciones
+- Una OT pasa a **"En espera de refacción" (ESTATUS = 3)** cuando el técnico solicita refacciones y **regresa a "Liberado" (2)** cuando ya **no queda ninguna refacción que la bloquee**.
+- "Bloquea" = la solicitud **no** está `ELIMINADA` (cancelada por almacén) ni `Cerrada` (cancelada por el técnico) **y** además no está completamente surtida (salida ≥ solicitada), ni devuelta completa, ni con rechazo de devolución. Es el mismo criterio de `SpPdxMTTOGetBalanceOT`.
+- La liberación la decide el **servidor** (no el front): `SpPdxMTTOActualizarSolicitudRefaccion` y `SpPdxMTTOUpdateEstatusSolicitud` reevalúan la OT al terminar, y `SpPdxMTTOActualizaMC` / `SpPdxMTTOActualizaMP` **no dejan bajar a 2** si todavía hay refacciones bloqueantes. Por eso la antigua llamada del controller que forzaba `ESTATUS = 2` al cerrar una solicitud ya no puede liberar antes de tiempo.
+- Un paro/OT nunca debe quedar en 3 con todas sus refacciones resueltas: si pasa, es defecto (revisar el estatus de cada `PdxMTTOMPSolicitudRefacciones` de la OT).
+
 ### Tiempos Muertos / Bitácoras
 - El grid mezcla **dos tipos de fila**:
   - **MANUAL** — clave `M|planta|fecha|línea`: concentra las **OT** del día (correctivos y preventivos).
@@ -121,6 +133,15 @@
 - Los **paros manuales** (`PAR-xx`) sí llegan por `obtenerParosProduccionSS`.
 - El paro se captura en la **fila del producto/turno** que se detuvo; el total de la línea es la suma de sus filas.
 - **Guardar dos veces no debe duplicar**: mismo `CLAVE_SYNC` ⇒ actualiza el mismo registro.
+
+### Paros de Producción (reporte)
+- El combo **Planta** está **deshabilitado a propósito**: el reporte siempre envía la planta del usuario (`this.PLANTA`), no el valor del combo. El combo **Proceso** sí es filtro real.
+- El combo **Proceso** viaja como `FiltroArea` → `p_ID_AREA` y aplica a **las dos ramas** del SP `SpPdxMTTOObtenerParosProduccion`: paros manuales (`PAR.ID_AREA`) y paros de correctivo (`COR-xx`, por `PdxMTTOGestionEquipos.AREA` del equipo de la OT).
+- Para los `COR-xx` el proceso es el **área del equipo**, no el texto de la línea (varios equipos de `SERVICIOS`/`MEZCLADO` están capturados con `AREA = PVC` en `PdxMTTOGestionEquipos`).
+- **Solo líneas de producción:** el reporte no muestra filas cuya línea tenga `PdxMTTOLineasxPlanta.PRODUCCION = 0` (`SERVICIOS`, `MEZCLADO`, `CALIDAD`, `SILOS`, ...) **ni** las que se llamen `SERVICIOS*`, `CALIDAD*`, `MEZCLADO*`, `SILOS*`, `MOLINO*`, `FFCC*`, `OTROS*` o contengan `PRUEBA` (blindaje por si la bandera `PRODUCCION` está mal capturada). En planta 2 la línea `SERVICIOS` estaba con `PRODUCCION = 1` y se corrigió a 0 (24/11/2026). En la rama de correctivos es fijo (`LE.PRODUCCION = 1`); en la manual aplica **solo cuando llama el reporte** (`p_INCLUIR_CORRECTIVO = 'S'`), porque las bitácoras de tiempos muertos llaman con `NULL` y conservan su comportamiento.
+- **Duración de los `COR-xx`:** se calcula con la ventana del **técnico** (`PdxMTTOOrdenesTrabajoMC.HORA_INICIO` → `HORA_FIN`), no con `HORA_APERTURA` → `HORA_CIERRE` de la OT (esa incluye los días que la orden tardó en cerrarse). Si falta una de las dos horas del técnico se completa con la del sistema; si el fin queda antes del inicio se usa la ventana del sistema completa.
+- Los paros manuales (`PAR-xx`) se excluyen de la vista cuando ya están capturados en la bitácora del tipo de línea (`p_TIPO_LINEA`).
+- La bitácora de tiempos muertos **no se ve afectada** por el filtro: llama a `obtenerParosProduccionSS` con `FiltroIncluirCorrectivo = null`, por lo que la rama de correctivos no se ejecuta.
 
 ### Métricas (OEE)
 - **Cumplimiento PM** solo cuenta las MP cerradas con **las 3 firmas**.
@@ -138,6 +159,13 @@
 
 ### Cómo mantener esta sección
 - Al cambiar una regla de negocio (flujo de firmas, cálculo de un KPI, origen de un dato), actualizar aquí en el mismo commit. **Esta sección es la que usan los agentes de QA para decidir si algo es un bug.**
+
+
+
+
+
+
+
 
 
 

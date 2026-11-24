@@ -35,7 +35,7 @@
 - **Datos manuales OTMP-011:** insertados en `DBADMIN` en 5 tablas (ver sección 2.1).
 - **Git (12/11/2026):** `origin/david_reyes` en `386fa35`; hay commits locales pendientes de push (documentación y corrección de rutinas). **No hacer push sin autorización del usuario.**
 - **Datos de prueba:** se quedan en `DBADMIN` (NO migrar).
-- **Credenciales de prueba (solo DBADMIN):** `adminmantenimiento@ptmexico.com` / `AdminMTTO` (administrador de mantenimiento). No usar en TEST/PTM ni producción.
+- **Credenciales de prueba:** `adminmantenimiento@ptmexico.com` / `AdminMTTO` (administrador de mantenimiento). Se pueden usar en DBADMIN, TEST y **en producción solo en modo consulta** (leer/navegar, nunca guardar ni autorizar).
 - **Firmas de prueba:** fuera del índice de Git (`git rm --cached`), siguen en disco y `.gitignore` las excluye.
 - **Equipo BCP03:** restaurado a `FECHA_INICIO_MANT = 2026-01-01`.
 
@@ -1991,7 +1991,7 @@ Mejora de UX incluida (pendiente de 34.B): `validarRangoHoras` ahora manda sus a
 
 ### F. Credenciales de prueba (solo TEST_JUNIO_2026 / DBADMIN)
 
-> ⚠️ **Uso exclusivo en ambientes de prueba.** Nunca en `PTM_2022_FINAL` ni en producción.
+> ⚠️ **Uso en producción:** permitido **solo en modo consulta** (leer, filtrar, abrir modales sin guardar). Nunca ejecutar acciones que guarden, autoricen, firmen, cierren, eliminen o generen documentos en producción.
 
 **TEST_JUNIO_2026** — `http://129.80.97.150:8081` (IIS, sitio del portal)
 
@@ -2178,3 +2178,95 @@ Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo le
 **Pendiente:** publicar los 4 JS en TEST/PTM (sin SQL). Si negocio lo pide, sanear históricos que hoy tengan OTs sin firmas en bitácoras.
 
 **Ajuste 2 (misma sesión) — la bitácora no mostraba la OTMP ejecutada antes de su fecha reprogramada:** caso OTMP-107 (reprogramada al 09/11, ejecutada por el técnico el 05/11). Causa: el SP `SpPdxMTTOObtenerMantenimientosPorRango` devuelve las ocurrencias cuyo periodo programado/reprogramado **cubre** el rango (consultar un día dentro del mes trae todo el mes) y nunca la fecha de ejecución; además, sin filtro, se agregaban filas de otros días. Solución: (1) fecha de la fila = **HORA_FIN del técnico primero**; (2) filtro en el front que descarta las OTMP cuya fecha de fila cae fuera del rango; (3) `ALTER` del SP condicionado a `P_LINEA_PROD = 1` que incluye `CAST(OT.HORA_FIN AS DATE) BETWEEN :P_FECHA_INICIO AND :P_FECHA_FIN` (el listado de Preventivos y el Calendario no cambian). Pruebas con la tablaPVC limpia: 05/11 trae 7 OTMP (incluida 107) en una sola fila de 30.17 h; guardar dos veces deja una fila (`M|1|20261105|LÍNEA 15 PVC`); 09/11 no re-agrega preventivos y no crea fila con OTMP-107 (`FILAS_CON_107 = 1`, `EN_09NOV = 0`).
+
+---
+
+## 40. Sesion 24/11/2026 - Paros de Produccion: el filtro Proceso no aplicaba a los correctivos
+
+**Reporte del usuario:** con **Proceso = PVC** el reporte seguia mostrando paros `COR-xx` de otros procesos ("los filtros los sigue registrando y combinando").
+
+**Causa:** el SP `SpPdxMTTOObtenerParosProduccion` tiene dos ramas en `UNION ALL`. La de paros manuales ya filtraba por area (`PAR.ID_AREA = :p_ID_AREA`), pero la de correctivos (`PdxMTTOSolicitudMC` + `PdxMTTOMCGenerados`) solo filtraba planta, linea, fecha y estatus, y devolvia `CAST(NULL AS INT) AS ID_AREA`. El front (`paros_produccion_refactor.js`) siempre envio `FiltroArea = $("#FiltroProceso").val()`, asi que el problema era 100% del SP.
+
+**Cambio 1 - Proceso (solo rama de correctivos, sin tocar el front):**
+1. `AND (:p_ID_AREA IS NULL OR E.AREA = :p_ID_AREA)` — area del equipo de la OT.
+2. `E.AREA AS ID_AREA` (antes `CAST(NULL AS INT)`).
+
+**Cambio 2 - Solo lineas de produccion (segunda vuelta del usuario):**
+- Los `COR-xx` de equipos cuya linea es `SERVICIOS` / `MEZCLADO` seguian apareciendo porque su `AREA` en `PdxMTTOGestionEquipos` es `PVC`. Ahora la rama de correctivos exige `LE.PRODUCCION = 1` (bandera de `PdxMTTOLineasxPlanta`).
+- En la rama manual se agrego `AND (:p_INCLUIR_CORRECTIVO IS NULL OR LIN.PRODUCCION = 1)`: el reporte manda `'S'` y filtra; las bitacoras mandan `NULL` y no cambian.
+
+**Cambio 3 - Categorias del modal "Registrar Paro de Produccion" (REVERTIDO):**
+- Se apagaron (`STATUS = 0`) `CORRECTIVO` (29), `MANTENIMIENTO PREVENTIVO` (1) y `MTTO CORRECTIVOS` (8) porque las asigna el sistema desde las OTs.
+- **El usuario confirmo que tambien son categorias de produccion** y que se quedan como estaban: se reactivaron con `STATUS = 1`. Queda en `APLICADOS/DBADMIN/PRODUCCION/20261124_PAROS_CATEGORIAS_MANTENIMIENTO_REACTIVADAS_DBADMIN.sql`; el apagado se movio a `OBSOLETO/` y no se genero paquete para TEST/PTM.
+- Respaldo del estado previo: `PdxMTTOCategoriasParo_BAK_20261124` (borrada al cerrar el tema; las categorias quedaron con `STATUS = 1`).
+
+**Pruebas (portal, DBADMIN, Planta 1, 04-17/11/2026):**
+- Proceso **PVC** -> 24 filas (43 -> 39 con el filtro de area -> 24 al quitar SERVICIOS/MEZCLADO).
+- Proceso **PEAD LISO** -> 2 filas (`COR-44`, `COR-3`).
+- **Sin proceso** -> 28 filas.
+- **Linea 6 PVC + Proceso PVC** -> 6 filas, todas de `LINEA 6 PVC`.
+- Cambiar de filtro **no acumula** resultados del anterior.
+- Paros manuales `PAR-1` y `PAR-2` siguen visibles con su categoria (`CORRECTIVO`, `MTTO CORRECTIVOS`).
+- Modal: las 3 categorias (`CORRECTIVO`, `MANTENIMIENTO PREVENTIVO`, `MTTO CORRECTIVOS`) siguen disponibles (reactivadas).
+- Directo en BD con `p_ID_AREA = 1`: todas las filas devueltas tienen `ID_AREA = 1`.
+
+**Aplicado:** `APLICADOS/DBADMIN/PAROS/20261124_PAROS_FILTROS_Y_DURACION_TECNICO_DBADMIN.sql` (filtros Proceso + solo lineas de produccion + duracion con horas del tecnico) y `APLICADOS/DBADMIN/PRODUCCION/20261124_PAROS_CATEGORIAS_MANTENIMIENTO_REACTIVADAS_DBADMIN.sql`.
+
+**Pendiente:** aplicar en TEST_JUNIO_2026 y PTM_2022_FINAL (`PENDIENTES/<schema>/PAROS/20261124_PAROS_FILTROS_Y_DURACION_TECNICO_<schema>.sql`, con `SET SCHEMA` + `ALTER PROCEDURE`). Verificar antes en PTM que no haya COR con linea no productiva que negocio quiera conservar y revisar la duracion de las OT que solo tengan una de las dos horas del tecnico.
+
+
+
+
+---
+
+## 41. Sesion 24/11/2026 - Refacciones de la OT: no cerrar el modal al autorizar
+
+**Reporte del usuario:** al autorizar una refaccion el sistema "te saca" y hay que volver a entrar; con varias refacciones en la misma OT es muy incomodo. Aplica a **Preventivos y Correctivos**.
+
+**Causa:** en `mantenimientos_correctivos_refactor.js` y `mantenimientos_preventivos_refactor.js`, el `success` de `POST /Almacen/AutorizarRefaccion` hacia `setTimeout(2000) -> modal.hide()` sobre `#modalRefaccionesOT`. Lo mismo pasaba al rechazar y al "Cerrar solicitud". El endpoint responde JSON limpio y no toca la sesion (verificado con `Invoke-WebRequest`: 200 + `{"Status":"OK",...}`), y el aviso SignalR ignora al mismo rol, asi que el cierre era solo del front.
+
+**Cambio (solo JS, sin DLL):**
+- `Autorizar` y `Rechazar`: se quito el `setTimeout` que cerraba el modal.
+- `Cerrar solicitud`: ya no cierra el modal; solo refresca el DataTable de fondo.
+- El boton de la fila ya cambiaba a `Autorizada` / `Rechazada` / `Cerrada`, asi que el usuario ve el resultado y sigue con las demas.
+
+**Pruebas (portal, DBADMIN):**
+- Correctivos, `OTMC-021`: dos refacciones `Atendida`. Se autorizaron las dos seguidas y el modal siguio abierto (antes se cerraba a los 2 s). Datos de prueba revertidos (`ACEPTADA_MANTENIMIENTO = NULL` en los IDs 5 y 6).
+- Preventivos, `OTMP-157`: se autorizo una refaccion y el modal siguio abierto. Dato revertido (ID 21).
+- Sin errores de consola en ambas pantallas; el JS servido ya no trae el auto-cierre.
+
+**Pendiente:** publicar los 2 JS en TEST/PTM (copiados a `SCRIPTJS_MIGRACION_RAPIDA/<schema>/`).
+
+---
+
+## 42. Sesion 24/11/2026 - Refacciones: la OT debe regresar a Liberado al resolverse todas
+
+**Reporte del usuario:** `OTMC-072` se queda en **"En espera de refaccion" (ESTATUS 3)** aunque una refaccion se surtio (1) y la otra se cancelo. Deberia pasar a **Liberado (2)**. "Esto es en el servidor".
+
+**Causas encontradas:**
+1. `SpPdxMTTOGetBalanceOT` solo excluia `ELIMINADA`; una solicitud **`Cerrada`** (cancelada por el tecnico) seguia contando como bloqueante, asi que `OT_LIBERADA = 0`.
+2. La liberacion solo se ejecutaba despues de una **salida de mercancia** (`CrearSalidaMercancia` -> `GetBalanceOT` -> `UpdateStatusOT`). Si la ultima accion era cerrar/eliminar una refaccion, nadie reevaluaba.
+3. El endpoint que cierra la solicitud desde la OT (`Almacen/ActualizarSolicitudRefaccion`) forzaba `ESTATUS = 2` sin revisar pendientes (liberaba antes de tiempo).
+4. `mantenimientos_correctivos_refactor.js` mandaba `TipoMantenimiento: "Preventivo"` al cerrar la solicitud desde un correctivo, asi que el servidor actualizaba `PdxMTTOMPGenerados` con un ID de correctivo y no pasaba nada.
+
+**Solucion (5 SP en BD, sin DLL):**
+- `SpPdxMTTOGetBalanceOT`: `Cerrada`/`ELIMINADA` cuentan como liberadas (detalle y resumen).
+- `SpPdxMTTOActualizarSolicitudRefaccion`: al terminar cuenta los bloqueantes y libera la OT (solo si estaba en 3). Devuelve `ORDEN_TRABAJO` y `OT_LIBERADA` ademas de `PENDIENTES`/`ESTATUS_OT`.
+- `SpPdxMTTOUpdateEstatusSolicitud`: mismo reevaluado (cubre `Atendida`/`ELIMINADA`).
+- `SpPdxMTTOActualizaMC` y `SpPdxMTTOActualizaMP`: si piden `ESTATUS = 2` y quedan refacciones bloqueantes, conservan el estatus actual. Devuelven `REFACCIONES_BLOQUEAN`.
+- JS: `TipoMantenimiento: "Correctivo"` en el cierre de solicitud.
+
+**Criterio de bloqueo (igual al balance):** la solicitud no es `ELIMINADA` ni `Cerrada` y no esta completamente surtida (salida >= solicitada / devuelta completa / rechazo de devolucion).
+
+**Pruebas (portal, DBADMIN):** `OTMC-028` con 3 refacciones `Pendiente` y OT en 3:
+- Cerrar 1 -> la OT **sigue en 3**.
+- Cerrar las 3 -> la OT pasa a **2 (Liberado)**.
+- Datos restaurados (`Pendiente` en 26/27/28 y OT en 3). Tambien se autorizaron refacciones en `OTMC-021`/`OTMP-157` para la prueba del modal (revertidas).
+
+**Aplicado:** `APLICADOS/DBADMIN/ALMACEN/20261124_REFACCIONES_LIBERAR_OT_AL_RESOLVER_DBADMIN.sql`.
+
+**Historico:** los SP nuevos solo aplican a transiciones nuevas, asi que las OT que ya estaban atoradas en 3 se liberan con el barrido `APLICADOS/DBADMIN/ALMACEN/20261124_REFACCIONES_BARRIDO_OT_EN_ESPERA_DBADMIN.sql` (re-ejecutable, no toca 1/2/4). En DBADMIN no habia casos (las 6 OT en 3 tienen refacciones pendientes). Diagnostico por OT (ej. `OTMC-072`): `VERIFICACION/20261124_VERIF_REFACCIONES_ESTATUS_OT.sql`, columna `BLOQUEA`.
+
+**Pendiente:** aplicar en TEST_JUNIO_2026 y PTM_2022_FINAL (`PENDIENTES/<schema>/ALMACEN/20261124_REFACCIONES_LIBERAR_OT_AL_RESOLVER_<schema>.sql`, con `SET SCHEMA` + `ALTER PROCEDURE`) y publicar `mantenimientos_correctivos_refactor.js`.
+
+

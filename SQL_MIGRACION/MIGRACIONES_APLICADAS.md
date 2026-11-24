@@ -1,6 +1,6 @@
 ﻿# Bitácora de migraciones aplicadas
 
-Última actualización: 23/11/2026
+Última actualización: 24/11/2026
 Responsable de la reorganización: sesión OpenCode
 Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/validación en el ambiente correspondiente.
 
@@ -51,6 +51,13 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 | 23/11/2026 | DBADMIN | Almacén: dropdowns de centros de costos solo activos | Aplicado/validado en portal | `SpPdxMTTOGetCostCenters` filtra `Active = 'Y'` (antes ofrecía PPEA "CODIGO ERRONEO"). Junto con el JS que bloquea salidas sin las 4 dimensiones de costeo. `APLICADOS/DBADMIN/ALMACEN/20261123_ALMACEN_COSTCENTERS_ACTIVOS_DBADMIN.sql` |
 | 23/11/2026 | TEST_JUNIO_2026 | Almacén: dropdowns de centros de costos solo activos | Aplicado/validado (8081) | Se requirió re-aplicar con la tabla `OPRC` calificada (ver nota del fix). El catálogo dim 2 ya no devuelve PPEA. `APLICADOS/TEST_JUNIO_2026/ALMACEN/20261123_ALMACEN_COSTCENTERS_ACTIVOS_TEST_JUNIO_2026.sql` |
 | 23/11/2026 | PTM_2022_FINAL | Almacén: dropdowns de centros de costos solo activos | Aplicado/validado (`CALL` dim 2 = 10 centros sin PPEA) | `APLICADOS/PTM_2022_FINAL/ALMACEN/20261123_ALMACEN_COSTCENTERS_ACTIVOS_PTM_2022_FINAL.sql` |
+| 24/11/2026 | DBADMIN | Paros: el filtro Proceso aplica a los correctivos (`COR-xx`) y solo se muestran líneas de producción | Aplicado/validado en portal | `SpPdxMTTOObtenerParosProduccion`: rama de correctivos con `E.AREA = :p_ID_AREA` + `LE.PRODUCCION = 1`; rama manual con `LIN.PRODUCCION = 1` solo cuando llama el reporte. Pruebas P1 04–17/11: Proceso PVC 24 filas, PEAD LISO 2, sin proceso 28, Línea 6 PVC 6. `APLICADOS/DBADMIN/PAROS/20261124_PAROS_FILTRO_PROCESO_Y_SOLO_LINEAS_PRODUCCION_DBADMIN.sql` |
+| 24/11/2026 | DBADMIN | Paros: categorías de mantenimiento del modal "Registrar Paro" | **Revertido el mismo día** | Se apagaron (`STATUS = 0`) `CORRECTIVO`, `MANTENIMIENTO PREVENTIVO` y `MTTO CORRECTIVOS`, pero el usuario confirmó que también son categorías de **producción** y deben seguir disponibles: se reactivaron (`STATUS = 1`). `APLICADOS/DBADMIN/PRODUCCION/20261124_PAROS_CATEGORIAS_MANTENIMIENTO_REACTIVADAS_DBADMIN.sql`; el apagado quedó en `OBSOLETO/20261124_PAROS_CATEGORIAS_MANTENIMIENTO_OFF_DBADMIN_REVERTIDO.sql` |
+| 24/11/2026 | App (JS) | Refacciones de la OT: autorizar/rechazar/cerrar ya no cierra el modal | Aplicado en portal | `mantenimientos_correctivos_refactor.js` y `mantenimientos_preventivos_refactor.js`: se quitó el `modal.hide()` posterior a cada acción; el botón de la fila cambia de estado y se puede seguir con las demás refacciones. Probado en portal con `OTMC-021` (2 refacciones) y `OTMP-157`. Publicar los 2 JS en TEST/PTM (sin DLL). |
+| 24/11/2026 | DBADMIN | Refacciones de la OT: la orden regresa a **Liberado** cuando ya no queda ninguna refacción pendiente | Aplicado/validado en portal | `SpPdxMTTOGetBalanceOT` ya no cuenta como bloqueantes las solicitudes `Cerrada`/`ELIMINADA`; `SpPdxMTTOActualizarSolicitudRefaccion` y `SpPdxMTTOUpdateEstatusSolicitud` reevalúan y liberan; `SpPdxMTTOActualizaMC`/`MP` no bajan a 2 con refacciones pendientes. Prueba `OTMC-028`: 1 de 3 cerrada → sigue en 3; las 3 cerradas → pasa a 2. `APLICADOS/DBADMIN/ALMACEN/20261124_REFACCIONES_LIBERAR_OT_AL_RESOLVER_DBADMIN.sql` |
+| 24/11/2026 | DBADMIN | Refacciones: barrido de OT atoradas en "En espera de refacción" | Aplicado (0 casos en DBADMIN) | Libera a 2 las OT en `ESTATUS = 3` sin solicitudes bloqueantes (incluye sin solicitudes). Re-ejecutable. `APLICADOS/DBADMIN/ALMACEN/20261124_REFACCIONES_BARRIDO_OT_EN_ESPERA_DBADMIN.sql`; verificación por OT en `VERIFICACION/20261124_VERIF_REFACCIONES_ESTATUS_OT.sql` |
+| 24/11/2026 | DBADMIN | Paros: `SERVICIOS` de planta 2 estaba como línea de producción | Aplicado | `PdxMTTOLineasxPlanta(PLANTA 2, SERVICIOS)` pasa a `PRODUCCION = 0` (respaldo `PdxMTTOLineasxPlanta_BAK_20261124`); además el SP del reporte excluye por nombre las líneas no productivas. `APLICADOS/DBADMIN/PAROS/20261124_PAROS_LINEA_SERVICIOS_P2_NO_PRODUCCION_DBADMIN.sql` |
+| 24/11/2026 | PTM_2022_FINAL | Paquete 24/11: Paros (filtros + duración), `SERVICIOS` P2 a `PRODUCCION = 0`, Refacciones (5 SP) y barrido de OTs en espera | Aplicado/validado en portal (P1 y P2) | Reporte P1: 66 PVC / 4 PEAD CORR / 7 PEAD LISO, 0 líneas no productivas. P2: 33 (32 PVC + 1 INY), antes 42 con 9 de `SERVICIOS`. `OTMC-028` (DBADMIN) y `OTMC-072` (PTM, liberada con el barrido) pasan a Liberado. Incluye el SP de bitácora de preventivos (fecha de ejecución). Pendiente solo `TEST_JUNIO_2026`. |
 
 ## Detalle de los cambios clave
 
@@ -210,6 +217,33 @@ Nota: “Aplicado/validado” significa que el usuario confirmó su ejecución/v
 - **Respaldo previo:** `SQL_ORIGINALES/SpPdxMTTOBuscarArticulos_ANTES_ORDERBY_20261118.sql`.
 - **Retrocompatibilidad verificada:** `GrupoArticulos=104` -> solo 104; `GrupoArticulos=110` -> solo 110.
 
+## 2026-11-24 - Paros de Producción: filtro Proceso en correctivos y solo líneas de producción
+
+- **Reporte del usuario:** con **Proceso = PVC** el reporte seguía mostrando paros `COR-xx` de otros procesos, y además aparecían líneas que no son de producción (`SERVICIOS`, `MEZCLADO`).
+- **Causa 1 (Proceso):** `SpPdxMTTOObtenerParosProduccion` tiene dos ramas en un `UNION ALL`. La de paros manuales ya filtraba (`PAR.ID_AREA = :p_ID_AREA`); la de correctivos (`PdxMTTOSolicitudMC` + `PdxMTTOMCGenerados`) solo filtraba planta/línea/fecha/estatus y devolvía `CAST(NULL AS INT) AS ID_AREA`.
+- **Causa 2 (líneas):** la rama de correctivos no revisaba `PdxMTTOLineasxPlanta.PRODUCCION`, así que entraban equipos cuya línea es de servicio (`SERVICIOS`, `MEZCLADO`).
+- **Cambios en el SP:**
+  1. Rama correctivos: `AND (:p_ID_AREA IS NULL OR E.AREA = :p_ID_AREA)` (área del **equipo** de la OT) y `E.AREA AS ID_AREA` en lugar de `CAST(NULL AS INT)`.
+  2. Rama correctivos: `AND LE.PRODUCCION = 1` (solo líneas de producción).
+  3. Rama manual: `AND (:p_INCLUIR_CORRECTIVO IS NULL OR LIN.PRODUCCION = 1)` — el filtro solo aplica cuando llama el reporte (`'S'`); las bitácoras de tiempos muertos llaman con `NULL` y no cambian.
+- **No se tocó el front:** `paros_produccion_refactor.js` ya enviaba `FiltroArea = $("#FiltroProceso").val()`.
+- **Pruebas (portal, DBADMIN, Planta 1, 04–17/11/2026):** Proceso **PVC** → 24 filas (antes 43, se van los 4 de PEAD y los 15 de SERVICIOS/MEZCLADO); **PEAD LISO** → 2; **sin proceso** → 28; **Línea 6 PVC + Proceso PVC** → 6. Aplicar un filtro no acumula resultados del anterior. Los 2 paros manuales (`PAR-1`, `PAR-2`) siguen visibles con su categoría.
+- **Categorías del modal (revertido):** se apagaron (`STATUS = 0`) `CORRECTIVO` (29), `MANTENIMIENTO PREVENTIVO` (1) y `MTTO CORRECTIVOS` (8), pero el usuario confirmó que **también son categorías de producción** y que se quedan como estaban: se reactivaron con `STATUS = 1` (`APLICADOS/DBADMIN/PRODUCCION/20261124_PAROS_CATEGORIAS_MANTENIMIENTO_REACTIVADAS_DBADMIN.sql`). El script del apagado quedó en `OBSOLETO/` y no se generó paquete para TEST/PTM.
+- **Pendiente:** `ALTER` del SP en `TEST_JUNIO_2026` y `PTM_2022_FINAL` (`PENDIENTES/<schema>/PAROS/`).
+## 2026-11-24 - Refacciones: la OT regresa a Liberado al resolverse todas
+
+- **Reporte del usuario:** `OTMC-072` quedó en **"En espera de refacción"** aunque una refacción se surtió (1) y la otra se canceló; debía pasar a **Liberado**.
+- **Causa 1:** `SpPdxMTTOGetBalanceOT` solo excluía `ELIMINADA`; una solicitud `Cerrada` (cancelada por el técnico) seguía contando como bloqueante, así que `OT_LIBERADA = 0`.
+- **Causa 2:** la liberación solo se ejecutaba después de una **salida de mercancía**. Al cerrar/eliminar la última refacción sin salida, nadie reevaluaba.
+- **Causa 3 (adicional):** el endpoint que cierra la solicitud desde la OT forzaba `ESTATUS = 2` sin revisar pendientes (liberaba antes de tiempo); y el JS de Correctivos mandaba `TipoMantenimiento: "Preventivo"`, así que el servidor actualizaba la tabla de preventivos con un ID de correctivo y no pasaba nada.
+- **Cambios (BD; sin DLL):**
+  1. `SpPdxMTTOGetBalanceOT`: `Cerrada`/`ELIMINADA` cuentan como liberadas (en el detalle y en el resumen).
+  2. `SpPdxMTTOActualizarSolicitudRefaccion`: al terminar cuenta los bloqueantes y libera la OT (solo si estaba en 3). Devuelve `ORDEN_TRABAJO` y `OT_LIBERADA`.
+  3. `SpPdxMTTOUpdateEstatusSolicitud`: mismo reevaluado (cubre `Atendida`/`ELIMINADA`).
+  4. `SpPdxMTTOActualizaMC` / `SpPdxMTTOActualizaMP`: si piden `ESTATUS = 2` y hay refacciones bloqueantes, **conservan** el estatus (no liberan antes de tiempo).
+- **JS:** `mantenimientos_correctivos_refactor.js` manda `TipoMantenimiento: "Correctivo"` al cerrar la solicitud.
+- **Pruebas (portal, DBADMIN, `OTMC-028` con 3 refacciones pendientes):** cerrar 1 → la OT **sigue en 3**; cerrar las 3 → pasa a **2 (Liberado)**. Datos restaurados al terminar.
+- **Barrido del histórico:** los SP nuevos solo actúan en transiciones nuevas, así que las OT que ya estaban atoradas en 3 se liberan con `APLICADOS/DBADMIN/ALMACEN/20261124_REFACCIONES_BARRIDO_OT_EN_ESPERA_DBADMIN.sql` (re-ejecutable; no toca estatus 1, 2 ni 4). Diagnóstico por OT: `VERIFICACION/20261124_VERIF_REFACCIONES_ESTATUS_OT.sql`.- **Pendiente:** `ALTER` de los 5 SP en `TEST_JUNIO_2026` y `PTM_2022_FINAL` → `PENDIENTES/<schema>/ALMACEN/20261124_REFACCIONES_LIBERAR_OT_AL_RESOLVER_<schema>.sql`.
 ## Obsoletos
 
 En `OBSOLETO/`:
@@ -221,10 +255,17 @@ En `OBSOLETO/`:
 Motivo: contienen versiones anteriores del SP de rango. La versión vigente está en `APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql`.
 
 ## Pendientes SQL
-- **`PENDIENTES/` esta vacio de scripts SQL:** todo aplicado y movido a `APLICADOS/`
-  (`DBADMIN`, `TEST_JUNIO_2026`, `PTM_2022_FINAL` y `NWSCALE`).
-- Al aplicarse en el servidor, moverlos a `APLICADOS/<schema>/` y actualizar esta bitácora.
-- Regla general: si `PENDIENTES/` no tiene scripts SQL, todo está al día.
+Pendientes **solo en `TEST_JUNIO_2026`** (PTM_2022_FINAL y DBADMIN ya aplicados el 24/11/2026). Todos llevan `SET SCHEMA` + `ALTER PROCEDURE`:
 
+| Script | Cambio |
+|---|---|
+| `PENDIENTES/TEST_JUNIO_2026/PREVENTIVOS/20261124_PREVENTIVOS_BITACORA_FECHA_EJECUCION_TEST_JUNIO_2026.sql` | Bitácora: el SP de rango también devuelve la ocurrencia por `HORA_FIN` del técnico dentro del rango (`P_LINEA_PROD = 1`) |
+| `PENDIENTES/TEST_JUNIO_2026/PAROS/20261124_PAROS_FILTROS_Y_DURACION_TECNICO_TEST_JUNIO_2026.sql` | Paros: filtro Proceso (`p_ID_AREA`) en correctivos, solo líneas de producción (bandera + nombre) y duración con horas del técnico |
+| `PENDIENTES/TEST_JUNIO_2026/PAROS/20261124_PAROS_LINEA_SERVICIOS_P2_NO_PRODUCCION_TEST_JUNIO_2026.sql` | Catálogo: `SERVICIOS` de planta 2 pasa a `PRODUCCION = 0` |
+| `PENDIENTES/TEST_JUNIO_2026/ALMACEN/20261124_REFACCIONES_LIBERAR_OT_AL_RESOLVER_TEST_JUNIO_2026.sql` | Refacciones: la OT regresa a Liberado cuando ya no queda ninguna pendiente (5 SP) |
+| `PENDIENTES/TEST_JUNIO_2026/ALMACEN/20261124_REFACCIONES_BARRIDO_OT_EN_ESPERA_TEST_JUNIO_2026.sql` | Barrido único: libera las OT atoradas en 3 sin refacciones pendientes |
+
+También pendiente de publicar en **TEST_JUNIO_2026**: los JS de `SCRIPTJS_MIGRACION_RAPIDA/TEST_JUNIO_2026/` (`produccion_pvc/peadliso/iny/corrugado_refactor.js`, `mantenimientos_correctivos_refactor.js`, `mantenimientos_preventivos_refactor.js`). Sin DLL.
+- Al aplicarse en el servidor, mover los scripts a `APLICADOS/TEST_JUNIO_2026/` y actualizar esta bitácora.
 
 
