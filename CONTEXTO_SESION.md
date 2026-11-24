@@ -771,8 +771,8 @@ Entorno: HANA Cloud `DBADMIN` + IIS Express local. No se tocó `TEST_JUNIO_2026`
 ### Scripts
 
 - `SQL_MIGRACION/APLICADOS/DBADMIN/ALMACEN/MIGRACION_ALMACEN_DEVOLUCION_COSTO_PROMEDIO.sql` — **aplicado en DBADMIN**.
-- `SQL_MIGRACION/PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql` — pendiente (usa `ALTER PROCEDURE`).
-- `SQL_MIGRACION/PENDIENTES/MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql` — pendiente (usa `ALTER PROCEDURE`).
+- `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_TEST_JUNIO_2026.sql` - **aplicado** el 18/11/2026; el script quedo en `SQL_MIGRACION/APLICADOS/TEST_JUNIO_2026/ALMACEN/`.
+- `MIGRACION_DEVOLUCION_COSTO_PROMEDIO_PTM_2022_FINAL.sql` - **aplicado** el 18/11/2026; el script quedo en `SQL_MIGRACION/APLICADOS/PTM_2022_FINAL/ALMACEN/`.
 - **On-premise no soporta `CREATE OR REPLACE PROCEDURE`**: en TEST_JUNIO_2026 y PTM_2022_FINAL siempre se usa `ALTER PROCEDURE` porque el SP ya existe. `CREATE OR REPLACE` solo se usó en DBADMIN (cloud).
 
 ### Validación
@@ -2298,4 +2298,5 @@ Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo le
 - `4cb0cc1` docs: ajustes de paros, refacciones y regla de cuentas de prueba en produccion.
 
 **Pendiente:** `TEST_JUNIO_2026` (5 scripts en `PENDIENTES/TEST_JUNIO_2026/` + los JS de `SCRIPTJS_MIGRACION_RAPIDA/TEST_JUNIO_2026/`). Opcional: borrar `PdxMTTOLineasxPlanta_BAK_20261124` en PTM.
+
 
