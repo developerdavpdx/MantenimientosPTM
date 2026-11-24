@@ -2270,3 +2270,31 @@ Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo le
 **Pendiente:** aplicar en TEST_JUNIO_2026 y PTM_2022_FINAL (`PENDIENTES/<schema>/ALMACEN/20261124_REFACCIONES_LIBERAR_OT_AL_RESOLVER_<schema>.sql`, con `SET SCHEMA` + `ALTER PROCEDURE`) y publicar `mantenimientos_correctivos_refactor.js`.
 
 
+
+---
+
+## 43. Cierre 24/11/2026 - Despliegue en PTM_2022_FINAL y validacion en produccion
+
+**Aplicado por el usuario en `PTM_2022_FINAL` (todos los paquetes del dia):**
+- `APLICADOS/PTM_2022_FINAL/PAROS/20261124_PAROS_FILTROS_Y_DURACION_TECNICO_PTM_2022_FINAL.sql` (filtro Proceso en correctivos + solo lineas de produccion + duracion con horas del tecnico).
+- `APLICADOS/PTM_2022_FINAL/PAROS/20261124_PAROS_LINEA_SERVICIOS_P2_NO_PRODUCCION_PTM_2022_FINAL.sql` (catalogo: `SERVICIOS` de planta 2 a `PRODUCCION = 0`).
+- `APLICADOS/PTM_2022_FINAL/ALMACEN/20261124_REFACCIONES_LIBERAR_OT_AL_RESOLVER_PTM_2022_FINAL.sql` (5 SP).
+- `APLICADOS/PTM_2022_FINAL/ALMACEN/20261124_REFACCIONES_BARRIDO_OT_EN_ESPERA_PTM_2022_FINAL.sql` (barrido: libero `OTMC-072`).
+- `APLICADOS/PTM_2022_FINAL/PREVENTIVOS/20261124_PREVENTIVOS_BITACORA_FECHA_EJECUCION_PTM_2022_FINAL.sql`.
+- JS publicados desde `SCRIPTJS_MIGRACION_RAPIDA/PTM_2022_FINAL/` (4 de produccion + correctivos + preventivos).
+
+**Validacion en produccion (solo consulta):**
+- Planta 1 (`adminmantenimiento@ptmexico.com`): Proceso PVC 66 / PEAD CORR 4 / PEAD LISO 7 = 77, **0 lineas no productivas**.
+- Planta 2 (`lunatc@ptmexico.com`): 33 filas (32 PVC + 1 INY) y **0 de `SERVICIOS`** (antes 42 con 9).
+- Exportacion a Excel: identica al grid (77 filas, 68 con duracion, 9 "En curso", suma 136.5 h, min 0.04, max 42.99).
+- 3 duraciones altas (`COR-15` 42.99, `COR-10` 24.62, `COR-35` 21.91) son **captura del tecnico**, no formula.
+- `OTMC-028` (DBADMIN) y `OTMC-072` (PTM) regresan a Liberado.
+
+**Regla actualizada:** las cuentas de prueba **si** se pueden usar en produccion **solo en modo consulta** (documentado en `AGENTS.md` y §0 de este archivo).
+
+**Commits locales (sin push, lo sube el usuario):**
+- `2e40455` feat(refacciones): la OT regresa a Liberado cuando ya no quedan refacciones pendientes.
+- `b94b537` feat(paros): filtro de proceso en correctivos, solo lineas de produccion y duracion del tecnico.
+- `4cb0cc1` docs: ajustes de paros, refacciones y regla de cuentas de prueba en produccion.
+
+**Pendiente:** `TEST_JUNIO_2026` (5 scripts en `PENDIENTES/TEST_JUNIO_2026/` + los JS de `SCRIPTJS_MIGRACION_RAPIDA/TEST_JUNIO_2026/`). Opcional: borrar `PdxMTTOLineasxPlanta_BAK_20261124` en PTM.
