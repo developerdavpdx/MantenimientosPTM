@@ -1,4 +1,4 @@
-// ========================================
+﻿// ========================================
 // GESTOR DE UI
 // ========================================
 class UIManager {
@@ -741,7 +741,18 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             }
 
             // ✅ NUEVO: Acumular correctivos en los datos formateados IN-MEMORY
-            return this.agregarCorrectivosAlGridEnMemoria(correctivos, datosFormateados);
+            // Solo se sincronizan los correctivos con las 2 firmas (tecnico + supervisor).
+            // Estatus 4 se alcanza con la firma del tecnico; el SP ya calcula
+            // OrdenTrabajoFinalizada='SI' unicamente con ambas firmas capturadas.
+            const correctivosConFirmas = correctivos.filter(
+                c => String(c.OrdenTrabajoFinalizada || '').trim().toUpperCase() === 'SI'
+            );
+
+            if (correctivosConFirmas.length === 0) {
+                return false;
+            }
+
+            return this.agregarCorrectivosAlGridEnMemoria(correctivosConFirmas, datosFormateados);
 
         } catch (error) {
 
@@ -966,7 +977,18 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             }
 
             // ✅ NUEVO: Acumular preventivos en los datos formateados IN-MEMORY
-            return this.agregarPreventivosAlGridEnMemoria(preventivos, datosFormateados);
+            // Solo se sincronizan los preventivos con las 3 firmas (tecnico, supervisor
+            // y mantenimiento). Estatus 4 se alcanza con la firma del tecnico; el SP ya
+            // calcula OrdenTrabajoFinalizada='SI' unicamente con las 3 firmas capturadas.
+            const preventivosConFirmas = preventivos.filter(
+                p => String(p.OrdenTrabajoFinalizada || '').trim().toUpperCase() === 'SI'
+            );
+
+            if (preventivosConFirmas.length === 0) {
+                return false;
+            }
+
+            return this.agregarPreventivosAlGridEnMemoria(preventivosConFirmas, datosFormateados);
 
         } catch (error) {
 
@@ -1009,7 +1031,10 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         const grupos = {};
 
         preventivos.forEach(item => {
-            const fecha = this.parsearFechaPreventivo(item.FechaRealInicio || item.HoraApertura);
+            // Fecha de la fila: fecha real de reprogramacion; si no hay, la hora fin del
+            // tecnico (cuando realmente se cerro, aunque el sistema registre otro dia);
+            // la apertura queda solo como respaldo.
+            const fecha = this.parsearFechaPreventivo(item.FechaRealInicio || item.HoraFin || item.HoraApertura);
 
             // 🔍 Buscar línea
             const lineaEncontrada = this.listaLineas.find(

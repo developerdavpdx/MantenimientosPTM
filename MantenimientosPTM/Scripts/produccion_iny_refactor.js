@@ -1,4 +1,4 @@
-// ========================================
+﻿// ========================================
 // GESTOR DE EVENTOS
 // ========================================
 class GestionEventosINY {
@@ -669,7 +669,18 @@ class GestionProduccionINY extends GestionProduccionBase {
             const correctivos = response.data || [];
             if (correctivos.length === 0) return false;
 
-            return this.agregarCorrectivosAlGridEnMemoria(correctivos, datosFormateados);
+            // Solo se sincronizan los correctivos con las 2 firmas (tecnico + supervisor).
+            // Estatus 4 se alcanza con la firma del tecnico; el SP ya calcula
+            // OrdenTrabajoFinalizada='SI' unicamente con ambas firmas capturadas.
+            const correctivosConFirmas = correctivos.filter(
+                c => String(c.OrdenTrabajoFinalizada || '').trim().toUpperCase() === 'SI'
+            );
+
+            if (correctivosConFirmas.length === 0) {
+                return false;
+            }
+
+            return this.agregarCorrectivosAlGridEnMemoria(correctivosConFirmas, datosFormateados);
 
         } catch (error) {
             console.error(error);
@@ -812,7 +823,18 @@ class GestionProduccionINY extends GestionProduccionBase {
             const preventivos = response.data || [];
             if (preventivos.length === 0) return false;
 
-            return this.agregarPreventivosAlGridEnMemoria(preventivos, datosFormateados);
+            // Solo se sincronizan los preventivos con las 3 firmas (tecnico, supervisor
+            // y mantenimiento). Estatus 4 se alcanza con la firma del tecnico; el SP ya
+            // calcula OrdenTrabajoFinalizada='SI' unicamente con las 3 firmas capturadas.
+            const preventivosConFirmas = preventivos.filter(
+                p => String(p.OrdenTrabajoFinalizada || '').trim().toUpperCase() === 'SI'
+            );
+
+            if (preventivosConFirmas.length === 0) {
+                return false;
+            }
+
+            return this.agregarPreventivosAlGridEnMemoria(preventivosConFirmas, datosFormateados);
 
         } catch (error) {
             console.error(error);
@@ -828,7 +850,10 @@ class GestionProduccionINY extends GestionProduccionBase {
         const grupos = {};
 
         preventivos.forEach(item => {
-            const fecha = this.parsearFechaPreventivo(item.FechaRealInicio || item.HoraApertura);
+            // Fecha de la fila: fecha real de reprogramacion; si no hay, la hora fin del
+            // tecnico (cuando realmente se cerro, aunque el sistema registre otro dia);
+            // la apertura queda solo como respaldo.
+            const fecha = this.parsearFechaPreventivo(item.FechaRealInicio || item.HoraFin || item.HoraApertura);
 
             const lineaEncontrada = this.listaLineas.find(l => String(l.value) === String(item.IdLineaProduccion));
             const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
@@ -3584,3 +3609,4 @@ class CorreosManagerINY {
         btn.prop("disabled", false);
     }
 }
+

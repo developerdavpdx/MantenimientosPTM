@@ -2097,6 +2097,8 @@ Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo le
 
 **Despliegue cerrado (23/11, commits e02c571 → d154762):** los 3 paquetes SQL aplicados y los 6 JS publicados en TEST (8081) y PTM (8083), tras respaldo de tablas+SPs del on-premise; scripts movidos a `APLICADOS/<schema>/`. Validación funcional completa en TEST: endpoint solo devolvió OTMC-012 (con paro), acumulado 15.3667 h decimales, carátula con estado derivado, INY sin `[ERROR]`, Métricas 0 paradas (coherente: sin OTs con paro guardadas). **Verificación de PTM en lectura:** Métricas P2 noviembre **18 → 0 paradas** y **127.47 → 38 h** de inactividad; bitácora del 23/11 sin OTMC-113 y endpoint de pendientes en 0; carátula OTMC-001 con `data-ordenfinalizada` y TM=TR=0.80 HRS; INY P1 sin `[ERROR]`. El "0 paradas" es correcto: las 18 de la captura original eran OTs sin paro; las OTs con paro real contarán cuando producción las sincronice a bitácora. Las 38 h restantes son capturas manuales legítimas (paros sin OT).
 
+**Verificación a nivel BD (23/11):** `SQL_MIGRACION/VERIFICACION/CHECK_BITACORAS_SOLO_PAROS_REALES_<schema>.sql` (commit 64f69bb) cruza cada orden de los strings `OTMC` contra `MAQUINA_DETENIDA`. Resultado en PTM: PVC **3 con paro / 0 sin paro / 0 huérfanas** (PeadLiso/Corrugado/INY en 0) y en DBADMIN PVC 2/0/0. Las 3 reales están en **planta 1**: OTMC-001 (04/11, 0.80 h), OTMC-017 (11/11, 1.79 h) y OTMC-026 (12/11, 1.29 h guardado vs 1.30 recalculado — 0.01 h de diferencia, probable actualización de la OT después del saneo). Por eso Métricas de planta 2 da 0 paradas y las 3 se ven con usuario de planta 1.
+
 **Pendientes:**
 1. Observaciones abiertas: OEE 134.65 % en P2 de TEST (Rendimiento > 100 %, revisar capacidades `@PDX_CAPPROD`); PNGs de firmas 404 (omitido: ambiente, no código); **Preventivos tiene el mismo patrón de doble etiqueta** (decidir el texto derivado con 3 firmas); menor: `OnboardingTour._positionSpotlight` lanza TypeError si el tour se cierra antes de posicionarse (visto en 8083).
 2. Con negocio: **transforms de `Web.config` por ambiente** (`Web.Test.config` / `Web.Prod.config`) + sello del login por `appSetting`, para eliminar la edición manual de cadenas al publicar.
@@ -2122,13 +2124,55 @@ Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo le
 4. Proceso ('PPVC') y Gastos ('GIF') hardcodeados; Cedis preseleccionado por planta del conectado ('CCOR'/'PLANTA2'). `OHEM` no tiene UDFs de Proceso/Gastos.
 
 **Cambios:**
-- SP `SpPdxMTTOGetCostCenters`: solo `Active = 'Y'` (aplicado en DBADMIN; paquetes en `PENDIENTES/<schema>/ALMACEN/`).
+- SP `SpPdxMTTOGetCostCenters`: solo `Active = 'Y'`. Aplicado y validado en los 3 schemas (ver Despliegue más abajo).
 - `solicitud_refacciones_refactor.js`: aviso al abrir el modal si el solicitante no tiene dept; placeholder "— Elija el centro de costos —" en el select; el guardado se bloquea si falta cualquiera de las 4 dimensiones (0 POST a SAP).
 
 **Pruebas (portal, DBADMIN):** OTMC-033 (MANTENIMIENTO) → preselecciona DMAN y el dropdown de Proceso ya no lista PPEA; OTMC-028 con solicitante de MATERIALES (prestado temporalmente) → aviso + placeholder + **guardado bloqueado con mensaje claro y 0 POST al servidor**. Dato de prueba restaurado.
 
+**Despliegue (23/11, tarde):** JS publicado en 8081 y 8083; el primer `ALTER` **no quedó** en on-premise porque `FROM "OPRC"` sin calificar se valida contra el currentSchema del ejecutor y fallaba con *invalid table name: OPRC*. Corregido calificando la tabla (`d1b61ff`) y re-aplicado: TEST verificado por portal (dim 2 sin PPEA) y PTM con `CALL ...(2)` = 10 centros sin PPEA. Paquetes movidos a `APLICADOS/<schema>/ALMACEN/` (`367da24`).
+**En PTM el hueco es mayor:** la consulta OUDP↔OPRC da **21 de 23 departamentos sin centro** (solo MANTENIMIENTO→DMAN y CALIDAD→DCAL); HERRAMENTALES falla porque el centro se llama "HERRAMENTAL" (sin S). Se envió a los usuarios la explicación y la lista de departamentos a mapear con contabilidad.
+
 **Pendientes:**
-1. Aplicar `PENDIENTES/<schema>/ALMACEN/20261123_ALMACEN_COSTCENTERS_ACTIVOS_<schema>.sql` en TEST/PTM y publicar el JS en el mismo pase.
-2. **Fondo (decisión de negocio/contabilidad):** mapear los 20 departamentos sin centro (dim 1) a PrcCodes válidos; definir de dónde salen Proceso (dim 2) y Gastos (dim 3) — OHEM no tiene esos datos. El Cedis por planta se mantiene como preselección porque la sucursal del empleado (OUBR: CORP, PII…) **no cuadra** con los centros dim 4 (CORPORATIVO, PLANTA 2 (P2)) ni por nombre ni por código → requiere mapeo explícito.
-3. Verificar en PTM al usuario de la falla:
+1. **Fondo (decisión de negocio/contabilidad):** mapear los 20 departamentos sin centro (dim 1) a PrcCodes válidos; definir de dónde salen Proceso (dim 2) y Gastos (dim 3) — OHEM no tiene esos datos. El Cedis por planta se mantiene como preselección porque la sucursal del empleado (OUBR: CORP, PII…) **no cuadra** con los centros dim 4 (CORPORATIVO, PLANTA 2 (P2)) ni por nombre ni por código → requiere mapeo explícito.
+2. Verificar en PTM al usuario de la falla:
    `SELECT T0."email", T0."dept", T1."Name", T3."PrcCode" FROM "PTM_2022_FINAL"."OHEM" T0 LEFT JOIN "PTM_2022_FINAL"."OUDP" T1 ON T0."dept" = T1."Code" LEFT JOIN "PTM_2022_FINAL"."OPRC" T3 ON T3."PrcName" = T1."Name" WHERE T0."email" = '<correo del solicitante>';`
+
+
+---
+
+## 38. Cierre de sesión (23/11/2026)
+
+**Entregado y desplegado en los 3 esquemas (DBADMIN, TEST_JUNIO_2026 y PTM_2022_FINAL):**
+1. **Tiempos muertos / paradas:** cálculo real (inicio→fin técnico, horas decimales), bitácoras solo con `MAQUINA_DETENIDA=1`, KPI sin filas de 0 h, saneamiento histórico y verificación a nivel BD. Ver §36.
+2. **Almacén:** dropdowns solo con centros activos, aviso + bloqueo de salidas sin dimensiones de costeo y comunicación enviada a los usuarios. Ver §37.
+
+**Pendientes abiertos:**
+1. **Mapeo dept→centro de costos** (dims 1/2/3/4) con contabilidad; cuando confirmen, implementar tabla de mapeo + SP con fallback al join actual (propuesta enviada a los usuarios).
+2. **Transforms de `Web.config`** (`Web.Test.config` / `Web.Prod.config`) + sello del login por `appSetting`, para publicar sin editar cadenas de conexión a mano.
+3. Observaciones menores: OEE > 100 % en TEST P2 (capacidades `@PDX_CAPPROD`), doble etiqueta en Preventivos, `OnboardingTour` TypeError cosmético, PNGs de firmas 404 (ambiente, no código).
+
+**Higiene del repo:** `MantenimientosPTM/Web.config` con `git update-index --skip-worktree` (los cambios locales por ambiente no se commitean); `SCRIPTJS_MIGRACION_RAPIDA/` en `.gitignore` (bandeja local de JS). Último commit: `367da24`.
+
+
+
+---
+
+## 39. Sesión 24/11/2026 — Bitácoras: firmas completas obligatorias y fecha del técnico
+
+**Regla nueva (usuario):**
+1. Estatus 4 **no basta**: a la bitácora solo deben sincronizarse los **preventivos con las 3 firmas** y los **correctivos con las 2** (técnico + supervisor).
+2. La fecha de la fila del preventivo debe ser **la hora fin del técnico** (no la apertura ni el cierre del sistema): caso OTPM-120, apertura 05/11 4:16 pm, fin del técnico 6:00 pm, cierre del sistema 19/11.
+
+**Implementación (solo front; SP compartidos INTACTOS):**
+- 4 JS (`produccion_pvc/peadliso/iny/corrugado_refactor.js`):
+  - `traerPreventivosCerrados` filtra `OrdenTrabajoFinalizada='SI'` (3 firmas) antes de agrupar.
+  - `traerCorrectivosCerrados` filtra `OrdenTrabajoFinalizada='SI'` (2 firmas). El SP de correctivos ya calculaba la bandera con ambas firmas.
+  - `agruparPreventivos`: fecha = `FechaRealInicio || HoraFin || HoraApertura`.
+- **No se tocaron** `SpPdxMTTOObtenerMantenimientosPorRango` (lo comparten el listado de Preventivos y el Calendario) ni el SP de correctivos: el rango sigue por fecha programada/reprogramada.
+
+**Pruebas (portal, DBADMIN):**
+- Preventivos noviembre P1: el endpoint devolvió 2 no sincronizados (OTMP-070 con 3 firmas y OTMP-063 sin firmas) → el front agregó **solo OTMP-070**, pintado en **23/11** (su fecha real de reprogramación, prioridad 1).
+- Correctivos 12/11: el endpoint devolvió **OTMC-026** (`MAQUINA_DETENIDA=1`, `OrdenTrabajoFinalizada='NO'`) → el front **no la agregó** (0 correctivos nuevos). OTMC-017 (2 firmas) ya estaba sincronizada.
+- JS servido verificado con los 3 cambios.
+
+**Pendiente:** publicar los 4 JS en TEST/PTM (sin SQL). Si negocio lo pide, sanear históricos que hoy tengan OTs sin firmas en bitácoras.
