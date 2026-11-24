@@ -738,14 +738,8 @@ class MantenimientosPreventivoApp {
                                 // ✅ Cambiar texto del botón a estado de éxito
                                 $btn.html('<i class="bi bi-check-circle-fill me-1"></i>Autorizada').addClass('btn-success').removeClass('btn-ptm-primary');
 
-                                // ✅ Cerrar el modal después de 2 segundos
-                                setTimeout(() => {
-                                    const modalElement = document.getElementById('modalRefaccionesOT');
-                                    const modal = bootstrap.Modal.getInstance(modalElement);
-                                    if (modal) {
-                                        modal.hide();
-                                    }
-                                }, 2000);
+                                // ✅ El modal se queda abierto para poder autorizar las demás
+                                // refacciones de la OT sin tener que volver a abrirlo.
                             } else {
                                 AlertManager.mostrar(response.Message || 'Error al autorizar la refacción', 'warning');
                                 $btn.html('<i class="bi bi-check-circle me-1"></i>Autorizar').prop('disabled', false);
@@ -776,14 +770,7 @@ class MantenimientosPreventivoApp {
                                 // ✅ Cambiar texto del botón a estado de rechazo
                                 $btn.html('<i class="bi bi-x-circle-fill me-1"></i>Rechazada').addClass('btn-danger').removeClass('btn-ptm-primary');
 
-                                // ✅ Cerrar el modal después de 2 segundos
-                                setTimeout(() => {
-                                    const modalElement = document.getElementById('modalRefaccionesOT');
-                                    const modal = bootstrap.Modal.getInstance(modalElement);
-                                    if (modal) {
-                                        modal.hide();
-                                    }
-                                }, 2000);
+                                // ✅ El modal se queda abierto para seguir con las demás refacciones
                             } else {
                                 AlertManager.mostrar(response.Message || 'Error al rechazar la refacción', 'warning');
                                 $btn.html('<i class="bi bi-check-circle me-1"></i>Autorizar').prop('disabled', false);
@@ -859,11 +846,8 @@ class MantenimientosPreventivoApp {
 
                                 $btn.html('<i class="bi bi-check-circle-fill me-1"></i>Cerrada').addClass('btn-secondary').removeClass('btn-danger');
 
+                                // ✅ El modal se queda abierto; solo se refresca el listado de fondo
                                 setTimeout(() => {
-                                    const modalElement = document.getElementById('modalRefaccionesOT');
-                                    const modal = bootstrap.Modal.getInstance(modalElement);
-                                    if (modal) modal.hide();
-
                                     if ($.fn.DataTable.isDataTable('#tablaMantenimientosRango')) {
                                         $('#tablaMantenimientosRango').DataTable().ajax.reload(null, false);
                                     }
@@ -6967,6 +6951,8 @@ class PrintManagerMantenimiento {
         return iconos[label] || '▪️';
     }
 }
+
+
 
 
 
