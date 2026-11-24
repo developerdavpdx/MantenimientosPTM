@@ -830,11 +830,22 @@ class GestionProduccionINY extends GestionProduccionBase {
                 p => String(p.OrdenTrabajoFinalizada || '').trim().toUpperCase() === 'SI'
             );
 
-            if (preventivosConFirmas.length === 0) {
+            // Solo los que caen dentro del rango consultado: el SP devuelve las
+            // ocurrencias de todo el periodo programado (p. ej. el mes completo)
+            // cuando el rango cae dentro; sin este filtro se agregaban dias fuera.
+            const preventivosEnRango = preventivosConFirmas.filter(p => {
+                const fechaFila = this.parsearFechaPreventivo(p.HoraFin || p.FechaRealInicio || p.HoraApertura);
+                if (!fechaFila) return false;
+                const okInicio = !fechaInicio || fechaFila >= fechaInicio;
+                const okFin = !fechaFin || fechaFila <= fechaFin;
+                return okInicio && okFin;
+            });
+
+            if (preventivosEnRango.length === 0) {
                 return false;
             }
 
-            return this.agregarPreventivosAlGridEnMemoria(preventivosConFirmas, datosFormateados);
+            return this.agregarPreventivosAlGridEnMemoria(preventivosEnRango, datosFormateados);
 
         } catch (error) {
             console.error(error);
@@ -853,7 +864,10 @@ class GestionProduccionINY extends GestionProduccionBase {
             // Fecha de la fila: fecha real de reprogramacion; si no hay, la hora fin del
             // tecnico (cuando realmente se cerro, aunque el sistema registre otro dia);
             // la apertura queda solo como respaldo.
-            const fecha = this.parsearFechaPreventivo(item.FechaRealInicio || item.HoraFin || item.HoraApertura);
+            // Fecha de la fila: manda la hora fin del tecnico (dia en que se finalizo el
+            // trabajo, ya con las firmas); despues la fecha real de reprogramacion y,
+            // como respaldo, la apertura.
+            const fecha = this.parsearFechaPreventivo(item.HoraFin || item.FechaRealInicio || item.HoraApertura);
 
             const lineaEncontrada = this.listaLineas.find(l => String(l.value) === String(item.IdLineaProduccion));
             const nombreLinea = lineaEncontrada ? lineaEncontrada.label : null;
@@ -3609,4 +3623,5 @@ class CorreosManagerINY {
         btn.prop("disabled", false);
     }
 }
+
 
