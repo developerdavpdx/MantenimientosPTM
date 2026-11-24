@@ -20,6 +20,12 @@
   5. Guardar dos veces y confirmar que **no se duplica**.
   6. Validar el producto terminado (NWSCALE) en modo día y en modo rango.
 
+## Comunicación con usuarios
+
+- Los mensajes para usuarios finales (WhatsApp, correo, Teams) van **breves, claros y SIN emojis**.
+- Un mensaje por tema reportado; si varios temas son de la misma persona, se pueden unir, pero sin mezclar módulos.
+- Nada de tecnicismos (SP, ALTER, tabla, commit): decir qué quedó resuelto y cómo se comporta ahora.
+
 ## Base de Datos SAP HANA Cloud
 - Esquema activo local: `DBADMIN`
 - Esquema pruebas (QA): `TEST_JUNIO_2026`
@@ -159,6 +165,7 @@
 
 ### Cómo mantener esta sección
 - Al cambiar una regla de negocio (flujo de firmas, cálculo de un KPI, origen de un dato), actualizar aquí en el mismo commit. **Esta sección es la que usan los agentes de QA para decidir si algo es un bug.**
+
 
 
 
