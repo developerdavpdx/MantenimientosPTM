@@ -107,7 +107,7 @@
 - **Si "Máquina detenida" está encendido** al cerrar, se genera un **paro `COR-xx`** (`TIPO_PARO = CORRECTIVO`) en `PdxMTTOTParoProduccion`.
 - **Si está apagado**, no debería generar paro.
 - **Bitácoras de tiempos muertos** solo incorporan OTs correctivas con `MAQUINA_DETENIDA = 1` **y las 2 firmas** (técnico + supervisor). La búsqueda común distingue la llamada de bitácora por `P_LINEA_PROD = 1`; las pantallas de Correctivos no aplican ese filtro y siguen mostrando todas las OTs.
-- **Preventivos en bitácora:** solo se sincronizan los que tienen las **3 firmas** (`OrdenTrabajoFinalizada='SI'`; estatus 4 se alcanza con la firma del técnico). El filtro se aplica **en el front** (`traerPreventivosCerrados`), no en el SP `SpPdxMTTOObtenerMantenimientosPorRango`, para no afectar el listado de Preventivos ni el Calendario. La fila se pinta con `FechaRealInicio` (reprogramación) → `HoraFin` del técnico → apertura como respaldo; el rango del SP sigue por fecha programada/reprogramada.
+- **Preventivos en bitácora:** solo se sincronizan los que tienen las **3 firmas** (`OrdenTrabajoFinalizada='SI'`; estatus 4 se alcanza con la firma del técnico). El filtro de firmas se aplica **en el front** (`traerPreventivosCerrados`). La fila se pinta con **`HoraFin` del técnico primero** (día en que se finalizó el trabajo) → `FechaRealInicio` (reprogramación) → apertura; además el front **descarta las OTMP cuya fecha de fila cae fuera del rango consultado** (el SP devuelve todo el periodo programado cuando el rango cae dentro). En bitácora (`P_LINEA_PROD = 1`) el SP también incluye la ocurrencia por `CAST(OT.HORA_FIN AS DATE) BETWEEN rango`, para que se vea el día de ejecución aunque la reprogramación diga otra fecha; el listado de Preventivos y el Calendario no cambian.
 - La hora de cierre se toma del **reloj del servidor** (decisión de negocio); la hora capturada por el técnico puede diferir del `TIEMPO INVERTIDO`.
 - **Corrección del administrador:** con estatus 4 y `FIRMA_SUPERVISO` vacía, el administrador (`AdminMtto`/`Administrador`) puede editar **Hora Inicio/Fin, Hora Cierre OT, Texto de Secuencia y Scrap Real** y guardar con **"Guardar"**. No reenvía firmas: el SP conserva `FIRMA_REALIZO` y su PNG. Con `FIRMA_SUPERVISO = 'SI'` la OT queda **bloqueada** (solo lectura). El administrador **no firma** en Correctivos.
 - **Etiqueta de estatus (listado y carátula deben coincidir):** el listado y el modal muestran el **estado derivado**: con `ESTATUS = 4` y `OrdenTrabajoFinalizada = 'NO'` (falta la firma del supervisor) se muestra **"En proceso de firmas (falta supervisor)"**; **"Cerrado"** solo con las 2 firmas completas. El botón de la carátula viaja con `data-ordenfinalizada`.
@@ -138,5 +138,6 @@
 
 ### Cómo mantener esta sección
 - Al cambiar una regla de negocio (flujo de firmas, cálculo de un KPI, origen de un dato), actualizar aquí en el mismo commit. **Esta sección es la que usan los agentes de QA para decidir si algo es un bug.**
+
 
 
