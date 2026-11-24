@@ -2298,3 +2298,4 @@ Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo le
 - `4cb0cc1` docs: ajustes de paros, refacciones y regla de cuentas de prueba en produccion.
 
 **Pendiente:** `TEST_JUNIO_2026` (5 scripts en `PENDIENTES/TEST_JUNIO_2026/` + los JS de `SCRIPTJS_MIGRACION_RAPIDA/TEST_JUNIO_2026/`). Opcional: borrar `PdxMTTOLineasxPlanta_BAK_20261124` en PTM.
+
