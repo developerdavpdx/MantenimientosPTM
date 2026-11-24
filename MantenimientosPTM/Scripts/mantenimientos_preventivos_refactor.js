@@ -1,4 +1,4 @@
-// ========================================
+﻿// ========================================
 // UTILIDADES
 // ========================================
 function escapeHtml(value) {
@@ -1990,8 +1990,14 @@ class MantenimientoManager {
                             const tieneFechaRealFin = row.FechaRealFin !== null && row.FechaRealFin !== undefined && row.FechaRealFin !== '';
 
                             if (tieneFechaRealInicio && tieneFechaRealFin) {
-                                const inicio = escapeHtml(row.FechaRealInicio.substring(0, 10));
-                                const fin = escapeHtml(row.FechaRealFin.substring(0, 10));
+                                // Fechas reales en DD/MM/YYYY (antes salian en ISO y se veian distintas)
+                                const aFechaCorta = (valor) => {
+                                    const m = String(valor || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+                                    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+                                    return String(valor || '').slice(0, 10);
+                                };
+                                const inicio = escapeHtml(aFechaCorta(row.FechaRealInicio));
+                                const fin = escapeHtml(aFechaCorta(row.FechaRealFin));
                                 return `Del <span class="badge btn-ptm-light badge-custom"><i class="bi bi-calendar3 me-1"></i>${inicio} </span> Al
                                         <span class="badge btn-ptm-light badge-custom"><i class="bi bi-calendar3 me-1"></i>${fin}</span>`;
                             }
@@ -2021,25 +2027,25 @@ class MantenimientoManager {
                             ))}`;
                         }
                     },
-                    // ✅ Col 11: Hora Apertura
+                    // ✅ Col 11: Hora Inicio (tecnico; la real del sistema queda en la caratula)
                     {
-                        data: "HoraApertura",
+                        data: "HoraInicio",
                         className: "text-center",
                         render: (data, type, row) => {
                             return `<i class="bi bi-clock me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
-                    // ✅ Col 12: Hora Cierre
+                    // ✅ Col 12: Hora Fin (tecnico; la real del sistema queda en la caratula)
                     {
-                        data: "HoraCierre",
+                        data: "HoraFin",
                         className: "text-center",
                         render: (data, type, row) => {
                             return `<i class="bi bi-clock-history me-1 text-muted"></i>${escapeHtml(data || '')}`;
                         }
                     },
-                    // ✅ Col 13: Tiempo Invertido (Hrs)
+                    // ✅ Col 13: Duracion del tecnico (Hrs); la del sistema queda en la caratula
                     {
-                        data: "TiempoInvertido",
+                        data: "DuracionHrs",
                         className: "text-center",
                         render: (data, type, row) => {
                             return `<i class="bi bi-stopwatch me-1 text-muted"></i>
@@ -2266,6 +2272,12 @@ class MantenimientoManager {
                     else if (esReprogramadoHistorico) {
                         textoTooltip = '✅ SE ENVIÓ AL SIGUIENTE MES';
                         $(row).addClass('mantenimiento-reprogramado');
+                    }
+
+                    // Incluir el motivo capturado en la reprogramacion
+                    const motivoReprogramacion = String(data.Motivo || '').trim();
+                    if (textoTooltip && motivoReprogramacion) {
+                        textoTooltip = `${textoTooltip} · ${motivoReprogramacion}`;
                     }
 
                     if (textoTooltip) {
@@ -6955,4 +6967,7 @@ class PrintManagerMantenimiento {
         return iconos[label] || '▪️';
     }
 }
+
+
+
 
