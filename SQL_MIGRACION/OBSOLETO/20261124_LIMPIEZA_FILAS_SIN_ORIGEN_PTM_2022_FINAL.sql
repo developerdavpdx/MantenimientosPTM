@@ -1,0 +1,160 @@
+-- ============================================================================
+-- OBSOLETO - NO APLICAR
+-- 2026-11-25: el usuario decidio CONSERVAR las filas con CLAVE_SYNC 'X|...'
+-- porque son filas manuales que los usuarios agregaron desde el portal (aunque
+-- esten vacias). No son basura del backfill en este caso.
+-- Se conserva el archivo solo como referencia de la consulta de diagnostico.
+-- ============================================================================
+-- ============================================================================
+-- 2026-11-24 - LIMPIEZA DE FILAS "SIN ORIGEN" (CLAVE_SYNC = 'X|...')
+-- Alcance: NOVIEMBRE 2026, las 4 tablas de tiempos muertos.
+--
+-- QUE HACE
+--   Borra las filas que quedaron del backfill como SIN_ORIGEN (clave
+--   'X|timestamp') y que estan COMPLETAMENTE VACIAS: sin OT, sin paro, sin
+--   producto/turno, sin horas programadas, sin horas de tiempos muertos, sin
+--   produccion y sin comentarios, dentro de noviembre 2026.
+--
+--   Caso detectado: planta 2, 21/11/2026, LINEA 9 PVC (ID 478) y LINEA 10 PVC
+--   (ID 479), cada una duplicando la fila buena (485 y 486).
+--
+-- PROTECCIONES
+--   - Solo filas con CLAVE_SYNC que empieza con 'X|' y ESTATUS = 'A'.
+--   - Solo noviembre 2026.
+--   - Solo si estan 100% vacias (si traen cualquier dato, NO se borran).
+--   - Primero se listan (consulta 1) y luego se borran (consulta 3).
+--
+-- ROLLBACK
+--   No aplica: solo se borran filas vacias. Si hiciera falta recuperarlas, se
+--   pueden reinsertar desde TMP_BAK_SANEO_<PROCESO>_20261124 (respaldo del saneo).
+-- ============================================================================
+
+
+-- ############################################################################
+-- 1. PREVIO: filas X| de noviembre (revisar antes de borrar)
+-- ############################################################################
+SELECT 'PVC' AS PROCESO, "ID_REGISTRO", TO_VARCHAR("FECHA", 'YYYY-MM-DD') AS FECHA, "LINEA",
+       TO_NVARCHAR("PLANTA") AS PLANTA, IFNULL("HORAS_PROGRAMADAS", 0) AS HR_PROG,
+       TO_NVARCHAR("OTMP") AS OTMP, TO_NVARCHAR("OTMC") AS OTMC,
+       TO_NVARCHAR("ID_PARO") AS ID_PARO, "USUARIO", "CLAVE_SYNC"
+FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionPVC"
+WHERE IFNULL("ESTATUS", 'A') = 'A' AND "FECHA" BETWEEN '2026-11-01' AND '2026-11-30'
+  AND "CLAVE_SYNC" LIKE 'X|%'
+UNION ALL
+SELECT 'PEADLISO', "ID_REGISTRO", TO_VARCHAR("FECHA", 'YYYY-MM-DD'), "LINEA",
+       TO_NVARCHAR("PLANTA"), IFNULL("HORAS_PROGRAMADAS", 0),
+       TO_NVARCHAR("OTMP"), TO_NVARCHAR("OTMC"), TO_NVARCHAR("ID_PARO"), "USUARIO", "CLAVE_SYNC"
+FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionPeadLiso"
+WHERE IFNULL("ESTATUS", 'A') = 'A' AND "FECHA" BETWEEN '2026-11-01' AND '2026-11-30'
+  AND "CLAVE_SYNC" LIKE 'X|%'
+UNION ALL
+SELECT 'CORRUGADO', "ID_REGISTRO", TO_VARCHAR("FECHA", 'YYYY-MM-DD'), "LINEA",
+       TO_NVARCHAR("PLANTA"), IFNULL("HORAS_PROGRAMADAS", 0),
+       TO_NVARCHAR("OTMP"), TO_NVARCHAR("OTMC"), TO_NVARCHAR("ID_PARO"), "USUARIO", "CLAVE_SYNC"
+FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionCorrugado"
+WHERE IFNULL("ESTATUS", 'A') = 'A' AND "FECHA" BETWEEN '2026-11-01' AND '2026-11-30'
+  AND "CLAVE_SYNC" LIKE 'X|%'
+UNION ALL
+SELECT 'INY', "ID_REGISTRO", TO_VARCHAR("FECHA", 'YYYY-MM-DD'), "LINEA",
+       TO_NVARCHAR("PLANTA"), IFNULL("HORAS_PROGRAMADAS", 0),
+       TO_NVARCHAR("OTMP"), TO_NVARCHAR("OTMC"), TO_NVARCHAR("ID_PARO"), "USUARIO", "CLAVE_SYNC"
+FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionINY"
+WHERE IFNULL("ESTATUS", 'A') = 'A' AND "FECHA" BETWEEN '2026-11-01' AND '2026-11-30'
+  AND "CLAVE_SYNC" LIKE 'X|%'
+ORDER BY PROCESO, FECHA, "LINEA";
+
+
+-- ############################################################################
+-- 2. BORRAR (solo las que estan completamente vacias)
+-- ############################################################################
+DELETE FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionPVC" T
+WHERE IFNULL(T."ESTATUS", 'A') = 'A'
+  AND T."FECHA" BETWEEN '2026-11-01' AND '2026-11-30'
+  AND T."CLAVE_SYNC" LIKE 'X|%'
+  AND IFNULL(TO_NVARCHAR(T."OTMP"), '') IN ('', '[]')
+  AND IFNULL(TO_NVARCHAR(T."OTMC"), '') IN ('', '[]')
+  AND IFNULL(LENGTH(TO_NVARCHAR(T."ID_PARO")), 0) = 0
+  AND T."ID_PRODUCTO_TERMINADO" IS NULL AND T."PRODUCTO" IS NULL AND T."TURNO" IS NULL
+  AND IFNULL(T."HORAS_PROGRAMADAS", 0) = 0
+  AND IFNULL(T."MANTENIMIENTO_PREVENTIVO", 0) + IFNULL(T."MTTO_CORRECTIVOS", 0) + IFNULL(T."HERRAMENTAL", 0)
+    + IFNULL(T."CONTROL_INVENTARIOS", 0) + IFNULL(T."FALTA_MATERIA_INSUMOS", 0) + IFNULL(T."CAMBIO_MOLDE_HR", 0)
+    + IFNULL(T."CALENTAMIENTO_HR", 0) + IFNULL(T."PARO_ARRANQUE_NO_PROGRAMADO", 0)
+    + IFNULL(T."ARRANQUE_ESTABILIZACION_HR", 0) + IFNULL(T."FALLA_ELECTRICA", 0) + IFNULL(T."SERVICIOS", 0)
+    + IFNULL(T."CAMBIO_MOLDE_SETUP_EXCESOS", 0) + IFNULL(T."FALLA_OPERACION", 0) + IFNULL(T."LIMPIEZA_TANQUE", 0)
+    + IFNULL(T."FALTA_MATERIAL", 0) + IFNULL(T."FALTA_PERSONAL", 0) + IFNULL(T."FALTA_REFACCIONES", 0) = 0
+  AND IFNULL(T."PRODUCCION_NETA_REAL", 0) + IFNULL(T."TR_FABRICADOS", 0) + IFNULL(T."TOTAL_SCRAP_KG", 0) = 0
+  AND IFNULL(LENGTH(TRIM(TO_NVARCHAR(T."COMENTARIOS"))), 0) = 0;
+
+DELETE FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionPeadLiso" T
+WHERE IFNULL(T."ESTATUS", 'A') = 'A'
+  AND T."FECHA" BETWEEN '2026-11-01' AND '2026-11-30'
+  AND T."CLAVE_SYNC" LIKE 'X|%'
+  AND IFNULL(TO_NVARCHAR(T."OTMP"), '') IN ('', '[]')
+  AND IFNULL(TO_NVARCHAR(T."OTMC"), '') IN ('', '[]')
+  AND IFNULL(LENGTH(TO_NVARCHAR(T."ID_PARO")), 0) = 0
+  AND T."ID_PRODUCTO_TERMINADO" IS NULL AND T."PRODUCTO" IS NULL AND T."TURNO" IS NULL
+  AND IFNULL(T."HORAS_PROGRAMADAS", 0) = 0
+  AND IFNULL(T."PREVENTIVO", 0) + IFNULL(T."TIEMPO_MUERTO_CORRECTIVOS", 0) + IFNULL(T."TIEMPO_MUERTO_HERRAMENTALES", 0)
+    + IFNULL(T."CONTROL_INVENTARIOS", 0) + IFNULL(T."FALTA_ENERGIA_ELECTRICA", 0)
+    + IFNULL(T."FALTA_MATERIA_PRIMA_INSUMOS", 0) + IFNULL(T."TIEMPO_CALENTAMIENTO_CI", 0)
+    + IFNULL(T."PREPARACION_LINEA_CAMBIO_HERRAMENTAL", 0) + IFNULL(T."TIEMPO_CALENTAMIENTO_HERRAMENTAL", 0)
+    + IFNULL(T."ARRANQUE_ESTABILIZACION_LINEA", 0) + IFNULL(T."CAMBIO_MOLDE_SETUP_EXCESOS", 0)
+    + IFNULL(T."FALTA_PERSONAL", 0) + IFNULL(T."TIEMPO_MUERTO_PROCESO", 0) = 0
+  AND IFNULL(T."PRODUCCION_NETA", 0) + IFNULL(T."TRLIBERADOS", 0) + IFNULL(T."TOTAL_SCRAP", 0) = 0
+  AND IFNULL(LENGTH(TRIM(TO_NVARCHAR(T."COMENTARIOS"))), 0) = 0;
+
+DELETE FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionCorrugado" T
+WHERE IFNULL(T."ESTATUS", 'A') = 'A'
+  AND T."FECHA" BETWEEN '2026-11-01' AND '2026-11-30'
+  AND T."CLAVE_SYNC" LIKE 'X|%'
+  AND IFNULL(TO_NVARCHAR(T."OTMP"), '') IN ('', '[]')
+  AND IFNULL(TO_NVARCHAR(T."OTMC"), '') IN ('', '[]')
+  AND IFNULL(LENGTH(TO_NVARCHAR(T."ID_PARO")), 0) = 0
+  AND T."ID_PRODUCTO_TERMINADO" IS NULL AND T."PRODUCTO" IS NULL AND T."TURNO" IS NULL
+  AND IFNULL(T."HORAS_PROGRAMADAS", 0) = 0
+  AND IFNULL(T."MANTENIMIENTO_PREVENTIVO", 0) + IFNULL(T."TIEMPO_MUERTO_CORRECTIVOS", 0)
+    + IFNULL(T."TIEMPO_MUERTO_HERRAMENTALES", 0) + IFNULL(T."CONTROL_INVENTARIOS", 0)
+    + IFNULL(T."FALTA_ENERGIA", 0) + IFNULL(T."FALTA_MATERIA_PRIMA", 0) + IFNULL(T."PREPARACION_CAMBIO", 0)
+    + IFNULL(T."ARRANQUE_ESTABILIZACION", 0) + IFNULL(T."TIEMPO_MTTO_CORRECTIVOS_ARRANQUE", 0)
+    + IFNULL(T."CAMBIO_MOLDE_SETUP_EXCESOS", 0) + IFNULL(T."TIEMPO_MUERTO_ARRANCAR", 0)
+    + IFNULL(T."TIEMPO_MUERTO_PROCESO", 0) = 0
+  AND IFNULL(T."PRODUCCION_NETA", 0) + IFNULL(T."TRLIBERADOS", 0) + IFNULL(T."SCRAP_TOTAL", 0) = 0
+  AND IFNULL(LENGTH(TRIM(TO_NVARCHAR(T."COMENTARIOS"))), 0) = 0;
+
+DELETE FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionINY" T
+WHERE IFNULL(T."ESTATUS", 'A') = 'A'
+  AND T."FECHA" BETWEEN '2026-11-01' AND '2026-11-30'
+  AND T."CLAVE_SYNC" LIKE 'X|%'
+  AND IFNULL(TO_NVARCHAR(T."OTMP"), '') IN ('', '[]')
+  AND IFNULL(TO_NVARCHAR(T."OTMC"), '') IN ('', '[]')
+  AND IFNULL(LENGTH(TO_NVARCHAR(T."ID_PARO")), 0) = 0
+  AND T."ID_PRODUCTO_TERMINADO" IS NULL AND T."PRODUCTO" IS NULL AND T."TURNO" IS NULL
+  AND IFNULL(T."HORAS_PROGRAMADAS", 0) = 0
+  AND IFNULL(T."PREVENTIVO", 0) + IFNULL(T."TIEMPO_MUERTO_CORRECTIVOS", 0)
+    + IFNULL(T."TIEMPO_MUERTO_HERRAMENTALES", 0) + IFNULL(T."CONTROL_INVENTARIOS", 0)
+    + IFNULL(T."FALTA_MATERIA_PRIMA", 0) + IFNULL(T."PREPARACION_LINEA", 0)
+    + IFNULL(T."TIEMPO_MUERTO_ARRANQUES", 0) + IFNULL(T."FALLA_MATERIAL", 0) + IFNULL(T."FALTA_PERSONAL", 0)
+    + IFNULL(T."FALLA_ELECTRICA", 0) + IFNULL(T."TIEMPO_MUERTO_PROCESO", 0) = 0
+  AND IFNULL(T."PRODUCCION_NETA", 0) + IFNULL(T."TR_LIBERADOS", 0) + IFNULL(T."TOTAL_SCRAP", 0) = 0
+  AND IFNULL(LENGTH(TRIM(TO_NVARCHAR(T."COMENTARIOS"))), 0) = 0;
+
+
+-- ############################################################################
+-- 3. VERIFICACION: cuantas filas X| quedaron por proceso
+-- ############################################################################
+SELECT 'PVC' AS PROCESO, COUNT(*) AS QUEDAN_X
+FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionPVC"
+WHERE IFNULL("ESTATUS", 'A') = 'A' AND "FECHA" BETWEEN '2026-11-01' AND '2026-11-30' AND "CLAVE_SYNC" LIKE 'X|%'
+UNION ALL
+SELECT 'PEADLISO', COUNT(*)
+FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionPeadLiso"
+WHERE IFNULL("ESTATUS", 'A') = 'A' AND "FECHA" BETWEEN '2026-11-01' AND '2026-11-30' AND "CLAVE_SYNC" LIKE 'X|%'
+UNION ALL
+SELECT 'CORRUGADO', COUNT(*)
+FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionCorrugado"
+WHERE IFNULL("ESTATUS", 'A') = 'A' AND "FECHA" BETWEEN '2026-11-01' AND '2026-11-30' AND "CLAVE_SYNC" LIKE 'X|%'
+UNION ALL
+SELECT 'INY', COUNT(*)
+FROM "PTM_2022_FINAL"."PdxMTTOTiemposMuertosProduccionINY"
+WHERE IFNULL("ESTATUS", 'A') = 'A' AND "FECHA" BETWEEN '2026-11-01' AND '2026-11-30' AND "CLAVE_SYNC" LIKE 'X|%';
+
