@@ -2415,6 +2415,11 @@ El usuario decidio **conservarlas**: son filas manuales que los usuarios agregar
 - **Mañana (25/11/2026):** borrar las `TMP_SANEO_*_20261124` de PTM (16 tablas de trabajo). **Conservar** `TMP_BAK_SANEO_{PVC,PEAD,CORR,INY}_20261124` unas semanas mas.
 - Los 5 scripts del 24/11 que estaban en `PENDIENTES/TEST_JUNIO_2026/` (PAROS x2, ALMACEN x2, PREVENTIVOS x1) **ya se aplicaron** y quedaron en `APLICADOS/TEST_JUNIO_2026/`; `PENDIENTES/` quedo vacio.
 
+**Git (25/11/2026):** 3 commits en `david_reyes`, **pusheados** (`origin/david_reyes = f3ef0af`, verificado):
+- `975b0b3` feat(bitacoras): correctivos por fecha del tecnico, tooltip mixto y saneo de noviembre.
+- `2f1070b` chore(sql): deja PENDIENTES vacio y mueve a APLICADOS los scripts de TEST ya aplicados.
+- `f3ef0af` docs: cierre del saneo de bitacoras de noviembre y despliegue en PTM/TEST.
+
 **Correccion de sintaxis (misma sesion):** la primera version del saneo traia un bloque `DO BEGIN ... END;` al inicio de cada proceso para borrar las temporales de una corrida anterior. **HANA Studio no lo acepta** cuando sigue otra sentencia en el mismo archivo: manda el bloque y el siguiente `CREATE` como una sola instruccion y truena con `incorrect syntax near "CREATE": line 51 col 1`. Se quitaron los 4 bloques: ahora todo son sentencias simples terminadas en punto y coma. La limpieza para re-ejecutar quedo como bloque comentado al inicio (`DROP TABLE` de las 20 temporales). Probado de nuevo el archivo completo en DBADMIN con los mismos resultados (3 OT movidas, 6 quitadas por proceso).
 
 

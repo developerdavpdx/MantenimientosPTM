@@ -269,6 +269,7 @@ Motivo: contienen versiones anteriores del SP de rango. La versiÃ³n vigente estÃ
 - **Validacion en el portal (`:8083`, solo lectura):** planta 1 -> 06/11 L6 sin la 070 y 06/11 L6 manual con 52.33; L16 sin fila el 06/11, 11/11 con 137.54 y 12/11 con 32.00. Planta 2 -> L7 05/11 75.50 y 06/11 10.02; L8 06/11 81.20.
 - **Decisiones:** `OTMP-011` no se borra (sigue en Preventivos, solo deja de salir en bitacora); las filas `CLAVE_SYNC = 'X|...'` se **conservan** (son filas manuales creadas por usuarios) y su script quedo en `OBSOLETO/` como no aplicable; el acumulamiento de meses anteriores no se toca.
 - **Pendiente de esta sesion:** nada.
+- **Git:** `975b0b3` (feat), `2f1070b` (chore), `f3ef0af` (docs) en `david_reyes`, pusheados el 25/11/2026.
 
 ## Pendientes SQL
 
