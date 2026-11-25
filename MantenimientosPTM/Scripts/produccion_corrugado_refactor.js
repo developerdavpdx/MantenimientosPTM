@@ -748,11 +748,22 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                 c => String(c.OrdenTrabajoFinalizada || '').trim().toUpperCase() === 'SI'
             );
 
-            if (correctivosConFirmas.length === 0) {
+            // Solo los que caen dentro del rango consultado: el SP puede devolver OTs
+            // creadas fuera del rango pero cerradas por el tecnico dentro de el (la
+            // fila se pinta con la hora fin del tecnico).
+            const correctivosEnRango = correctivosConFirmas.filter(c => {
+                const fechaFila = this.parsearFechaCorrectivo(c.HoraFin || c.FechaCreacion);
+                if (!fechaFila) return false;
+                const okInicio = !fechaInicio || fechaFila >= fechaInicio;
+                const okFin = !fechaFin || fechaFila <= fechaFin;
+                return okInicio && okFin;
+            });
+
+            if (correctivosEnRango.length === 0) {
                 return false;
             }
 
-            return this.agregarCorrectivosAlGridEnMemoria(correctivosConFirmas, datosFormateados);
+            return this.agregarCorrectivosAlGridEnMemoria(correctivosEnRango, datosFormateados);
 
         } catch (error) {
 
@@ -767,6 +778,10 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
 
     parsearFechaCorrectivo(fechaTexto) {
         if (!fechaTexto) return null;
+        // ISO (HORA_INICIO / HORA_FIN del tecnico)
+        if (String(fechaTexto).includes('-')) {
+            return String(fechaTexto).split('T')[0];
+        }
         const [fechaParte] = fechaTexto.split(' ');
         const [dia, mes, anio] = fechaParte.split('/');
         if (!dia || !mes || !anio) return null;
@@ -778,7 +793,10 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
         const grupos = {};
 
         correctivos.forEach(item => {
-            const fecha = this.parsearFechaCorrectivo(item.FechaCreacion);
+            // Fecha de la fila: dia en que el tecnico cerro la OT (HORA_FIN), igual que
+            // en preventivos. Si la OT no trae hora fin (historico sin captura), se
+            // conserva la fecha de creacion de la solicitud.
+            const fecha = this.parsearFechaCorrectivo(item.HoraFin || item.FechaCreacion);
 
             // 🆕 Corrugado no tiene Herramental separado — todo va a TiempoMuertoCorrectivos
             // Si el equipo de la OT es HERRAMENTALES va a la columna Herramental
@@ -1940,19 +1958,46 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
                                 'PARO_MANUAL': 'Paros Manuales: ' + normalizarParos(params.data?.ID_PARO, false)
                             };
 
-                            const tooltipText = tooltipTexts[origen] || '';
-                            const tooltipSafe = tooltipText.replace(/"/g, '&quot;');
-                            const tooltipAttr = tooltipSafe
-                                ? `data-bs-toggle="tooltip" data-bs-title="${tooltipSafe}" title="${tooltipSafe}"`
-                                : '';
+                            // 🔥 NUEVO: una marca por tipo de contenido. Una fila puede traer
+                            // preventivos y correctivos a la vez; antes solo se veia el de mayor
+                            // prioridad y se perdia el tooltip del otro.
+                            const EMOJIS = {
+                                'PREVENTIVO': '\u{1F6E0}\uFE0F',
+                                'CORRECTIVO': '\u{1F527}',
+                                'PRODUCTO_TERMINADO': '\u{1F4E6}',
+                                'PARO_MANUAL': '\u{1F6AB}'
+                            };
+
+                            const txtOTMC = normalizarOrdenes(params.data?.OTMC);
+                            const txtOTMP = normalizarOrdenes(params.data?.OTMP);
+                            const txtParos = normalizarParos(params.data?.ID_PARO, false);
+
+                            const marcas = [];
+                            if (txtOTMC) marcas.push('CORRECTIVO');
+                            if (txtOTMP) marcas.push('PREVENTIVO');
+
+                            if (marcas.length === 0) {
+                                // Sin OT: se conserva el comportamiento anterior (producto o paro)
+                                if (origen) marcas.push(origen);
+                            } else if (txtParos) {
+                                marcas.push('PARO_MANUAL');
+                            }
+
+                            const marcasHtml = marcas.map(m => {
+                                const texto = (tooltipTexts[m] || '').replace(/"/g, '&quot;');
+                                const attr = texto
+                                    ? `data-bs-toggle="tooltip" data-bs-title="${texto}" title="${texto}"`
+                                    : '';
+                                return `<span style="font-size: 16px; cursor: help;" ${attr}>${EMOJIS[m] || ''}</span>`;
+                            }).join('');
 
                             // 🔥 NUEVO: Mostrar punto pulsante si es un registro nuevo (sin ID_REGISTRO)
                             const puntoPulsante = !idRegistro && (origen === 'CORRECTIVO' || origen === 'PREVENTIVO' || origen === 'PRODUCTO_TERMINADO' || origen === 'PARO_MANUAL')
                                 ? `<span class="punto-pulso punto-pulso-margin-left"></span>`
                                 : '';
 
-                            return emoji
-                                ? `<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 16px; cursor: help;" ${tooltipAttr}>${emoji}</span><span>${params.value}</span>${puntoPulsante}</div>`
+                            return marcasHtml
+                                ? `<div style="display: flex; align-items: center; gap: 4px;">${marcasHtml}<span>${params.value}</span>${puntoPulsante}</div>`
                                 : params.value;
                         }
                     },
