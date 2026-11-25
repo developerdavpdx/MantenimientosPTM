@@ -2299,4 +2299,124 @@ Comprobado el 21/11 sin escribir nada (0 POST al abrir; apertura de OT = solo le
 
 **Pendiente:** `TEST_JUNIO_2026` (5 scripts en `PENDIENTES/TEST_JUNIO_2026/` + los JS de `SCRIPTJS_MIGRACION_RAPIDA/TEST_JUNIO_2026/`). Opcional: borrar `PdxMTTOLineasxPlanta_BAK_20261124` en PTM.
 
+---
+
+## 44. Sesion 24/11/2026 - Correctivos por fecha del tecnico + saneamiento legacy de bitacoras (noviembre)
+**Reporte del usuario:** en el portal de produccion la fila del 06/11 traia `OTMP-157`, `OTMP-160`, `OTMP-161`, `OTMP-162` y `OTMP-163`, pero el tecnico cerro la 157 el **11/11** (apertura 06/11 11:07, fin del tecnico 11/11 20:40, cierre del sistema 20/11). La regla nueva ya no los vuelve a poner ahi, pero **lo ya sincronizado no se mueve solo**: `SpPdxMTTOObtenerMantenimientosPorRango` excluye las OT ya sincronizadas, asi que una OT en el dia equivocado nunca reaparece en el dia correcto.
+
+**Decisiones del usuario:**
+1. Los correctivos tambien se van al dia de **HORA_FIN del tecnico** (antes usaban `FechaCreacion`).
+2. Quitar de la bitacora las OT **sin firmas completas** (preventivos 3, correctivos 2).
+3. Alcance del saneamiento: **solo noviembre 2026**.
+
+### A. Cambios de codigo (vigentes de aqui en adelante)
+
+- **4 JS de produccion** (`produccion_pvc/peadliso/iny/corrugado_refactor.js`):
+  - `agruparCorrectivos`: fecha de la fila = `item.HoraFin || item.FechaCreacion`.
+  - `traerCorrectivosCerrados`: descarta las OTMC cuya fecha de fila cae fuera del rango consultado (mismo criterio que preventivos).
+  - `parsearFechaCorrectivo`: ahora acepta ISO (`YYYY-MM-DDTHH24:MI:SS`, que es como el SP manda `HORA_INICIO`/`HORA_FIN`) ademas de `DD/MM/YYYY`. Sin esto el filtro nuevo tiraba todas las OT.
+- **SP `SpPdxMTTOObtenerMantenimientosCorrectivos`** (`APLICADOS/DBADMIN/CORRECTIVOS/20261124_CORRECTIVOS_BITACORA_FECHA_TECNICO_DBADMIN.sql`): el rango ahora es `(FECHA_CREACION en rango) OR (P_LINEA_PROD IS NOT NULL AND CAST(OT.HORA_FIN AS DATE) BETWEEN rango)`. El listado de Correctivos manda `P_LINEA_PROD = NULL` y no cambia.
+- Build Debug OK; `node --check` OK en los 4 JS; copiados a `SCRIPTJS_MIGRACION_RAPIDA/{PTM_2022_FINAL,TEST_JUNIO_2026}/`.
+
+### B. Diagnostico (solo lectura)
+
+`SQL_MIGRACION/VERIFICACION/20261124_DIAG_BITACORAS_LEGACY_PTM_2022_FINAL.sql` (16 sentencias, probadas). Por proceso lista: OTMP/OTMC distintas, cuantas tienen fecha distinta a `HORA_FIN`, cuantas sin `HORA_FIN`, cuantas sin firmas completas y el detalle con `ID_FILA_DESTINO` (si no es NULL, hay que fusionar). Se corre en PTM (el usuario `DBADMIN` no tiene acceso a ese esquema desde la conexion de desarrollo).
+
+### C. Saneamiento
+
+`SQL_MIGRACION/APLICADOS/DBADMIN/PRODUCCION/20261124_SANEO_BITACORAS_FECHA_TECNICO_NOV_DBADMIN.sql` (4 bloques: PVC, PEAD LISO, CORRUGADO, INY). Por proceso:
+1. Respaldo del mes en `TMP_BAK_SANEO_<PROCESO>_20261124`.
+2. `TMP_SANEO_<PROCESO>_MAP_20261124`: una fila por OT con `FECHA_ORIGEN`, `FECHA_DESTINO` (= `CAST(HORA_FIN AS DATE)`, o la original si no hay hora fin o cae fuera de noviembre), `HORAS` (preventivos: `DURACION_HRS`; correctivos: minutos redondeados de inicio/fin del tecnico igual que `GlobalUtil.calcularDiferenciaHoras`) e `INCLUIR` (firmas completas; en correctivos ademas `MAQUINA_DETENIDA = 1`).
+3. Crea la fila destino si no existe (`M|PLANTA|YYYYMMDD|LINEA`, `HORAS_PROGRAMADAS` vacia, `USUARIO = 'SANEAMIENTO'`).
+4. Recalcula `OTMP`/`OTMC` (set canonico por fecha + linea), horas (`MANTENIMIENTO_PREVENTIVO`/`PREVENTIVO`, correctivos y herramentales) y los KPI del portal (TD, TP, KgNetos, KgPorTD, Rendimiento, Disponibilidad, OEE, EficienciaOperativa) con las formulas de cada proceso.
+5. Borra la fila **solo** si queda sin OT, sin paro, sin horas programadas, sin produccion y sin comentarios.
+6. Al final: consulta `REVISAR` (filas no tocadas), conteo de OT movidas/quitadas y resumen antes/despues por proceso.
+
+**Blindaje:** solo `ESTATUS = 'A'` de noviembre; solo filas manuales (`ID_PRODUCTO_TERMINADO` nulo); si una fila trae un numero de OT que no existe en el catalogo o hay **dos filas manuales** para el mismo dia/linea, la fila **no se toca** y sale en `REVISAR`; re-ejecutable (segunda corrida: 0 movimientos, 0 borrados); la clave se calcula con `INSERT ... WHERE NOT EXISTS` por clave y por fecha+linea+planta.
+
+**Pruebas (DBADMIN, datos sembrados y borrados al terminar):**
+- Caso real: fila 06/11 con `OTMP-157/160/161/162/163` -> 157/160/161/162 quitadas (solo firma del tecnico) y 163 movida al 11/11; fila 11/11 con `OTMC-017` y `MP 3.83 / MTTO 1.80` (TD 4.17, TP 2.37, KgNetos 443.04, Rend 88.61, Disp 56.83, OEE 47.84, Eficiencia 47.96).
+- `OTMC-026` (sin supervisor) quitada; fila que quedaba vacia y con `HORAS_PROGRAMADAS = 0` borrada; fila con produccion capturada se conserva.
+- `OTMC-001` (fin 04/11) creo la fila nueva del 04/11 con sus 0.80 h.
+- Duplicado de `OTMC-017` en dos filas: se queda en una sola, sin duplicar horas (la suma de llegada se ignora si la fila ya tenia la OT).
+- OT inexistente (`OTMP-999`) y fila duplicada mismo dia/linea: se detectan y **no** se tocan.
+- Regresion: la fila real del 05/11 (`LINEA 15 PVC`, 7 OTMP, MP 30.17) quedo **identica** (la suma de `DURACION_HRS` reproduce el valor guardado).
+- Los 4 procesos con el mismo set: MP 99 -> 3.83, correctivos -> 2.60 (1.80 + 0.80), filas 4 (una borrada, una creada).
+
+**Prueba en portal (DBADMIN, `Produccion_pvc`, adminmantenimiento):**
+- Se movio temporalmente `OTMC-017` (`MAQUINA_DETENIDA=1`, 2 firmas) a `HORA_FIN = 12/11 10:00`.
+- Rango **11/11-12/11**: la OT aparece en la fila **12/11** de `LÍNEA 16 PVC` (`Mantenimiento Correctivo: OTMC-017`) y `OTMP-163` en la del 11/11.
+- Rango **11/11 solo**: solo `OTMP-163` (el front descarta la OTMC-017 aunque el SP la traiga por `FECHA_CREACION`).
+- Revertido a `11/11 08:45`: la OT regresa a la fila del 11/11.
+- Unico error de consola: WebSocket de SignalR (preexistente, cae a long polling).
+
+### D. Validacion en produccion (24-25/11/2026, solo lectura)
+
+Saneo **corrido por el usuario en `PTM_2022_FINAL`** (`20261124_SANEO_..._PTM_2022_FINAL.sql`). Resultados del propio script:
+
+- `REVISAR`: vacio.
+- PVC: **31 movidas / 0 quitadas**; CORRUGADO **1 quitada** (`OTMP-011`, solo firma del tecnico); PEAD/INY 0.
+- PVC `MP` 667.34 -> **667.34** (nada perdido). Filas 810 -> **811** (4 nuevas `SANEAMIENTO`: 894 06/11 L6, 895 05/11 L7 p2, 896 06/11 L7 p2, 897 06/11 L8 p2; menos 3 borradas: 654, 236, 395).
+- Correctivos PVC: 5 filas con +/-2 min (`298` 1.29->1.30, `235` 1.79->1.80, `856` 2.20->2.18, `859` 0.33->0.31, `874` 2.02->2.00). Causa: el administrador edito Hora Inicio/Fin despues de sincronizar y la bitacora no se habia actualizado; el saneo las alinea con la ventana del tecnico (neto -0.04 h).
+- CORRUGADO `MP` 109.14 -> 0: la fila del 02/11 tenia `OTMP-011` (6.42 h) **acumulada 17 veces** (6.42 x 17 = 109.14). Mismo patron de acumulamiento del front que se debe revisar en meses anteriores.
+- Fila `61` (04/11 L6) **no se borro**: tiene `PRODUCTO = 2A25160` y `TURNO = 2` con todo lo demas en 0. Regla conservadora: no se borra una fila con captura de producto.
+
+**Validacion en el portal (`:8083`, solo consulta):**
+
+| Planta | Filtro | Resultado |
+|---|---|---|
+| 1 (`adminmantenimiento`) | L6 PVC 04-06/11 | 04/11 producto turno 1 y 2 con MP 0; **06/11 manual MP 52.33** (OTMP-070) |
+| 1 | L16 PVC 05-12/11 | **no existe fila del 06/11**; 11/11 manual MP **137.54**; 12/11 manual MP **32.00** (OTMP-160) |
+| 2 (`lunatc`) | L7 PVC 04-06/11 | 04/11 solo producto turno 2 MP 0 (la 654 se borro); **05/11 MP 75.50**; **06/11 MP 10.02** (OTMP-124) |
+| 2 | L8 PVC 05-06/11 | **06/11 MP 81.20** (OTMP-144 a 152) |
+| 2 | L9 PVC 05/11 | tooltip `OTMP-112...118` (fila no tocada) |
+
+Observacion de UI (preexistente, no del saneo): en el render de la columna `Mes` el marcador es **excluyente** — si la fila trae `OTMC` se pinta como correctivo y **el tooltip del preventivo no se muestra** (por eso el 11/11 L16 solo muestra `OTMC-017` aunque tenga 7 OTMP). En filas con solo OTMP el tooltip si sale completo.
+
+### E. Tooltip mixto en bitacoras (4 procesos, 25/11/2026)
+
+**Solicitud del usuario:** en una fila con preventivos y correctivos a la vez se debe ver la lista de ambos.
+
+**Causa:** `formatearDatos` asigna `_origen`/`_marcador` con prioridad (`OTMC` > `OTMP` > producto > paro) y el render de la columna `Mes` pintaba **un solo** icono con **un solo** tooltip, por lo que el de menor prioridad se perdia.
+
+**Cambio (solo JS, `produccion_pvc/peadliso/iny/corrugado_refactor.js`):** el render ahora arma una lista de marcas a partir del contenido real de la fila:
+- `OTMC` -> 🔧 `Mantenimiento Correctivo: ...`
+- `OTMP` -> 🛠️ `Mantenimiento Preventivo: ...`
+- `ID_PARO` (ademas de OT) -> 🚫 `Paros Manuales: ...`
+- sin OT: se conserva el comportamiento anterior (📦 `Producto Terminado` o 🚫 paro manual).
+
+Los emojis se declaran con escapes unicode (`\u{1F6E0}\uFE0F`, `\u{1F527}`, `\u{1F4E6}`, `\u{1F6AB}`) para no depender del encoding del archivo. `node --check` OK en los 4 y build 0 errores.
+
+**Prueba (DBADMIN, portal):** fila sembrada con `OTMP-101` + `OTMC-017` -> el HTML del render trae los dos `<span>` con sus tooltips ("Mantenimiento Correctivo: OTMC-017" y "Mantenimiento Preventivo: OTMP-101"). Fila con solo `OTMP` -> un solo icono con la lista completa (7 ordenes). Dato de prueba borrado al terminar.
+
+### F. Limpieza de filas SIN_ORIGEN (`X|`) - DESCARTADA
+
+El usuario decidio **conservarlas**: son filas manuales que los usuarios agregaron desde el portal (aunque esten vacias), no basura del backfill. No se aplica ninguna limpieza. Los scripts quedaron en `SQL_MIGRACION/OBSOLETO/20261124_LIMPIEZA_FILAS_SIN_ORIGEN_*.sql` con la nota de "no aplicar" (solo sirve la consulta de diagnostico). Efecto colateral aceptado: en 21/11 planta 2 quedan dos filas manuales del mismo dia+linea (478 `X|` vacia y 485 `M|` con datos); si alguna vez llegara una OT a ese dia/linea, el saneo la marcaria en `REVISAR` y el portal acumularia en la primera.
+
+### G. Decisiones del usuario (25/11/2026)
+
+- **`OTMP-011`**: no se borra ni se toca. Que no aparezca en bitacora es correcto (le faltan firmas) y **siempre debe seguir apareciendo en el listado de Preventivos**; ahi no se filtra por firmas. Solo queda como "en proceso de firmas" y no cuenta para el cumplimiento PM.
+- **Acumulamiento de horas** (`6.42 x 17`): basta con que noviembre quede correcto; el historico anterior no se toca.
+- **Filas `X|`**: se conservan (ver seccion F).
+- **Tooltip mixto**: implementado en los 4 procesos (seccion E).
+
+
+
+
+**Estado (25/11/2026): aplicado en los 3 esquemas y validado en produccion.**
+
+- `DBADMIN`: aplicado y probado (saneo con datos sembrados).
+- `PTM_2022_FINAL`: SP + 4 JS publicados; saneo corrido y validado en el portal (ver seccion D).
+- `TEST_JUNIO_2026`: SP + saneo (sin OT en bitacora de noviembre, 29 filas intactas).
+- Scripts movidos a `APLICADOS/<schema>/PRODUCCION/` (+ `CORRECTIVOS/`). `SCRIPTJS_MIGRACION_RAPIDA` quedo **vacio** (los JS ya estan publicados; la fuente es `MantenimientosPTM/Scripts/`).
+- Bitacora actualizada en `SQL_MIGRACION/MIGRACIONES_APLICADAS.md`.
+
+**Pendiente (opcional):**
+- **Mañana (25/11/2026):** borrar las `TMP_SANEO_*_20261124` de PTM (16 tablas de trabajo). **Conservar** `TMP_BAK_SANEO_{PVC,PEAD,CORR,INY}_20261124` unas semanas mas.
+- Los 5 scripts del 24/11 que estaban en `PENDIENTES/TEST_JUNIO_2026/` (PAROS x2, ALMACEN x2, PREVENTIVOS x1) **ya se aplicaron** y quedaron en `APLICADOS/TEST_JUNIO_2026/`; `PENDIENTES/` quedo vacio.
+
+**Correccion de sintaxis (misma sesion):** la primera version del saneo traia un bloque `DO BEGIN ... END;` al inicio de cada proceso para borrar las temporales de una corrida anterior. **HANA Studio no lo acepta** cuando sigue otra sentencia en el mismo archivo: manda el bloque y el siguiente `CREATE` como una sola instruccion y truena con `incorrect syntax near "CREATE": line 51 col 1`. Se quitaron los 4 bloques: ahora todo son sentencias simples terminadas en punto y coma. La limpieza para re-ejecutar quedo como bloque comentado al inicio (`DROP TABLE` de las 20 temporales). Probado de nuevo el archivo completo en DBADMIN con los mismos resultados (3 OT movidas, 6 quitadas por proceso).
+
+
+
 

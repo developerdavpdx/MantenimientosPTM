@@ -1,4 +1,4 @@
-﻿# Bitácora de migraciones aplicadas
+# Bitácora de migraciones aplicadas
 
 Última actualización: 24/11/2026
 Responsable de la reorganización: sesión OpenCode
@@ -254,19 +254,28 @@ En `OBSOLETO/`:
 
 Motivo: contienen versiones anteriores del SP de rango. La versión vigente está en `APLICADOS/COMUN/MIGRACION_PREVENTIVOS_SP_RANGO.sql`.
 
+## 2026-11-24/25 - Bitacoras: correctivos por fecha del tecnico + saneo de noviembre
+
+- **Reporte del usuario:** la fila del 06/11 en PVC traia `OTMP-157/160/161/162/163`, pero el tecnico cerro la 157 el 11/11 (apertura 06/11, cierre del sistema 20/11). La regla nueva ya no las vuelve a poner ahi, pero lo ya sincronizado no se mueve solo (el SP de rango excluye las OT ya sincronizadas).
+- **Regla:** la fila de bitacora se pinta con `HORA_FIN` del tecnico, tambien en correctivos (`HoraFin` -> `FechaCreacion`). Preventivos: `HoraFin` -> `FechaRealInicio` -> apertura. Solo entran las OT con firmas completas (preventivos 3, correctivos 2 + `MAQUINA_DETENIDA = 1`).
+- **Cambios de codigo (4 JS, sin DLL):** `agruparCorrectivos` usa `HoraFin || FechaCreacion`; `traerCorrectivosCerrados` descarta las OTMC fuera del rango; `parsearFechaCorrectivo` acepta ISO (el SP manda `HORA_FIN` en ISO).
+- **SP `SpPdxMTTOObtenerMantenimientosCorrectivos`:** en bitacora (`P_LINEA_PROD = 1`) el rango tambien incluye `CAST(OT.HORA_FIN AS DATE) BETWEEN rango`. El listado de Correctivos no cambia.
+- **Tooltip mixto (4 JS):** la columna `Mes` muestra una marca por tipo (correctivo / preventivo / paro / producto) en vez de una sola; antes se perdia el tooltip de menor prioridad.
+- **Saneo de noviembre:** `APLICADOS/<schema>/PRODUCCION/20261124_SANEO_BITACORAS_FECHA_TECNICO_NOV_<schema>.sql` (4 procesos). Reubica por `HORA_FIN`, quita las OT sin firmas completas, recalcula horas y KPI, crea la fila destino y borra las que quedan vacias. Respaldo del mes en `TMP_BAK_SANEO_<PROCESO>_20261124`.
+- **Aplicado y validado:**
+  - `DBADMIN`: aplicado y probado con datos sembrados (31 OT movidas / 6 quitadas por proceso en el set de prueba).
+  - `PTM_2022_FINAL`: SP + 4 JS publicados; saneo corrido. PVC **31 movidas / 0 quitadas**, horario de preventivo 667.34 -> 667.34; CORRUGADO 1 quitada (`OTMP-011`, solo firma del tecnico; la fila tenia la OT sumada 17 veces: 6.42 x 17 = 109.14); 4 filas nuevas (`SANEAMIENTO`), 3 borradas. Correctivos: 5 filas con +/-2 min corregidas (ediciones del admin que no se habian reflejado).
+  - `TEST_JUNIO_2026`: SP + saneo (no habia OT en bitacora de noviembre: 29 filas intactas; la unica OT, `OTMP-089`, ya estaba en su dia).
+- **Validacion en el portal (`:8083`, solo lectura):** planta 1 -> 06/11 L6 sin la 070 y 06/11 L6 manual con 52.33; L16 sin fila el 06/11, 11/11 con 137.54 y 12/11 con 32.00. Planta 2 -> L7 05/11 75.50 y 06/11 10.02; L8 06/11 81.20.
+- **Decisiones:** `OTMP-011` no se borra (sigue en Preventivos, solo deja de salir en bitacora); las filas `CLAVE_SYNC = 'X|...'` se **conservan** (son filas manuales creadas por usuarios) y su script quedo en `OBSOLETO/` como no aplicable; el acumulamiento de meses anteriores no se toca.
+- **Pendiente de esta sesion:** nada.
+
 ## Pendientes SQL
-Pendientes **solo en `TEST_JUNIO_2026`** (PTM_2022_FINAL y DBADMIN ya aplicados el 24/11/2026). Todos llevan `SET SCHEMA` + `ALTER PROCEDURE`:
 
-| Script | Cambio |
-|---|---|
-| `PENDIENTES/TEST_JUNIO_2026/PREVENTIVOS/20261124_PREVENTIVOS_BITACORA_FECHA_EJECUCION_TEST_JUNIO_2026.sql` | Bitácora: el SP de rango también devuelve la ocurrencia por `HORA_FIN` del técnico dentro del rango (`P_LINEA_PROD = 1`) |
-| `PENDIENTES/TEST_JUNIO_2026/PAROS/20261124_PAROS_FILTROS_Y_DURACION_TECNICO_TEST_JUNIO_2026.sql` | Paros: filtro Proceso (`p_ID_AREA`) en correctivos, solo líneas de producción (bandera + nombre) y duración con horas del técnico |
-| `PENDIENTES/TEST_JUNIO_2026/PAROS/20261124_PAROS_LINEA_SERVICIOS_P2_NO_PRODUCCION_TEST_JUNIO_2026.sql` | Catálogo: `SERVICIOS` de planta 2 pasa a `PRODUCCION = 0` |
-| `PENDIENTES/TEST_JUNIO_2026/ALMACEN/20261124_REFACCIONES_LIBERAR_OT_AL_RESOLVER_TEST_JUNIO_2026.sql` | Refacciones: la OT regresa a Liberado cuando ya no queda ninguna pendiente (5 SP) |
-| `PENDIENTES/TEST_JUNIO_2026/ALMACEN/20261124_REFACCIONES_BARRIDO_OT_EN_ESPERA_TEST_JUNIO_2026.sql` | Barrido único: libera las OT atoradas en 3 sin refacciones pendientes |
+- **Sin pendientes.** Los 5 scripts del 24/11 que estaban en `PENDIENTES/TEST_JUNIO_2026/` (PAROS x2, ALMACEN x2, PREVENTIVOS x1) se aplicaron y se movieron a `APLICADOS/TEST_JUNIO_2026/{PAROS,ALMACEN,PREVENTIVOS}/`.
+- `PENDIENTES/` quedo solo con su `README.md`.
+- JS: las copias de `SCRIPTJS_MIGRACION_RAPIDA/` se eliminaron; la fuente es `MantenimientosPTM/Scripts/` (publicado en `:8083` y `:8081`).
 
-También pendiente de publicar en **TEST_JUNIO_2026**: los JS de `SCRIPTJS_MIGRACION_RAPIDA/TEST_JUNIO_2026/` (`produccion_pvc/peadliso/iny/corrugado_refactor.js`, `mantenimientos_correctivos_refactor.js`, `mantenimientos_preventivos_refactor.js`). Sin DLL.
-- Al aplicarse en el servidor, mover los scripts a `APLICADOS/TEST_JUNIO_2026/` y actualizar esta bitácora.
+## Tareas menores abiertas
 
-
-
+- **Borrar las temporales del saneo en `PTM_2022_FINAL`** (`TMP_SANEO_*_20261124` x16) cuando ya no se necesiten para comparar. **Conservar** `TMP_BAK_SANEO_{PVC,PEAD,CORR,INY}_20261124` (respaldo del mes) unas semanas. Acordado con el usuario: se borran el 25/11/2026 o despues.
