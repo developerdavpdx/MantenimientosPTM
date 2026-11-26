@@ -1281,16 +1281,13 @@ class GestionProduccionCorrugado extends GestionProduccionBase {
             .replace(/[\u0300-\u036f]/g, "")
             .trim();
 
-        // 🟦 Mapeo 1:1 con las 4 columnas de TIEMPO NO PRODUCTIVO en Corrugado:
+        // Mapeo 1:1 con las 4 columnas de TIEMPO NO PRODUCTIVO en Corrugado:
         // TiempoMuertoCorrectivos, CambioMoldeSetupExcesos, TiempoMuertoArrancar, TiempoMuertoProceso
+        // NOTA (2026-11-25): los paros manuales de mantenimiento (MTTO CORRECTIVOS,
+        // HERRAMENTAL) NO suman horas a la bitacora. Esas horas solo pueden venir de una
+        // OT; si se sumaran aqui, MTTR/MTBF tomarian horas sin orden. El paro sigue
+        // visible en el reporte de Paros, pero sin horas en la fila.
         const mapeo = {
-            // MTTO CORRECTIVOS
-            'MTTO CORRECTIVOS': 'TiempoMuertoCorrectivos',
-            'MTTO. CORRECTIVOS': 'TiempoMuertoCorrectivos',
-            'HERRAMENTAL': 'TiempoMuertoHerramentales',
-            'TIEMPO MUERTO HERRAMENTAL': 'TiempoMuertoHerramentales',
-            'TIEMPO MUERTO POR CORRECTIVOS': 'TiempoMuertoCorrectivos', // 🔥 AGREGADO (id 22)
-
             // CAMBIO DE MOLDE (SETUP) EXCESOS
             'CAMBIO DE MOLDE (SETUP) EXCESOS': 'CambioMoldeSetupExcesos',
             'CAMBIO MOLDE SETUP EXCESOS': 'CambioMoldeSetupExcesos',

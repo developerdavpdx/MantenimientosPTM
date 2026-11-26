@@ -1200,17 +1200,14 @@ class GestionProduccionINY extends GestionProduccionBase {
             .replace(/[\u0300-\u036f]/g, "")
             .trim();
 
-        // 🟦 Mapeo 1:1 directo con columnas de TIEMPO NO PRODUCTIVO (Inyección)
+        // Mapeo 1:1 directo con columnas de TIEMPO NO PRODUCTIVO (Inyección)
         // 7 columnas: TiempoMuertoCorrectivos, TiempoMuertoHerramentales, TiempoMuertoArranques, 
         //             FallaMaterial, FaltaPersonal, FallaElectrica, TiempoMuertoProceso
+        // NOTA (2026-11-25): los paros manuales de mantenimiento (MTTO CORRECTIVOS,
+        // HERRAMENTAL) NO suman horas a la bitacora. Esas horas solo pueden venir de una
+        // OT; si se sumaran aqui, MTTR/MTBF tomarian horas sin orden. El paro sigue
+        // visible en el reporte de Paros, pero sin horas en la fila.
         const mapeo = {
-            // MTTO CORRECTIVOS (Row 8)
-            'MTTO CORRECTIVOS': 'TiempoMuertoCorrectivos',
-            'MTTO. CORRECTIVOS': 'TiempoMuertoCorrectivos',
-
-            // HERRAMENTAL (Row 12)
-            'HERRAMENTAL': 'TiempoMuertoHerramentales',
-
             // ARRANQUE (rows 6, 7, 20, 23)
             'PARO Y ARRANQUE NO PROGRAMADO': 'TiempoMuertoArranques',
             'ARRANQUE Y ESTABILIZACION (HR)': 'TiempoMuertoArranques',
@@ -2022,7 +2019,8 @@ class GestionProduccionINY extends GestionProduccionBase {
                         field: 'TiempoMuertoHerramentales',
                         headerName: 'TIEMPO MUERTO HERRAMENTALES',
                         width: 140,
-                        ...this.getColumnaNumerica('celda-verde-claro')
+                        ...this.getColumnaNumerica('celda-verde-claro'),
+                        editable: false
                     },
                     {
                         field: 'TiempoMuertoArranques',

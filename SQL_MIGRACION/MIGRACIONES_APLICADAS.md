@@ -271,9 +271,20 @@ Motivo: contienen versiones anteriores del SP de rango. La versión vigente est�
 - **Pendiente de esta sesion:** nada.
 - **Git:** `975b0b3` (feat), `2f1070b` (chore), `f3ef0af` (docs) en `david_reyes`, pusheados el 25/11/2026.
 
+## 2026-11-25 - Metricas: filtro de linea, normalizacion de bitacoras y limpieza de herramental en INY (PTM)
+
+- **Reportes:** (1) el filtro de Linea del tablero no devolvia datos salvo una linea; (2) el MTTR/MTBF tomaba horas de paros manuales y de capturas en la celda de Herramental; (3) el grid de bitacora y las metricas no cuadraban por dos nombres de linea.
+- **SP de metricas (4, PTM):** comparacion de `P_LINEA` normalizada (UPPER/TRIM + acentos) en la bitacora y en el cumplimiento PM. Script: `APLICADOS/PTM_2022_FINAL/METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_PTM_2022_FINAL.sql`. TEST/DBADMIN pendientes.
+- **Bitacoras (PTM):** normalizacion `Linea N PVC` -> `LÍNEA N PVC` y `CLAVE_SYNC` actualizada en las 4 tablas, sin borrar filas (la fila vacia del 22/11 se conserva). Respaldo `TMP_BAK_NORM_<PROC>_20261125`. Catalogo: `LÍNEA 13/14/15 PVC` con acento y alta de `LÍNEA 9 INY`. Script: `APLICADOS/PTM_2022_FINAL/PRODUCCION/20261125_NORMALIZAR_LINEAS_BITACORAS_PTM_2022_FINAL.sql`.
+- **Herramental manual en INY:** 61 h capturadas a mano (12 filas, incluidas producto terminado) puestas en 0 y KPI recalculados en 2 pasadas. Scripts en `APLICADOS/PTM_2022_FINAL/PRODUCCION/20261125_FIX_INY_HERRAMENTAL_MANUAL_*.sql`.
+- **JS (4) publicados en `:8083`:** los paros manuales de `MTTO CORRECTIVOS`/`HERRAMENTAL` ya no suman a la bitacora y la celda de Herramental queda bloqueada en INY y PEAD (PVC/Corrugado ya lo estaban). Vistas de Produccion con cache-busting por ticks.
+- **Validacion (portal `:8083`):** L1/L3/L10/L13 ya devuelven su tiempo disponible (antes 0 o solo las filas nuevas); L5 muestra 49 registros / 540 h programadas / 495 h disponibles / 0.32 h de reparacion / 1 parada -> **MTTR 0.32 h y MTBF 494.68 h**.
+
 ## Pendientes SQL
 
-- **Sin pendientes.** Los 5 scripts del 24/11 que estaban en `PENDIENTES/TEST_JUNIO_2026/` (PAROS x2, ALMACEN x2, PREVENTIVOS x1) se aplicaron y se movieron a `APLICADOS/TEST_JUNIO_2026/{PAROS,ALMACEN,PREVENTIVOS}/`.
+- **PTM_2022_FINAL: al dia.** Los 5 scripts del 2026-11-25 se aplicaron y movieron a `APLICADOS/PTM_2022_FINAL/{METRICAS,PRODUCCION}/`.
+- **Pendientes en DBADMIN y TEST_JUNIO_2026** (no aplicados; el 2026-11-25 solo se aplico PTM): filtro de linea normalizado de Metricas y normalizacion de lineas de las bitacoras, un script por schema en `METRICAS/` y `PRODUCCION/`.
+- **Sin pendientes** de los paquetes anteriores (24/11 y previos).
 - `PENDIENTES/` quedo solo con su `README.md`.
 - JS: las copias de `SCRIPTJS_MIGRACION_RAPIDA/` se eliminaron; la fuente es `MantenimientosPTM/Scripts/` (publicado en `:8083` y `:8081`).
 

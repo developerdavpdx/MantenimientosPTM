@@ -32,7 +32,29 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 - El JS `solicitud_refacciones_refactor.js` publicado en 8081 y 8083 el mismo día.
 ## Contenido actual
 
-**Ninguno.** Todo está aplicado y movido a `../APLICADOS/<schema>/`.
+**PTM_2022_FINAL: aplicado y movido a `../APLICADOS/PTM_2022_FINAL/`.**
+
+**Pendiente solo en DBADMIN y TEST_JUNIO_2026** (no aplicados; el 2026-11-25 se aplico unicamente PTM).
+
+Orden sugerido por schema:
+
+1. `PRODUCCION/20261125_CATALOGO_LINEA_9_INY_<schema>.sql` (verifica y, si falta, crea `LÍNEA 9 INY`).
+2. `PRODUCCION/20261125_NORMALIZAR_LINEAS_BITACORAS_<schema>.sql` (nombres de linea + `CLAVE_SYNC`).
+3. `PRODUCCION/20261125_FIX_INY_HERRAMENTAL_MANUAL_<schema>.sql` (solo si el preview trae filas; si no, no cambia nada).
+4. `METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_<schema>.sql`.
+
+- **DBADMIN:** los 4 en `PENDIENTES/DBADMIN/{PRODUCCION,METRICAS}/`.
+- **TEST_JUNIO_2026:** los 4 en `PENDIENTES/TEST_JUNIO_2026/{PRODUCCION,METRICAS}/`.
+
+**JS y vistas:** `SCRIPTJS_MIGRACION_RAPIDA/DBADMIN/` y `.../TEST_JUNIO_2026/` tienen los 4 JS de produccion; la subcarpeta `Vistas/` tiene los 4 `.cshtml` con el cache-busting por ticks. En DBADMIN la app corre desde el repo, pero las copias quedan para referencia/publicacion.
+
+> 2026-11-25 (PTM): aplicados y movidos a `../APLICADOS/PTM_2022_FINAL/`:
+> filtro de linea normalizado en los 4 SP de metricas, normalizacion de nombres
+> de linea en las 4 bitacoras (`Linea N PVC` -> `LÍNEA N PVC` + `CLAVE_SYNC`),
+> catalogo (`LÍNEA 13/14/15 PVC` con acento y alta de `LÍNEA 9 INY`) y limpieza de
+> las horas de herramental manuales en INY (2 pasadas). Los 4 JS de produccion se
+> publicaron en `:8083`; las copias de `../../../SCRIPTJS_MIGRACION_RAPIDA/PTM_2022_FINAL/`
+> coinciden byte a byte con el repo.
 
 > 2026-11-23: aplicados en los 3 schemas (DBADMIN, TEST_JUNIO_2026 y PTM_2022_FINAL) los 3 paquetes
 > del día - SP de correctivos (bitácora solo con máquina detenida), 4 SPs de métricas (N° de paradas)

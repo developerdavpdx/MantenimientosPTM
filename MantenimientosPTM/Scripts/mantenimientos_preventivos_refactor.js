@@ -55,7 +55,7 @@ class UIManager {
 
         if (this.datos_usuario[0].TIPOUSUARIO != "AdminMtto" && this.datos_usuario[0].TIPOUSUARIO != "Administrador") {
             $("#btnGenerarOrdenes").addClass("d-none");
-            $("#btnExportarExcel").addClass("d-none");
+            // El boton de exportar se mantiene visible para todos los roles que ven el listado.
         }
 
         $('#FiltroFechaInicio').val(DateUtils.obtenerPrimerDiaMesActual());
@@ -2016,7 +2016,7 @@ class MantenimientoManager {
                         data: "HoraInicio",
                         className: "text-center",
                         render: (data, type, row) => {
-                            return `<i class="bi bi-clock me-1 text-muted"></i>${escapeHtml(data || '')}`;
+                            return `<i class="bi bi-clock me-1 text-muted"></i>${escapeHtml(data || 'N/A')}`;
                         }
                     },
                     // ✅ Col 12: Hora Fin (tecnico; la real del sistema queda en la caratula)
@@ -2024,7 +2024,7 @@ class MantenimientoManager {
                         data: "HoraFin",
                         className: "text-center",
                         render: (data, type, row) => {
-                            return `<i class="bi bi-clock-history me-1 text-muted"></i>${escapeHtml(data || '')}`;
+                            return `<i class="bi bi-clock-history me-1 text-muted"></i>${escapeHtml(data || 'N/A')}`;
                         }
                     },
                     // ✅ Col 13: Duracion del tecnico (Hrs); la del sistema queda en la caratula
@@ -2032,8 +2032,9 @@ class MantenimientoManager {
                         data: "DuracionHrs",
                         className: "text-center",
                         render: (data, type, row) => {
-                            return `<i class="bi bi-stopwatch me-1 text-muted"></i>
-                        ${data ? `${escapeHtml(data)} HRS` : ''}`;
+                            return data
+                                ? `<i class="bi bi-stopwatch me-1 text-muted"></i>${escapeHtml(data)} HRS`
+                                : '<i class="bi bi-stopwatch me-1 text-muted"></i>N/A';
                         }
                     },
                     // ✅ Col 14: Usuario Generó

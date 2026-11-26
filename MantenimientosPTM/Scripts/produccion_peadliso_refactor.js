@@ -1453,12 +1453,14 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             .replace(/[\u0300-\u036f]/g, "")
             .trim();
 
-        // 🟦 Mapeo de categorías a campos del grid PEAD LISO
+        // Mapeo de categorías a campos del grid PEAD LISO
+        // NOTA (2026-11-25): los paros manuales de mantenimiento (MTTO CORRECTIVOS,
+        // CORRECTIVO, HERRAMENTAL) NO suman horas a la bitacora. Esas horas solo pueden
+        // venir de una OT; si se sumaran aqui, MTTR/MTBF tomarian horas sin orden.
+        // El paro sigue visible en el reporte de Paros, pero sin horas en la fila.
+        // Los alias de preparacion/calentamiento de herramental se conservan porque son
+        // tiempos de setup, no de mantenimiento correctivo.
         const mapeo = {
-            'MTTO CORRECTIVOS': 'TiempoMuertoCorrectivos',
-            'MTTO. CORRECTIVOS': 'TiempoMuertoCorrectivos',
-            'CORRECTIVO': 'TiempoMuertoCorrectivos',
-            'CORRECTIVOS': 'TiempoMuertoCorrectivos',
             'FALLA ELECTRICA': 'FaltaEnergiaElectrica',
             'ENERGIA': 'FaltaEnergiaElectrica',
             'FALTA ENERGIA': 'FaltaEnergiaElectrica',
@@ -1470,7 +1472,6 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
             'CALENTAMIENTO CI': 'TiempoCalentamientoCI',
             'PREPARACION LINEA CAMBIO HERRAMENTAL': 'PreparacionLineaCambioHerramental',
             'CAMBIO HERRAMENTAL': 'PreparacionLineaCambioHerramental',
-            'HERRAMENTAL': 'PreparacionLineaCambioHerramental',
             'TIEMPO CALENTAMIENTO HERRAMENTAL': 'TiempoCalentamientoHerramental',
             'CALENTAMIENTO HERRAMENTAL': 'TiempoCalentamientoHerramental',
             'ARRANQUE ESTABILIZACION': 'ArranqueEstabilizacionLinea',
@@ -1895,7 +1896,8 @@ class GestionProduccionPeadLiso extends GestionProduccionBase {
                         field: 'TiempoMuertoHerramentales',
                         headerName: 'TIEMPO MUERTO HERRAMENTALES',
                         width: 135,
-                        ...this.getColumnaNumerica('celda-verde-claro')
+                        ...this.getColumnaNumerica('celda-verde-claro'),
+                        editable: false
                     },
 
                     {

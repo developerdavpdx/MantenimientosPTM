@@ -66,6 +66,7 @@
 - **Menú:** vive en `MantenimientosPTM/Views/Shared/_Layout.cshtml` (bloque de navegación, aprox. líneas 182-330) y todos los enlaces usan `@Url.Action("Accion","Controlador")`. Un módulo nuevo solo es visible si se agrega ahí.
 - **Carga de JS:** cada vista declara sus `<script>` al final. El cache-busting es `?v=@System.IO.File.GetLastWriteTime(HttpContext.Current.Server.MapPath("~/Scripts/x.js")).Ticks` y hoy se aplica a `Global.js`, `Content/Custom.css` y al JS principal del módulo (Equipos, Correctivos, Preventivos, PROGMC, Calendario, Métricas, Login); los auxiliares (`FileUpload.js`, `ProductosTerminadosHelper.js`, tour configs) se cargan sin versión.
 - **Ambiente/BD activo:** `MantenimientosPTM/Web.config` → `appSettings["Database"]` (hoy `DBADMIN`; alternativas comentadas `PTM_2022_FINAL` y `TEST_JUNIO_2026`), más `connectionStrings["HANAConnection"]` (SAP HANA Cloud) y `connectionStrings["SQLConnection"]` (NWSCALE en SQL Server).
+- **Publicación rápida:** cada archivo modificado se copia a su bandeja local (`.gitignore`), por schema: `SCRIPTJS_MIGRACION_RAPIDA/<schema>/` para JS, `VIEWS_MIGRACION_RAPIDA/<schema>/` para vistas `.cshtml` y `CSS_MIGRACION_RAPIDA/<schema>/` para CSS. La fuente es `MantenimientosPTM/Scripts`, `MantenimientosPTM/Views` y `MantenimientosPTM/Content`; las bandejas sirven para copiar al IIS. No se publica el `Web.config` del repo.
 - **Resolución de SPs:** las clases `MantenimientosPTM/Models/AccesoDatos/AccesoDatos*.cs` exponen propiedades `GC*` que interpolan `AppSettings["Database"]` + nombre del SP; se ejecutan con `GlobalCommands.ExecuteProcedureHanaAuto` (`Models/GlobalCommands.cs`). Las reglas de negocio intermedias están en `Models/LogicaNegocio/Logica*.cs`.
 
 ### Vistas legacy / código muerto conocidas
@@ -160,6 +161,12 @@
 - `HORAS_PARO` / **MTTR** dependen de la **bitácora de tiempos muertos guardada**, no solo del cierre de la OT: si no se guarda la bitácora, el indicador no se mueve.
 - La **planta** se toma de `sessionStorage.userData[0].PLANTA`, **no** del combo "Planta" (que es cosmético en este módulo).
 - `TodosLosProcesos` ejecuta los SP **en serie** (~150 ms por SP, latencia de red a HANA Cloud).
+- **MTTR** = Σ horas de la columna de correctivos/herramental (según Clasificación) / Σ `OTMC` de las filas con horas. Solo entran **correctivos con paro (`MAQUINA_DETENIDA = 1`) y las 2 firmas**; preventivos y paros manuales no cuentan.
+- **Clasificación:** `MANTENIMIENTO` usa `MTTO_CORRECTIVOS`; `HERRAMENTALES` usa `HERRAMENTAL`; `Todas` suma las dos.
+- **MTBF** = (Σ `TIEMPO_DISPONIBLE` − Σ horas de reparación) / Σ `OTMC`; **sin paradas → N/A**. El `T. disponible` es la suma de **todas las líneas del filtro** (incluye filas de producto terminado NWSCALE); con una línea es solo esa línea y no se compara con el total.
+- `TIEMPO_DISPONIBLE` = `HORAS_PROGRAMADAS` − los paros programados del proceso (PVC: MTTO. PREVENTIVO, CONTROL INVENTARIOS, FALTA MATERIA PRIMA E INSUMOS, CAMBIO MOLDE, CALENTAMIENTO, PARO Y ARRANQUE NO PROG., ARRANQUE Y ESTABILIZACIÓN; INY: PREVENTIVO, CONTROL DE INVENTARIOS, FALTA DE MATERIA PRIMA E INSUMOS, PREPARACIÓN DE LÍNEA).
+- **Filtro de línea:** comparación **normalizada** (UPPER/TRIM + acentos) porque en la bitácora conviven `Linea N PVC` y `LÍNEA N PVC`. La bitácora debe estar normalizada al nombre de `PdxMTTOLineasxPlanta`; el front busca la fila por **nombre**, no por ID, y si no coincide crea una fila nueva.
+- **Horas de correctivo/herramental:** solo se llenan desde OT. La celda de Herramental **no es editable** y los paros manuales de `MTTO CORRECTIVOS`/`HERRAMENTAL` **no suman** a la bitácora (sí quedan en el reporte de Paros).
 
 ### Almacén
 - Las refacciones solicitadas desde una OT se consultan en **Almacén → Solicitud de Refacciones**, no dentro de la OT.

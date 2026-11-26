@@ -2422,6 +2422,43 @@ El usuario decidio **conservarlas**: son filas manuales que los usuarios agregar
 
 **Correccion de sintaxis (misma sesion):** la primera version del saneo traia un bloque `DO BEGIN ... END;` al inicio de cada proceso para borrar las temporales de una corrida anterior. **HANA Studio no lo acepta** cuando sigue otra sentencia en el mismo archivo: manda el bloque y el siguiente `CREATE` como una sola instruccion y truena con `incorrect syntax near "CREATE": line 51 col 1`. Se quitaron los 4 bloques: ahora todo son sentencias simples terminadas en punto y coma. La limpieza para re-ejecutar quedo como bloque comentado al inicio (`DROP TABLE` de las 20 temporales). Probado de nuevo el archivo completo en DBADMIN con los mismos resultados (3 OT movidas, 6 quitadas por proceso).
 
+---
+
+## 45. Sesion 25/11/2026 - Metricas: MTTR/MTBF, filtro de linea y normalizacion de bitacoras
+
+**Reportes del usuario:** (1) el MTTR/MTBF tomaba todos los tiempos correctivos, no solo las ordenes con paro; (2) al filtrar por linea en Metricas no devolvia datos salvo una linea; (3) el grid de bitacora y las metricas no cuadraban.
+
+### A. Causas
+- **MTTR/MTBF** leian la **columna** de la bitacora (`MTTO_CORRECTIVOS + HERRAMENTAL`), que recibia capturas manuales y horas de producto; el denominador solo contaba `OTMC` del JSON. En INY planta 2 habia **61 h de Herramental** capturadas a mano (12 filas, sin OT ni paro; 2 de ellas de producto terminado).
+- En **INY y PEAD** la celda de Herramental era **editable** (en PVC/Corrugado no) y el mapeo de paros manuales de `MTTO CORRECTIVOS`/`HERRAMENTAL` sumaba a la bitacora.
+- En la bitacora de PVC convivian **`Linea N PVC`** (historico, sin acento) y **`LÍNEA N PVC`** (catalogo). El grid filtraba por texto exacto; las metricas ya comparaban normalizado -> universos distintos.
+- El front busca la fila por **nombre** de linea; con dos nombres creaba/duplicaba filas para el mismo dia/turno.
+
+### B. Cambios
+- **JS (4 modulos):** se quitaron del mapeo los paros manuales de `MTTO CORRECTIVOS`/`HERRAMENTAL`; la celda de Herramental queda `editable: false` en INY y PEAD; las 4 vistas de Produccion usan cache-busting por ticks. Publicados en `:8083`; hashes verificados contra el repo.
+- **SQL PTM:**
+  - `SpPdxMTTOMetricasOEE_*` (4): comparacion de `P_LINEA` normalizada (UPPER/TRIM + acentos) en la bitacora y en el cumplimiento PM.
+  - Limpieza de las 61 h de Herramental manual en INY (2 pasadas; incluye producto terminado). TD/TP/KPI recalculados.
+  - Catalogo: `LINEA 13/14/15 PVC` -> con acento; alta de `LÍNEA 9 INY`.
+  - Normalizacion de las 4 bitacoras: `Linea N PVC` -> `LÍNEA N PVC`, `CLAVE_SYNC` actualizada, **sin borrar filas** (la fila vacia del 22/11 se conserva).
+- **Archivos:** `APLICADOS/PTM_2022_FINAL/METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_PTM_2022_FINAL.sql`, `APLICADOS/PTM_2022_FINAL/PRODUCCION/20261125_{NORMALIZAR_LINEAS_BITACORAS,CATALOGO_LINEA_9_INY,FIX_INY_HERRAMENTAL_MANUAL,FIX_INY_HERRAMENTAL_MANUAL_PROD}_PTM_2022_FINAL.sql`.
+- **Pendiente DBADMIN/TEST:** los equivalentes en `PENDIENTES/{DBADMIN,TEST_JUNIO_2026}/{METRICAS,PRODUCCION}/`.
+- **Verificaciones:** `VERIFICACION/20261125_VERIF_*.sql` (MTTR/MTBF, filtro de linea, origen de horas, cuadre L5, estado INY, origen del T. disponible).
+- **Infografia para usuarios:** `DOCUMENTOS/Infografia_MTTR_MTBF_2026-11-25.{html,png}`; el mensaje corto de WhatsApp quedo en el chat.
+
+### C. Validacion (PTM, `:8083`)
+- L1/L3/L10/L13 devuelven su tiempo disponible (antes 0 o solo las filas nuevas).
+- L5: **49 registros** (2 turnos/dia), 540 h programadas, **495 h disponibles**, 0.32 h de reparacion, **1 parada** -> **MTTR 0.32 h / MTBF 494.68 h**.
+- El delta 540 -> 495 son los paros programados (calentamiento 8.5, paro/arranque 17.5, arranque 13, falta materia 6 = 45).
+
+### D. Pendientes
+- Aplicar normalizacion + filtro normalizado en **TEST_JUNIO_2026** y **DBADMIN**.
+- **Excel de Correctivos (implementado y validado en PTM):** boton **Exportar**, columna **"Paro de linea"** en el grid (badge rojo/gris) y export con el mismo estilo de Preventivos (iconos, encabezado degradado, filas alternadas y badge de color en Paro). 16 columnas: orden, equipo, proceso, linea, clasificacion, estatus, fecha solicitud, hora inicio/fin y duracion **del tecnico**, paro, firmas, solicitante, actividad y texto. **N/A** si el tecnico aun no cierra; la duracion se calcula de las horas si `DURACION_HRS` viene vacia (OTMC-072 = 1.55 h). Validado en `:8083`: archivo `PK` de ~17 KB, iconos en encabezados, Paro **Sí** `FFDC3545` / **No** `FF6C757D`.
+- **Horas del tecnico:** el listado de Correctivos usa `HORA_INICIO`/`HORA_FIN`/`DURACION_HRS`; Preventivos ya lo hacia y se homologo el **N/A**. La vista de Preventivos del servidor aun tiene los titulos viejos ("Hora Apertura/Cierre"): publicar `VIEWS_MIGRACION_RAPIDA/<schema>/MantenimientoPreventivo.cshtml` para alinearlos.
+- **Bandejas de publicacion:** `SCRIPTJS_MIGRACION_RAPIDA/<schema>/` (JS), `VIEWS_MIGRACION_RAPIDA/<schema>/` (vistas `.cshtml`) y `CSS_MIGRACION_RAPIDA/<schema>/` (CSS), locales (`.gitignore`). Copiados: los 2 JS del Excel en PTM/TEST/DBADMIN; `MantenimientoCorrectivo.cshtml` y `MantenimientoPreventivo.cshtml` en los 3; las 4 vistas de Produccion en TEST/DBADMIN (PTM ya publicadas). La bandeja PTM se recreo con los JS del Excel; los 4 de Produccion ya estan publicados.
+- Borrar en PTM `TMP_NORM_*`, `TMP_NORM_*_SKIP` y `TMP_CAT_L13_20261125`; conservar `TMP_BAK_NORM_*` unas semanas.
+- Commit local en `david_reyes`; **push solo con autorizacion del usuario**.
+
 
 
 

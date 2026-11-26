@@ -151,6 +151,9 @@ class MantenimientosCorrectivosApp {
         // Filtros
         $('#btnFiltrar').on('click', () => this.mantenimientoManager.aplicarFiltros());
 
+        // Exportar a Excel
+        $('#btnExportarExcel').on('click', () => this.mantenimientoManager.exportarExcel());
+
         // Checkboxes
         $('#selectAll').on('change', (e) => this.mantenimientoManager.seleccionarTodos(e));
 
@@ -996,6 +999,200 @@ class MantenimientoManager {
         console.log('✅ MantenimientoManager inicializado correctamente');
     }
 
+    // Hora del tecnico: los SP la mandan en ISO (2026-11-12T06:40:00).
+    // Si el tecnico aun no cierra, se muestra N/A.
+    formatearHoraTecnico(valor) {
+        if (!valor) return 'N/A';
+        const texto = String(valor).trim();
+        const m = texto.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+        if (m) return `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`;
+        return texto;
+    }
+
+    // Duracion del tecnico: usa DURACION_HRS; si viene vacia pero hay inicio y fin,
+    // se calcula con esa ventana (casos donde la OT se corrigio y no se recalculó).
+    calcularDuracionTecnico(row) {
+        if (row && row.DuracionHrs) return row.DuracionHrs;
+        if (!row || !row.HoraInicio || !row.HoraFin) return null;
+        const inicio = new Date(row.HoraInicio);
+        const fin = new Date(row.HoraFin);
+        if (isNaN(inicio.getTime()) || isNaN(fin.getTime()) || fin < inicio) return null;
+        return ((fin - inicio) / 3600000).toFixed(2);
+    }
+
+    // ============================
+    // EXPORTAR A EXCEL
+    // ============================
+    async exportarExcel() {
+        const table = $('#tablaMantenimientosRango').DataTable();
+
+        if (!table || table.rows({ search: 'applied' }).count() === 0) {
+            AlertManager.mostrar('No hay datos para exportar', 'warning');
+            return;
+        }
+
+        const $btn = $('#btnExportarExcel');
+        const htmlOriginal = $btn.html();
+        $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Exportando...').prop('disabled', true);
+
+        try {
+            const data = table.rows({ search: 'applied' }).data().toArray();
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Correctivos', {
+                pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
+            });
+
+            const columnas = [
+                { header: '📋 Orden', width: 16 },
+                { header: '⚙️ Equipo', width: 38 },
+                { header: '🏭 Proceso', width: 16 },
+                { header: '🔀 Línea', width: 18 },
+                { header: '🏷️ Clasificación', width: 16 },
+                { header: '📌 Estatus', width: 22 },
+                { header: '📅 Fecha solicitud', width: 18 },
+                { header: '⏱️ Hora inicio (técnico)', width: 20 },
+                { header: '⏱️ Hora fin (técnico)', width: 20 },
+                { header: '⏳ Duración técnico (h)', width: 14 },
+                { header: '🚫 Paro de línea', width: 14 },
+                { header: '✍️ Firma realizó', width: 13 },
+                { header: '✍️ Firma supervisó', width: 14 },
+                { header: '👤 Solicitante', width: 26 },
+                { header: '📝 Actividad realizada', width: 50 },
+                { header: '💬 Texto breve', width: 30 }
+            ];
+
+            worksheet.mergeCells('A1:P1');
+            const title = worksheet.getCell('A1');
+            title.value = '📊 REPORTE DE MANTENIMIENTOS CORRECTIVOS';
+            title.font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+            title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0058A1' } };
+            title.alignment = { vertical: 'middle', horizontal: 'center' };
+            worksheet.getRow(1).height = 40;
+
+            worksheet.mergeCells('A2:D2');
+            const info1 = worksheet.getCell('A2');
+            info1.value = `📅 Fecha de generación: ${new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+            info1.font = { name: 'Segoe UI', size: 11, bold: true };
+            info1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3F2FD' } };
+            info1.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+
+            worksheet.mergeCells('E2:P2');
+            const info2 = worksheet.getCell('E2');
+            info2.value = `📈 Total de registros: ${data.length}`;
+            info2.font = { name: 'Segoe UI', size: 11, bold: true };
+            info2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+            info2.alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+
+            const headerRow = worksheet.getRow(4);
+            columnas.forEach((col, i) => {
+                const cell = headerRow.getCell(i + 1);
+                cell.value = col.header;
+                cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = {
+                    type: 'gradient',
+                    gradient: 'angle',
+                    degree: 90,
+                    stops: [
+                        { position: 0, color: { argb: 'FF1976D2' } },
+                        { position: 1, color: { argb: 'FF0058A1' } }
+                    ]
+                };
+                cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                cell.border = {
+                    top: { style: 'medium', color: { argb: 'FF0058A1' } },
+                    left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+                    bottom: { style: 'medium', color: { argb: 'FF0058A1' } },
+                    right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+                };
+                worksheet.getColumn(i + 1).width = col.width;
+            });
+            headerRow.height = 35;
+
+            const textoEstatus = (row) => {
+                if (!row.DescEstatusOrden) return 'Nueva';
+                if (String(row.OrdenTrabajoFinalizada).toUpperCase() === 'NO' && String(row.EstatusOrden) === '4') {
+                    return 'En proceso de firmas';
+                }
+                return row.DescEstatusOrden;
+            };
+
+            data.forEach((row, index) => {
+                const excelRow = worksheet.getRow(5 + index);
+                const bgColor = (index % 2 === 0) ? 'FFFFFFFF' : 'FFF5F5F5';
+                const valores = [
+                    row.NumeroOrden || '',
+                    `${row.NombreEquipo || ''} ${row.NumeroDocPmCalidad || ''}`.trim(),
+                    row.Area || '',
+                    row.LineaProduccion || '',
+                    row.Clasificacion || row.AreaTecnica || '',
+                    textoEstatus(row),
+                    row.FechaCreacion || '',
+                    this.formatearHoraTecnico(row.HoraInicio),
+                    this.formatearHoraTecnico(row.HoraFin),
+                    this.calcularDuracionTecnico(row) || 'N/A',
+                    parseInt(row.MaquinaDetenida, 10) === 1 ? 'Sí' : 'No',
+                    row.FirmaRealizo ? 'Sí' : 'No',
+                    row.FirmaSuperviso ? 'Sí' : 'No',
+                    row.Solicitante || '',
+                    row.TextoSecuencia || '',
+                    row.TextoCorto || ''
+                ];
+
+                valores.forEach((value, colIndex) => {
+                    const cell = excelRow.getCell(colIndex + 1);
+                    cell.value = value;
+                    cell.font = { name: 'Segoe UI', size: 9 };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                    cell.alignment = {
+                        vertical: 'middle',
+                        horizontal: (colIndex === 1 || colIndex >= 14) ? 'left' : 'center',
+                        wrapText: colIndex >= 14
+                    };
+                    cell.border = {
+                        top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                        left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                        bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                        right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+                    };
+
+                    // Badge de "Paro de línea": rojo si detuvo la máquina, gris si no.
+                    if (colIndex === 10) {
+                        const esParo = String(value).trim() === 'Sí';
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: esParo ? 'FFDC3545' : 'FF6C757D' } };
+                        cell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    }
+                });
+
+                excelRow.height = 22;
+            });
+
+            const lastRow = worksheet.getRow(5 + data.length);
+            worksheet.mergeCells(`A${lastRow.number}:P${lastRow.number}`);
+            const summary = worksheet.getCell(`A${lastRow.number}`);
+            summary.value = `✅ Fin del reporte - ${data.length} registros exportados`;
+            summary.font = { name: 'Segoe UI', size: 10, bold: true, italic: true, color: { argb: 'FF666666' } };
+            summary.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
+            summary.alignment = { horizontal: 'center' };
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Correctivos_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error al exportar correctivos:', error);
+            AlertManager.mostrar('No fue posible generar el Excel. Intenta de nuevo.', 'danger');
+        } finally {
+            $btn.html(htmlOriginal).prop('disabled', false);
+        }
+    }
+
     llenarMantenimientosCorrectivosPorRango() {
         try {
             // ✅ Remover fila vacía si existe
@@ -1361,29 +1558,45 @@ class MantenimientoManager {
                         </span>`;
                         }
                     },
+                    // ✅ Paro de línea (Máquina detenida)
+                    {
+                        data: null,
+                        className: "text-center",
+                        render: (data, type, row) => {
+                            const detenida = parseInt(row.MaquinaDetenida, 10) === 1;
+                            return detenida
+                                ? '<span class="badge badge-custom" style="background-color:#dc3545;color:#fff;"><i class="bi bi-pause-circle me-1"></i>Sí</span>'
+                                : '<span class="badge badge-custom" style="background-color:#6c757d;color:#fff;"><i class="bi bi-check-circle me-1"></i>No</span>';
+                        }
+                    },
                     // ✅ Col 8: Fecha Solicitud Mantenimiento
                     {
                         data: "FechaCreacion",
                         className: "text-center",
                         render: (data) => `<i class="bi bi-calendar-event me-1 text-muted"></i>${escapeHtml(data || 'N/A')}`
                     },
-                    // ✅ Col 9: Hora Apertura
+                    // ✅ Col 9: Hora Inicio (tecnico; la del sistema queda en la caratula)
                     {
-                        data: "HoraApertura",
+                        data: "HoraInicio",
                         className: "text-center",
-                        render: (data) => `<i class="bi bi-clock me-1 text-muted"></i>${escapeHtml(data || '')}`
+                        render: (data) => `<i class="bi bi-clock me-1 text-muted"></i>${escapeHtml(this.formatearHoraTecnico(data))}`
                     },
-                    // ✅ Col 10: Hora Cierre
+                    // ✅ Col 10: Hora Fin (tecnico; la del sistema queda en la caratula)
                     {
-                        data: "HoraCierre",
+                        data: "HoraFin",
                         className: "text-center",
-                        render: (data) => `<i class="bi bi-clock-history me-1 text-muted"></i>${escapeHtml(data || '')}`
+                        render: (data) => `<i class="bi bi-clock-history me-1 text-muted"></i>${escapeHtml(this.formatearHoraTecnico(data))}`
                     },
-                    // ✅ Col 11: Tiempo Invertido (Hrs)
+                    // ✅ Col 11: Duracion del tecnico (Hrs)
                     {
-                        data: "TiempoInvertido",
+                        data: "DuracionHrs",
                         className: "text-center",
-                        render: (data) => `<i class="bi bi-stopwatch me-1 text-muted"></i>${data ? `${escapeHtml(data)} HRS` : ''}`
+                        render: (data, type, row) => {
+                            const dur = this.calcularDuracionTecnico(row);
+                            return dur
+                                ? `<i class="bi bi-stopwatch me-1 text-muted"></i>${escapeHtml(dur)} HRS`
+                                : '<span class="text-muted">N/A</span>';
+                        }
                     },
                     // ✅ Col 12: Texto Breve
                     {
@@ -1422,10 +1635,10 @@ class MantenimientoManager {
                 ],
                 columnDefs: [
                     // Columnas no ordenables
-                    { orderable: false, targets: [0, 1, 2, 7, 9, 10, 11, 12, 13, 14] },
+                    { orderable: false, targets: [0, 1, 2, 7, 8, 10, 11, 12, 13, 14, 15] },
 
                     // Centrado de columnas
-                    { className: "text-center", targets: [0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14, 15] },
+                    { className: "text-center", targets: [0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] },
 
                     // 🎯 PRIORIDADES RESPONSIVE
                     { responsivePriority: 1, targets: 0 },  // Control +/-
@@ -1436,14 +1649,15 @@ class MantenimientoManager {
                     { responsivePriority: 6, targets: 5 },  // Proceso
                     { responsivePriority: 7, targets: 6 },  // Línea
                     { responsivePriority: 8, targets: 7 },  // Estatus Orden
-                    { responsivePriority: 9, targets: 8 },  // Fecha Solicitud Mantenimiento
-                    { responsivePriority: 10, targets: 9 },  // Hora Apertura
-                    { responsivePriority: 11, targets: 10 },  // Hora Cierre
-                    { responsivePriority: 12, targets: 11 },  // Tiempo Invertido
-                    { responsivePriority: 13, targets: 12 },  // Texto Breve
-                    { responsivePriority: 14, targets: 13 },  // Solicitante
-                    { responsivePriority: 15, targets: 14 },  // Comentarios
-                    { responsivePriority: 16, targets: 15 },  // Tipo Mantenimiento
+                    { responsivePriority: 9, targets: 8 },  // Paro de línea
+                    { responsivePriority: 10, targets: 9 },  // Fecha Solicitud Mantenimiento
+                    { responsivePriority: 11, targets: 10 }, // Hora Apertura
+                    { responsivePriority: 12, targets: 11 }, // Hora Cierre
+                    { responsivePriority: 13, targets: 12 }, // Tiempo Invertido
+                    { responsivePriority: 14, targets: 13 }, // Texto Breve
+                    { responsivePriority: 15, targets: 14 }, // Solicitante
+                    { responsivePriority: 16, targets: 15 }, // Comentarios
+                    { responsivePriority: 17, targets: 16 }, // Tipo Mantenimiento
                 ],
                 ordering: false,
                 info: true,

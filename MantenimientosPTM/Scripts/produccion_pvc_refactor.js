@@ -1804,9 +1804,11 @@ class GestionProduccionPVC extends GestionProduccionBase {
             .trim();
 
         const mapeo = {
-            // MTTO CORRECTIVOS
-            'MTTO CORRECTIVOS': 'MttoCorrectivos',
-            'MTTO. CORRECTIVOS': 'MttoCorrectivos',
+            // NOTA (2026-11-25): los paros manuales de mantenimiento (MTTO CORRECTIVOS,
+            // HERRAMENTAL) NO suman horas a la bitacora. Esas horas solo pueden venir de
+            // una OT (correctivo de mantenimiento o de herramental); si se sumaran aqui,
+            // MTTR/MTBF tomarian horas sin orden. El paro sigue visible en el reporte de
+            // Paros y su ID queda registrado en la fila, pero sin horas.
 
             // FALLA ELÉCTRICA
             'FALLA ELECTRICA': 'FallaElectrica',
@@ -1818,9 +1820,6 @@ class GestionProduccionPVC extends GestionProduccionBase {
             // CAMBIO MOLDE SETUP EXCESOS
             'CAMBIO DE MOLDE (SETUP) EXCESOS': 'CambioMoldeSetupExcesos',
             'CAMBIO MOLDE SETUP EXCESOS': 'CambioMoldeSetupExcesos',
-
-            // HERRAMENTAL
-            'HERRAMENTAL': 'Herramental',
 
             // FALLA OPERACIÓN
             'FALLA DE OPERACION': 'FallaOperacion',

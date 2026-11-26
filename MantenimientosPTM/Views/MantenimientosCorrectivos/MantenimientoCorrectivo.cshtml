@@ -11,12 +11,22 @@
             <div class="card-header header-fijo-custom text-dark">
                 <div class="row g-2 align-items-center mb-3">
                     <!-- Título -->
-                    <div class="col-12 col-lg-12">
+                    <div class="col-12 col-lg-7">
                         <h4 class="mb-0 text-color-logo">
                             <i class="bi bi-clipboard-check-fill me-2"></i>
                             Órdenes de Trabajo Correctivo
                             <span class="text-primary ms-2" id="mesActual">@(DateTime.Now.ToString("MMMM yyyy").ToUpper())</span>
                         </h4>
+                    </div>
+                    <!-- Exportar -->
+                    <div class="col-12 col-lg-5">
+                        <div class="d-flex flex-wrap justify-content-start justify-content-lg-end gap-2">
+                            <button id="btnExportarExcel" class="btn-filtro-limpiar d-flex align-items-center"
+                                    data-bs-toggle="tooltip" title="Exportar a Excel">
+                                <i class="bi bi-file-earmark-excel-fill me-2"></i>
+                                Exportar
+                            </button>
+                        </div>
                     </div>
                     <!-- Botón -->
                     @*<div class="col-12 col-lg-5">
@@ -152,10 +162,11 @@
                                 <th scope="col">Proceso</th>
                                 <th scope="col">Línea</th>
                                 <th scope="col">Estatus Orden</th>
+                                <th scope="col">Paro de línea</th>
                                 <th scope="col">Fecha Solicitud Mantenimiento</th>
-                                <th scope="col">Hora Apertura</th>
-                                <th scope="col">Hora Cierre</th>
-                                <th scope="col">Tiempo Invertido (Hrs)</th>
+                                <th scope="col">Hora Inicio</th>
+                                <th scope="col">Hora Fin</th>
+                                <th scope="col">Duración Técnico (Hrs)</th>
                                 <th scope="col">Texto Breve</th>
                                 <th scope="col">Solicitante</th>
                                 <th scope="col" class="col-text-long">Comentarios</th>
@@ -164,7 +175,7 @@
                         </thead>
                         <tbody>
                             <tr id="filaVacia">
-                                <td colspan="16" class="text-center">
+                                <td colspan="17" class="text-center">
                                     <!-- 👈 Cambiar de 16 a 15 -->
                                     <i class="bi bi-funnel"></i> Aplica los filtros para ver los mantenimientos
                                 </td>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>MTTR y MTBF - Cómo se calculan</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    background: #eef3f8;
+    color: #1f2d3d;
+    padding: 26px;
+  }
+  .page {
+    width: 1440px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(11, 61, 107, .18);
+  }
+  .header {
+    background: linear-gradient(120deg, #0b3d6b 0%, #0f5c9c 60%, #1177b5 100%);
+    color: #fff;
+    padding: 26px 34px 24px;
+    position: relative;
+  }
+  .header::after {
+    content: "";
+    position: absolute;
+    right: -60px; top: -80px;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.07);
+  }
+  .header h1 { font-size: 30px; font-weight: 700; letter-spacing: .2px; }
+  .header p { font-size: 15px; opacity: .9; margin-top: 6px; }
+  .body { padding: 26px 30px 26px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .card {
+    border: 1px solid #e3eaf2;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(31,45,61,.05);
+    overflow: hidden;
+  }
+  .card-top {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    color: #fff;
+  }
+  .card-top .num {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,255,255,.22);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px;
+  }
+  .card-top h2 { font-size: 20px; font-weight: 700; letter-spacing: .3px; }
+  .card-top .sub { margin-left: auto; font-size: 12.5px; opacity: .95; }
+  .mttr .card-top { background: linear-gradient(100deg, #b26a00, #e08a00); }
+  .mtbf .card-top { background: linear-gradient(100deg, #0b6f80, #1097ad); }
+  .card-body { padding: 16px 18px 18px; }
+  .formula {
+    border-radius: 10px;
+    padding: 13px 14px;
+    text-align: center;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.35;
+    margin-bottom: 14px;
+  }
+  .mttr .formula { background: #fff6e5; border: 1px solid #f3d08a; color: #8a5200; }
+  .mtbf .formula { background: #e8f7fa; border: 1px solid #9bdbe6; color: #075866; }
+  .formula .op { font-size: 22px; padding: 0 4px; }
+  .label {
+    font-size: 11.5px; font-weight: 700; letter-spacing: 1.1px;
+    text-transform: uppercase; color: #6b7c8f; margin: 12px 0 7px;
+  }
+  .steps { display: flex; flex-direction: column; gap: 8px; }
+  .step {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: #f7fafd; border: 1px solid #e6edf5;
+    border-radius: 9px; padding: 9px 11px;
+    font-size: 13.2px; line-height: 1.38;
+  }
+  .step .dot {
+    flex: 0 0 21px; width: 21px; height: 21px; border-radius: 50%;
+    background: #0f5c9c; color: #fff; font-size: 11.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-top: 1px;
+  }
+  .mttr .step .dot { background: #b26a00; }
+  .mtbf .step .dot { background: #0b6f80; }
+  .split { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 2px; }
+  .row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; line-height: 1.3;
+  }
+  .tag {
+    font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: 6px;
+    white-space: nowrap;
+  }
+  .tag.mtto { background: #e2ecfb; color: #0b4f8a; border: 1px solid #b9d3f2; }
+  .tag.herr { background: #efe6fb; color: #5a2c9a; border: 1px solid #d3c1f0; }
+  .tag.gray { background: #eef1f5; color: #46586b; border: 1px solid #d7dee7; }
+  .arrow { color: #93a4b6; font-weight: 700; }
+  .note {
+    margin-top: 12px; padding: 9px 11px; border-radius: 9px;
+    font-size: 12.8px; line-height: 1.38;
+  }
+  .note.warn { background: #fdecec; border: 1px solid #f5b5b5; color: #9c1c1c; }
+  .note.ok { background: #eef8f0; border: 1px solid #b7e0c0; color: #1c6b35; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mini {
+    background: #f7fafd; border: 1px solid #e6edf5; border-radius: 9px;
+    padding: 9px 11px; font-size: 12.3px; line-height: 1.55;
+  }
+  .mini b { display: block; font-size: 12.5px; margin-bottom: 4px; color: #0b3d6b; }
+  .mini.mtbf-mini b { color: #075866; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .chip {
+    background: #eef3f9; border: 1px solid #d9e2ec; color: #33475b;
+    font-size: 11.6px; padding: 3px 8px; border-radius: 20px; white-space: nowrap;
+  }
+  .timeline {
+    margin-top: 6px; background: #f7fafd; border: 1px solid #e6edf5;
+    border-radius: 10px; padding: 14px 14px 12px;
+  }
+  .tl-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11.5px; font-weight: 700; margin-bottom: 6px;
+  }
+  .tl-head .left { color: #075866; }
+  .tl-head .right { color: #9c1c1c; }
+  .bar {
+    position: relative; height: 24px; border-radius: 6px;
+    background: linear-gradient(90deg, #bdeef0, #8fdde3);
+    border: 1px solid #6cc9d2;
+  }
+  .bar .stop {
+    position: absolute; left: 78%; width: 13%; height: 100%;
+    background: #e25c5c; border-radius: 4px;
+  }
+  .timeline .foot {
+    display: flex; justify-content: space-between; margin-top: 9px;
+    font-size: 11.2px; color: #5b6b7c;
+  }
+  .timeline .foot b { color: #1f2d3d; }
+  .example {
+    margin-top: 18px;
+    background: #0b3d6b;
+    color: #fff;
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 16px;
+    font-size: 14px;
+  }
+  .example .badge {
+    background: #ffd166; color: #5a3b00; font-weight: 800;
+    border-radius: 8px; padding: 6px 10px; font-size: 12px; white-space: nowrap;
+  }
+  .example b { color: #ffe08a; }
+  .bottom {
+    margin-top: 18px;
+    display: grid; grid-template-columns: 1.05fr 1fr 1fr; gap: 14px;
+    align-items: stretch;
+  }
+  .box {
+    border: 1px solid #e3eaf2; border-radius: 12px; padding: 12px 14px;
+    font-size: 12.6px; line-height: 1.42; background: #fbfcfe;
+  }
+  .box h3 {
+    font-size: 12px; letter-spacing: 1px; text-transform: uppercase;
+    color: #6b7c8f; margin-bottom: 7px;
+  }
+  .box .big { font-size: 15px; font-weight: 700; color: #0b3d6b; }
+  .box ul { list-style: none; }
+  .box li { margin: 3px 0; }
+  .box li::before { content: "•"; color: #0f5c9c; font-weight: 700; margin-right: 6px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .filters .chip { background: #e8f1fb; border-color: #c6dcf3; color: #0b4f8a; font-weight: 600; }
+  .footer {
+    margin-top: 16px; text-align: center; font-size: 11.5px; color: #7a8a9c;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <h1>MTTR y MTBF: cómo se calculan</h1>
+    <p>Tablero de Métricas · Mantenimientos PTM · Datos de la bitácora de tiempos muertos</p>
+  </div>
+
+  <div class="body">
+    <div class="grid">
+
+      <!-- MTTR -->
+      <div class="card mttr">
+        <div class="card-top">
+          <div class="num">1</div>
+          <h2>MTTR</h2>
+          <div class="sub">Tiempo promedio de reparación</div>
+        </div>
+        <div class="card-body">
+          <div class="formula">
+            MTTR <span class="op">=</span> tiempo total de reparación <span class="op">/</span> número de paradas
+          </div>
+
+          <div class="label">Qué se toma en cuenta</div>
+          <div class="steps">
+            <div class="step"><div class="dot">A</div><div>Solo <b>correctivos</b> con “La máquina estuvo detenida” y las <b>2 firmas</b>.</div></div>
+            <div class="step"><div class="dot">B</div><div>Tiempo del técnico: de la <b>hora de inicio</b> a la <b>hora de fin</b> del trabajo.</div></div>
+            <div class="step"><div class="dot">C</div><div>Ese tiempo se <b>sincroniza en la bitácora de tiempos muertos</b> para validarse y guardarse.</div></div>
+          </div>
+
+          <div class="label">Depende del Área Técnica del correctivo</div>
+          <div class="split">
+            <div class="row">
+              <span class="tag gray">Mantenimiento</span>
+              <span class="arrow">→</span>
+              <span class="tag mtto">MTTO. CORRECTIVOS</span>
+            </div>
+            <div class="row">
+              <span class="tag gray">Mantenimiento Herramentales</span>
+              <span class="arrow">→</span>
+              <span class="tag herr">HERRAMENTAL</span>
+            </div>
+          </div>
+
+          <div class="label">En Métricas, según el filtro Clasificación</div>
+          <div class="split">
+            <div class="row"><span class="tag mtto">MANTENIMIENTO</span><span class="arrow">→</span><span>toma MTTO. CORRECTIVOS</span></div>
+            <div class="row"><span class="tag herr">HERRAMENTALES</span><span class="arrow">→</span><span>toma HERRAMENTAL</span></div>
+            <div class="row"><span class="tag gray">TODAS</span><span class="arrow">→</span><span>suma las dos columnas</span></div>
+          </div>
+
+          <div class="note warn">
+            <b>Preventivos</b> y <b>paros de producción capturados a mano</b> no cuentan para el MTTR.
+          </div>
+        </div>
+      </div>
+
+      <!-- MTBF -->
+      <div class="card mtbf">
+        <div class="card-top">
+          <div class="num">2</div>
+          <h2>MTBF</h2>
+          <div class="sub">Tiempo promedio entre fallas</div>
+        </div>
+        <div class="card-body">
+          <div class="formula">
+            MTBF <span class="op">=</span> (tiempo disponible <span class="op">−</span> tiempo de reparación) <span class="op">/</span> número de paradas
+          </div>
+
+          <div class="label">Tiempo disponible = HORAS PROGRAMADAS − TIEMPO NO DISPONIBLE</div>
+          <div class="cols">
+            <div class="mini">
+              <b>En PVC se resta</b>
+              MTTO. PREVENTIVO · CONTROL INVENTARIOS · FALTA MATERIA PRIMA E INSUMOS · CAMBIO MOLDE (HR) · CALENTAMIENTO (HR) · PARO Y ARRANQUE NO PROG. · ARRANQUE Y ESTABILIZACIÓN
+            </div>
+            <div class="mini mtbf-mini">
+              <b>En INY se resta</b>
+              PREVENTIVO · CONTROL DE INVENTARIOS · FALTA DE MATERIA PRIMA E INSUMOS · PREPARACIÓN DE LÍNEA
+            </div>
+          </div>
+
+          <div class="label">Cómo se ve en el tiempo</div>
+          <div class="timeline">
+            <div class="tl-head">
+              <span class="left">Tiempo disponible de la línea</span>
+              <span class="right">paro / reparación</span>
+            </div>
+            <div class="bar">
+              <span class="stop"></span>
+            </div>
+            <div class="foot">
+              <span><b>Sin paradas</b> → MTBF = N/A</span>
+              <span>Más tiempo disponible y menos paradas = MTBF más alto</span>
+            </div>
+          </div>
+
+          <div class="note ok" style="background:#eef3fb;border-color:#c6dcf3;color:#0b4f8a;">
+            <b>Lectura rápida:</b> MTTR alto = reparaciones más largas. MTBF alto = más tiempo entre fallas.
+          </div>
+
+          <div class="note ok">
+            El tiempo de reparación es <b>el mismo</b> que se usó en el MTTR: solo correctivos con paro y 2 firmas.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ejemplo -->
+    <div class="example">
+      <span class="badge">EJEMPLO · LÍNEA 5 PVC</span>
+      <div>
+        Del <b>01/11/2026 al 25/11/2026</b>: <b>495 h</b> disponibles, <b>0.32 h</b> de reparación y <b>1 parada</b>
+        → MTTR <b>0.32 h</b> y MTBF <b>494.68 h</b>.
+      </div>
+    </div>
+
+    <!-- Filtros y recomendaciones -->
+    <div class="bottom">
+      <div class="box">
+        <h3>Filtros del tablero</h3>
+        <div class="filters">
+          <span class="chip">Planta</span>
+          <span class="chip">Proceso</span>
+          <span class="chip">Línea</span>
+          <span class="chip">Clasificación</span>
+          <span class="chip">Fechas</span>
+        </div>
+        <div style="margin-top:8px;">Cambian el universo de datos que se suma.</div>
+      </div>
+      <div class="box">
+        <h3>Una línea vs. todas</h3>
+        <ul>
+          <li><span class="big">Una línea:</span> solo esa línea.</li>
+          <li><span class="big">Todas las líneas:</span> suma de todas, incluido el producto terminado de NWSCALE. El MTBF sale más alto y no se compara con el de una línea sola.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>Para que cuadre</h3>
+        <ul>
+          <li>Mantener la <b>bitácora actualizada</b>: si no se guarda, no se refleja en las métricas.</li>
+          <li>Revisar los <b>filtros aplicados</b> antes de comparar.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">Mantenimientos PTM · Métricas de Mantenimiento · Noviembre 2026</div>
+  </div>
+</div>
+</body>
+</html>
