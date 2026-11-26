@@ -274,18 +274,31 @@ Motivo: contienen versiones anteriores del SP de rango. La versión vigente est�
 ## 2026-11-25 - Metricas: filtro de linea, normalizacion de bitacoras y limpieza de herramental en INY (PTM)
 
 - **Reportes:** (1) el filtro de Linea del tablero no devolvia datos salvo una linea; (2) el MTTR/MTBF tomaba horas de paros manuales y de capturas en la celda de Herramental; (3) el grid de bitacora y las metricas no cuadraban por dos nombres de linea.
-- **SP de metricas (4, PTM):** comparacion de `P_LINEA` normalizada (UPPER/TRIM + acentos) en la bitacora y en el cumplimiento PM. Script: `APLICADOS/PTM_2022_FINAL/METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_PTM_2022_FINAL.sql`. TEST/DBADMIN pendientes.
+- **SP de metricas (4, PTM):** comparacion de `P_LINEA` normalizada (UPPER/TRIM + acentos) en la bitacora y en el cumplimiento PM. Script: `APLICADOS/PTM_2022_FINAL/METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_PTM_2022_FINAL.sql`. **TEST aplicado el 2026-11-26; DBADMIN pendiente.**
 - **Bitacoras (PTM):** normalizacion `Linea N PVC` -> `LÍNEA N PVC` y `CLAVE_SYNC` actualizada en las 4 tablas, sin borrar filas (la fila vacia del 22/11 se conserva). Respaldo `TMP_BAK_NORM_<PROC>_20261125`. Catalogo: `LÍNEA 13/14/15 PVC` con acento y alta de `LÍNEA 9 INY`. Script: `APLICADOS/PTM_2022_FINAL/PRODUCCION/20261125_NORMALIZAR_LINEAS_BITACORAS_PTM_2022_FINAL.sql`.
 - **Herramental manual en INY:** 61 h capturadas a mano (12 filas, incluidas producto terminado) puestas en 0 y KPI recalculados en 2 pasadas. Scripts en `APLICADOS/PTM_2022_FINAL/PRODUCCION/20261125_FIX_INY_HERRAMENTAL_MANUAL_*.sql`.
 - **JS (4) publicados en `:8083`:** los paros manuales de `MTTO CORRECTIVOS`/`HERRAMENTAL` ya no suman a la bitacora y la celda de Herramental queda bloqueada en INY y PEAD (PVC/Corrugado ya lo estaban). Vistas de Produccion con cache-busting por ticks.
 - **Validacion (portal `:8083`):** L1/L3/L10/L13 ya devuelven su tiempo disponible (antes 0 o solo las filas nuevas); L5 muestra 49 registros / 540 h programadas / 495 h disponibles / 0.32 h de reparacion / 1 parada -> **MTTR 0.32 h y MTBF 494.68 h**.
 
+## 2026-11-26 - Aplicado en TEST_JUNIO_2026 (paquete del 25/11)
+
+- **Scripts aplicados por el usuario y movidos a `APLICADOS/TEST_JUNIO_2026/`:** `METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_TEST_JUNIO_2026.sql` y `PRODUCCION/20261125_{CATALOGO_LINEA_9_INY,NORMALIZAR_LINEAS_BITACORAS,FIX_INY_HERRAMENTAL_MANUAL}_TEST_JUNIO_2026.sql`.
+- **Publicacion verificada en `:8081` (solo lectura):**
+  - 6 JS servidos identicos byte a byte al repo: `mantenimientos_correctivos_refactor.js`, `mantenimientos_preventivos_refactor.js` y los 4 `produccion_*_refactor.js`.
+  - Las 4 vistas de Produccion usan cache-busting por ticks; las 6 vistas de `VIEWS_MIGRACION_RAPIDA/TEST_JUNIO_2026/` coinciden con el repo.
+  - Correctivos: boton **Exportar** y columna **"Paro de linea"** presentes. Preventivos: encabezados **"Hora Inicio" / "Hora Fin"**.
+  - Bitacora PVC de noviembre: todas las lineas con acento (`LÍNEA N PVC`), ninguna `Linea N PVC`.
+  - Catalogo: `LÍNEA 13/14/15 PVC` con acento.
+- **No verificable con datos en TEST:** el filtro normalizado de Metricas (TEST no tiene `HORAS_PROGRAMADAS` en noviembre: TD = 0 y MTBF N/A), `LÍNEA 9 INY` (el modulo INY no expone filtro de linea y no hay filas INY en noviembre) y la limpieza de Herramental manual en INY (0 filas). En PTM ya quedaron validados el 25/11.
+- **DBADMIN:** pendiente; el trial de HANA Cloud esta offline ("trial environment is temporarily offline"), sin dependencia con TEST ni con la publicacion.
+
 ## Pendientes SQL
 
 - **PTM_2022_FINAL: al dia.** Los 5 scripts del 2026-11-25 se aplicaron y movieron a `APLICADOS/PTM_2022_FINAL/{METRICAS,PRODUCCION}/`.
-- **Pendientes en DBADMIN y TEST_JUNIO_2026** (no aplicados; el 2026-11-25 solo se aplico PTM): filtro de linea normalizado de Metricas y normalizacion de lineas de las bitacoras, un script por schema en `METRICAS/` y `PRODUCCION/`.
+- **TEST_JUNIO_2026: al dia.** Los 4 scripts del 2026-11-25 se aplicaron el 2026-11-26 y quedaron en `APLICADOS/TEST_JUNIO_2026/{METRICAS,PRODUCCION}/`.
+- **Pendiente solo DBADMIN** (bloqueado por el trial de HANA Cloud offline): filtro de linea normalizado de Metricas y normalizacion de lineas de las bitacoras, en `PENDIENTES/DBADMIN/{METRICAS,PRODUCCION}/`.
 - **Sin pendientes** de los paquetes anteriores (24/11 y previos).
-- `PENDIENTES/` quedo solo con su `README.md`.
+- `PENDIENTES/` solo deberia conservar el bloque de DBADMIN y su `README.md`.
 - JS: las copias de `SCRIPTJS_MIGRACION_RAPIDA/` se eliminaron; la fuente es `MantenimientosPTM/Scripts/` (publicado en `:8083` y `:8081`).
 
 ## Tareas menores abiertas

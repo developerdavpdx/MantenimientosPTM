@@ -2442,7 +2442,7 @@ El usuario decidio **conservarlas**: son filas manuales que los usuarios agregar
   - Catalogo: `LINEA 13/14/15 PVC` -> con acento; alta de `LÍNEA 9 INY`.
   - Normalizacion de las 4 bitacoras: `Linea N PVC` -> `LÍNEA N PVC`, `CLAVE_SYNC` actualizada, **sin borrar filas** (la fila vacia del 22/11 se conserva).
 - **Archivos:** `APLICADOS/PTM_2022_FINAL/METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_PTM_2022_FINAL.sql`, `APLICADOS/PTM_2022_FINAL/PRODUCCION/20261125_{NORMALIZAR_LINEAS_BITACORAS,CATALOGO_LINEA_9_INY,FIX_INY_HERRAMENTAL_MANUAL,FIX_INY_HERRAMENTAL_MANUAL_PROD}_PTM_2022_FINAL.sql`.
-- **Pendiente DBADMIN/TEST:** los equivalentes en `PENDIENTES/{DBADMIN,TEST_JUNIO_2026}/{METRICAS,PRODUCCION}/`.
+- **TEST aplicado el 2026-11-26** (ver §46); **DBADMIN pendiente** (trial de HANA Cloud offline). Los equivalentes estan en `PENDIENTES/DBADMIN/{METRICAS,PRODUCCION}/`.
 - **Verificaciones:** `VERIFICACION/20261125_VERIF_*.sql` (MTTR/MTBF, filtro de linea, origen de horas, cuadre L5, estado INY, origen del T. disponible).
 - **Infografia para usuarios:** `DOCUMENTOS/Infografia_MTTR_MTBF_2026-11-25.{html,png}`; el mensaje corto de WhatsApp quedo en el chat.
 
@@ -2452,12 +2452,50 @@ El usuario decidio **conservarlas**: son filas manuales que los usuarios agregar
 - El delta 540 -> 495 son los paros programados (calentamiento 8.5, paro/arranque 17.5, arranque 13, falta materia 6 = 45).
 
 ### D. Pendientes
-- Aplicar normalizacion + filtro normalizado en **TEST_JUNIO_2026** y **DBADMIN**.
+- ~~Aplicar normalizacion + filtro normalizado en **TEST_JUNIO_2026**~~ (hecho el 26/11, ver §46) y **DBADMIN** (bloqueado por el trial de HANA Cloud offline).
 - **Excel de Correctivos (implementado y validado en PTM):** boton **Exportar**, columna **"Paro de linea"** en el grid (badge rojo/gris) y export con el mismo estilo de Preventivos (iconos, encabezado degradado, filas alternadas y badge de color en Paro). 16 columnas: orden, equipo, proceso, linea, clasificacion, estatus, fecha solicitud, hora inicio/fin y duracion **del tecnico**, paro, firmas, solicitante, actividad y texto. **N/A** si el tecnico aun no cierra; la duracion se calcula de las horas si `DURACION_HRS` viene vacia (OTMC-072 = 1.55 h). Validado en `:8083`: archivo `PK` de ~17 KB, iconos en encabezados, Paro **Sí** `FFDC3545` / **No** `FF6C757D`.
-- **Horas del tecnico:** el listado de Correctivos usa `HORA_INICIO`/`HORA_FIN`/`DURACION_HRS`; Preventivos ya lo hacia y se homologo el **N/A**. La vista de Preventivos del servidor aun tiene los titulos viejos ("Hora Apertura/Cierre"): publicar `VIEWS_MIGRACION_RAPIDA/<schema>/MantenimientoPreventivo.cshtml` para alinearlos.
+- **Horas del tecnico:** el listado de Correctivos usa `HORA_INICIO`/`HORA_FIN`/`DURACION_HRS`; Preventivos ya lo hacia y se homologo el **N/A**. La vista de Preventivos ya quedo publicada en TEST/PTM con los titulos "Hora Inicio/Fin" (ver §46).
 - **Bandejas de publicacion:** `SCRIPTJS_MIGRACION_RAPIDA/<schema>/` (JS), `VIEWS_MIGRACION_RAPIDA/<schema>/` (vistas `.cshtml`) y `CSS_MIGRACION_RAPIDA/<schema>/` (CSS), locales (`.gitignore`). Copiados: los 2 JS del Excel en PTM/TEST/DBADMIN; `MantenimientoCorrectivo.cshtml` y `MantenimientoPreventivo.cshtml` en los 3; las 4 vistas de Produccion en TEST/DBADMIN (PTM ya publicadas). La bandeja PTM se recreo con los JS del Excel; los 4 de Produccion ya estan publicados.
 - Borrar en PTM `TMP_NORM_*`, `TMP_NORM_*_SKIP` y `TMP_CAT_L13_20261125`; conservar `TMP_BAK_NORM_*` unas semanas.
 - Commit local en `david_reyes`; **push solo con autorizacion del usuario**.
+
+---
+
+## 46. Sesion 26/11/2026 - Publicacion en TEST_JUNIO_2026 y sugerencia de unificacion de la bitacora
+
+### A. Aplicado y publicado en TEST_JUNIO_2026 (por el usuario)
+
+- **SQL:** los 4 scripts del paquete del 25/11 (`METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_*`, `PRODUCCION/20261125_{CATALOGO_LINEA_9_INY,NORMALIZAR_LINEAS_BITACORAS,FIX_INY_HERRAMENTAL_MANUAL}_*`). Movidos a `APLICADOS/TEST_JUNIO_2026/{METRICAS,PRODUCCION}/`.
+- **JS:** los 6 de `SCRIPTJS_MIGRACION_RAPIDA/TEST_JUNIO_2026/` (correctivos, preventivos y los 4 de Produccion).
+- **Vistas:** `MantenimientoCorrectivo.cshtml`, `MantenimientoPreventivo.cshtml` y las 4 de Produccion.
+
+### B. Verificacion en `:8081` (solo lectura, sin guardar)
+
+- **6/6 JS identicos byte a byte al repo** (SHA256 servido = repo): correctivos, preventivos, pvc, peadliso, iny, corrugado.
+- Las 4 vistas de Produccion sirven los JS con **cache-busting por ticks** (`?v=639312...`); las 6 vistas de la bandeja coinciden con el repo.
+- **Correctivos:** boton **Exportar** y columna **"Paro de linea"** presentes.
+- **Preventivos:** encabezados **"Hora Inicio" / "Hora Fin"** (ya no "Hora Apertura/Cierre").
+- **Bitacora PVC de noviembre:** todas las lineas con acento (`LÍNEA N PVC`), ninguna `Linea N PVC`.
+- **Catalogo:** `LÍNEA 13/14/15 PVC` con acento.
+- **No verificable con datos en TEST:** filtro normalizado de Metricas (TEST no tiene `HORAS_PROGRAMADAS` en noviembre: TD 0 y MTBF N/A), `LÍNEA 9 INY` (el modulo INY no expone filtro de linea y no hay filas INY en noviembre) y limpieza de Herramental manual en INY (0 filas). Ya validados en PTM el 25/11.
+
+### C. DBADMIN bloqueado
+
+- El trial de HANA Cloud responde 200 en `cockpit.hanatrial.ondemand.com` y `accounts.sap.com`, y SAP for Me reporta operativo, pero el login muestra **"SAP BTP Trial (Our trial environment is temporarily offline)"** y "no tiene autorizacion para acceder". Es del lado de SAP; no es la cuenta ni la contrasena. Los 4 scripts de DBADMIN siguen en `PENDIENTES/DBADMIN/`.
+- La publicacion en TEST y PTM es HANA on-premise, no depende del trial.
+
+### D. Sugerencia pendiente (nuestra, no aprobada): unificar la bitacora por fecha + linea
+
+- **Origen:** validacion de solo lectura en `:8083` del modulo Paros contra la bitacora de tiempos muertos.
+- **Hallazgo:** los paros manuales no se suman a TIEMPO NO DISPONIBLE (TND). Las columnas TND se capturan a mano en la fila producto/turno, que es la unica que trae `HORAS_PROGRAMADAS`. Paros, preventivos y correctivos se agrupan en una fila por fecha + linea, sin producto, asi que sus horas no reducen TD ni MTBF. En noviembre (planta 1, PVC) solo habia 2 filas con paro (`PAR-2` MTTO CORRECTIVOS, 0.30 h) y 14 filas con `CAMBIO MOLDE (HR)`/`CALENTAMIENTO (HR)` sin paro (captura manual).
+- **Sugerencia:** unificar producto, preventivos, correctivos y paros en **una sola fila por fecha + linea**. Implicaria una sola fuente de horas programadas por linea/dia, TND alimentado por los paros (sin captura manual) y recalculo de TD/MTBF. Tambien resolveria la duplicidad de nombres de linea y el acumulamiento de horas.
+- **Decision:** la toma el usuario de Produccion. **No se implementa nada** hasta que la apruebe; por ahora el llenado de TND sigue manual y las columnas siguen editables.
+- Se le compartio la infografia `DOCUMENTOS/Infografia_MTTR_MTBF_2026-11-25.png` para explicar las formulas.
+
+### E. Estado de Git (26/11/2026)
+
+- Movimiento de los 4 scripts de TEST + actualizacion de `MIGRACIONES_APLICADAS.md` y `PENDIENTES/README.md`: **sin commitear**.
+- Sin push. Las 2 propuestas de `DOCUMENTOS/` (requisiciones por niveles y solicitud de material sin OT) siguen sin commitear, y el PNG de la infografia aparece renombrado en el arbol de trabajo (revisar antes de commitear).
 
 
 

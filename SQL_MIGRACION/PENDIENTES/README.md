@@ -34,19 +34,24 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 
 **PTM_2022_FINAL: aplicado y movido a `../APLICADOS/PTM_2022_FINAL/`.**
 
-**Pendiente solo en DBADMIN y TEST_JUNIO_2026** (no aplicados; el 2026-11-25 se aplico unicamente PTM).
+**TEST_JUNIO_2026: aplicado el 2026-11-26 y movido a `../APLICADOS/TEST_JUNIO_2026/`**
+(4 scripts: catalogo, normalizacion, fix de herramental INY y filtro de linea de metricas).
+Verificado en el portal `:8081`: bitacoras con `LÍNEA N PVC` con acento, catalogo con
+`LÍNEA 13/14/15 PVC` y los 6 JS publicados identicos al repo. El SP de metricas no se
+pudo probar con datos porque TEST no tiene `HORAS_PROGRAMADAS` en noviembre.
 
-Orden sugerido por schema:
+**Pendiente solo en DBADMIN** (bloqueado: el trial de HANA Cloud esta offline).
 
-1. `PRODUCCION/20261125_CATALOGO_LINEA_9_INY_<schema>.sql` (verifica y, si falta, crea `LÍNEA 9 INY`).
-2. `PRODUCCION/20261125_NORMALIZAR_LINEAS_BITACORAS_<schema>.sql` (nombres de linea + `CLAVE_SYNC`).
-3. `PRODUCCION/20261125_FIX_INY_HERRAMENTAL_MANUAL_<schema>.sql` (solo si el preview trae filas; si no, no cambia nada).
-4. `METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_<schema>.sql`.
+Orden sugerido:
+
+1. `PRODUCCION/20261125_CATALOGO_LINEA_9_INY_DBADMIN.sql` (verifica y, si falta, crea `LÍNEA 9 INY`).
+2. `PRODUCCION/20261125_NORMALIZAR_LINEAS_BITACORAS_DBADMIN.sql` (nombres de linea + `CLAVE_SYNC`).
+3. `PRODUCCION/20261125_FIX_INY_HERRAMENTAL_MANUAL_DBADMIN.sql` (solo si el preview trae filas; si no, no cambia nada).
+4. `METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_DBADMIN.sql`.
 
 - **DBADMIN:** los 4 en `PENDIENTES/DBADMIN/{PRODUCCION,METRICAS}/`.
-- **TEST_JUNIO_2026:** los 4 en `PENDIENTES/TEST_JUNIO_2026/{PRODUCCION,METRICAS}/`.
 
-**JS y vistas:** `SCRIPTJS_MIGRACION_RAPIDA/DBADMIN/` y `.../TEST_JUNIO_2026/` tienen los 4 JS de produccion; la subcarpeta `Vistas/` tiene los 4 `.cshtml` con el cache-busting por ticks. En DBADMIN la app corre desde el repo, pero las copias quedan para referencia/publicacion.
+**JS y vistas:** `SCRIPTJS_MIGRACION_RAPIDA/<schema>/` tiene los 4 JS de produccion (mas correctivos y preventivos) y `VIEWS_MIGRACION_RAPIDA/<schema>/` las vistas `.cshtml` con el cache-busting por ticks. En DBADMIN la app corre desde el repo, pero las copias quedan para referencia/publicacion.
 
 > 2026-11-25 (PTM): aplicados y movidos a `../APLICADOS/PTM_2022_FINAL/`:
 > filtro de linea normalizado en los 4 SP de metricas, normalizacion de nombres
