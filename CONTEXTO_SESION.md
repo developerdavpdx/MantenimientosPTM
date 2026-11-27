@@ -2517,13 +2517,13 @@ Bajo el reporte de Correctivos y (1) no aparecia el **Scrap**, (2) algunas OT **
 - **Planta 2: 0 casos** (67 correctivos, 50 cerrados, todos con inicio). La cuenta `lunatc@ptmexico.com` se uso solo para consulta.
 - **Reconstruccion:** `HORA_INICIO = HORA_FIN - DURACION_HRS`. La duracion se calculo en el portal con la ventana del tecnico (`DuracionHrs` es de solo lectura) y el defecto solo perdio la columna de inicio. Evidencia: en 40 de 42 el inicio reconstruido coincide con la apertura (0.1-0.9 min); en `OTMC-007` y `OTMC-008` difiere 37 y 40 min, lo que prueba que la duracion salio del inicio real.
 - **Script:** `APLICADOS/PTM_2022_FINAL/PRODUCCION/CORRECTIVOS/20261127_CORRECTIVOS_BACKFILL_HORA_INICIO_PTM_2022_FINAL.sql` (respaldo `TMP_BAK_HORA_INICIO_20261127`, verificacion y rollback incluidos). Ejecutado por el usuario en el Studio: **44 filas** actualizadas.
-- **Validacion (`:8083`, planta 1):** cerradas sin inicio 42 -> **1** (`OTMC-074`); en el Excel los "N/A" de hora inicio bajaron de **65 a 22** (2 pendientes + las que siguen en captura).
-- **Pendientes por decision:** `OTMC-074` (cerrada) y `OTMC-081` (en firmas) **no tienen duracion**, asi que no hay de donde reconstruir. Opciones: dejarlas en N/A o poner la hora de apertura como referencia (bloque comentado en el script).
-- **Hallazgo aparte:** `OTMC-079` tiene inicio 17:27 y fin 09:45 (ventana invertida, previa al backfill). El administrador la puede corregir en el portal con "Guardar".
+- **Validacion (`:8083`, planta 1):** cerradas sin inicio **42 -> 0**; filas con fin y sin inicio **46 -> 0**; en el Excel los "N/A" de hora inicio bajaron de **65 a 20** (solo las OT que siguen en captura).
+- **Casos especiales:** `OTMC-081` (17:29-17:51 = 0.37 h) y `OTMC-079` (09:45-17:27 = 7.70 h) los corrigio el usuario en el portal. `OTMC-074` estaba cerrada con 2 firmas (bloqueada) y sin duracion: se corrigio con `APLICADOS/PTM_2022_FINAL/PRODUCCION/CORRECTIVOS/20261127_CORRECTIVOS_FIX_OTMC-074_PTM_2022_FINAL.sql` usando la **hora de apertura** (12:33) y 13 min = **0.22 h**. Ojo: la caratula muestra la apertura como "hora inicio tecnico" cuando el dato viene vacio (JS linea 2155), por eso parecia tener inicio.
+- **Hallazgo aparte:** `OTMC-079` tenia la ventana invertida (17:27 / 09:45); ya quedo corregida.
 
 ### D. Estado
 
-- **PTM:** backfill aplicado (44). **TEST:** script equivalente listo en `APLICADOS/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/`, pendiente de ejecutar (hay al menos `OTMC-011`). **DBADMIN:** trial offline.
+- **PTM:** backfill aplicado (44 filas) + `OTMC-074`; **sin pendientes**. **TEST:** script equivalente listo en `APLICADOS/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/`, pendiente de ejecutar (hay al menos `OTMC-011`). **DBADMIN:** trial offline.
 - **Sin cambios de codigo pendientes** por este tema; solo el commit de los scripts y la documentacion.
 
 
