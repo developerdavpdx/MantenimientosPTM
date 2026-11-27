@@ -1020,6 +1020,16 @@ class MantenimientoManager {
         return ((fin - inicio) / 3600000).toFixed(2);
     }
 
+    // Scrap real capturado por el tecnico (SP lo manda como texto en SCRAP).
+    // Se exporta como numero cuando es valido; vacio si la OT aun no lo captura.
+    normalizarScrapParaExcel(valor) {
+        if (valor === null || valor === undefined) return '';
+        const texto = String(valor).trim();
+        if (texto === '') return '';
+        const numero = Number(texto.replace(/,/g, ''));
+        return Number.isFinite(numero) ? numero : texto;
+    }
+
     // ============================
     // EXPORTAR A EXCEL
     // ============================
@@ -1054,6 +1064,7 @@ class MantenimientoManager {
                 { header: '⏱️ Hora fin (técnico)', width: 20 },
                 { header: '⏳ Duración técnico (h)', width: 14 },
                 { header: '🚫 Paro de línea', width: 14 },
+                { header: '♻️ Scrap real', width: 14 },
                 { header: '✍️ Firma realizó', width: 13 },
                 { header: '✍️ Firma supervisó', width: 14 },
                 { header: '👤 Solicitante', width: 26 },
@@ -1061,7 +1072,7 @@ class MantenimientoManager {
                 { header: '💬 Texto breve', width: 30 }
             ];
 
-            worksheet.mergeCells('A1:P1');
+            worksheet.mergeCells('A1:Q1');
             const title = worksheet.getCell('A1');
             title.value = '📊 REPORTE DE MANTENIMIENTOS CORRECTIVOS';
             title.font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -1076,7 +1087,7 @@ class MantenimientoManager {
             info1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3F2FD' } };
             info1.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
 
-            worksheet.mergeCells('E2:P2');
+            worksheet.mergeCells('E2:Q2');
             const info2 = worksheet.getCell('E2');
             info2.value = `📈 Total de registros: ${data.length}`;
             info2.font = { name: 'Segoe UI', size: 11, bold: true };
@@ -1131,6 +1142,7 @@ class MantenimientoManager {
                     this.formatearHoraTecnico(row.HoraFin),
                     this.calcularDuracionTecnico(row) || 'N/A',
                     parseInt(row.MaquinaDetenida, 10) === 1 ? 'Sí' : 'No',
+                    this.normalizarScrapParaExcel(row.Scrap),
                     row.FirmaRealizo ? 'Sí' : 'No',
                     row.FirmaSuperviso ? 'Sí' : 'No',
                     row.Solicitante || '',
@@ -1162,13 +1174,21 @@ class MantenimientoManager {
                         cell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
                         cell.alignment = { vertical: 'middle', horizontal: 'center' };
                     }
+
+                    // Scrap real: numero con 2 decimales cuando viene capturado.
+                    if (colIndex === 11) {
+                        if (typeof value === 'number' && isFinite(value)) {
+                            cell.numFmt = '0.00';
+                        }
+                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    }
                 });
 
                 excelRow.height = 22;
             });
 
             const lastRow = worksheet.getRow(5 + data.length);
-            worksheet.mergeCells(`A${lastRow.number}:P${lastRow.number}`);
+            worksheet.mergeCells(`A${lastRow.number}:Q${lastRow.number}`);
             const summary = worksheet.getCell(`A${lastRow.number}`);
             summary.value = `✅ Fin del reporte - ${data.length} registros exportados`;
             summary.font = { name: 'Segoe UI', size: 10, bold: true, italic: true, color: { argb: 'FF666666' } };

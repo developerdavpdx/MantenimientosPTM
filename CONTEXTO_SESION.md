@@ -2453,7 +2453,7 @@ El usuario decidio **conservarlas**: son filas manuales que los usuarios agregar
 
 ### D. Pendientes
 - ~~Aplicar normalizacion + filtro normalizado en **TEST_JUNIO_2026**~~ (hecho el 26/11, ver §46) y **DBADMIN** (bloqueado por el trial de HANA Cloud offline).
-- **Excel de Correctivos (implementado y validado en PTM):** boton **Exportar**, columna **"Paro de linea"** en el grid (badge rojo/gris) y export con el mismo estilo de Preventivos (iconos, encabezado degradado, filas alternadas y badge de color en Paro). 16 columnas: orden, equipo, proceso, linea, clasificacion, estatus, fecha solicitud, hora inicio/fin y duracion **del tecnico**, paro, firmas, solicitante, actividad y texto. **N/A** si el tecnico aun no cierra; la duracion se calcula de las horas si `DURACION_HRS` viene vacia (OTMC-072 = 1.55 h). Validado en `:8083`: archivo `PK` de ~17 KB, iconos en encabezados, Paro **Sí** `FFDC3545` / **No** `FF6C757D`.
+- **Excel de Correctivos (implementado y validado en PTM):** boton **Exportar**, columna **"Paro de linea"** en el grid (badge rojo/gris) y export con el mismo estilo de Preventivos (iconos, encabezado degradado, filas alternadas y badge de color en Paro). 17 columnas (desde el 27/11 incluye **"Scrap real"**): orden, equipo, proceso, linea, clasificacion, estatus, fecha solicitud, hora inicio/fin y duracion **del tecnico**, paro, scrap, firmas, solicitante, actividad y texto. **N/A** si el tecnico aun no cierra; la duracion se calcula de las horas si `DURACION_HRS` viene vacia (OTMC-072 = 1.55 h). Validado en `:8083`: archivo `PK` de ~17 KB, iconos en encabezados, Paro **Sí** `FFDC3545` / **No** `FF6C757D`.
 - **Horas del tecnico:** el listado de Correctivos usa `HORA_INICIO`/`HORA_FIN`/`DURACION_HRS`; Preventivos ya lo hacia y se homologo el **N/A**. La vista de Preventivos ya quedo publicada en TEST/PTM con los titulos "Hora Inicio/Fin" (ver §46).
 - **Bandejas de publicacion:** `SCRIPTJS_MIGRACION_RAPIDA/<schema>/` (JS), `VIEWS_MIGRACION_RAPIDA/<schema>/` (vistas `.cshtml`) y `CSS_MIGRACION_RAPIDA/<schema>/` (CSS), locales (`.gitignore`). Copiados: los 2 JS del Excel en PTM/TEST/DBADMIN; `MantenimientoCorrectivo.cshtml` y `MantenimientoPreventivo.cshtml` en los 3; las 4 vistas de Produccion en TEST/DBADMIN (PTM ya publicadas). La bandeja PTM se recreo con los JS del Excel; los 4 de Produccion ya estan publicados.
 - Borrar en PTM `TMP_NORM_*`, `TMP_NORM_*_SKIP` y `TMP_CAT_L13_20261125`; conservar `TMP_BAK_NORM_*` unas semanas.
@@ -2496,6 +2496,35 @@ El usuario decidio **conservarlas**: son filas manuales que los usuarios agregar
 
 - Movimiento de los 4 scripts de TEST + actualizacion de `MIGRACIONES_APLICADAS.md` y `PENDIENTES/README.md`: **sin commitear**.
 - Sin push. Las 2 propuestas de `DOCUMENTOS/` (requisiciones por niveles y solicitud de material sin OT) siguen sin commitear, y el PNG de la infografia aparece renombrado en el arbol de trabajo (revisar antes de commitear).
+
+---
+
+## 47. Sesion 27/11/2026 - Correctivos: Scrap en el Excel y backfill de HORA_INICIO
+
+### A. Reporte del usuario
+
+Bajo el reporte de Correctivos y (1) no aparecia el **Scrap**, (2) algunas OT **cerradas** mostraban **"Hora inicio (tecnico) = N/A"**.
+
+### B. Scrap
+
+- El SP `SpPdxMTTOObtenerMantenimientosCorrectivos` ya devolvia `SCRAP` y el grid lo traia en el dato (109 de 130 filas con valor en planta 1); el **Excel** tenia 16 columnas y nunca lo incluyo.
+- Se agrego la columna **"Scrap real"** (posicion 12, numerica con 2 decimales) en `mantenimientos_correctivos_refactor.js`; merges del titulo, totales y pie ajustados a 17 columnas.
+- Publicado por el usuario en `:8081` y `:8083`; verificado por hash (identico al repo) y validado en TEST generando el Excel real: 17 columnas, valores 0 / 100 / 12 y badge de Paro intacto.
+
+### C. HORA_INICIO nula
+
+- **46 OT** con `HORA_INICIO` NULL y `HORA_FIN` capturada: **42 cerradas** con las 2 firmas y **4 en proceso de firmas**. Todas de **planta 1**, creadas entre el **07 y el 20/11/2026** (ventana del defecto que guardaba el inicio en NULL, corregido el 20/11).
+- **Planta 2: 0 casos** (67 correctivos, 50 cerrados, todos con inicio). La cuenta `lunatc@ptmexico.com` se uso solo para consulta.
+- **Reconstruccion:** `HORA_INICIO = HORA_FIN - DURACION_HRS`. La duracion se calculo en el portal con la ventana del tecnico (`DuracionHrs` es de solo lectura) y el defecto solo perdio la columna de inicio. Evidencia: en 40 de 42 el inicio reconstruido coincide con la apertura (0.1-0.9 min); en `OTMC-007` y `OTMC-008` difiere 37 y 40 min, lo que prueba que la duracion salio del inicio real.
+- **Script:** `APLICADOS/PTM_2022_FINAL/PRODUCCION/CORRECTIVOS/20261127_CORRECTIVOS_BACKFILL_HORA_INICIO_PTM_2022_FINAL.sql` (respaldo `TMP_BAK_HORA_INICIO_20261127`, verificacion y rollback incluidos). Ejecutado por el usuario en el Studio: **44 filas** actualizadas.
+- **Validacion (`:8083`, planta 1):** cerradas sin inicio 42 -> **1** (`OTMC-074`); en el Excel los "N/A" de hora inicio bajaron de **65 a 22** (2 pendientes + las que siguen en captura).
+- **Pendientes por decision:** `OTMC-074` (cerrada) y `OTMC-081` (en firmas) **no tienen duracion**, asi que no hay de donde reconstruir. Opciones: dejarlas en N/A o poner la hora de apertura como referencia (bloque comentado en el script).
+- **Hallazgo aparte:** `OTMC-079` tiene inicio 17:27 y fin 09:45 (ventana invertida, previa al backfill). El administrador la puede corregir en el portal con "Guardar".
+
+### D. Estado
+
+- **PTM:** backfill aplicado (44). **TEST:** script equivalente listo en `APLICADOS/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/`, pendiente de ejecutar (hay al menos `OTMC-011`). **DBADMIN:** trial offline.
+- **Sin cambios de codigo pendientes** por este tema; solo el commit de los scripts y la documentacion.
 
 
 
