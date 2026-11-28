@@ -308,9 +308,10 @@ Motivo: contienen versiones anteriores del SP de rango. La versi√≥n vigente est√
 - **PTM_2022_FINAL: al dia.** Los 5 scripts del 2026-11-25 se aplicaron y movieron a `APLICADOS/PTM_2022_FINAL/{METRICAS,PRODUCCION}/`.
 - **TEST_JUNIO_2026: al dia.** Los 4 scripts del 2026-11-25 se aplicaron el 2026-11-26 y quedaron en `APLICADOS/TEST_JUNIO_2026/{METRICAS,PRODUCCION}/`.
 - **Pendiente solo DBADMIN** (bloqueado por el trial de HANA Cloud offline): filtro de linea normalizado de Metricas y normalizacion de lineas de las bitacoras, en `PENDIENTES/DBADMIN/{METRICAS,PRODUCCION}/`.
-- **Correctivos 2026-11-27:** backfill de `HORA_INICIO` aplicado en PTM (44 filas + `OTMC-074`). **Sin pendientes en PTM**; el script de TEST sigue por ejecutar.
+- **Correctivos 2026-11-27:** backfill de `HORA_INICIO` aplicado en PTM (44 filas + `OTMC-074`). **Sin pendientes en PTM**; el script de TEST esta listo en `APLICADOS/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/` (no ejecutado; solo TEST, no critico).
+- **DBADMIN: no aplicado.** El trial de HANA Cloud quedo offline y el schema de desarrollo dejo de usarse; los 4 scripts del 25/11 se conservaron en `OBSOLETO/DBADMIN_NO_APLICADO_20261127/` (con README). No afecta a TEST ni a produccion.
 - **Sin pendientes** de los paquetes anteriores (24/11 y previos).
-- `PENDIENTES/` solo deberia conservar el bloque de DBADMIN y su `README.md`.
+- `PENDIENTES/` quedo **sin scripts** (solo su `README.md`).
 - JS: las copias de `SCRIPTJS_MIGRACION_RAPIDA/` se eliminaron; la fuente es `MantenimientosPTM/Scripts/` (publicado en `:8083` y `:8081`).
 
 ## Tareas menores abiertas

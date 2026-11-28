@@ -2442,7 +2442,7 @@ El usuario decidio **conservarlas**: son filas manuales que los usuarios agregar
   - Catalogo: `LINEA 13/14/15 PVC` -> con acento; alta de `LÍNEA 9 INY`.
   - Normalizacion de las 4 bitacoras: `Linea N PVC` -> `LÍNEA N PVC`, `CLAVE_SYNC` actualizada, **sin borrar filas** (la fila vacia del 22/11 se conserva).
 - **Archivos:** `APLICADOS/PTM_2022_FINAL/METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_PTM_2022_FINAL.sql`, `APLICADOS/PTM_2022_FINAL/PRODUCCION/20261125_{NORMALIZAR_LINEAS_BITACORAS,CATALOGO_LINEA_9_INY,FIX_INY_HERRAMENTAL_MANUAL,FIX_INY_HERRAMENTAL_MANUAL_PROD}_PTM_2022_FINAL.sql`.
-- **TEST aplicado el 2026-11-26** (ver §46); **DBADMIN pendiente** (trial de HANA Cloud offline). Los equivalentes estan en `PENDIENTES/DBADMIN/{METRICAS,PRODUCCION}/`.
+- **TEST aplicado el 2026-11-26** (ver §46); **DBADMIN no aplicado** (trial offline; scripts conservados en `OBSOLETO/DBADMIN_NO_APLICADO_20261127/`, ver §49).
 - **Verificaciones:** `VERIFICACION/20261125_VERIF_*.sql` (MTTR/MTBF, filtro de linea, origen de horas, cuadre L5, estado INY, origen del T. disponible).
 - **Infografia para usuarios:** `DOCUMENTOS/Infografia_MTTR_MTBF_2026-11-25.{html,png}`; el mensaje corto de WhatsApp quedo en el chat.
 
@@ -2452,7 +2452,7 @@ El usuario decidio **conservarlas**: son filas manuales que los usuarios agregar
 - El delta 540 -> 495 son los paros programados (calentamiento 8.5, paro/arranque 17.5, arranque 13, falta materia 6 = 45).
 
 ### D. Pendientes
-- ~~Aplicar normalizacion + filtro normalizado en **TEST_JUNIO_2026**~~ (hecho el 26/11, ver §46) y **DBADMIN** (bloqueado por el trial de HANA Cloud offline).
+- ~~Aplicar normalizacion + filtro normalizado en **TEST_JUNIO_2026**~~ (hecho el 26/11, ver §46). **DBADMIN: descartado** (trial offline; ver §49).
 - **Excel de Correctivos (implementado y validado en PTM):** boton **Exportar**, columna **"Paro de linea"** en el grid (badge rojo/gris) y export con el mismo estilo de Preventivos (iconos, encabezado degradado, filas alternadas y badge de color en Paro). 17 columnas (desde el 27/11 incluye **"Scrap real"**): orden, equipo, proceso, linea, clasificacion, estatus, fecha solicitud, hora inicio/fin y duracion **del tecnico**, paro, scrap, firmas, solicitante, actividad y texto. **N/A** si el tecnico aun no cierra; la duracion se calcula de las horas si `DURACION_HRS` viene vacia (OTMC-072 = 1.55 h). Validado en `:8083`: archivo `PK` de ~17 KB, iconos en encabezados, Paro **Sí** `FFDC3545` / **No** `FF6C757D`.
 - **Horas del tecnico:** el listado de Correctivos usa `HORA_INICIO`/`HORA_FIN`/`DURACION_HRS`; Preventivos ya lo hacia y se homologo el **N/A**. La vista de Preventivos ya quedo publicada en TEST/PTM con los titulos "Hora Inicio/Fin" (ver §46).
 - **Bandejas de publicacion:** `SCRIPTJS_MIGRACION_RAPIDA/<schema>/` (JS), `VIEWS_MIGRACION_RAPIDA/<schema>/` (vistas `.cshtml`) y `CSS_MIGRACION_RAPIDA/<schema>/` (CSS), locales (`.gitignore`). Copiados: los 2 JS del Excel en PTM/TEST/DBADMIN; `MantenimientoCorrectivo.cshtml` y `MantenimientoPreventivo.cshtml` en los 3; las 4 vistas de Produccion en TEST/DBADMIN (PTM ya publicadas). La bandeja PTM se recreo con los JS del Excel; los 4 de Produccion ya estan publicados.
@@ -2481,7 +2481,8 @@ El usuario decidio **conservarlas**: son filas manuales que los usuarios agregar
 
 ### C. DBADMIN bloqueado
 
-- El trial de HANA Cloud responde 200 en `cockpit.hanatrial.ondemand.com` y `accounts.sap.com`, y SAP for Me reporta operativo, pero el login muestra **"SAP BTP Trial (Our trial environment is temporarily offline)"** y "no tiene autorizacion para acceder". Es del lado de SAP; no es la cuenta ni la contrasena. Los 4 scripts de DBADMIN siguen en `PENDIENTES/DBADMIN/`.
+- El trial de HANA Cloud responde 200 en `cockpit.hanatrial.ondemand.com` y `accounts.sap.com`, y SAP for Me reporta operativo, pero el login muestra **"SAP BTP Trial (Our trial environment is temporarily offline)"** y "no tiene autorizacion para acceder". Es del lado de SAP; no es la cuenta ni la contrasena.
+- Los 4 scripts de DBADMIN **no se aplicaron**; el 27/11 se movieron a `OBSOLETO/DBADMIN_NO_APLICADO_20261127/` (con README y orden de ejecucion) y `PENDIENTES/` quedo sin scripts. DBADMIN es desarrollo y ya no se usa; TEST y PTM no dependen de el.
 - La publicacion en TEST y PTM es HANA on-premise, no depende del trial.
 
 ### D. Sugerencia pendiente (nuestra, no aprobada): unificar la bitacora por fecha + linea
@@ -2523,7 +2524,7 @@ Bajo el reporte de Correctivos y (1) no aparecia el **Scrap**, (2) algunas OT **
 
 ### D. Estado
 
-- **PTM:** backfill aplicado (44 filas) + `OTMC-074`; **sin pendientes**. **TEST:** script equivalente listo en `APLICADOS/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/`, pendiente de ejecutar (hay al menos `OTMC-011`). **DBADMIN:** trial offline.
+- **PTM:** backfill aplicado (44 filas) + `OTMC-074`; **sin pendientes**. **TEST:** script equivalente listo en `APLICADOS/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/`, pendiente de ejecutar (hay al menos `OTMC-011`; no critico). **DBADMIN:** descartado (trial offline, ver §49).
 - **Sin cambios de codigo pendientes** por este tema; solo el commit de los scripts y la documentacion.
 
 ---
@@ -2559,10 +2560,43 @@ Un supervisor de planta 2 puso el mes completo (01-27/11) en la bitacora de PVC 
 - Aplica tanto a **Descargar** como a **Enviar por correo**.
 - **Validado en produccion (`:8083`, planta 2):** se copio una fila en memoria (TMP, sin guardar; TR 5,935 / Neta 174,478.088 / Scrap 3,190). El grid movio sus totales a 706,840 / 4,578,499.203 / 250,658, pero el Excel conservo **825 filas** y totales **700,905 / 4,404,021.115 / 247,468**: la fila sin guardar no salio ni en el detalle ni en los totales.
 
-### F. Pendiente
+### F. Correo validado
 
-- Probar **Enviar por correo** en el portal (en la validacion solo se probo la descarga; no se envio correo real). El candado corre antes de generar el Excel, igual que en Descargar.
-- Opcional: replicar el candado en Correctivos y Preventivos (su export tambien depende de haber pulsado Buscar).
+- **Enviar por correo probado en TEST (`:8081`) y en produccion (`:8083`)** a `pdxdesarrollo@gmail.com`; el usuario confirmo la recepcion. En ambos casos se cambio el rango a 01-27 sin pulsar Buscar: el candado reconsulto (15 -> 84 filas en TEST, 16 -> 275 en PTM) y el correo salio con el Excel del rango completo.
+- Opcional: replicar el candado de filtros/guardado en Correctivos y Preventivos (su export tambien depende de haber pulsado Buscar).
+
+---
+
+## 49. Cierre 27/11/2026 - Limpieza de pendientes, codegraph y git
+
+### A. Scripts pendientes
+
+- `SQL_MIGRACION/PENDIENTES/` quedo **sin scripts** (solo su `README.md`).
+- Los 4 scripts de **DBADMIN** del paquete del 25/11 (metricas normalizado, catalogo `LÍNEA 9 INY`, normalizacion de bitacoras y fix de herramental INY) **nunca se aplicaron** (trial offline) y se movieron a `OBSOLETO/DBADMIN_NO_APLICADO_20261127/` con un README que explica como retomarlos. No afecta a TEST ni a produccion.
+- El respaldo de correctivos de **TEST** (`APLICADOS/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/20261127_CORRECTIVOS_BACKFILL_HORA_INICIO_TEST_JUNIO_2026.sql`) sigue ahi, **sin ejecutar**; solo TEST, no critico.
+
+### B. Documentacion
+
+- `PENDIENTES/README.md`, `MIGRACIONES_APLICADAS.md` y este contexto actualizados con el estado final (sin pendientes de SQL en TEST/PTM; DBADMIN descartado).
+- `AGENTS.md`: nueva regla de bitacoras sobre Descargar/Enviar (filtros + solo registros guardados).
+
+### C. CodeGraph
+
+- Indice actualizado al 27/11/2026 con los cambios de codigo del dia (verificacion con `codegraph status`).
+
+### D. Git
+
+- Commits locales en `david_reyes` (sin push; lo sube el usuario):
+  - `03f946d` feat(correctivos): Scrap real en el Excel y backfill de HORA_INICIO en PTM.
+  - `89e068a` chore(correctivos): cierra el caso de OTMC-074.
+  - `4b45f47` feat(bitacoras): export y correo respetan filtros y solo incluyen lo guardado.
+  - El cierre de esta sesion (limpieza de PENDIENTES + docs + codegraph).
+
+### E. Pendientes reales (sin urgencia)
+
+- Borrar respaldos viejos en PTM: `TMP_SANEO_*` se pueden ir; conservar `TMP_BAK_*` unas semanas mas (incluye `TMP_BAK_HORA_INICIO_20261127` y `TMP_BAK_OTMC074_20261127`).
+- Opcional: correr el backfill de correctivos en TEST.
+- Sin push hasta que el usuario lo autorice.
 
 
 

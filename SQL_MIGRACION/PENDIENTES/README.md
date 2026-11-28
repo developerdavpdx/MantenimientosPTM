@@ -32,6 +32,8 @@ Regla: si hay algo aquí, es porque falta aplicarlo. Si no hay nada, todo está 
 - El JS `solicitud_refacciones_refactor.js` publicado en 8081 y 8083 el mismo día.
 ## Contenido actual
 
+**Sin scripts pendientes** (2026-11-27).
+
 **PTM_2022_FINAL: aplicado y movido a `../APLICADOS/PTM_2022_FINAL/`.**
 
 **TEST_JUNIO_2026: aplicado el 2026-11-26 y movido a `../APLICADOS/TEST_JUNIO_2026/`**
@@ -40,18 +42,12 @@ Verificado en el portal `:8081`: bitacoras con `LÍNEA N PVC` con acento, catalo
 `LÍNEA 13/14/15 PVC` y los 6 JS publicados identicos al repo. El SP de metricas no se
 pudo probar con datos porque TEST no tiene `HORAS_PROGRAMADAS` en noviembre.
 
-**Pendiente solo en DBADMIN** (bloqueado: el trial de HANA Cloud esta offline).
+**DBADMIN: no aplicado.** El trial de HANA Cloud quedo offline y el schema de desarrollo
+dejo de usarse. Los 4 scripts se conservaron en
+`../OBSOLETO/DBADMIN_NO_APLICADO_20261127/` por si se retoma (con su README y el orden
+de ejecucion). No afecta a TEST ni a produccion.
 
-Orden sugerido:
-
-1. `PRODUCCION/20261125_CATALOGO_LINEA_9_INY_DBADMIN.sql` (verifica y, si falta, crea `LÍNEA 9 INY`).
-2. `PRODUCCION/20261125_NORMALIZAR_LINEAS_BITACORAS_DBADMIN.sql` (nombres de linea + `CLAVE_SYNC`).
-3. `PRODUCCION/20261125_FIX_INY_HERRAMENTAL_MANUAL_DBADMIN.sql` (solo si el preview trae filas; si no, no cambia nada).
-4. `METRICAS/20261125_METRICAS_FILTRO_LINEA_NORMALIZADO_DBADMIN.sql`.
-
-- **DBADMIN:** los 4 en `PENDIENTES/DBADMIN/{PRODUCCION,METRICAS}/`.
-
-**JS y vistas:** `SCRIPTJS_MIGRACION_RAPIDA/<schema>/` tiene los 4 JS de produccion (mas correctivos y preventivos) y `VIEWS_MIGRACION_RAPIDA/<schema>/` las vistas `.cshtml` con el cache-busting por ticks. En DBADMIN la app corre desde el repo, pero las copias quedan para referencia/publicacion.
+**JS y vistas:** `SCRIPTJS_MIGRACION_RAPIDA/<schema>/` tiene los JS de produccion (mas correctivos y preventivos) y `VIEWS_MIGRACION_RAPIDA/<schema>/` las vistas `.cshtml` con el cache-busting por ticks. En DBADMIN la app corre desde el repo, pero las copias quedan para referencia/publicacion.
 
 > 2026-11-25 (PTM): aplicados y movidos a `../APLICADOS/PTM_2022_FINAL/`:
 > filtro de linea normalizado en los 4 SP de metricas, normalizacion de nombres
