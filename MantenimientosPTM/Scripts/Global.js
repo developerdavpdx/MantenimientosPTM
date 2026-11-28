@@ -4685,6 +4685,47 @@ class GestionProduccionBase {
         if (this.configurarMenuContextual) this.configurarMenuContextual();
     }
 
+    // ============================================================
+    // FILTROS DE LA BITACORA: evita exportar/enviar datos viejos
+    // ------------------------------------------------------------
+    // El Excel y el correo se arman con lo que esta cargado en el grid.
+    // Si el usuario cambia las fechas (u otro filtro) y NO pulsa Buscar,
+    // antes de exportar se refresca con los filtros actuales para que el
+    // archivo corresponda a lo que se ve en pantalla.
+    // ============================================================
+    leerFiltrosBitacora() {
+        const val = (sel) => ($(sel).val() || '').toString().trim();
+        return {
+            inicio: val('#FiltroFechaInicio'),
+            fin: val('#FiltroFechaFin'),
+            linea: val('#FiltroLinea'),
+            turno: val('#FiltroTurno'),
+            producto: val('#FiltroProducto'),
+            nwscale: $('#chkIncluirNWSCALE').is(':checked') ? '1' : '0'
+        };
+    }
+
+    guardarFiltrosAplicados() {
+        this._filtrosAplicados = this.leerFiltrosBitacora();
+    }
+
+    async asegurarFiltrosAplicados() {
+        const actual = this.leerFiltrosBitacora();
+        const prev = this._filtrosAplicados;
+        const iguales = prev &&
+            actual.inicio  === prev.inicio &&
+            actual.fin     === prev.fin &&
+            actual.linea   === prev.linea &&
+            actual.turno   === prev.turno &&
+            actual.producto === prev.producto &&
+            actual.nwscale === prev.nwscale;
+
+        if (iguales) return false;
+
+        await this.consultarDatos();
+        return true;
+    }
+
     // Utilidades comunes
     formatearNumero(value) {
         const v = parseFloat(value || 0);
@@ -4962,9 +5003,23 @@ class GestionProduccionBase {
 // EXPORTADOR EXCEL BASE
 // ========================================
 class ExcelExporterBase {
-    constructor(gridApi, columnDefs) {
+    constructor(gridApi, columnDefs, calcularTotales) {
         this.gridApi = gridApi;
         this.columnDefs = columnDefs;
+        // Opcional: funcion del modulo que recalcula la fila de totales para un
+        // subconjunto de filas (se usa al excluir registros sin guardar).
+        this.calcularTotales = (typeof calcularTotales === 'function') ? calcularTotales : null;
+    }
+
+    // Solo se exportan los registros que ya existen en la base. Las filas
+    // nuevas (producto terminado pendiente de NWSCALE, paros/OT sin guardar,
+    // capturas manuales) viven solo en memoria hasta pulsar Guardar.
+    esFilaPersistida(data) {
+        if (!data) return false;
+        if (data.id === 'TOTALES') return true;
+        if (data._esNuevo === true) return false;
+        if (typeof data.id === 'string' && data.id.indexOf('TMP_') === 0) return false;
+        return true;
     }
 
     // Hooks que las subclases pueden implementar
@@ -5088,6 +5143,7 @@ class ExcelExporterBase {
     _agregarFilasDatosDefault(worksheet, estructura) {
         const textFields = this.getTextFields();
         this.gridApi.forEachNodeAfterFilterAndSort((node) => {
+            if (!this.esFilaPersistida(node.data)) return;
             const fila = [];
             estructura.grupos.forEach(grupo => {
                 grupo.children.forEach(col => {

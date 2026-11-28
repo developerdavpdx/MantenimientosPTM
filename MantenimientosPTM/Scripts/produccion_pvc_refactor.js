@@ -297,6 +297,7 @@ class GestionProduccionPVC extends GestionProduccionBase {
             let FiltroLinea = $("#FiltroLinea").val() || null;
             let FiltroTurno = $("#FiltroTurno").val() || null;
             let FiltroProducto = $("#FiltroProducto").val() || '';
+            this.guardarFiltrosAplicados();
             $("#mesActual").text(this.formatearRangoFechas(FiltroFechaInicio, FiltroFechaFin));
 
             const response = await $.ajax({
@@ -3109,9 +3110,25 @@ class GestionProduccionPVC extends GestionProduccionBase {
         return datos;
     }
 
-    exportarExcel() {
-        const exporter = new ExcelExporterPVC(this.gridApi, this.columnDefs);
+    async exportarExcel() {
+        await this.asegurarFiltrosAplicados();
+        const exporter = new ExcelExporterPVC(this.gridApi, this.columnDefs,
+            (filas) => this.calcularTotalesParaFilas(filas));
         exporter.exportarConFormato();
+    }
+
+    // Totales para un subconjunto de filas. Se usa al exportar/enviar solo los
+    // registros que ya estan en la base (sin las filas nuevas en memoria).
+    calcularTotalesParaFilas(filas) {
+        const gridOriginal = this.gridApi;
+        this.gridApi = {
+            forEachNodeAfterFilter: (cb) => filas.forEach(data => cb({ data }))
+        };
+        try {
+            return this.obtenerTotalesGrid();
+        } finally {
+            this.gridApi = gridOriginal;
+        }
     }
 
     calcularTiempoDisponible(row) {
@@ -3821,8 +3838,8 @@ class ArticuloAutocompleteEditor {
 // EXPORTADOR EXCEL PARA PVC
 // ========================================
 class ExcelExporterPVC extends ExcelExporterBase {
-    constructor(gridApi, columnDefs) {
-        super(gridApi, columnDefs);
+    constructor(gridApi, columnDefs, calcularTotales) {
+        super(gridApi, columnDefs, calcularTotales);
     }
 
     getSheetName() { return 'Causas Tiempos Muertos PVC'; }
@@ -3895,13 +3912,17 @@ class ExcelExporterPVC extends ExcelExporterBase {
     agregarFilasDatos(worksheet, estructura) {
 
         const camposTexto = ['Mes', 'Fecha', 'Producto', 'TRIP', 'Linea', 'Turno', 'Comentarios'];
+        const filasExportadas = [];
 
         // ========================================
-        // FILAS DE DATOS (solo las filtradas/ordenadas)
+        // FILAS DE DATOS (solo las filtradas/ordenadas y ya guardadas)
         // ========================================
         this.gridApi.forEachNodeAfterFilterAndSort((node) => {
 
             if (!node.data || node.data.id === 'TOTALES') return;
+            if (!this.esFilaPersistida(node.data)) return;
+
+            filasExportadas.push(node.data);
 
             const fila = [];
 
@@ -3931,17 +3952,19 @@ class ExcelExporterPVC extends ExcelExporterBase {
         });
 
         // ========================================
-        // FILA DE TOTALES (desde la fila anclada)
+        // FILA DE TOTALES (calculada sobre las filas exportadas)
         // ========================================
-        const nodoTotales = this.gridApi.getPinnedBottomRow(0);
+        const datosTotales = this.calcularTotales
+            ? this.calcularTotales(filasExportadas)
+            : ((this.gridApi.getPinnedBottomRow(0) || {}).data);
 
-        if (nodoTotales && nodoTotales.data) {
+        if (datosTotales) {
 
             const fila = [];
 
             estructura.grupos.forEach(grupo => {
                 grupo.children.forEach(col => {
-                    let valor = nodoTotales.data[col.field];
+                    let valor = datosTotales[col.field];
 
                     if (valor !== null && valor !== undefined && valor !== '') {
                         if (!camposTexto.includes(col.field)) {
@@ -4402,13 +4425,18 @@ class CorreosManagerPVC {
             return;
         }
 
+        // Si cambiaron los filtros y no se pulso Buscar, se refresca antes de
+        // generar el Excel para que el correo lleve el mismo rango de la pantalla.
+        await this.appProduccion.asegurarFiltrosAplicados();
+
         const btn = $("#btnEnviarExcelCorreo");
         btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Generando Excel...');
         btn.prop("disabled", true);
 
         try {
             // 🔥 Generar Excel en el cliente con estilos
-            const exporter = new ExcelExporterPVC(this.appProduccion.gridApi, this.appProduccion.columnDefs);
+            const exporter = new ExcelExporterPVC(this.appProduccion.gridApi, this.appProduccion.columnDefs,
+                (filas) => this.appProduccion.calcularTotalesParaFilas(filas));
             const archivoExcel = await exporter.generarExcelParaEnvio();
 
             if (!archivoExcel) {

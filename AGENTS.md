@@ -144,6 +144,7 @@
 - Los **paros manuales** (`PAR-xx`) sí llegan por `obtenerParosProduccionSS`.
 - El paro se captura en la **fila del producto/turno** que se detuvo; el total de la línea es la suma de sus filas.
 - **Guardar dos veces no debe duplicar**: mismo `CLAVE_SYNC` ⇒ actualiza el mismo registro.
+- **Descargar / Enviar por correo:** el archivo se arma con lo que está cargado en el grid y **solo incluye las filas que ya existen en la base** (`_esNuevo` o id `TMP_` se excluyen; producto terminado pendiente, paros/OT sin guardar y capturas manuales no salen). La fila de totales se recalcula con esas mismas filas. Además, si los filtros cambiaron desde la última búsqueda, antes de generar el archivo se reconsulta automáticamente con los filtros actuales.
 
 ### Paros de Producción (reporte)
 - El combo **Planta** está **deshabilitado a propósito**: el reporte siempre envía la planta del usuario (`this.PLANTA`), no el valor del combo. El combo **Proceso** sí es filtro real.

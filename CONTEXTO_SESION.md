@@ -2526,6 +2526,44 @@ Bajo el reporte de Correctivos y (1) no aparecia el **Scrap**, (2) algunas OT **
 - **PTM:** backfill aplicado (44 filas) + `OTMC-074`; **sin pendientes**. **TEST:** script equivalente listo en `APLICADOS/TEST_JUNIO_2026/PRODUCCION/CORRECTIVOS/`, pendiente de ejecutar (hay al menos `OTMC-011`). **DBADMIN:** trial offline.
 - **Sin cambios de codigo pendientes** por este tema; solo el commit de los scripts y la documentacion.
 
+---
+
+## 48. Sesion 27/11/2026 - Bitacoras: Descargar y Enviar respetan los filtros
+
+### A. Reporte del usuario
+
+Un supervisor de planta 2 puso el mes completo (01-27/11) en la bitacora de PVC y el Excel/reporte solo traia el dia de hoy. Se pidio validar los 4 procesos.
+
+### B. Causa
+
+- Cambiar las fechas solo actualiza el titulo (`#mesActual`); la consulta se dispara hasta pulsar **Buscar** (a proposito: "no se consulta automaticamente").
+- `Descargar` y `Enviar` arman el Excel con **lo que esta cargado en el grid** (`ExcelExporterBase(this.gridApi, ...)`), no reconsultan.
+- Resultado: el titulo decia "Del 01 al 27" pero el archivo llevaba las filas del dia. Reproducido en `:8083`: con 826 filas cargadas (01-27) se cambio el filtro a 20-27 sin Buscar; el titulo dijo 20-27 y el Excel trajo las 826 filas del 01-27.
+
+### C. Correccion (4 procesos)
+
+- `Global.js` (`GestionProduccionBase`): `leerFiltrosBitacora()` (fechas, linea, turno, producto y check NWSCALE), `guardarFiltrosAplicados()` y `asegurarFiltrosAplicados()`.
+- Los 4 `produccion_*_refactor.js` guardan el snapshot al iniciar `consultarDatos()` y llaman `await this.asegurarFiltrosAplicados()` en `exportarExcel()` y en `enviarExcelPorCorreo()`. Si los filtros cambiaron desde la ultima busqueda, se reconsulta antes de generar el archivo.
+- `node --check` OK en los 5 archivos. Copiados a `SCRIPTJS_MIGRACION_RAPIDA/<schema>/` y publicados por el usuario en `:8081` y `:8083` (hash identico al repo en los 5).
+
+### D. Prueba funcional
+
+- **TEST `:8081` (PVC):** carga inicial 14 filas (27/11); se cambiaron las fechas a 01-27 **sin pulsar Buscar** y se pulso **Descargar**: el grid se refresco a **83 filas / 25 dias** y el Excel trajo esas **83 filas del 01 al 27**.
+- **Produccion `:8083` (PVC planta 2, solo consulta):** carga inicial **22 filas** (27/11); se cambio a 01-27 sin Buscar y al pulsar **Descargar** el grid se refresco a **826 filas / 27 dias** y el Excel trajo **825 filas con fecha** (01-27). Los totales del archivo coinciden con la suma de esas filas (TR 700,905; Neta 4,404,021.115; Scrap 247,468).
+- **PEAD en TEST** no tiene datos de noviembre, asi que no se pudo comparar volumen; el codigo es el mismo (clase base).
+
+### E. Solo registros guardados
+
+- El reporte/Excel se arma con el grid, pero ahora **solo exporta filas que ya existen en la base**: se excluyen las que traen `_esNuevo = true` o id `TMP_` (producto terminado pendiente de NWSCALE, paros/OT sin guardar y capturas manuales).
+- La fila de **totales se recalcula** con las filas exportadas (callback `calcularTotalesParaFilas` en cada modulo, que reutiliza `obtenerTotalesGrid`), para que no quede un total que incluya filas que no salieron.
+- Aplica tanto a **Descargar** como a **Enviar por correo**.
+- **Validado en produccion (`:8083`, planta 2):** se copio una fila en memoria (TMP, sin guardar; TR 5,935 / Neta 174,478.088 / Scrap 3,190). El grid movio sus totales a 706,840 / 4,578,499.203 / 250,658, pero el Excel conservo **825 filas** y totales **700,905 / 4,404,021.115 / 247,468**: la fila sin guardar no salio ni en el detalle ni en los totales.
+
+### F. Pendiente
+
+- Probar **Enviar por correo** en el portal (en la validacion solo se probo la descarga; no se envio correo real). El candado corre antes de generar el Excel, igual que en Descargar.
+- Opcional: replicar el candado en Correctivos y Preventivos (su export tambien depende de haber pulsado Buscar).
+
 
 
 
